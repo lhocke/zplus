@@ -1,52 +1,5 @@
 {
-  "synonyms": {
-    "WITH": [
-      "USING",
-      "THROUGH",
-      "THRU"
-    ],
-    "IN": [
-      "INSIDE",
-      "INTO"
-    ],
-    "ON": [
-      "ONTO"
-    ],
-    "UNDER": [
-      "UNDERNEATH",
-      "BENEATH",
-      "BELOW"
-    ],
-    "NORTH": [
-      "N"
-    ],
-    "SOUTH": [
-      "S"
-    ],
-    "EAST": [
-      "E"
-    ],
-    "WEST": [
-      "W"
-    ],
-    "DOWN": [
-      "D"
-    ],
-    "UP": [
-      "U"
-    ],
-    "NW": [
-      "NORTHWEST"
-    ],
-    "NE": [
-      "NORTHE"
-    ],
-    "SW": [
-      "SOUTHWEST"
-    ],
-    "SE": [
-      "SOUTHE"
-    ],
+  "verbSynonyms": {
     "SUPER": [
       "SUPERBRIEF"
     ],
@@ -133,7 +86,8 @@
     "GIVE": [
       "DONATE",
       "OFFER",
-      "FEED"
+      "FEED",
+      "HAND"
     ],
     "HELLO": [
       "HI"
@@ -289,6 +243,57 @@
     "YELL": [
       "SCREAM",
       "SHOUT"
+    ]
+  },
+  "directionSynonyms": {
+    "NORTH": [
+      "N"
+    ],
+    "SOUTH": [
+      "S"
+    ],
+    "EAST": [
+      "E"
+    ],
+    "WEST": [
+      "W"
+    ],
+    "DOWN": [
+      "D"
+    ],
+    "UP": [
+      "U"
+    ],
+    "NW": [
+      "NORTHWEST"
+    ],
+    "NE": [
+      "NORTHE"
+    ],
+    "SW": [
+      "SOUTHWEST"
+    ],
+    "SE": [
+      "SOUTHE"
+    ]
+  },
+  "prepSynonyms": {
+    "WITH": [
+      "USING",
+      "THROUGH",
+      "THRU"
+    ],
+    "IN": [
+      "INSIDE",
+      "INTO"
+    ],
+    "ON": [
+      "ONTO"
+    ],
+    "UNDER": [
+      "UNDERNEATH",
+      "BENEATH",
+      "BELOW"
     ]
   },
   "buzzwords": [

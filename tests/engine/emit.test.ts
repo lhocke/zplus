@@ -63,7 +63,9 @@ const SYNTAX: SyntaxEntryRaw[] = [
 ];
 
 const VOCAB: VocabularyData = {
-  synonyms: { TAKE: ['GET', 'GRAB'], LOOK: ['L'] },
+  verbSynonyms: { TAKE: ['GET', 'GRAB'], LOOK: ['L'] },
+  directionSynonyms: { NORTH: ['N'], SOUTH: ['S'] },
+  prepSynonyms: { WITH: ['USING', 'THROUGH', 'THRU'] },
   buzzwords: ['A', 'AN', 'THE'],
 };
 
@@ -189,18 +191,32 @@ describe('emitData — syntax.json (port-native SyntaxEntryOut schema)', () => {
 });
 
 describe('emitData — vocabulary.json', () => {
-  test('writes valid JSON matching VocabularyData shape', () => {
+  test('writes valid JSON matching VocabularyData shape (three typed tables)', () => {
     emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
     const parsed: VocabularyData = JSON.parse(readFileSync(join(dataDir, 'vocabulary.json'), 'utf8'));
-    expect(parsed.synonyms).toBeDefined();
+    expect(parsed.verbSynonyms).toBeDefined();
+    expect(parsed.directionSynonyms).toBeDefined();
+    expect(parsed.prepSynonyms).toBeDefined();
     expect(parsed.buzzwords).toBeDefined();
   });
 
-  test('synonyms and buzzwords are preserved', () => {
+  test('verbSynonyms and buzzwords are preserved', () => {
     emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
     const parsed: VocabularyData = JSON.parse(readFileSync(join(dataDir, 'vocabulary.json'), 'utf8'));
-    expect(parsed.synonyms['TAKE']).toContain('GET');
+    expect(parsed.verbSynonyms['TAKE']).toContain('GET');
     expect(parsed.buzzwords).toContain('THE');
+  });
+
+  test('directionSynonyms are preserved', () => {
+    emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
+    const parsed: VocabularyData = JSON.parse(readFileSync(join(dataDir, 'vocabulary.json'), 'utf8'));
+    expect(parsed.directionSynonyms['NORTH']).toContain('N');
+  });
+
+  test('prepSynonyms are preserved', () => {
+    emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
+    const parsed: VocabularyData = JSON.parse(readFileSync(join(dataDir, 'vocabulary.json'), 'utf8'));
+    expect(parsed.prepSynonyms['WITH']).toContain('USING');
   });
 });
 

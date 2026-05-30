@@ -136,12 +136,12 @@ describe('extractVocabulary — TAKE synonyms', () => {
   const nodes = parseSexpr(TAKE_SYNTAX_ZIL);
   const vocab = extractVocabulary(nodes);
 
-  test('TAKE is a key in synonyms', () => {
-    expect(vocab.synonyms['TAKE']).toBeDefined();
+  test('TAKE is a key in verbSynonyms', () => {
+    expect(vocab.verbSynonyms['TAKE']).toBeDefined();
   });
 
   test('TAKE synonyms include GET, HOLD, CARRY, REMOVE, GRAB, CATCH', () => {
-    const syns = vocab.synonyms['TAKE'];
+    const syns = vocab.verbSynonyms['TAKE'];
     expect(syns).toContain('GET');
     expect(syns).toContain('HOLD');
     expect(syns).toContain('CARRY');
@@ -153,7 +153,7 @@ describe('extractVocabulary — TAKE synonyms', () => {
   test('canonical word itself is not listed as its own synonym', () => {
     // The <SYNONYM TAKE GET HOLD …> form: first atom is the canonical;
     // the rest are aliases.  TAKE should not appear in its own alias list.
-    expect(vocab.synonyms['TAKE']).not.toContain('TAKE');
+    expect(vocab.verbSynonyms['TAKE']).not.toContain('TAKE');
   });
 });
 
@@ -161,12 +161,12 @@ describe('extractVocabulary — LOOK synonyms', () => {
   const nodes = parseSexpr(LOOK_SYNTAX_ZIL);
   const vocab = extractVocabulary(nodes);
 
-  test('LOOK is a key in synonyms', () => {
-    expect(vocab.synonyms['LOOK']).toBeDefined();
+  test('LOOK is a key in verbSynonyms', () => {
+    expect(vocab.verbSynonyms['LOOK']).toBeDefined();
   });
 
   test('LOOK synonyms include L, STARE, GAZE', () => {
-    const syns = vocab.synonyms['LOOK'];
+    const syns = vocab.verbSynonyms['LOOK'];
     expect(syns).toContain('L');
     expect(syns).toContain('STARE');
     expect(syns).toContain('GAZE');
@@ -178,7 +178,7 @@ describe('extractVocabulary — DROP synonyms', () => {
   const vocab = extractVocabulary(nodes);
 
   test('DROP synonyms include DISCARD, DUMP', () => {
-    const syns = vocab.synonyms['DROP'];
+    const syns = vocab.verbSynonyms['DROP'];
     expect(syns).toContain('DISCARD');
     expect(syns).toContain('DUMP');
   });

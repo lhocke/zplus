@@ -507,16 +507,26 @@ export interface SyntaxEntryRaw {
 export type { SyntaxEntryOut as SyntaxEntry } from './syntax-normalize.js';
 
 /**
- * Aggregated vocabulary data for the parser.
+ * Aggregated vocabulary data for the parser (C2 schema).
  *
- * synonyms maps each canonical word to its aliases
- * (e.g. "TAKE" → ["GET", "HOLD", "CARRY", "REMOVE", "GRAB", "CATCH"]).
+ * The flat `synonyms` map is split into three typed tables so the parser can
+ * distinguish verb synonyms (fold before SYNTAX matching) from direction
+ * synonyms (short-circuit path) and prep synonyms (canonicalise before
+ * matching P-SPREP1/P-SPREP2 in a SyntaxEntry).
  *
- * buzzwords are filler words the parser silently drops
- * (e.g. "A", "AN", "THE", "IS").
+ * verbSynonyms   — canonical verb → alias list
+ *                  e.g. "TAKE" → ["GET", "HOLD", "CARRY", "REMOVE", "GRAB", "CATCH"]
+ * directionSynonyms — canonical direction → alias list
+ *                  e.g. "NORTH" → ["N"]
+ * prepSynonyms   — canonical prep → alias list
+ *                  e.g. "WITH" → ["USING", "THROUGH", "THRU"]
+ * buzzwords      — filler words the parser silently drops
+ *                  e.g. "A", "AN", "THE", "IS"
  */
 export interface VocabularyData {
-  readonly synonyms: Record<string, string[]>;
+  readonly verbSynonyms: Record<string, string[]>;
+  readonly directionSynonyms: Record<string, string[]>;
+  readonly prepSynonyms: Record<string, string[]>;
   readonly buzzwords: string[];
 }
 
@@ -683,15 +693,41 @@ export function extractSyntax(nodes: SNode[]): SyntaxEntryRaw[] {
   return results;
 }
 
+// ---------------------------------------------------------------------------
+// Synonym classification sets — used to categorise each SYNONYM canonical
+// into one of the three typed tables.
+//
+// Direction canonicals: declared via <DIRECTIONS ...> in gglobals.zil:5.
+// Prep canonicals: the 4 words that have SYNONYM declarations in gsyntax.zil:20-23.
+// Everything else is a verb synonym.
+// ---------------------------------------------------------------------------
+
+const DIRECTION_CANONICALS = new Set([
+  'NORTH', 'SOUTH', 'EAST', 'WEST',
+  'NE', 'NW', 'SE', 'SW',
+  'UP', 'DOWN', 'IN', 'OUT', 'LAND',
+]);
+
+const PREP_CANONICALS = new Set(['WITH', 'IN', 'ON', 'UNDER']);
+
 /**
  * Walk an array of top-level SNodes and aggregate all <SYNONYM …> and
- * <BUZZ …> forms into a VocabularyData record.
+ * <BUZZ …> forms into a VocabularyData record with three typed tables.
  *
- * <SYNONYM TAKE GET HOLD …>  → synonyms['TAKE'] = ['GET', 'HOLD', …]
+ * <SYNONYM TAKE GET HOLD …>  → verbSynonyms['TAKE'] = ['GET', 'HOLD', …]
+ * <SYNONYM NORTH N>          → directionSynonyms['NORTH'] = ['N']
+ * <SYNONYM WITH USING …>     → prepSynonyms['WITH'] = ['USING', …]
  * <BUZZ A AN THE IS …>       → buzzwords = ['A', 'AN', 'THE', 'IS', …]
+ *
+ * Note: IN appears as both a direction canonical and a prep canonical.
+ * It is classified as a prep synonym when it has synonym aliases (gsyntax.zil:21),
+ * and as a direction canonical otherwise (gglobals.zil:5). In practice both
+ * tables carry it so the parser can handle both roles.
  */
 export function extractVocabulary(nodes: SNode[]): VocabularyData {
-  const synonyms: Record<string, string[]> = {};
+  const verbSynonyms: Record<string, string[]> = {};
+  const directionSynonyms: Record<string, string[]> = {};
+  const prepSynonyms: Record<string, string[]> = {};
   const buzzSet = new Set<string>();
 
   for (const node of nodes) {
@@ -706,10 +742,32 @@ export function extractVocabulary(nodes: SNode[]): VocabularyData {
       const canonical = form.items[1];
       if (!canonical || !isAtom(canonical)) continue;
       const key = (canonical as SAtom).value;
-      if (!synonyms[key]) synonyms[key] = [];
+
+      // Collect aliases
+      const aliases: string[] = [];
       for (let j = 2; j < form.items.length; j++) {
         const n = form.items[j];
-        if (isAtom(n)) synonyms[key].push((n as SAtom).value);
+        if (isAtom(n)) aliases.push((n as SAtom).value);
+      }
+
+      // Classify into the appropriate typed table.
+      // Preposition check comes before direction check because IN is both;
+      // when IN has synonym aliases (gsyntax.zil:21) it is a prep, not a direction.
+      if (PREP_CANONICALS.has(key)) {
+        if (!prepSynonyms[key]) prepSynonyms[key] = [];
+        for (const a of aliases) {
+          if (!prepSynonyms[key].includes(a)) prepSynonyms[key].push(a);
+        }
+      } else if (DIRECTION_CANONICALS.has(key)) {
+        if (!directionSynonyms[key]) directionSynonyms[key] = [];
+        for (const a of aliases) {
+          if (!directionSynonyms[key].includes(a)) directionSynonyms[key].push(a);
+        }
+      } else {
+        if (!verbSynonyms[key]) verbSynonyms[key] = [];
+        for (const a of aliases) {
+          if (!verbSynonyms[key].includes(a)) verbSynonyms[key].push(a);
+        }
       }
     } else if (tag === 'BUZZ') {
       for (let j = 1; j < form.items.length; j++) {
@@ -719,7 +777,7 @@ export function extractVocabulary(nodes: SNode[]): VocabularyData {
     }
   }
 
-  return { synonyms, buzzwords: Array.from(buzzSet) };
+  return { verbSynonyms, directionSynonyms, prepSynonyms, buzzwords: Array.from(buzzSet) };
 }
 
 // ---------------------------------------------------------------------------
@@ -769,25 +827,56 @@ if (isMain) {
 
     // Vocabulary (synonyms + buzzwords) across all four files
     const actionsNodes = parseSexpr(read('1actions.zil'));
-    const vocab = {
-      synonyms: {} as Record<string, string[]>,
-      buzzwords: [] as string[],
+    const vocab: {
+      verbSynonyms: Record<string, string[]>;
+      directionSynonyms: Record<string, string[]>;
+      prepSynonyms: Record<string, string[]>;
+      buzzwords: string[];
+    } = {
+      verbSynonyms: {},
+      directionSynonyms: {},
+      prepSynonyms: {},
+      buzzwords: [],
     };
-    for (const nodes of [dungeonNodes, actionsNodes, syntaxNodes, gverbsNodes]) {
-      const v = extractVocabulary(nodes);
-      for (const [k, aliases] of Object.entries(v.synonyms)) {
-        if (!vocab.synonyms[k]) vocab.synonyms[k] = [];
+
+    function mergeTable(
+      target: Record<string, string[]>,
+      source: Record<string, string[]>,
+    ): void {
+      for (const [k, aliases] of Object.entries(source)) {
+        if (!target[k]) target[k] = [];
         for (const a of aliases) {
-          if (!vocab.synonyms[k].includes(a)) vocab.synonyms[k].push(a);
+          if (!target[k].includes(a)) target[k].push(a);
         }
       }
+    }
+
+    for (const nodes of [dungeonNodes, actionsNodes, syntaxNodes, gverbsNodes]) {
+      const v = extractVocabulary(nodes);
+      mergeTable(vocab.verbSynonyms, v.verbSynonyms);
+      mergeTable(vocab.directionSynonyms, v.directionSynonyms);
+      mergeTable(vocab.prepSynonyms, v.prepSynonyms);
       for (const w of v.buzzwords) {
         if (!vocab.buzzwords.includes(w)) vocab.buzzwords.push(w);
       }
     }
+
+    // GIVE→HAND: gsyntax.zil:234-235 wraps <SYNONYM GIVE HAND> in a
+    // <COND (<N==? ,ZORK-NUMBER 3> ...)> block.  The extractor only processes
+    // top-level SYNONYM forms, so this alias is never seen.  The condition
+    // N==? ZORK-NUMBER 3 means "if ZORK-NUMBER is not 3", which is always
+    // true for Zork I (ZORK-NUMBER = 1).  Add it explicitly here.
+    if (!vocab.verbSynonyms['GIVE']) vocab.verbSynonyms['GIVE'] = [];
+    if (!vocab.verbSynonyms['GIVE'].includes('HAND')) {
+      vocab.verbSynonyms['GIVE'].push('HAND');
+    }
+
+    const verbCount = Object.keys(vocab.verbSynonyms).length;
+    const dirCount = Object.keys(vocab.directionSynonyms).length;
+    const prepCount = Object.keys(vocab.prepSynonyms).length;
     console.log(
-      `  vocabulary: ${Object.keys(vocab.synonyms).length} synonym groups, ` +
-      `${vocab.buzzwords.length} buzzwords`
+      `  vocabulary: ${verbCount} verb groups, ${dirCount} direction groups, ` +
+      `${prepCount} prep groups, ${vocab.buzzwords.length} buzzwords`
     );
 
     emitData(objects, syntax, vocab, { dataDir, domainDir });
