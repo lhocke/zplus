@@ -95,10 +95,24 @@ export function syntaxCheck(
     // gparser.zil:717 — ncn > num: too many nouns for this form; skip.
     if (ncn > num) continue;
 
-    // gparser.zil:718-722 — DRIVE1 accumulation:
-    // num >= 1, ncn === 0, AND (no prep1 given OR prep1 matches form.prep1).
+    // gparser.zil:718-722 — DRIVE1 accumulation.
+    //
+    // ZIL condition (lines 718-721):
+    //   <AND <NOT <L? .NUM 1>>          ; num >= 1
+    //        <ZERO? ,P-NCN>              ; ncn === 0
+    //        <OR <ZERO? <GET ,P-ITBL ,P-PREP1>>   ; no prep typed (P-PREP1==0)
+    //            <EQUAL? .PREP <GETB .SYN ,P-SPREP1>>>>  ; OR typed prep matches form's prep
+    //
+    // The OR's first arm fires when NO prep was typed (prep1===undefined in TS).
+    // In that case ANY form with num>=1 qualifies for DRIVE1, regardless of
+    // the form's own prep1.  The old implementation gated on prepEq(form.prep1, prep1),
+    // which only matches when BOTH are undefined — excluding forms with a prep1 when
+    // the player typed a bare verb.  Concrete example: bare LISTEN has no num=0 form;
+    // ZIL sets DRIVE1 to the LISTEN-TO form and emits the orphan prompt; the old
+    // implementation returned drive1=undefined and emitted the wrong response.
+    //
     // drive1 = form  (LAST qualifying wins per ZIL's unconditional SET)
-    if (num >= 1 && ncn === 0 && prepEq(form.prep1, prep1)) {
+    if (num >= 1 && ncn === 0 && (prep1 === undefined || prepEq(form.prep1, prep1))) {
       drive1 = form;
       continue;
     }
@@ -120,6 +134,18 @@ export function syntaxCheck(
     }
   }
 
-  // Loop exhausted — hand DRIVE state to C4.
+  // gparser.zil:730-735 — loop exhausted.
+  //
+  // ZIL: <COND (<OR .DRIVE1 .DRIVE2> <RETURN>)    ; hand control to post-loop GWIM block
+  //             (T <TELL "That sentence isn't one I recognize." CR> <RFALSE>)>
+  //
+  // If NEITHER drive was set, ZIL prints the verbatim message and RFALSE immediately,
+  // BEFORE ever reaching the GWIM/orphan block.  We return kind:'fail' here so
+  // parser.ts can propagate it verbatim without falling through to the C4 bridge.
+  if (drive1 === undefined && drive2 === undefined) {
+    return { kind: 'fail', message: "That sentence isn't one I recognize." };
+  }
+
+  // At least one drive is set — hand DRIVE state to C4 for GWIM/orphan resolution.
   return { kind: 'needGwim', drive1, drive2 };
 }

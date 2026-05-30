@@ -432,13 +432,20 @@ export class Parser {
     let preAction: string | undefined;
     let matchedSyntax: import('./types.js').SyntaxEntry | undefined;
 
+    if (syntaxResult.kind === 'fail') {
+      // gparser.zil:734 — "That sentence isn't one I recognize." (and no-verb fail).
+      // Propagate verbatim — no C4 bridge, no fallback.
+      return { kind: 'fail', message: syntaxResult.message };
+    }
+
     if (syntaxResult.kind === 'matched') {
       action = syntaxResult.entry.action;
       preAction = syntaxResult.entry.preAction;
       matchedSyntax = syntaxResult.entry;
     } else {
-      // C4 BRIDGE: no matched form — synthesize a fallback action string
-      // so the old engine dispatch path continues to work until C4 lands.
+      // syntaxResult.kind === 'needGwim': at least one drive is set.
+      // C4 BRIDGE: synthesize a fallback action string so the old engine
+      // dispatch path continues to work until C4 lands.
       // This preserves backward compatibility per §6 risk note.
       action = 'V-' + canonical.toUpperCase();
       preAction = undefined;

@@ -12,12 +12,14 @@
  *   - TAKE 1-obj and 2-obj forms
  *   - CLIMB UP first-match-wins (two consecutive UP forms)
  *   - DRIVE1 fallback (bare verb, ncn=0, 1-obj form)
+ *   - DRIVE1 bare-verb + form-has-prep1 path (LISTEN/TALK/SEND etc.) — ZIL:720
  *   - DRIVE2 fallback (two-obj verb, ncn=1, matching prep1)
  *   - DRIVE last-wins (ZIL divergence from spec pseudocode)
  *   - No-verb fail (verbatim ZIL string)
+ *   - Recognize fail ("That sentence isn't one I recognize.") — ZIL:734
  *   - prepEq direct tests
  *   - Too-many-nouns (ncn=2 against num=1 form → skipped)
- *   - Unknown verb → needGwim with no drives
+ *   - Unknown verb → recognize fail (empty form list, no drives)
  */
 
 import { describe, test, expect } from 'vitest';
@@ -115,12 +117,16 @@ describe('syntaxCheck() — no-verb fail', () => {
 // ---------------------------------------------------------------------------
 
 describe('syntaxCheck() — unknown verb', () => {
-  test('unknown verb → needGwim with no drives', () => {
+  test('unknown verb (empty form list, no drives) → recognize fail — gparser.zil:734', () => {
+    // An unknown verb has no syntax forms. The loop does not execute, leaving
+    // both drives undefined. ZIL's loop-exit COND fires "That sentence isn't one
+    // I recognize." and RFALSEs. We return kind:'fail' with the verbatim message.
+    // (In normal play, vocabulary lookup in parser.ts catches the unknown word
+    // before syntaxCheck is called; this exercises the empty-form-list edge case.)
     const r = syntaxCheck('FROBULATE', 0);
-    expect(r.kind).toBe('needGwim');
-    if (r.kind === 'needGwim') {
-      expect(r.drive1).toBeUndefined();
-      expect(r.drive2).toBeUndefined();
+    expect(r.kind).toBe('fail');
+    if (r.kind === 'fail') {
+      expect(r.message).toBe("That sentence isn't one I recognize.");
     }
   });
 });
@@ -301,23 +307,142 @@ describe('syntaxCheck() — DRIVE fallbacks', () => {
     }
   });
 
-  test('LOOK with ncn=1 and no prep → needGwim (no 1-obj no-prep LOOK form)', () => {
+  test('LOOK with ncn=1 and no prep → recognize fail (no 1-obj no-prep LOOK form, no drives)', () => {
     // LOOK has no 1-obj form with prep1=null. All 1-obj LOOK forms have a prep.
     // ncn=1, no prep: ncn(1) > num(0) skips the 0-obj form; no 1-obj no-prep form exists.
-    // 2-obj forms have ncn(1) < num(2) so not skipped, but ncn=1 with num=2 → drive2.
-    // Result: needGwim.
+    // 2-obj forms: drive2 needs prepEq(form.prep1='AT', undefined) → mismatch.
+    // drive1 needs ncn===0 → not met (ncn=1).
+    // No drives set → gparser.zil:734: "That sentence isn't one I recognize."
     const r = syntaxCheck('LOOK', 1, undefined);
-    expect(r.kind).toBe('needGwim');
+    expect(r.kind).toBe('fail');
+    if (r.kind === 'fail') {
+      expect(r.message).toBe("That sentence isn't one I recognize.");
+    }
   });
 
-  test('unknown form with no drive candidates → needGwim with both drives undefined', () => {
+  test('unrecognized form (verb exists but prep mismatch, ncn=1) → recognize fail', () => {
     // A verb that exists but the form (wrong prep) doesn't match anything.
-    // LOOK with prep1=FROBNICATE doesn't match any form.
+    // LOOK with ncn=1 prep1=FROBNICATE: no form matches, no drives can be set
+    // (drive1 needs ncn===0, drive2 needs prepEq(form.prep1, 'FROBNICATE') which
+    // fails for all LOOK 2-obj forms whose prep1=AT).
+    // Result: gparser.zil:734 recognize fail.
     const r = syntaxCheck('LOOK', 1, 'FROBNICATE');
+    expect(r.kind).toBe('fail');
+    if (r.kind === 'fail') {
+      expect(r.message).toBe("That sentence isn't one I recognize.");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Section 8b: DRIVE1 bare-verb + form-has-prep1 path — gparser.zil:720
+//
+// ZIL DRIVE1 condition (lines 718-721):
+//   <AND num>=1  ncn===0
+//        <OR <ZERO? P-PREP1>          ; no prep typed → ANY form qualifies
+//            <EQUAL? typed-prep form-prep>>>
+//
+// For verbs with NO num=0 form and ALL forms carrying a non-null prep1 (LISTEN,
+// TALK, SEND, BLOW, KNOCK, LEAN, PUMP), a bare-verb input (ncn=0, no prep) must
+// still land drive1.  The old implementation gated on prepEq(form.prep1, prep1)
+// which only matches when BOTH are undefined, silently excluding all prep-carrying
+// forms.  Concrete fix: `prep1 === undefined || prepEq(form.prep1, prep1)`.
+// ---------------------------------------------------------------------------
+
+describe('syntaxCheck() — DRIVE1 bare-verb + form-has-prep1 (gparser.zil:720)', () => {
+  test('bare LISTEN (ncn=0, no prep) → needGwim with drive1 set to last LISTEN form', () => {
+    // LISTEN has no num=0 form; all forms have prep1 (TO, FOR).
+    // ZIL: P-PREP1==0 → OR fires → DRIVE1 set for both TO and FOR forms; last=FOR form.
+    // drive1 must be defined (so C4 can emit "What do you want to listen for?").
+    const listenForms = getForms('LISTEN');
+    expect(listenForms.length).toBeGreaterThan(0);
+    // All LISTEN forms have a non-null prep1.
+    expect(listenForms.every(f => f.prep1 !== undefined)).toBe(true);
+
+    const r = syntaxCheck('LISTEN', 0);
     expect(r.kind).toBe('needGwim');
     if (r.kind === 'needGwim') {
-      expect(r.drive1).toBeUndefined();
-      expect(r.drive2).toBeUndefined();
+      expect(r.drive1).toBeDefined();
+      // Last-wins: drive1 is the last LISTEN form (prep1=FOR per gsyntax.zil).
+      const lastListenForm = listenForms[listenForms.length - 1]!;
+      expect(r.drive1).toBe(lastListenForm);
+      expect(r.drive1!.prep1).toBe('FOR');
+    }
+  });
+
+  test('bare TALK (ncn=0, no prep) → needGwim with drive1 set to TALK TO form', () => {
+    // TALK has only one form: TALK TO OBJECT = V-TELL. No num=0 form.
+    // Bare TALK: drive1 must be the TALK-TO form so C4 can orphan "...to?".
+    const talkForms = getForms('TALK');
+    expect(talkForms.length).toBeGreaterThan(0);
+    expect(talkForms.every(f => f.prep1 !== undefined)).toBe(true);
+
+    const r = syntaxCheck('TALK', 0);
+    expect(r.kind).toBe('needGwim');
+    if (r.kind === 'needGwim') {
+      expect(r.drive1).toBeDefined();
+      expect(r.drive1!.prep1).toBe('TO');
+    }
+  });
+
+  test('bare SEND (ncn=0, no prep) → needGwim with drive1 set (SEND FOR form)', () => {
+    const sendForms = getForms('SEND');
+    expect(sendForms.length).toBeGreaterThan(0);
+    const r = syntaxCheck('SEND', 0);
+    expect(r.kind).toBe('needGwim');
+    if (r.kind === 'needGwim') {
+      expect(r.drive1).toBeDefined();
+    }
+  });
+
+  test('LISTEN TO X (ncn=1, prep1=TO) → full match, not DRIVE1', () => {
+    // With prep typed: DRIVE1 gate's second OR arm fires only if typed-prep matches.
+    // prep1=TO, form.prep1=TO → full-match path (not drive1 accumulation).
+    const r = syntaxCheck('LISTEN', 1, 'TO');
+    expect(r.kind).toBe('matched');
+    if (r.kind === 'matched') {
+      expect(r.entry.prep1).toBe('TO');
+      expect(r.entry.action).toBe('V-LISTEN');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Section 8c: Recognize fail — gparser.zil:730-734
+//
+// When the loop exhausts with NO drive set (neither drive1 nor drive2), ZIL
+// prints "That sentence isn't one I recognize." and RFALSE — before any
+// GWIM/orphan logic.  syntaxCheck() returns kind:'fail' with the verbatim
+// message so parser.ts can propagate it without the C4 fallback bridge.
+// ---------------------------------------------------------------------------
+
+describe('syntaxCheck() — recognize fail (gparser.zil:734)', () => {
+  test('verbatim message string for no-drive loop exhaustion', () => {
+    // LOOK with ncn=1 prep=IN full-matches V-LOOK-INSIDE; with ncn=2 no-prep
+    // there are no drives (drive1 needs ncn=0; drive2 needs ncn=1; no full match).
+    const r = syntaxCheck('LOOK', 2, undefined, undefined);
+    expect(r.kind).toBe('fail');
+    if (r.kind === 'fail') {
+      expect(r.message).toBe("That sentence isn't one I recognize.");
+    }
+  });
+
+  test('ncn=2 with mismatched preps for known verb → recognize fail, not no-verb fail', () => {
+    // TAKE has no 2-obj form with prep2=WITH; drive1/drive2 both unset → recognize fail.
+    const r = syntaxCheck('TAKE', 2, undefined, 'WITH');
+    expect(r.kind).toBe('fail');
+    if (r.kind === 'fail') {
+      expect(r.message).toBe("That sentence isn't one I recognize.");
+      // Distinct from no-verb fail ("There was no verb in that sentence!").
+      expect(r.message).not.toContain('no verb');
+    }
+  });
+
+  test('ncn=2 LOOK IN WITH → recognize fail (LOOK has no 2-obj IN form)', () => {
+    const r = syntaxCheck('LOOK', 2, 'IN', 'WITH');
+    expect(r.kind).toBe('fail');
+    if (r.kind === 'fail') {
+      expect(r.message).toBe("That sentence isn't one I recognize.");
     }
   });
 });
@@ -332,24 +457,19 @@ describe('syntaxCheck() — DRIVE fallbacks', () => {
 
 describe('syntaxCheck() — DRIVE last-wins (ZIL gparser.zil:722/725)', () => {
   test('TAKE ncn=0 drive1: last qualifying form wins, not first', () => {
-    // TAKE has multiple forms eligible for drive1 when ncn=0 (all num>=1 with prep1=null).
-    // The 1-obj no-prep form (V-TAKE, form[0]) AND the 2-obj forms with prep1=null
-    // (prep2=FROM, OFF, OUT — forms 5,6,7 in 0-indexed) are all drive1-eligible
-    // (num>=1, ncn=0, prepEq(form.prep1, undefined) → both undefined).
-    // ZIL last-wins means drive1 is the LAST drive1-eligible form, not the first.
+    // ZIL DRIVE1 gate (gparser.zil:718-722): num>=1 AND ncn===0 AND
+    // (P-PREP1==0 OR typed-prep matches form-prep).
+    // For bare TAKE (ncn=0, no prep typed = prep1===undefined): P-PREP1 is 0,
+    // so the OR's first arm fires for ALL num>=1 forms regardless of form.prep1.
+    // ALL 8 TAKE forms are DRIVE1-eligible. Last-wins → drive1 = form 7 (prep2=FROM).
     const takeForms = getForms('TAKE');
-    const drive1EligibleForms = takeForms.filter(
-      f => f.numObjects >= 1 && f.prep1 === undefined
-    );
-    // There should be multiple drive1-eligible forms (1-obj no-prep + 2-obj no-prep).
-    expect(drive1EligibleForms.length).toBeGreaterThan(1);
+    // The last TAKE form in declaration order (all 8 are eligible, last wins).
+    const lastTakeForm = takeForms[takeForms.length - 1]!;
 
     const r = syntaxCheck('TAKE', 0);
     expect(r.kind).toBe('needGwim');
     if (r.kind === 'needGwim') {
-      // Last-wins: drive1 should be the LAST drive1-eligible form.
-      const lastEligible = drive1EligibleForms[drive1EligibleForms.length - 1]!;
-      expect(r.drive1).toBe(lastEligible); // object-identity
+      expect(r.drive1).toBe(lastTakeForm); // object-identity, last-wins
     }
   });
 });
@@ -359,22 +479,19 @@ describe('syntaxCheck() — DRIVE last-wins (ZIL gparser.zil:722/725)', () => {
 // ---------------------------------------------------------------------------
 
 describe('syntaxCheck() — too-many-nouns', () => {
-  test('ncn=2 against a num=1 form → that form is skipped (ncn > num → continue)', () => {
+  test('ncn=2 against a num=1 form → that form is skipped; no matching 2-obj form → recognize fail', () => {
     // If LOOK is given ncn=2 but no matching 2-obj form exists for given preps,
-    // all 1-obj forms should be skipped, returning needGwim.
+    // all 1-obj forms should be skipped.
     // LOOK has exactly one 2-obj form: AT + WITH → V-READ.
-    // With ncn=2 and no prep → should not match that form (prep1 mismatch).
-    const r = syntaxCheck('LOOK', 2, undefined, undefined);
-    // The 2-obj form (AT+WITH) has prep1=AT which != undefined → not matched.
+    // With ncn=2 and no prep → the 2-obj form has prep1=AT which != undefined → not matched.
     // Also ncn=2 > num=0 for the 0-obj form, and ncn=2 > num=1 for 1-obj forms.
-    // So no full match, no drive (ncn>num for all num<=1, and drive1/drive2
-    // conditions don't apply when ncn=2).
-    // Actually: drive1 needs num>=1 AND ncn===0. ncn=2 → drive1 never set.
-    // drive2 needs num===2 AND ncn===1. ncn=2 → drive2 never set.
-    expect(r.kind).toBe('needGwim');
-    if (r.kind === 'needGwim') {
-      expect(r.drive1).toBeUndefined();
-      expect(r.drive2).toBeUndefined();
+    // drive1 needs ncn===0. ncn=2 → drive1 never set.
+    // drive2 needs ncn===1. ncn=2 → drive2 never set.
+    // No drives → gparser.zil:734: "That sentence isn't one I recognize."
+    const r = syntaxCheck('LOOK', 2, undefined, undefined);
+    expect(r.kind).toBe('fail');
+    if (r.kind === 'fail') {
+      expect(r.message).toBe("That sentence isn't one I recognize.");
     }
   });
 
