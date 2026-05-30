@@ -9,8 +9,7 @@ import { Parser } from './parser/parser.js';
 import { executeVerb } from './verbs/index.js';
 import { Scoring } from './scoring.js';
 import { lookupPer, lookupPreAction } from '../actions/registry.js';
-import { M_BEG, M_ENTER, M_LOOK } from './messages.js';
-// M_END is imported in B2 (runMEnd body); the constant is defined in messages.ts.
+import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
 
 // ---------------------------------------------------------------------------
 // Public types — frozen contracts from the implementation plan.
@@ -84,6 +83,17 @@ export class Game {
   private readonly scoring: Scoring;
   private moveCount = 0;
 
+  /**
+   * Stashed command context for M-END (gmain.zil:151–161).
+   * LIVING-ROOM-FCN's M-END branch reads VERB?, PRSO, PRSI to determine whether
+   * a treasure was deposited (1actions.zil:478–482), so M-END's ActionContext
+   * must carry the JUST-EXECUTED command's verb/dobj/iobj, not the room defaults.
+   */
+  private lastVerb: string = 'look';
+  private lastDobj: GameObject | undefined = undefined;
+  private lastIobj: GameObject | undefined = undefined;
+  private lastPrep: string | undefined = undefined;
+
   /** Room ids the player has visited at least once. */
   private readonly visited = new Set<ObjectId>();
 
@@ -145,6 +155,15 @@ export class Game {
       // Resolve objects from ids (single-object callers use dobjIds?.[0]).
       const dobj = cmd.dobjIds?.[0] !== undefined ? this.world.get(cmd.dobjIds[0]!) : undefined;
       const iobj = cmd.iobjIds?.[0] !== undefined ? this.world.get(cmd.iobjIds[0]!) : undefined;
+
+      // Stash the just-resolved command for M-END (gmain.zil:151–161).
+      // LIVING-ROOM-FCN's M-END branch reads VERB?/PRSO/PRSI (1actions.zil:478–482)
+      // to determine if a treasure was deposited; the stash lets runMEnd carry
+      // these values in its ActionContext.
+      this.lastVerb = cmd.verb;
+      this.lastDobj = dobj;
+      this.lastIobj = iobj;
+      this.lastPrep = cmd.prep;
 
       // --- Action-dispatch chain (faithful to PERFORM in gmain.zil) ----------
       // Each step may RTRUE (return true) to short-circuit the remainder.  The
@@ -225,11 +244,20 @@ export class Game {
       }
 
       // ---- M-END (gmain.zil:151–161) ----------------------------------------
-      // B2 wires the full runMEnd body; this structural call site is placed here
-      // so B2 is a drop-in.  M-END fires on EVERY non-fatal turn (unconditional
-      // post-turn room callback), on the CURRENT room (post-GOTO).
-      // Wire is intentionally a no-op stub until B2 lands.
-      // (The M_END import is already live in messages.ts.)
+      // Fires on EVERY non-fatal turn — unconditional post-turn room callback on
+      // the CURRENT room (post-GOTO).  M-FATAL is already handled above (break).
+      // The stashed lastVerb/lastDobj/lastIobj/lastPrep carry the just-executed
+      // command so M-END handlers (e.g. LIVING-ROOM-FCN) can read VERB?/PRSO/PRSI.
+      const mEndOut = this.runMEnd(this.here);
+      if (mEndOut.length > 0) {
+        // Append M-END output to the most recent segment's output (same turn).
+        const idx = outputs.length - 1;
+        if (idx >= 0) {
+          outputs[idx] = [outputs[idx], mEndOut].filter(s => s.length > 0).join('\n');
+        } else {
+          outputs.push(mEndOut);
+        }
+      }
 
       // Keep pronoun state up to date.
       this.parser.bindPronouns(cmd);
@@ -496,6 +524,41 @@ export class Game {
     const buf: string[] = [];
     const ctx = this.makeContext(
       room, 'look', undefined, undefined, undefined, M_LOOK,
+      (text) => buf.push(text),
+    );
+    room.handler(ctx);
+    return buf.join('\n');
+  }
+
+  /**
+   * Run the room's M-END callback after each non-fatal turn (gmain.zil:151–161).
+   *
+   * Called on the CURRENT room (this.here) AFTER any GOTO that fired during the
+   * chain — so "go north" fires M-END on the NEW room, not the starting room.
+   * Passes the just-executed command's verb/dobj/iobj/prep so that M-END
+   * handlers (e.g. LIVING-ROOM-FCN) can read VERB?/PRSO/PRSI exactly as ZIL
+   * does (1actions.zil:478–482).
+   *
+   * Key differences from onRoomEntered (M-ENTER) and runMLook (M-LOOK):
+   *   - rarg = M_END (6) instead of M_ENTER (2) or M_LOOK (3)
+   *   - verb/dobj/iobj carry the just-executed command (NOT 'walk'/'look')
+   *   - this.here is NOT reassigned (room entry already happened)
+   *
+   * The return value of the handler is currently ignored (the chain result was
+   * already checked for M-FATAL before reaching here).  LIVING-ROOM-FCN returns
+   * RFALSE; per spec §2 open question #4, no Zork I M-END handler is believed
+   * to RFATAL, so the return value is not re-checked for M-FATAL here.
+   */
+  private runMEnd(room: Room): string {
+    if (room.handler === undefined) return '';
+    const buf: string[] = [];
+    const ctx = this.makeContext(
+      room,
+      this.lastVerb,
+      this.lastDobj,
+      this.lastIobj,
+      this.lastPrep,
+      M_END,
       (text) => buf.push(text),
     );
     room.handler(ctx);
