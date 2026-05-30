@@ -47,6 +47,9 @@ const FLAG_NAME_MAP: Record<string, Flag> = {
   NonDescript:  Flag.NonDescript,
   Searchable:   Flag.Searchable,
   Surface:      Flag.Surface,
+  Actor:        Flag.Actor,
+  Tool:         Flag.Tool,
+  TryTake:      Flag.TryTake,
 };
 
 function buildObject(data: ObjectData): GameObject {

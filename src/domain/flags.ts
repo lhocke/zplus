@@ -23,6 +23,12 @@ export enum Flag {
   NonDescript,
   Searchable,
   Surface,
+  /** ACTORBIT — object is an NPC/actor; used by GWIM (FIND ACTORBIT) for attack/give. */
+  Actor,
+  /** TOOLBIT — object is a tool/instrument; used by GWIM (FIND TOOLBIT) for with-clauses. */
+  Tool,
+  /** TRYTAKEBIT — parser auto-takes the object before the action if not already held. */
+  TryTake,
 }
 
 // Capability predicates — thin wrappers so call sites read as intent, not
@@ -56,3 +62,6 @@ export const isLand         = (o: FlagHost): boolean => o.has(Flag.Land);
 export const isNonDescript  = (o: FlagHost): boolean => o.has(Flag.NonDescript);
 export const isSearchable   = (o: FlagHost): boolean => o.has(Flag.Searchable);
 export const isSurface      = (o: FlagHost): boolean => o.has(Flag.Surface);
+export const isActor        = (o: FlagHost): boolean => o.has(Flag.Actor);
+export const isTool         = (o: FlagHost): boolean => o.has(Flag.Tool);
+export const isTryTake      = (o: FlagHost): boolean => o.has(Flag.TryTake);

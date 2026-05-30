@@ -166,6 +166,7 @@
     "kind": "thing",
     "desc": "quantity of water",
     "flags": [
+      "TryTake",
       "Takeable",
       "Drink"
     ],
@@ -223,7 +224,7 @@
     "kind": "actor",
     "desc": "number of ghosts",
     "flags": [
-      "Takeable",
+      "Actor",
       "NonDescript"
     ],
     "props": {},
@@ -267,7 +268,7 @@
     "kind": "thing",
     "desc": "basket",
     "flags": [
-      "Takeable"
+      "TryTake"
     ],
     "props": {},
     "synonyms": [
@@ -288,7 +289,7 @@
     "desc": "basket",
     "flags": [
       "Transparent",
-      "Takeable",
+      "TryTake",
       "Container",
       "Open"
     ],
@@ -332,7 +333,8 @@
     "kind": "actor",
     "desc": "bat",
     "flags": [
-      "Takeable"
+      "Actor",
+      "TryTake"
     ],
     "props": {},
     "synonyms": [
@@ -369,7 +371,7 @@
     "kind": "thing",
     "desc": "red hot brass bell",
     "flags": [
-      "Takeable"
+      "TryTake"
     ],
     "props": {},
     "synonyms": [
@@ -390,6 +392,7 @@
     "desc": "bloody axe",
     "flags": [
       "Weapon",
+      "TryTake",
       "Takeable",
       "NonDescript"
     ],
@@ -413,7 +416,7 @@
     "flags": [
       "NonDescript",
       "Turnable",
-      "Takeable"
+      "TryTake"
     ],
     "props": {},
     "synonyms": [
@@ -433,7 +436,7 @@
     "desc": "green bubble",
     "flags": [
       "NonDescript",
-      "Takeable"
+      "TryTake"
     ],
     "props": {},
     "synonyms": [
@@ -653,7 +656,7 @@
     "flags": [
       "Container",
       "Open",
-      "Takeable",
+      "TryTake",
       "Sacred"
     ],
     "props": {},
@@ -749,7 +752,7 @@
       "Transparent",
       "Container",
       "NonDescript",
-      "Takeable",
+      "TryTake",
       "Searchable"
     ],
     "props": {
@@ -770,7 +773,7 @@
     "desc": "carpet",
     "flags": [
       "NonDescript",
-      "Takeable"
+      "TryTake"
     ],
     "props": {},
     "synonyms": [
@@ -790,6 +793,7 @@
     "desc": "chalice",
     "flags": [
       "Takeable",
+      "TryTake",
       "Container"
     ],
     "props": {
@@ -861,8 +865,9 @@
     "kind": "actor",
     "desc": "cyclops",
     "flags": [
-      "Takeable",
-      "NonDescript"
+      "Actor",
+      "NonDescript",
+      "TryTake"
     ],
     "props": {
       "STRENGTH": 10000
@@ -885,7 +890,7 @@
     "desc": "dam",
     "flags": [
       "NonDescript",
-      "Takeable"
+      "TryTake"
     ],
     "props": {},
     "synonyms": [
@@ -1085,7 +1090,8 @@
     "kind": "thing",
     "desc": "hand-held air pump",
     "flags": [
-      "Takeable"
+      "Takeable",
+      "Tool"
     ],
     "props": {},
     "synonyms": [
@@ -1150,7 +1156,8 @@
     "desc": "nasty knife",
     "flags": [
       "Takeable",
-      "Weapon"
+      "Weapon",
+      "TryTake"
     ],
     "props": {},
     "synonyms": [
@@ -1171,7 +1178,7 @@
     "kind": "thing",
     "desc": "skeleton",
     "flags": [
-      "Takeable",
+      "TryTake",
       "NonDescript"
     ],
     "props": {},
@@ -1326,7 +1333,7 @@
     "flags": [
       "Container",
       "NonDescript",
-      "Takeable"
+      "TryTake"
     ],
     "props": {
       "CAPACITY": 50
@@ -1375,7 +1382,7 @@
     "desc": "small mailbox",
     "flags": [
       "Container",
-      "Takeable"
+      "TryTake"
     ],
     "props": {
       "CAPACITY": 10
@@ -1419,7 +1426,7 @@
     "kind": "thing",
     "desc": "mirror",
     "flags": [
-      "Takeable",
+      "TryTake",
       "NonDescript"
     ],
     "props": {},
@@ -1437,7 +1444,7 @@
     "kind": "thing",
     "desc": "mirror",
     "flags": [
-      "Takeable",
+      "TryTake",
       "NonDescript"
     ],
     "props": {},
@@ -1505,7 +1512,8 @@
     "kind": "thing",
     "desc": "small piece of vitreous slag",
     "flags": [
-      "Takeable"
+      "Takeable",
+      "TryTake"
     ],
     "props": {
       "SIZE": 10
@@ -1527,7 +1535,7 @@
     "desc": "pile of bodies",
     "flags": [
       "NonDescript",
-      "Takeable"
+      "TryTake"
     ],
     "props": {},
     "synonyms": [
@@ -1547,7 +1555,8 @@
     "desc": "pile of leaves",
     "flags": [
       "Takeable",
-      "Burned"
+      "Burned",
+      "TryTake"
     ],
     "props": {
       "SIZE": 25
@@ -1757,7 +1766,8 @@
     "desc": "rope",
     "flags": [
       "Takeable",
-      "Sacred"
+      "Sacred",
+      "TryTake"
     ],
     "props": {
       "SIZE": 10
@@ -1780,7 +1790,9 @@
     "desc": "rusty knife",
     "flags": [
       "Takeable",
-      "Weapon"
+      "TryTake",
+      "Weapon",
+      "Tool"
     ],
     "props": {
       "SIZE": 20
@@ -1839,7 +1851,8 @@
     "kind": "thing",
     "desc": "screwdriver",
     "flags": [
-      "Takeable"
+      "Takeable",
+      "Tool"
     ],
     "props": {},
     "synonyms": [
@@ -1858,7 +1871,8 @@
     "kind": "thing",
     "desc": "skeleton key",
     "flags": [
-      "Takeable"
+      "Takeable",
+      "Tool"
     ],
     "props": {
       "SIZE": 10
@@ -1876,7 +1890,8 @@
     "kind": "thing",
     "desc": "shovel",
     "flags": [
-      "Takeable"
+      "Takeable",
+      "Tool"
     ],
     "props": {
       "SIZE": 15
@@ -1959,7 +1974,7 @@
     "kind": "thing",
     "desc": "large bag",
     "flags": [
-      "Takeable",
+      "TryTake",
       "NonDescript"
     ],
     "props": {},
@@ -1979,6 +1994,7 @@
     "desc": "stiletto",
     "flags": [
       "Weapon",
+      "TryTake",
       "Takeable",
       "NonDescript"
     ],
@@ -2043,7 +2059,8 @@
     "desc": "sword",
     "flags": [
       "Takeable",
-      "Weapon"
+      "Weapon",
+      "TryTake"
     ],
     "props": {
       "SIZE": 30,
@@ -2118,10 +2135,11 @@
     "kind": "actor",
     "desc": "thief",
     "flags": [
-      "Takeable",
+      "Actor",
       "Invisible",
       "Container",
-      "Open"
+      "Open",
+      "TryTake"
     ],
     "props": {
       "STRENGTH": 5
@@ -2221,8 +2239,9 @@
     "kind": "actor",
     "desc": "troll",
     "flags": [
-      "Takeable",
-      "Open"
+      "Actor",
+      "Open",
+      "TryTake"
     ],
     "props": {
       "STRENGTH": 2
@@ -2293,7 +2312,8 @@
     "kind": "thing",
     "desc": "viscous material",
     "flags": [
-      "Takeable"
+      "Takeable",
+      "Tool"
     ],
     "props": {
       "SIZE": 6
@@ -2399,7 +2419,8 @@
     "kind": "thing",
     "desc": "wrench",
     "flags": [
-      "Takeable"
+      "Takeable",
+      "Tool"
     ],
     "props": {
       "SIZE": 10

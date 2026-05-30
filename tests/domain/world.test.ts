@@ -51,7 +51,10 @@ describe('World.fromData — registry and containment', () => {
   it('flags are hydrated from data', () => {
     const mailbox = world.get('MAILBOX');
     expect(mailbox!.has(Flag.Container)).toBe(true);
-    expect(mailbox!.has(Flag.Takeable)).toBe(true);
+    // MAILBOX ZIL: (FLAGS CONTBIT TRYTAKEBIT) — no TAKEBIT, so Takeable is NOT set;
+    // TryTake is set (TRYTAKEBIT → Flag.TryTake per C4 schema).
+    expect(mailbox!.has(Flag.TryTake)).toBe(true);
+    expect(mailbox!.has(Flag.Takeable)).toBe(false);
   });
 
   it('props are hydrated from data', () => {

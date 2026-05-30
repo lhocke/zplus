@@ -100,7 +100,6 @@ const FLAG_MAP: Record<string, string> = {
   LIGHTBIT: 'Light',
   ONBIT: 'Light',        // ONBIT = lamp/room is currently lit
   TAKEBIT: 'Takeable',
-  TRYTAKEBIT: 'Takeable',
   CONTBIT: 'Container',
   OPENBIT: 'Open',
   DOORBIT: 'Door',
@@ -124,8 +123,9 @@ const FLAG_MAP: Record<string, string> = {
   SEARCHBIT: 'Searchable',
   SURFACEBIT: 'Surface',
   // Flags that don't map 1-to-1 to the enum — kept as raw names
-  ACTORBIT: 'Takeable',  // actors are not takeable; will be refined by kind
-  TOOLBIT: 'Takeable',
+  ACTORBIT: 'Actor',   // NPC/actor flag — used by GWIM (FIND ACTORBIT)
+  TOOLBIT: 'Tool',     // tool/instrument flag — used by GWIM (FIND TOOLBIT)
+  TRYTAKEBIT: 'TryTake', // parser auto-takes before action (TAKE-CHECK)
 };
 
 /** Map a ZIL flag atom to a Flag enum name. Unknown atoms pass through. */
