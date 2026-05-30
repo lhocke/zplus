@@ -10,15 +10,28 @@
  *
  * emitData is kept separate so tests can drive it with tiny in-memory fixtures
  * without touching the real src/ tree.
+ *
+ * A1 schema change: emitData now accepts SyntaxEntryRaw[] (the extractor's
+ * intermediate format) and normalizes each entry to SyntaxEntryOut (the
+ * port-native schema) before writing to syntax.json. The normalization:
+ *   - renames preposition→prep1, preposition2→prep2
+ *   - flattens directObject/indirectObject to dobjFindBit/dobjLocBits/iobjFindBit/iobjLocBits
+ *   - converts where string arrays to integer bitmasks
+ *   - adds explicit numObjects: 0|1|2
  */
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import type { ObjectData, SyntaxEntry, VocabularyData } from './extract.js';
+import type { ObjectData, SyntaxEntryRaw, VocabularyData } from './extract.js';
+import { normalizeSyntaxEntry } from './syntax-normalize.js';
+import type { SyntaxEntryOut } from './syntax-normalize.js';
 
-// Re-export for callers that want a single import point
-export type { ObjectData, SyntaxEntry, VocabularyData };
+// Re-export for callers that want a single import point.
+// SyntaxEntry is re-exported as the port-native output type (SyntaxEntryOut).
+export type { ObjectData, VocabularyData };
+export type { SyntaxEntryOut as SyntaxEntry };
+export type { SyntaxEntryRaw };
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -36,13 +49,13 @@ export interface EmitDirs {
  * directories (both are created if they do not exist).
  *
  * @param objects   All extracted ObjectData records (rooms + non-rooms combined).
- * @param syntax    All extracted SyntaxEntry records.
+ * @param syntax    All extracted SyntaxEntryRaw records (normalized to port-native schema before writing).
  * @param vocab     Aggregated VocabularyData.
  * @param dirs      Output directories.
  */
 export function emitData(
   objects: ObjectData[],
-  syntax: SyntaxEntry[],
+  syntax: SyntaxEntryRaw[],
   vocab: VocabularyData,
   dirs: EmitDirs,
 ): void {
@@ -54,9 +67,12 @@ export function emitData(
   const rooms = objects.filter(o => o.kind === 'room');
   const nonRooms = objects.filter(o => o.kind !== 'room');
 
+  // Normalize syntax entries to port-native schema before writing.
+  const normalizedSyntax: SyntaxEntryOut[] = syntax.map(normalizeSyntaxEntry);
+
   writeFileSync(join(dataDir, 'rooms.json'), toJson(rooms));
   writeFileSync(join(dataDir, 'objects.json'), toJson(nonRooms));
-  writeFileSync(join(dataDir, 'syntax.json'), toJson(syntax));
+  writeFileSync(join(dataDir, 'syntax.json'), toJson(normalizedSyntax));
   writeFileSync(join(dataDir, 'vocabulary.json'), toJson(vocab));
   writeFileSync(join(domainDir, 'ids.ts'), buildIdsModule(objects));
 }

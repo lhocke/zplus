@@ -471,14 +471,18 @@ export interface ObjectSlot {
 }
 
 /**
- * A parsed SYNTAX declaration from gsyntax.zil.
+ * Raw parsed SYNTAX declaration from gsyntax.zil — the extractor's intermediate format.
  *
  * Example ZIL:  <SYNTAX TAKE OBJECT (FIND TAKEBIT) (ON-GROUND IN-ROOM MANY)
  *                              = V-TAKE PRE-TAKE>
  * Result: { verb: 'TAKE', directObject: {find:'TAKEBIT', where:[...]},
  *           action: 'V-TAKE', preAction: 'PRE-TAKE' }
+ *
+ * This raw type is normalized to SyntaxEntryOut (the port-native schema) by
+ * normalizeSyntaxEntry() in syntax-normalize.ts before being written to
+ * src/data/syntax.json.
  */
-export interface SyntaxEntry {
+export interface SyntaxEntryRaw {
   /** Main verb word, upper-case (e.g. "TAKE"). */
   readonly verb: string;
   /** Preposition / particle before the direct-object slot, if any (e.g. "IN", "UP"). */
@@ -494,6 +498,13 @@ export interface SyntaxEntry {
   /** Optional pre-action routine name (e.g. "PRE-TAKE"). */
   readonly preAction?: string;
 }
+
+/**
+ * Port-native SyntaxEntry — re-exported from syntax-normalize for callers that
+ * import from this module. This is the schema written to src/data/syntax.json
+ * and consumed by the data-driven parser.
+ */
+export type { SyntaxEntryOut as SyntaxEntry } from './syntax-normalize.js';
 
 /**
  * Aggregated vocabulary data for the parser.
@@ -576,7 +587,7 @@ function parseObjectSlot(items: SNode[], pos: number): { slot: ObjectSlot; next:
  *     [prep2 [OBJECT (FIND flag)? (scope…)]]
  *     = ACTION [PRE-ACTION]>
  */
-function parseSyntaxForm(form: SList): SyntaxEntry | null {
+function parseSyntaxForm(form: SList): SyntaxEntryRaw | null {
   // Must start with SYNTAX
   if (head(form) !== 'SYNTAX') return null;
   // Second item is the verb atom
@@ -648,7 +659,7 @@ function parseSyntaxForm(form: SList): SyntaxEntry | null {
   if (preposition2 !== undefined) entry['preposition2'] = preposition2;
   if (indirectObject !== undefined) entry['indirectObject'] = indirectObject;
   if (preAction !== undefined) entry['preAction'] = preAction;
-  return entry as unknown as SyntaxEntry;
+  return entry as unknown as SyntaxEntryRaw;
 }
 
 // ---------------------------------------------------------------------------
@@ -657,10 +668,10 @@ function parseSyntaxForm(form: SList): SyntaxEntry | null {
 
 /**
  * Walk an array of top-level SNodes and extract every <SYNTAX …> form into a
- * SyntaxEntry.  All other forms are silently skipped.
+ * SyntaxEntryRaw.  All other forms are silently skipped.
  */
-export function extractSyntax(nodes: SNode[]): SyntaxEntry[] {
-  const results: SyntaxEntry[] = [];
+export function extractSyntax(nodes: SNode[]): SyntaxEntryRaw[] {
+  const results: SyntaxEntryRaw[] = [];
   for (const node of nodes) {
     if (!isList(node)) continue;
     const form = node as SList;

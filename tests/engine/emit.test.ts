@@ -4,7 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { emitData } from '../../tools/extract-zil/emit.js';
-import type { ObjectData, SyntaxEntry, VocabularyData } from '../../tools/extract-zil/extract.js';
+import type { ObjectData, VocabularyData } from '../../tools/extract-zil/extract.js';
+import type { SyntaxEntryRaw } from '../../tools/extract-zil/extract.js';
+import type { SyntaxEntryOut } from '../../tools/extract-zil/syntax-normalize.js';
 
 // ---------------------------------------------------------------------------
 // Minimal in-memory dataset — two rooms and one object
@@ -49,7 +51,9 @@ const OBJECTS: ObjectData[] = [
 
 const ALL_OBJECTS = [...ROOMS, ...OBJECTS];
 
-const SYNTAX: SyntaxEntry[] = [
+// The fixture uses SyntaxEntryRaw (the extractor's intermediate format).
+// emitData normalizes it to SyntaxEntryOut before writing to syntax.json.
+const SYNTAX: SyntaxEntryRaw[] = [
   {
     verb: 'TAKE',
     directObject: { find: 'TAKEBIT', where: ['ON-GROUND', 'IN-ROOM', 'MANY'] },
@@ -136,19 +140,51 @@ describe('emitData — objects.json', () => {
   });
 });
 
-describe('emitData — syntax.json', () => {
+describe('emitData — syntax.json (port-native SyntaxEntryOut schema)', () => {
   test('writes valid JSON array of syntax entries', () => {
     emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
-    const parsed: SyntaxEntry[] = JSON.parse(readFileSync(join(dataDir, 'syntax.json'), 'utf8'));
+    const parsed: SyntaxEntryOut[] = JSON.parse(readFileSync(join(dataDir, 'syntax.json'), 'utf8'));
     expect(Array.isArray(parsed)).toBe(true);
     expect(parsed).toHaveLength(1);
   });
 
   test('entry preserves verb and action', () => {
     emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
-    const parsed: SyntaxEntry[] = JSON.parse(readFileSync(join(dataDir, 'syntax.json'), 'utf8'));
+    const parsed: SyntaxEntryOut[] = JSON.parse(readFileSync(join(dataDir, 'syntax.json'), 'utf8'));
     expect(parsed[0].verb).toBe('TAKE');
     expect(parsed[0].action).toBe('V-TAKE');
+  });
+
+  test('entry has numObjects = 1 (one direct-object slot)', () => {
+    emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
+    const parsed: SyntaxEntryOut[] = JSON.parse(readFileSync(join(dataDir, 'syntax.json'), 'utf8'));
+    expect(parsed[0].numObjects).toBe(1);
+  });
+
+  test('entry has port-native dobjFindBit (not directObject.find)', () => {
+    emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
+    const parsed: SyntaxEntryOut[] = JSON.parse(readFileSync(join(dataDir, 'syntax.json'), 'utf8'));
+    expect(parsed[0].dobjFindBit).toBe('TAKEBIT');
+    expect(parsed[0]).not.toHaveProperty('directObject');
+  });
+
+  test('entry has dobjLocBits = 52 (ON-GROUND+IN-ROOM+MANY = 16+32+4)', () => {
+    emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
+    const parsed: SyntaxEntryOut[] = JSON.parse(readFileSync(join(dataDir, 'syntax.json'), 'utf8'));
+    expect(parsed[0].dobjLocBits).toBe(52);
+  });
+
+  test('entry has preAction = PRE-TAKE (not undefined)', () => {
+    emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
+    const parsed: SyntaxEntryOut[] = JSON.parse(readFileSync(join(dataDir, 'syntax.json'), 'utf8'));
+    expect(parsed[0].preAction).toBe('PRE-TAKE');
+  });
+
+  test('entry has prep1 = null and prep2 = null (no prepositions)', () => {
+    emitData(ALL_OBJECTS, SYNTAX, VOCAB, { dataDir, domainDir });
+    const parsed: SyntaxEntryOut[] = JSON.parse(readFileSync(join(dataDir, 'syntax.json'), 'utf8'));
+    expect(parsed[0].prep1).toBeNull();
+    expect(parsed[0].prep2).toBeNull();
   });
 });
 

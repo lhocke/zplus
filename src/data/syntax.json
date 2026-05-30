@@ -1,2853 +1,3206 @@
 [
   {
     "verb": "VERBOSE",
-    "action": "V-VERBOSE"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-VERBOSE",
+    "preAction": null
   },
   {
     "verb": "BRIEF",
-    "action": "V-BRIEF"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-BRIEF",
+    "preAction": null
   },
   {
     "verb": "SUPER",
-    "action": "V-SUPER-BRIEF"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-SUPER-BRIEF",
+    "preAction": null
   },
   {
     "verb": "DIAGNOSE",
-    "action": "V-DIAGNOSE"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-DIAGNOSE",
+    "preAction": null
   },
   {
     "verb": "INVENTORY",
-    "action": "V-INVENTORY"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-INVENTORY",
+    "preAction": null
   },
   {
     "verb": "QUIT",
-    "action": "V-QUIT"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-QUIT",
+    "preAction": null
   },
   {
     "verb": "RESTART",
-    "action": "V-RESTART"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-RESTART",
+    "preAction": null
   },
   {
     "verb": "RESTORE",
-    "action": "V-RESTORE"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-RESTORE",
+    "preAction": null
   },
   {
     "verb": "SAVE",
-    "action": "V-SAVE"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-SAVE",
+    "preAction": null
   },
   {
     "verb": "SCORE",
-    "action": "V-SCORE"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-SCORE",
+    "preAction": null
   },
   {
     "verb": "SCRIPT",
-    "action": "V-SCRIPT"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-SCRIPT",
+    "preAction": null
   },
   {
     "verb": "UNSCRIPT",
-    "action": "V-UNSCRIPT"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-UNSCRIPT",
+    "preAction": null
   },
   {
     "verb": "VERSION",
-    "action": "V-VERSION"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-VERSION",
+    "preAction": null
   },
   {
     "verb": "$VERIFY",
-    "action": "V-VERIFY"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-VERIFY",
+    "preAction": null
   },
   {
     "verb": "#RANDOM",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-RANDOM",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "#COMMAND",
-    "action": "V-COMMAND-FILE"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-COMMAND-FILE",
+    "preAction": null
   },
   {
     "verb": "#RECORD",
-    "action": "V-RECORD"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-RECORD",
+    "preAction": null
   },
   {
     "verb": "#UNRECORD",
-    "action": "V-UNRECORD"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-UNRECORD",
+    "preAction": null
   },
   {
     "verb": "ACTIVATE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "LIGHTBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LAMP-ON",
-    "directObject": {
-      "find": "LIGHTBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "ANSWER",
-    "action": "V-ANSWER"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-ANSWER",
+    "preAction": null
   },
   {
     "verb": "ANSWER",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-REPLY",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "APPLY",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "TO",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "TO",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-PUT"
   },
   {
     "verb": "ATTACK",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": "WEAPONBIT",
+    "iobjLocBits": 194,
     "action": "V-ATTACK",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "WEAPONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "BACK",
-    "action": "V-BACK"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-BACK",
+    "preAction": null
   },
   {
     "verb": "BLAST",
-    "action": "V-BLAST"
-  },
-  {
-    "verb": "BLOW",
-    "action": "V-LAMP-OFF",
-    "preposition": "OUT",
-    "directObject": {
-      "where": []
-    }
-  },
-  {
-    "verb": "BLOW",
-    "action": "V-INFLATE",
-    "preposition": "UP",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "TOOLBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "HELD",
-        "CARRIED"
-      ]
-    }
-  },
-  {
-    "verb": "BLOW",
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-BLAST",
-    "preposition": "UP",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "BLOW",
+    "numObjects": 1,
+    "prep1": "OUT",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-LAMP-OFF",
+    "preAction": null
+  },
+  {
+    "verb": "BLOW",
+    "numObjects": 2,
+    "prep1": "UP",
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": "TOOLBIT",
+    "iobjLocBits": 240,
+    "action": "V-INFLATE",
+    "preAction": null
+  },
+  {
+    "verb": "BLOW",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-BLAST",
+    "preAction": null
+  },
+  {
+    "verb": "BLOW",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-BREATHE",
-    "preposition": "IN",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "BOARD",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "VEHBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-BOARD",
-    "directObject": {
-      "find": "VEHBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
     "preAction": "PRE-BOARD"
   },
   {
     "verb": "BRUSH",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-BRUSH",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "BRUSH",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-BRUSH",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "BUG",
-    "action": "V-BUG"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-BUG",
+    "preAction": null
   },
   {
     "verb": "BURN",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "BURNBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": "FLAMEBIT",
+    "iobjLocBits": 242,
     "action": "V-BURN",
-    "directObject": {
-      "find": "BURNBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "FLAMEBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "HAVE"
-      ]
-    },
     "preAction": "PRE-BURN"
   },
   {
     "verb": "BURN",
+    "numObjects": 2,
+    "prep1": "DOWN",
+    "prep2": "WITH",
+    "dobjFindBit": "BURNBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": "FLAMEBIT",
+    "iobjLocBits": 242,
     "action": "V-BURN",
-    "preposition": "DOWN",
-    "directObject": {
-      "find": "BURNBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "FLAMEBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "HAVE"
-      ]
-    },
     "preAction": "PRE-BURN"
   },
   {
     "verb": "CHOMP",
-    "action": "V-CHOMP"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-CHOMP",
+    "preAction": null
   },
   {
     "verb": "CLIMB",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": "RMUNGBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CLIMB-UP",
-    "preposition": "UP",
-    "directObject": {
-      "find": "RMUNGBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "CLIMB",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": "CLIMBBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CLIMB-UP",
-    "preposition": "UP",
-    "directObject": {
-      "find": "CLIMBBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "CLIMB",
+    "numObjects": 1,
+    "prep1": "DOWN",
+    "prep2": null,
+    "dobjFindBit": "RMUNGBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CLIMB-DOWN",
-    "preposition": "DOWN",
-    "directObject": {
-      "find": "RMUNGBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "CLIMB",
+    "numObjects": 1,
+    "prep1": "DOWN",
+    "prep2": null,
+    "dobjFindBit": "CLIMBBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CLIMB-DOWN",
-    "preposition": "DOWN",
-    "directObject": {
-      "find": "CLIMBBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "CLIMB",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "CLIMBBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CLIMB-FOO",
-    "directObject": {
-      "find": "CLIMBBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "CLIMB",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": "VEHBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-BOARD",
-    "preposition": "IN",
-    "directObject": {
-      "find": "VEHBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
     "preAction": "PRE-BOARD"
   },
   {
     "verb": "CLIMB",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": "VEHBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CLIMB-ON",
-    "preposition": "ON",
-    "directObject": {
-      "find": "VEHBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "CLIMB",
+    "numObjects": 1,
+    "prep1": "WITH",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-THROUGH",
-    "preposition": "WITH",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "CLOSE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "DOORBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CLOSE",
-    "directObject": {
-      "find": "DOORBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "COMMAND",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-COMMAND",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "COUNT",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-COUNT",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "CROSS",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CROSS",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "CUT",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": "WEAPONBIT",
+    "iobjLocBits": 192,
     "action": "V-CUT",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "WEAPONBIT",
-      "where": [
-        "CARRIED",
-        "HELD"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "CURSE",
-    "action": "V-CURSES"
-  },
-  {
-    "verb": "CURSE",
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CURSES",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": []
-    }
+    "preAction": null
+  },
+  {
+    "verb": "CURSE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-CURSES",
+    "preAction": null
   },
   {
     "verb": "DEFLATE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DEFLATE",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "DESTROY",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 200,
     "action": "V-MUNG",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "HELD",
-        "CARRIED"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "TAKE"
-      ]
-    },
     "preAction": "PRE-MUNG"
   },
   {
     "verb": "DESTROY",
+    "numObjects": 2,
+    "prep1": "DOWN",
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 200,
     "action": "V-MUNG",
-    "preposition": "DOWN",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "HELD",
-        "CARRIED"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "TAKE"
-      ]
-    },
     "preAction": "PRE-MUNG"
   },
   {
     "verb": "DESTROY",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-OPEN",
-    "preposition": "IN",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "HELD",
-        "CARRIED"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "DIG",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DIG",
-    "preposition": "IN",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "DIG",
+    "numObjects": 2,
+    "prep1": "IN",
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": "TOOLBIT",
+    "iobjLocBits": 194,
     "action": "V-DIG",
-    "preposition": "IN",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "TOOLBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "DIG",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": "TOOLBIT",
+    "iobjLocBits": 194,
     "action": "V-DIG",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "TOOLBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "DISEMBARK",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "VEHBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DISEMBARK",
-    "directObject": {
-      "find": "VEHBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "DISENCHANT",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DISENCHANT",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "DRINK",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "DRINKBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DRINK",
-    "directObject": {
-      "find": "DRINKBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "DRINK",
+    "numObjects": 1,
+    "prep1": "FROM",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 192,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DRINK-FROM",
-    "preposition": "FROM",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "DROP",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 134,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DROP",
-    "directObject": {
-      "where": [
-        "HELD",
-        "MANY",
-        "HAVE"
-      ]
-    },
     "preAction": "PRE-DROP"
   },
   {
     "verb": "DROP",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "DOWN",
+    "dobjFindBit": null,
+    "dobjLocBits": 134,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT",
-    "directObject": {
-      "where": [
-        "HELD",
-        "MANY",
-        "HAVE"
-      ]
-    },
-    "preposition2": "DOWN",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-PUT"
   },
   {
     "verb": "DROP",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "IN",
+    "dobjFindBit": null,
+    "dobjLocBits": 134,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT",
-    "directObject": {
-      "where": [
-        "HELD",
-        "MANY",
-        "HAVE"
-      ]
-    },
-    "preposition2": "IN",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-PUT"
   },
   {
     "verb": "DROP",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "ON",
+    "dobjFindBit": null,
+    "dobjLocBits": 134,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT-ON",
-    "directObject": {
-      "where": [
-        "HELD",
-        "MANY",
-        "HAVE"
-      ]
-    },
-    "preposition2": "ON",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-PUT"
   },
   {
     "verb": "EAT",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "FOODBIT",
+    "dobjLocBits": 248,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-EAT",
-    "directObject": {
-      "find": "FOODBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "ECHO",
-    "action": "V-ECHO"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-ECHO",
+    "preAction": null
   },
   {
     "verb": "ENCHANT",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-ENCHANT",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "ENTER",
-    "action": "V-ENTER"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-ENTER",
+    "preAction": null
   },
   {
     "verb": "ENTER",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-THROUGH",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "EXIT",
-    "action": "V-EXIT"
-  },
-  {
-    "verb": "EXIT",
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-EXIT",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
+  },
+  {
+    "verb": "EXIT",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-EXIT",
+    "preAction": null
   },
   {
     "verb": "EXAMINE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 4,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-EXAMINE",
-    "directObject": {
-      "where": [
-        "MANY"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "EXAMINE",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 244,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOOK-INSIDE",
-    "preposition": "IN",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "IN-ROOM",
-        "ON-GROUND",
-        "MANY"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "EXAMINE",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 244,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOOK-INSIDE",
-    "preposition": "ON",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "IN-ROOM",
-        "ON-GROUND",
-        "MANY"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "EXORCISE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-EXORCISE",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "EXORCISE",
+    "numObjects": 1,
+    "prep1": "OUT",
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-EXORCISE",
-    "preposition": "OUT",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "EXORCISE",
+    "numObjects": 1,
+    "prep1": "AWAY",
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-EXORCISE",
-    "preposition": "AWAY",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "EXTINGUISH",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "ONBIT",
+    "dobjLocBits": 250,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LAMP-OFF",
-    "directObject": {
-      "find": "ONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "FILL",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "CONTBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-FILL",
-    "directObject": {
-      "find": "CONTBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-FILL"
   },
   {
     "verb": "FILL",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "CONTBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-FILL",
-    "directObject": {
-      "find": "CONTBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
     "preAction": "PRE-FILL"
   },
   {
     "verb": "FIND",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-FIND",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "FOLLOW",
-    "action": "V-FOLLOW"
-  },
-  {
-    "verb": "FOLLOW",
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-FOLLOW",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
+  },
+  {
+    "verb": "FOLLOW",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-FOLLOW",
+    "preAction": null
   },
   {
     "verb": "FROBOZZ",
-    "action": "V-FROBOZZ"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-FROBOZZ",
+    "preAction": null
   },
   {
     "verb": "GIVE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "TO",
+    "dobjFindBit": null,
+    "dobjLocBits": 134,
+    "iobjFindBit": "ACTORBIT",
+    "iobjLocBits": 16,
     "action": "V-GIVE",
-    "directObject": {
-      "where": [
-        "MANY",
-        "HELD",
-        "HAVE"
-      ]
-    },
-    "preposition2": "TO",
-    "indirectObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND"
-      ]
-    },
     "preAction": "PRE-GIVE"
   },
   {
     "verb": "GIVE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 16,
+    "iobjFindBit": null,
+    "iobjLocBits": 134,
     "action": "V-SGIVE",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND"
-      ]
-    },
-    "indirectObject": {
-      "where": [
-        "MANY",
-        "HELD",
-        "HAVE"
-      ]
-    },
     "preAction": "PRE-SGIVE"
   },
   {
     "verb": "HATCH",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-HATCH",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "HELLO",
-    "action": "V-HELLO"
-  },
-  {
-    "verb": "HELLO",
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-HELLO",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
+  },
+  {
+    "verb": "HELLO",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-HELLO",
+    "preAction": null
   },
   {
     "verb": "INCANT",
-    "action": "V-INCANT"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-INCANT",
+    "preAction": null
   },
   {
     "verb": "INFLAT",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": "TOOLBIT",
+    "iobjLocBits": 240,
     "action": "V-INFLATE",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "TOOLBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "HELD",
-        "CARRIED"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "JUMP",
-    "action": "V-LEAP"
-  },
-  {
-    "verb": "JUMP",
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LEAP",
-    "preposition": "OVER",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "JUMP",
+    "numObjects": 1,
+    "prep1": "OVER",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LEAP",
-    "preposition": "ACROSS",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "JUMP",
+    "numObjects": 1,
+    "prep1": "ACROSS",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LEAP",
-    "preposition": "IN",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "JUMP",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LEAP",
-    "preposition": "FROM",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "JUMP",
+    "numObjects": 1,
+    "prep1": "FROM",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LEAP",
-    "preposition": "OFF",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
+  },
+  {
+    "verb": "JUMP",
+    "numObjects": 1,
+    "prep1": "OFF",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-LEAP",
+    "preAction": null
   },
   {
     "verb": "KICK",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-KICK",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "KILL",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": "WEAPONBIT",
+    "iobjLocBits": 194,
     "action": "V-ATTACK",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "WEAPONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "STAB",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-STAB",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "STAB",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": "WEAPONBIT",
+    "iobjLocBits": 194,
     "action": "V-ATTACK",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "WEAPONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "KISS",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-KISS",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "KNOCK",
+    "numObjects": 1,
+    "prep1": "AT",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-KNOCK",
-    "preposition": "AT",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "KNOCK",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-KNOCK",
-    "preposition": "ON",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "KNOCK",
+    "numObjects": 1,
+    "prep1": "DOWN",
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-ATTACK",
-    "preposition": "DOWN",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "LAUNCH",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "VEHBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LAUNCH",
-    "directObject": {
-      "find": "VEHBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LEAN",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 130,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LEAN-ON",
-    "preposition": "ON",
-    "directObject": {
-      "where": [
-        "HELD",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "LEAVE",
-    "action": "V-LEAVE"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-LEAVE",
+    "preAction": null
   },
   {
     "verb": "LEAVE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DROP",
-    "directObject": {
-      "where": []
-    },
     "preAction": "PRE-DROP"
   },
   {
     "verb": "LIGHT",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "LIGHTBIT",
+    "dobjLocBits": 250,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LAMP-ON",
-    "directObject": {
-      "find": "LIGHTBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "LIGHT",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "LIGHTBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": "FLAMEBIT",
+    "iobjLocBits": 202,
     "action": "V-BURN",
-    "directObject": {
-      "find": "LIGHTBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "FLAMEBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "TAKE",
-        "HAVE"
-      ]
-    },
     "preAction": "PRE-BURN"
   },
   {
     "verb": "LISTEN",
+    "numObjects": 1,
+    "prep1": "TO",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LISTEN",
-    "preposition": "TO",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LISTEN",
+    "numObjects": 1,
+    "prep1": "FOR",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LISTEN",
-    "preposition": "FOR",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LOCK",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": "TOOLBIT",
+    "iobjLocBits": 248,
     "action": "V-LOCK",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "TOOLBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "LOOK",
-    "action": "V-LOOK"
-  },
-  {
-    "verb": "LOOK",
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOOK",
-    "preposition": "AROUND",
-    "directObject": {
-      "find": "RMUNGBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LOOK",
+    "numObjects": 1,
+    "prep1": "AROUND",
+    "prep2": null,
+    "dobjFindBit": "RMUNGBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOOK",
-    "preposition": "UP",
-    "directObject": {
-      "find": "RMUNGBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LOOK",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": "RMUNGBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOOK",
-    "preposition": "DOWN",
-    "directObject": {
-      "find": "RMUNGBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LOOK",
+    "numObjects": 1,
+    "prep1": "DOWN",
+    "prep2": null,
+    "dobjFindBit": "RMUNGBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-LOOK",
+    "preAction": null
+  },
+  {
+    "verb": "LOOK",
+    "numObjects": 1,
+    "prep1": "AT",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 244,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-EXAMINE",
-    "preposition": "AT",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "MANY"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "LOOK",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOOK-ON",
-    "preposition": "ON",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LOOK",
+    "numObjects": 1,
+    "prep1": "WITH",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 244,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOOK-INSIDE",
-    "preposition": "WITH",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "MANY"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "LOOK",
+    "numObjects": 1,
+    "prep1": "UNDER",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOOK-UNDER",
-    "preposition": "UNDER",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LOOK",
+    "numObjects": 1,
+    "prep1": "BEHIND",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOOK-BEHIND",
-    "preposition": "BEHIND",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LOOK",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 244,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOOK-INSIDE",
-    "preposition": "IN",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "MANY"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "LOOK",
+    "numObjects": 2,
+    "prep1": "AT",
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-READ",
-    "preposition": "AT",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-READ"
   },
   {
     "verb": "LOOK",
+    "numObjects": 1,
+    "prep1": "FOR",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-FIND",
-    "preposition": "FOR",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LOWER",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LOWER",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "LUBRICATE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 192,
     "action": "V-OIL",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": [
-        "HELD",
-        "CARRIED"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "MAKE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-MAKE",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "MELT",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": "FLAMEBIT",
+    "iobjLocBits": 240,
     "action": "V-MELT",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "FLAMEBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "MOVE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-MOVE",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
     "preAction": "PRE-MOVE"
   },
   {
     "verb": "MOVE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUSH-TO",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "MOVE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "TO",
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUSH-TO",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "TO",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "MOVE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "IN",
+    "dobjFindBit": null,
+    "dobjLocBits": 134,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT",
-    "directObject": {
-      "where": [
-        "HELD",
-        "MANY",
-        "HAVE"
-      ]
-    },
-    "preposition2": "IN",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-PUT"
   },
   {
     "verb": "MOVE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": "TOOLBIT",
+    "iobjLocBits": 0,
     "action": "V-TURN",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "TOOLBIT",
-      "where": []
-    },
     "preAction": "PRE-TURN"
   },
   {
     "verb": "ROLL",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-MOVE",
-    "preposition": "UP",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
     "preAction": "PRE-MOVE"
   },
   {
     "verb": "ROLL",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-MOVE",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
     "preAction": "PRE-MOVE"
   },
   {
     "verb": "MUMBLE",
-    "action": "V-MUMBLE"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-MUMBLE",
+    "preAction": null
   },
   {
     "verb": "ODYSSEUS",
-    "action": "V-ODYSSEUS"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-ODYSSEUS",
+    "preAction": null
   },
   {
     "verb": "OPEN",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "DOORBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-OPEN",
-    "directObject": {
-      "find": "DOORBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "OPEN",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": "DOORBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-OPEN",
-    "preposition": "UP",
-    "directObject": {
-      "find": "DOORBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "OPEN",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "DOORBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": "TOOLBIT",
+    "iobjLocBits": 242,
     "action": "V-OPEN",
-    "directObject": {
-      "find": "DOORBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "TOOLBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "PICK",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PICK",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "PICK",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PICK",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "PICK",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": "TAKEBIT",
+    "dobjLocBits": 20,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TAKE",
-    "preposition": "UP",
-    "directObject": {
-      "find": "TAKEBIT",
-      "where": [
-        "ON-GROUND",
-        "MANY"
-      ]
-    },
     "preAction": "PRE-TAKE"
   },
   {
     "verb": "PLAY",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PLAY",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "PLUG",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PLUG",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "PLUGH",
-    "action": "V-ADVENT"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-ADVENT",
+    "preAction": null
   },
   {
     "verb": "POKE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": "WEAPONBIT",
+    "iobjLocBits": 194,
     "action": "V-MUNG",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "WEAPONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    },
     "preAction": "PRE-MUNG"
   },
   {
     "verb": "PUNCTURE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": "WEAPONBIT",
+    "iobjLocBits": 194,
     "action": "V-MUNG",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "WEAPONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    },
     "preAction": "PRE-MUNG"
   },
   {
     "verb": "POUR",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 192,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DROP",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED"
-      ]
-    },
     "preAction": "PRE-DROP"
   },
   {
     "verb": "POUR",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "IN",
+    "dobjFindBit": null,
+    "dobjLocBits": 192,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DROP",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED"
-      ]
-    },
-    "preposition2": "IN",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-DROP"
   },
   {
     "verb": "POUR",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "ON",
+    "dobjFindBit": null,
+    "dobjLocBits": 192,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-POUR-ON",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED"
-      ]
-    },
-    "preposition2": "ON",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "POUR",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "FROM",
+    "dobjFindBit": null,
+    "dobjLocBits": 192,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DROP",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED"
-      ]
-    },
-    "preposition2": "FROM",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-DROP"
   },
   {
     "verb": "PRAY",
-    "action": "V-PRAY"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-PRAY",
+    "preAction": null
   },
   {
     "verb": "PULL",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-MOVE",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
     "preAction": "PRE-MOVE"
   },
   {
     "verb": "PULL",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-MOVE",
-    "preposition": "ON",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
     "preAction": "PRE-MOVE"
   },
   {
     "verb": "PULL",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-MOVE",
-    "preposition": "UP",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
     "preAction": "PRE-MOVE"
   },
   {
     "verb": "PUMP",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUMP",
-    "preposition": "UP",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "PUMP",
+    "numObjects": 2,
+    "prep1": "UP",
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUMP",
-    "preposition": "UP",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "PUSH",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUSH-TO",
-    "directObject": {
-      "where": [
-        "IN-ROOM",
-        "ON-GROUND"
-      ]
-    },
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "PUSH",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "TO",
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUSH-TO",
-    "directObject": {
-      "where": [
-        "IN-ROOM",
-        "ON-GROUND"
-      ]
-    },
-    "preposition2": "TO",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "PUSH",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 52,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUSH",
-    "directObject": {
-      "where": [
-        "IN-ROOM",
-        "ON-GROUND",
-        "MANY"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "PUSH",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 52,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUSH",
-    "preposition": "ON",
-    "directObject": {
-      "where": [
-        "IN-ROOM",
-        "ON-GROUND",
-        "MANY"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "PUSH",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": "TOOLBIT",
+    "iobjLocBits": 0,
     "action": "V-TURN",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "TOOLBIT",
-      "where": []
-    },
     "preAction": "PRE-TURN"
   },
   {
     "verb": "PUSH",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "UNDER",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT-UNDER",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "UNDER",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "PUT",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "IN",
+    "dobjFindBit": null,
+    "dobjLocBits": 134,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT",
-    "directObject": {
-      "where": [
-        "HELD",
-        "MANY",
-        "HAVE"
-      ]
-    },
-    "preposition2": "IN",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-PUT"
   },
   {
     "verb": "PUT",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "ON",
+    "dobjFindBit": null,
+    "dobjLocBits": 134,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT-ON",
-    "directObject": {
-      "where": [
-        "HELD",
-        "MANY",
-        "HAVE"
-      ]
-    },
-    "preposition2": "ON",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-PUT"
   },
   {
     "verb": "PUT",
+    "numObjects": 1,
+    "prep1": "DOWN",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 132,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DROP",
-    "preposition": "DOWN",
-    "directObject": {
-      "where": [
-        "HELD",
-        "MANY"
-      ]
-    },
     "preAction": "PRE-DROP"
   },
   {
     "verb": "PUT",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "UNDER",
+    "dobjFindBit": null,
+    "dobjLocBits": 130,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT-UNDER",
-    "directObject": {
-      "where": [
-        "HELD",
-        "HAVE"
-      ]
-    },
-    "preposition2": "UNDER",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "PUT",
+    "numObjects": 1,
+    "prep1": "OUT",
+    "prep2": null,
+    "dobjFindBit": "ONBIT",
+    "dobjLocBits": 250,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LAMP-OFF",
-    "preposition": "OUT",
-    "directObject": {
-      "find": "ONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "PUT",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 116,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-WEAR",
-    "preposition": "ON",
-    "directObject": {
-      "where": [
-        "IN-ROOM",
-        "ON-GROUND",
-        "CARRIED",
-        "MANY"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "PUT",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "BEHIND",
+    "dobjFindBit": null,
+    "dobjLocBits": 134,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT-BEHIND",
-    "directObject": {
-      "where": [
-        "HELD",
-        "MANY",
-        "HAVE"
-      ]
-    },
-    "preposition2": "BEHIND",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "RAISE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-RAISE",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "RAISE",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-RAISE",
-    "preposition": "UP",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "RAPE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-RAPE",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "READ",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "READBIT",
+    "dobjLocBits": 248,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-READ",
-    "directObject": {
-      "find": "READBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE"
-      ]
-    },
     "preAction": "PRE-READ"
   },
   {
     "verb": "READ",
+    "numObjects": 1,
+    "prep1": "FROM",
+    "prep2": null,
+    "dobjFindBit": "READBIT",
+    "dobjLocBits": 248,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-READ",
-    "preposition": "FROM",
-    "directObject": {
-      "find": "READBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE"
-      ]
-    },
     "preAction": "PRE-READ"
   },
   {
     "verb": "READ",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "READBIT",
+    "dobjLocBits": 248,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-READ",
-    "directObject": {
-      "find": "READBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-READ"
   },
   {
     "verb": "READ",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "READBIT",
+    "dobjLocBits": 248,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-READ-PAGE",
-    "directObject": {
-      "find": "READBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE"
-      ]
-    },
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "REPENT",
-    "action": "V-REPENT"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-REPENT",
+    "preAction": null
   },
   {
     "verb": "RING",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 8,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-RING",
-    "directObject": {
-      "where": [
-        "TAKE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "RING",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 8,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-RING",
-    "directObject": {
-      "where": [
-        "TAKE"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "RUB",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-RUB",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "RUB",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-RUB",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "TALK",
+    "numObjects": 1,
+    "prep1": "TO",
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 32,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TELL",
-    "preposition": "TO",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "SAY",
-    "action": "V-SAY"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-SAY",
+    "preAction": null
   },
   {
     "verb": "SEARCH",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SEARCH",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SEARCH",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SEARCH",
-    "preposition": "IN",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SEARCH",
+    "numObjects": 1,
+    "prep1": "FOR",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-FIND",
-    "preposition": "FOR",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SEND",
+    "numObjects": 1,
+    "prep1": "FOR",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SEND",
-    "preposition": "FOR",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SHAKE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 2,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SHAKE",
-    "directObject": {
-      "where": [
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "SKIP",
-    "action": "V-SKIP"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-SKIP",
+    "preAction": null
   },
   {
     "verb": "SLIDE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "UNDER",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT-UNDER",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "UNDER",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SLIDE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUSH-TO",
-    "directObject": {
-      "where": [
-        "IN-ROOM",
-        "ON-GROUND"
-      ]
-    },
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SLIDE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "TO",
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUSH-TO",
-    "directObject": {
-      "where": [
-        "IN-ROOM",
-        "ON-GROUND"
-      ]
-    },
-    "preposition2": "TO",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SMELL",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SMELL",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SPIN",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SPIN",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SPRAY",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "ON",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SPRAY",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "ON",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SPRAY",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SSPRAY",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SQUEEZE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SQUEEZE",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SQUEEZE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "ON",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "ON",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-PUT"
   },
   {
     "verb": "STAND",
-    "action": "V-STAND"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-STAND",
+    "preAction": null
   },
   {
     "verb": "STAND",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": "RMUNGBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-STAND",
-    "preposition": "UP",
-    "directObject": {
-      "find": "RMUNGBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "STAY",
-    "action": "V-STAY"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-STAY",
+    "preAction": null
   },
   {
     "verb": "STRIKE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": "WEAPONBIT",
+    "iobjLocBits": 242,
     "action": "V-ATTACK",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "WEAPONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "STRIKE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-STRIKE",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "HELD",
-        "CARRIED"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "SWIM",
-    "action": "V-SWIM"
-  },
-  {
-    "verb": "SWIM",
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SWIM",
-    "preposition": "IN",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "SWIM",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SWIM",
-    "preposition": "ACROSS",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
+  },
+  {
+    "verb": "SWIM",
+    "numObjects": 1,
+    "prep1": "ACROSS",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-SWIM",
+    "preAction": null
   },
   {
     "verb": "SWING",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "WEAPONBIT",
+    "dobjLocBits": 194,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-SWING",
-    "directObject": {
-      "find": "WEAPONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "SWING",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "AT",
+    "dobjFindBit": "WEAPONBIT",
+    "dobjLocBits": 194,
+    "iobjFindBit": "ACTORBIT",
+    "iobjLocBits": 48,
     "action": "V-SWING",
-    "directObject": {
-      "find": "WEAPONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    },
-    "preposition2": "AT",
-    "indirectObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "TAKE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "TAKEBIT",
+    "dobjLocBits": 52,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TAKE",
-    "directObject": {
-      "find": "TAKEBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "MANY"
-      ]
-    },
     "preAction": "PRE-TAKE"
   },
   {
     "verb": "TAKE",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": "VEHBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-BOARD",
-    "preposition": "IN",
-    "directObject": {
-      "find": "VEHBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
     "preAction": "PRE-BOARD"
   },
   {
     "verb": "TAKE",
+    "numObjects": 1,
+    "prep1": "OUT",
+    "prep2": null,
+    "dobjFindBit": "RMUNGBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-DISEMBARK",
-    "preposition": "OUT",
-    "directObject": {
-      "find": "RMUNGBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "TAKE",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": "VEHBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CLIMB-ON",
-    "preposition": "ON",
-    "directObject": {
-      "find": "VEHBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "TAKE",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": "RMUNGBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-STAND",
-    "preposition": "UP",
-    "directObject": {
-      "find": "RMUNGBIT",
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "TAKE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "OUT",
+    "dobjFindBit": "TAKEBIT",
+    "dobjLocBits": 100,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TAKE",
-    "directObject": {
-      "find": "TAKEBIT",
-      "where": [
-        "CARRIED",
-        "IN-ROOM",
-        "MANY"
-      ]
-    },
-    "preposition2": "OUT",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-TAKE"
   },
   {
     "verb": "TAKE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "OFF",
+    "dobjFindBit": "TAKEBIT",
+    "dobjLocBits": 100,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TAKE",
-    "directObject": {
-      "find": "TAKEBIT",
-      "where": [
-        "CARRIED",
-        "IN-ROOM",
-        "MANY"
-      ]
-    },
-    "preposition2": "OFF",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-TAKE"
   },
   {
     "verb": "TAKE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "FROM",
+    "dobjFindBit": "TAKEBIT",
+    "dobjLocBits": 100,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TAKE",
-    "directObject": {
-      "find": "TAKEBIT",
-      "where": [
-        "IN-ROOM",
-        "CARRIED",
-        "MANY"
-      ]
-    },
-    "preposition2": "FROM",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-TAKE"
   },
   {
     "verb": "TELL",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 32,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TELL",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "TELL",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "ABOUT",
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 32,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TELL",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "ABOUT",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "THROW",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "AT",
+    "dobjFindBit": null,
+    "dobjLocBits": 194,
+    "iobjFindBit": "ACTORBIT",
+    "iobjLocBits": 48,
     "action": "V-THROW",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    },
-    "preposition2": "AT",
-    "indirectObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "THROW",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 194,
+    "iobjFindBit": "ACTORBIT",
+    "iobjLocBits": 48,
     "action": "V-THROW",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "THROW",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-OVERBOARD",
-    "directObject": {
-      "where": []
-    },
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "THROW",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "IN",
+    "dobjFindBit": null,
+    "dobjLocBits": 194,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    },
-    "preposition2": "IN",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-PUT"
   },
   {
     "verb": "THROW",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "ON",
+    "dobjFindBit": null,
+    "dobjLocBits": 194,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-PUT-ON",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    },
-    "preposition2": "ON",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-PUT"
   },
   {
     "verb": "THROW",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "OFF",
+    "dobjFindBit": null,
+    "dobjLocBits": 194,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-THROW-OFF",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    },
-    "preposition2": "OFF",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "THROW",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "OVER",
+    "dobjFindBit": null,
+    "dobjLocBits": 194,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-THROW-OFF",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    },
-    "preposition2": "OVER",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "TIE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "TO",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TIE",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "TO",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "TIE",
+    "numObjects": 2,
+    "prep1": "UP",
+    "prep2": "WITH",
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": "TOOLBIT",
+    "iobjLocBits": 242,
     "action": "V-TIE-UP",
-    "preposition": "UP",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "TOOLBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "HELD",
-        "CARRIED",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "TREASURE",
-    "action": "V-TREASURE"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-TREASURE",
+    "preAction": null
   },
   {
     "verb": "TURN",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": "TURNBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": "RMUNGBIT",
+    "iobjLocBits": 0,
     "action": "V-TURN",
-    "directObject": {
-      "find": "TURNBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "RMUNGBIT",
-      "where": []
-    },
     "preAction": "PRE-TURN"
   },
   {
     "verb": "TURN",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": "LIGHTBIT",
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LAMP-ON",
-    "preposition": "ON",
-    "directObject": {
-      "find": "LIGHTBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "TURN",
+    "numObjects": 2,
+    "prep1": "ON",
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 2,
     "action": "V-LAMP-ON",
-    "preposition": "ON",
-    "directObject": {
-      "where": []
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "where": [
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "TURN",
+    "numObjects": 1,
+    "prep1": "OFF",
+    "prep2": null,
+    "dobjFindBit": "ONBIT",
+    "dobjLocBits": 250,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-LAMP-OFF",
-    "preposition": "OFF",
-    "directObject": {
-      "find": "ONBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "TURN",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "TO",
+    "dobjFindBit": "TURNBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TURN",
-    "directObject": {
-      "find": "TURNBIT",
-      "where": []
-    },
-    "preposition2": "TO",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-TURN"
   },
   {
     "verb": "TURN",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "FOR",
+    "dobjFindBit": "TURNBIT",
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-TURN",
-    "directObject": {
-      "find": "TURNBIT",
-      "where": []
-    },
-    "preposition2": "FOR",
-    "indirectObject": {
-      "where": []
-    },
     "preAction": "PRE-TURN"
   },
   {
     "verb": "UNLOCK",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "WITH",
+    "dobjFindBit": null,
+    "dobjLocBits": 48,
+    "iobjFindBit": "TOOLBIT",
+    "iobjLocBits": 248,
     "action": "V-UNLOCK",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    },
-    "preposition2": "WITH",
-    "indirectObject": {
-      "find": "TOOLBIT",
-      "where": [
-        "HELD",
-        "CARRIED",
-        "ON-GROUND",
-        "IN-ROOM",
-        "TAKE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "UNTIE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-UNTIE",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "HELD",
-        "CARRIED"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "UNTIE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "FROM",
+    "dobjFindBit": null,
+    "dobjLocBits": 240,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-UNTIE",
-    "directObject": {
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM",
-        "HELD",
-        "CARRIED"
-      ]
-    },
-    "preposition2": "FROM",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "WAIT",
-    "action": "V-WAIT"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-WAIT",
+    "preAction": null
   },
   {
     "verb": "WAKE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-ALARM",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "WAKE",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": "ACTORBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-ALARM",
-    "preposition": "UP",
-    "directObject": {
-      "find": "ACTORBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "WALK",
-    "action": "V-WALK-AROUND"
-  },
-  {
-    "verb": "WALK",
-    "action": "V-WALK",
-    "directObject": {
-      "where": []
-    }
-  },
-  {
-    "verb": "WALK",
-    "action": "V-WALK",
-    "preposition": "AWAY",
-    "directObject": {
-      "where": []
-    }
-  },
-  {
-    "verb": "WALK",
-    "action": "V-THROUGH",
-    "preposition": "IN",
-    "directObject": {
-      "where": []
-    }
-  },
-  {
-    "verb": "WALK",
-    "action": "V-THROUGH",
-    "preposition": "WITH",
-    "directObject": {
-      "where": []
-    }
-  },
-  {
-    "verb": "WALK",
-    "action": "V-THROUGH",
-    "preposition": "ON",
-    "directObject": {
-      "where": []
-    }
-  },
-  {
-    "verb": "WALK",
-    "action": "V-LEAP",
-    "preposition": "OVER",
-    "directObject": {
-      "where": []
-    }
-  },
-  {
-    "verb": "WALK",
-    "action": "V-WALK-TO",
-    "preposition": "TO",
-    "directObject": {
-      "where": []
-    }
-  },
-  {
-    "verb": "WALK",
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-WALK-AROUND",
-    "preposition": "AROUND",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "WALK",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-WALK",
+    "preAction": null
+  },
+  {
+    "verb": "WALK",
+    "numObjects": 1,
+    "prep1": "AWAY",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-WALK",
+    "preAction": null
+  },
+  {
+    "verb": "WALK",
+    "numObjects": 1,
+    "prep1": "IN",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-THROUGH",
+    "preAction": null
+  },
+  {
+    "verb": "WALK",
+    "numObjects": 1,
+    "prep1": "WITH",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-THROUGH",
+    "preAction": null
+  },
+  {
+    "verb": "WALK",
+    "numObjects": 1,
+    "prep1": "ON",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-THROUGH",
+    "preAction": null
+  },
+  {
+    "verb": "WALK",
+    "numObjects": 1,
+    "prep1": "OVER",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-LEAP",
+    "preAction": null
+  },
+  {
+    "verb": "WALK",
+    "numObjects": 1,
+    "prep1": "TO",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-WALK-TO",
+    "preAction": null
+  },
+  {
+    "verb": "WALK",
+    "numObjects": 1,
+    "prep1": "AROUND",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-WALK-AROUND",
+    "preAction": null
+  },
+  {
+    "verb": "WALK",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": "CLIMBBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CLIMB-UP",
-    "preposition": "UP",
-    "directObject": {
-      "find": "CLIMBBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "WALK",
+    "numObjects": 1,
+    "prep1": "DOWN",
+    "prep2": null,
+    "dobjFindBit": "CLIMBBIT",
+    "dobjLocBits": 48,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-CLIMB-DOWN",
-    "preposition": "DOWN",
-    "directObject": {
-      "find": "CLIMBBIT",
-      "where": [
-        "ON-GROUND",
-        "IN-ROOM"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "WAVE",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 202,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-WAVE",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "TAKE",
-        "HAVE"
-      ]
-    }
+    "preAction": null
   },
   {
     "verb": "WAVE",
+    "numObjects": 2,
+    "prep1": null,
+    "prep2": "AT",
+    "dobjFindBit": null,
+    "dobjLocBits": 202,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-WAVE",
-    "directObject": {
-      "where": [
-        "HELD",
-        "CARRIED",
-        "TAKE",
-        "HAVE"
-      ]
-    },
-    "preposition2": "AT",
-    "indirectObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "WAVE",
+    "numObjects": 1,
+    "prep1": "AT",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-WAVE",
-    "preposition": "AT",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "WEAR",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-WEAR",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "WIN",
-    "action": "V-WIN"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-WIN",
+    "preAction": null
   },
   {
     "verb": "WIND",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-WIND",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "WIND",
+    "numObjects": 1,
+    "prep1": "UP",
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
     "action": "V-WIND",
-    "preposition": "UP",
-    "directObject": {
-      "where": []
-    }
+    "preAction": null
   },
   {
     "verb": "WISH",
-    "action": "V-WISH"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-WISH",
+    "preAction": null
   },
   {
     "verb": "YELL",
-    "action": "V-YELL"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-YELL",
+    "preAction": null
   },
   {
     "verb": "ZORK",
-    "action": "V-ZORK"
+    "numObjects": 0,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 0,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-ZORK",
+    "preAction": null
   }
 ]
