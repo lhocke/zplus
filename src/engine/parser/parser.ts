@@ -4,7 +4,7 @@ import type { World } from '../../domain/world.js';
 import type { GameObject } from '../../domain/game-object.js';
 import type { ParsedCommand, ParseResult } from './types.js';
 import { Flag } from '../../domain/flags.js';
-import { tokenize } from './tokenizer.js';
+import { tokenize, splitChained } from './tokenizer.js';
 import {
   lookupVerb,
   DIRECTIONS,
@@ -298,6 +298,128 @@ export class Parser {
       kind: 'ok',
       command: { verb: canonical, dobjId, iobjId, prep, raw: tokens },
     };
+  }
+
+  /**
+   * Parse a chained input string — one with segments separated by "." or
+   * "then" — returning one ParseResult per segment.  Processing stops at the
+   * first error: the error result is appended and the remainder is discarded.
+   *
+   * Pronoun bindings propagate across segments within the same call so that
+   * "take lantern then examine it" resolves "it" to the lantern.
+   *
+   * "take all" / "drop all" and "take all except <noun>" are expanded here:
+   * each takeable (or inventory item for drop) in scope becomes its own
+   * ParseResult in the output list.
+   */
+  parseChained(
+    input: string,
+    room: Room,
+    player: GameObject | null,
+    world: World,
+  ): ParseResult[] {
+    const segments = splitChained(input);
+    if (segments.length === 0) return [{ kind: 'empty' }];
+
+    const results: ParseResult[] = [];
+
+    for (const tokens of segments) {
+      // Detect "all" / "all except" patterns for multi-item expansion.
+      const expanded = this.tryExpandAll(tokens, room, player, world);
+      if (expanded !== null) {
+        results.push(...expanded);
+        // "take all" is a terminal segment — don't chain further.
+        break;
+      }
+
+      // Normal single parse.
+      const segment = tokens.join(' ');
+      const result = this.parse(segment, room, player, world);
+      results.push(result);
+
+      if (result.kind !== 'ok') {
+        // Stop chaining at first error.
+        break;
+      }
+
+      // Propagate pronoun bindings across segments.
+      this.bindPronouns(result.command);
+    }
+
+    return results;
+  }
+
+  /**
+   * Try to interpret a token array as an "all" or "all except <noun>" form
+   * for take/drop/get.  Returns an array of ParseResults (one per matching
+   * object) when the pattern is recognised, or null when it isn't.
+   *
+   * Recognised forms:
+   *   take all
+   *   get all
+   *   take all except <noun>
+   *   drop all
+   */
+  private tryExpandAll(
+    tokens: string[],
+    room: Room,
+    player: GameObject | null,
+    world: World,
+  ): ParseResult[] | null {
+    if (tokens.length < 2) return null;
+
+    const rawVerb = tokens[0]!;
+    const canonical = lookupVerb(rawVerb);
+    if (canonical === undefined) return null;
+
+    // Only "take" (and synonym "get") and "drop" support "all" expansion.
+    if (canonical !== 'take' && canonical !== 'drop') return null;
+
+    // Must contain the word "all".
+    const allIdx = tokens.indexOf('all');
+    if (allIdx === -1) return null;
+
+    // Determine excluded object id (for "all except <noun>").
+    let excludeId: ObjectId | undefined;
+    const exceptIdx = tokens.indexOf('except');
+    if (exceptIdx !== -1 && exceptIdx > allIdx) {
+      const exceptTokens = tokens.slice(exceptIdx + 1);
+      if (exceptTokens.length > 0) {
+        const scope = collectScope(room, player, world);
+        const phrase = splitNounPhrase(exceptTokens);
+        if (phrase !== null) {
+          const matches = matchNoun(phrase.noun, phrase.adjectives, scope);
+          if (matches.length === 1) excludeId = matches[0]!.id;
+          // If ambiguous or not found, we simply don't exclude anything —
+          // the engine will handle it when executing.
+        }
+      }
+    }
+
+    const scope = collectScope(room, player, world);
+
+    // For "take all": pick every takeable object in scope.
+    // For "drop all": pick every takeable object without a parent (inventory
+    //   shortcut) or carried by the player.
+    const candidates: GameObject[] =
+      canonical === 'take'
+        ? scope.filter(o => o.has(Flag.Takeable))
+        : scope.filter(o => o.has(Flag.Takeable) && (o.parent === null || o.parent === player));
+
+    const matches = candidates.filter(o => o.id !== excludeId);
+
+    if (matches.length === 0) return [];
+
+    return matches.map(obj => ({
+      kind: 'ok' as const,
+      command: {
+        verb: canonical,
+        dobjId: obj.id,
+        iobjId: undefined,
+        prep: undefined,
+        raw: tokens,
+      },
+    }));
   }
 
   /**
