@@ -130,6 +130,20 @@ export class World {
     return new World(registry);
   }
 
+  /**
+   * Register a pre-constructed object into the world after construction.
+   * Useful for bootstrap: synthesise a PLAYER actor, then register it before
+   * handing the world to the Game constructor.
+   *
+   * Throws if the id is already registered — prevents silent shadowing.
+   */
+  register(obj: GameObject): void {
+    if (this.registry.has(obj.id)) {
+      throw new Error(`World.register: duplicate id "${obj.id}"`);
+    }
+    this.registry.set(obj.id, obj);
+  }
+
   get(id: ObjectId): GameObject | undefined {
     return this.registry.get(id);
   }

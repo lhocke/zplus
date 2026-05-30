@@ -202,7 +202,10 @@ function verbRead(ctx: VerbContext): VerbResult {
   }
 
   // Prefer an explicit text prop; fall back to ldesc, then desc.
-  const text = item.props.get('text');
+  // The extractor stores the key as 'TEXT' (upper-case, matching ZIL
+  // convention); accept both casings so synthetic test fixtures using
+  // lowercase 'text' continue to work.
+  const text = item.props.get('TEXT') ?? item.props.get('text');
   if (typeof text === 'string') return result(text);
   if (item.ldesc) return result(item.ldesc);
   return result(`The ${item.desc} has nothing written on it.`);
