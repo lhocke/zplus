@@ -59,7 +59,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are standing in front of a massive barrow of stone. In the east face\nis a huge stone door which is open. You cannot see into the dark of the tomb.",
+    "ldesc": "You are standing in front of a massive barrow of stone. In the east face is a huge stone door which is open. You cannot see into the dark of the tomb.",
     "actionRoutine": "STONE-BARROW-FCN",
     "exits": [
       {
@@ -82,7 +82,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are facing the north side of a white house. There is no door here,\nand all the windows are boarded up. To the north a narrow path winds through\nthe trees.",
+    "ldesc": "You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.",
     "exits": [
       {
         "dir": "sw",
@@ -124,7 +124,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are facing the south side of a white house. There is no door here,\nand all the windows are boarded.",
+    "ldesc": "You are facing the south side of a white house. There is no door here, and all the windows are boarded.",
     "exits": [
       {
         "dir": "west",
@@ -210,7 +210,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a forest, with trees in all directions. To the east,\nthere appears to be sunlight.",
+    "ldesc": "This is a forest, with trees in all directions. To the east, there appears to be sunlight.",
     "actionRoutine": "FOREST-ROOM",
     "exits": [
       {
@@ -369,7 +369,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a path winding through a dimly lit forest. The path heads\nnorth-south here. One particularly large tree with some low branches\nstands at the edge of the path.",
+    "ldesc": "This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.",
     "actionRoutine": "FOREST-ROOM",
     "exits": [
       {
@@ -472,7 +472,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are in a small clearing in a well marked forest path that\nextends to the east and west.",
+    "ldesc": "You are in a small clearing in a well marked forest path that extends to the east and west.",
     "actionRoutine": "FOREST-ROOM",
     "exits": [
       {
@@ -638,7 +638,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a small room with passages to the east and south and a\nforbidding hole leading west. Bloodstains and deep scratches\n(perhaps made by an axe) mar the walls.",
+    "ldesc": "This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.",
     "actionRoutine": "TROLL-ROOM-F",
     "exits": [
       {
@@ -671,7 +671,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are on the east edge of a chasm, the bottom of which cannot be\nseen. A narrow passage goes north, and the path you are on continues\nto the east.",
+    "ldesc": "You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east.",
     "exits": [
       {
         "dir": "north",
@@ -698,7 +698,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is an art gallery. Most of the paintings have been stolen by\nvandals with exceptional taste. The vandals left through either the\nnorth or west exits.",
+    "ldesc": "This is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits.",
     "exits": [
       {
         "dir": "west",
@@ -723,7 +723,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This appears to have been an artist's studio. The walls and floors are\nsplattered with paints of 69 different colors. Strangely enough, nothing\nof value is hanging here. At the south end of the room is an open door\n(also covered with paint). A dark and narrow chimney leads up from a\nfireplace; although you might be able to get up it, it seems unlikely\nyou could get back down.",
+    "ldesc": "This appears to have been an artist's studio. The walls and floors are splattered with paints of 69 different colors. Strangely enough, nothing of value is hanging here. At the south end of the room is an open door (also covered with paint). A dark and narrow chimney leads up from a fireplace; although you might be able to get up it, it seems unlikely you could get back down.",
     "exits": [
       {
         "dir": "south",
@@ -877,7 +877,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is part of a maze of twisty little passages, all alike.\nA skeleton, probably the remains of a luckless adventurer, lies here.",
+    "ldesc": "This is part of a maze of twisty little passages, all alike. A skeleton, probably the remains of a luckless adventurer, lies here.",
     "exits": [
       {
         "dir": "east",
@@ -1331,7 +1331,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a long passage. To the west is one entrance. On the\neast there is an old wooden door, with a large opening in it (about\ncyclops sized).",
+    "ldesc": "This is a long passage. To the west is one entrance. On the east there is an old wooden door, with a large opening in it (about cyclops sized).",
     "parent": "TO",
     "exits": [
       {
@@ -1357,7 +1357,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a large room, whose east wall is solid granite. A number\nof discarded bags, which crumble at your touch, are scattered about\non the floor. There is an exit down a staircase.",
+    "ldesc": "This is a large room, whose east wall is solid granite. A number of discarded bags, which crumble at your touch, are scattered about on the floor. There is an exit down a staircase.",
     "actionRoutine": "TREASURE-ROOM-FCN",
     "exits": [
       {
@@ -1482,7 +1482,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are standing on a path beside a gently flowing stream. The path\nfollows the stream, which flows from west to east.",
+    "ldesc": "You are standing on a path beside a gently flowing stream. The path follows the stream, which flows from west to east.",
     "exits": [
       {
         "dir": "east",
@@ -1507,7 +1507,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are on the gently flowing stream. The upstream route is too narrow\nto navigate, and the downstream route is invisible due to twisting\nwalls. There is a narrow beach to land on.",
+    "ldesc": "You are on the gently flowing stream. The upstream route is too narrow to navigate, and the downstream route is invisible due to twisting walls. There is a narrow beach to land on.",
     "exits": [
       {
         "dir": "up",
@@ -1596,7 +1596,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a tiny cave with entrances west and north, and a staircase\nleading down.",
+    "ldesc": "This is a tiny cave with entrances west and north, and a staircase leading down.",
     "exits": [
       {
         "dir": "north",
@@ -1628,7 +1628,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a tiny cave with entrances west and north, and a dark,\nforbidding staircase leading down.",
+    "ldesc": "This is a tiny cave with entrances west and north, and a dark, forbidding staircase leading down.",
     "actionRoutine": "CAVE2-ROOM",
     "exits": [
       {
@@ -1655,7 +1655,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a cold and damp corridor where a long east-west passageway\nturns into a southward path.",
+    "ldesc": "This is a cold and damp corridor where a long east-west passageway turns into a southward path.",
     "exits": [
       {
         "dir": "south",
@@ -1677,7 +1677,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a long and narrow corridor where a long north-south passageway\nbriefly narrows even further.",
+    "ldesc": "This is a long and narrow corridor where a long north-south passageway briefly narrows even further.",
     "exits": [
       {
         "dir": "north",
@@ -1699,7 +1699,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a winding passage. It seems that there are only exits\non the east and north.",
+    "ldesc": "This is a winding passage. It seems that there are only exits on the east and north.",
     "exits": [
       {
         "dir": "north",
@@ -1721,7 +1721,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a winding passage. It seems that there are only exits\non the east and north.",
+    "ldesc": "This is a winding passage. It seems that there are only exits on the east and north.",
     "exits": [
       {
         "dir": "north",
@@ -1745,7 +1745,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is an ancient room, long under water. There is an exit to\nthe south and a staircase leading up.",
+    "ldesc": "This is an ancient room, long under water. There is an exit to the south and a staircase leading up.",
     "exits": [
       {
         "dir": "up",
@@ -1770,7 +1770,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a narrow east-west passageway. There is a narrow stairway\nleading down at the north end of the room.",
+    "ldesc": "This is a narrow east-west passageway. There is a narrow stairway leading down at the north end of the room.",
     "exits": [
       {
         "dir": "east",
@@ -1800,7 +1800,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a circular stone room with passages in all directions. Several\nof them have unfortunately been blocked by cave-ins.",
+    "ldesc": "This is a circular stone room with passages in all directions. Several of them have unfortunately been blocked by cave-ins.",
     "exits": [
       {
         "dir": "east",
@@ -1868,7 +1868,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This cave has exits to the west and east, and narrows to a crack toward\nthe south. The earth is particularly damp here.",
+    "ldesc": "This cave has exits to the west and east, and narrows to a crack toward the south. The earth is particularly damp here.",
     "exits": [
       {
         "dir": "west",
@@ -1951,7 +1951,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "A chasm runs southwest to northeast and the path follows it. You are\non the south side of the chasm, where a crack opens into a passage.",
+    "ldesc": "A chasm runs southwest to northeast and the path follows it. You are on the south side of the chasm, where a crack opens into a passage.",
     "exits": [
       {
         "dir": "ne",
@@ -2017,7 +2017,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You have entered the Land of the Living Dead. Thousands of lost souls\ncan be heard weeping and moaning. In the corner are stacked the remains\nof dozens of previous adventurers less fortunate than yourself.\nA passage exits to the north.",
+    "ldesc": "You have entered the Land of the Living Dead. Thousands of lost souls can be heard weeping and moaning. In the corner are stacked the remains of dozens of previous adventurers less fortunate than yourself. A passage exits to the north.",
     "exits": [
       {
         "dir": "out",
@@ -2063,7 +2063,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a room which looks like an Egyptian tomb. There is an\nascending staircase to the west.",
+    "ldesc": "This is a room which looks like an Egyptian tomb. There is an ascending staircase to the west.",
     "exits": [
       {
         "dir": "west",
@@ -2144,7 +2144,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is the north end of a large temple. On the east wall is an\nancient inscription, probably a prayer in a long-forgotten language.\nBelow the prayer is a staircase leading down. The west wall is solid\ngranite. The exit to the north end of the room is through huge\nmarble pillars.",
+    "ldesc": "This is the north end of a large temple. On the east wall is an ancient inscription, probably a prayer in a long-forgotten language. Below the prayer is a staircase leading down. The west wall is solid granite. The exit to the north end of the room is through huge marble pillars.",
     "exits": [
       {
         "dir": "down",
@@ -2184,7 +2184,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is the south end of a large temple. In front of you is what\nappears to be an altar. In one corner is a small hole in the floor\nwhich leads into darkness. You probably could not get back up it.",
+    "ldesc": "This is the south end of a large temple. In front of you is what appears to be an altar. In one corner is a small hole in the floor which leads into darkness. You probably could not get back up it.",
     "actionRoutine": "SOUTH-TEMPLE-FCN",
     "exits": [
       {
@@ -2247,7 +2247,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This room appears to have been the waiting room for groups touring\nthe dam. There are open doorways here to the north and east marked\n\"Private\", and there is a path leading south over the top of the dam.",
+    "ldesc": "This room appears to have been the waiting room for groups touring the dam. There are open doorways here to the north and east marked \"Private\", and there is a path leading south over the top of the dam.",
     "exits": [
       {
         "dir": "south",
@@ -2273,7 +2273,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is what appears to have been the maintenance room for Flood\nControl Dam #3. Apparently, this room has been ransacked recently, for\nmost of the valuable equipment is gone. On the wall in front of you is a\ngroup of buttons colored blue, yellow, brown, and red. There are doorways to\nthe west and south.",
+    "ldesc": "This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south.",
     "exits": [
       {
         "dir": "south",
@@ -2299,7 +2299,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are at the base of Flood Control Dam #3, which looms above you\nand to the north. The river Frigid is flowing by here. Along the\nriver are the White Cliffs which seem to form giant walls stretching\nfrom north to south along the shores of the river as it winds its\nway downstream.",
+    "ldesc": "You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.",
     "exits": [
       {
         "dir": "north",
@@ -2325,7 +2325,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are on the Frigid River in the vicinity of the Dam. The river\nflows quietly here. There is a landing on the west shore.",
+    "ldesc": "You are on the Frigid River in the vicinity of the Dam. The river flows quietly here. There is a landing on the west shore.",
     "exits": [
       {
         "dir": "up",
@@ -2362,7 +2362,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "The river turns a corner here making it impossible to see the\nDam. The White Cliffs loom on the east bank and large rocks prevent\nlanding on the west.",
+    "ldesc": "The river turns a corner here making it impossible to see the Dam. The White Cliffs loom on the east bank and large rocks prevent landing on the west.",
     "exits": [
       {
         "dir": "up",
@@ -2399,7 +2399,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "The river descends here into a valley. There is a narrow beach on the\nwest shore below the cliffs. In the distance a faint rumbling can be\nheard.",
+    "ldesc": "The river descends here into a valley. There is a narrow beach on the west shore below the cliffs. In the distance a faint rumbling can be heard.",
     "exits": [
       {
         "dir": "up",
@@ -2432,7 +2432,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are on a narrow strip of beach which runs along the base of the\nWhite Cliffs. There is a narrow path heading south along the Cliffs\nand a tight passage leading west into the cliffs themselves.",
+    "ldesc": "You are on a narrow strip of beach which runs along the base of the White Cliffs. There is a narrow path heading south along the Cliffs and a tight passage leading west into the cliffs themselves.",
     "actionRoutine": "WHITE-CLIFFS-FUNCTION",
     "exits": [
       {
@@ -2462,7 +2462,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are on a rocky, narrow strip of beach beside the Cliffs. A\nnarrow path leads north along the shore.",
+    "ldesc": "You are on a rocky, narrow strip of beach beside the Cliffs. A narrow path leads north along the shore.",
     "actionRoutine": "WHITE-CLIFFS-FUNCTION",
     "exits": [
       {
@@ -2486,7 +2486,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "The river is running faster here and the sound ahead appears to be\nthat of rushing water. On the east shore is a sandy beach. A small\narea of beach can also be seen below the cliffs on the west shore.",
+    "ldesc": "The river is running faster here and the sound ahead appears to be that of rushing water. On the east shore is a sandy beach. A small area of beach can also be seen below the cliffs on the west shore.",
     "actionRoutine": "RIVR4-ROOM",
     "exits": [
       {
@@ -2525,7 +2525,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "The sound of rushing water is nearly unbearable here. On the east\nshore is a large landing area.",
+    "ldesc": "The sound of rushing water is nearly unbearable here. On the east shore is a large landing area.",
     "exits": [
       {
         "dir": "up",
@@ -2555,7 +2555,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are on the east shore of the river. The water here seems somewhat\ntreacherous. A path travels from north to south here, the south end\nquickly turning around a sharp corner.",
+    "ldesc": "You are on the east shore of the river. The water here seems somewhat treacherous. A path travels from north to south here, the south end quickly turning around a sharp corner.",
     "exits": [
       {
         "dir": "north",
@@ -2580,7 +2580,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are on a large sandy beach on the east shore of the river, which is\nflowing quickly by. A path runs beside the river to the south here, and\na passage is partially buried in sand to the northeast.",
+    "ldesc": "You are on a large sandy beach on the east shore of the river, which is flowing quickly by. A path runs beside the river to the south here, and a passage is partially buried in sand to the northeast.",
     "exits": [
       {
         "dir": "ne",
@@ -2660,7 +2660,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are on top of a rainbow (I bet you never thought you would walk\non a rainbow), with a magnificent view of the Falls. The rainbow\ntravels east-west here.",
+    "ldesc": "You are on top of a rainbow (I bet you never thought you would walk on a rainbow), with a magnificent view of the Falls. The rainbow travels east-west here.",
     "exits": [
       {
         "dir": "west",
@@ -2685,7 +2685,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are on a small, rocky beach on the continuation of the Frigid\nRiver past the Falls. The beach is narrow due to the presence of the\nWhite Cliffs. The river canyon opens here and sunlight shines in\nfrom above. A rainbow crosses over the falls to the east and a narrow\npath continues to the southwest.",
+    "ldesc": "You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest.",
     "exits": [
       {
         "dir": "up",
@@ -2722,7 +2722,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are beneath the walls of the river canyon which may be climbable\nhere. The lesser part of the runoff of Aragain Falls flows by below.\nTo the north is a narrow path.",
+    "ldesc": "You are beneath the walls of the river canyon which may be climbable here. The lesser part of the runoff of Aragain Falls flows by below. To the north is a narrow path.",
     "exits": [
       {
         "dir": "up",
@@ -2748,7 +2748,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are on a ledge about halfway up the wall of the river canyon.\nYou can see from here that the main flow from Aragain Falls twists\nalong a passage which it is impossible for you to enter. Below you is the\ncanyon bottom. Above you is more cliff, which appears\nclimbable.",
+    "ldesc": "You are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable.",
     "exits": [
       {
         "dir": "up",
@@ -2774,7 +2774,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are at the top of the Great Canyon on its west wall. From here\nthere is a marvelous view of the canyon and parts of the Frigid River\nupstream. Across the canyon, the walls of the White Cliffs join the\nmighty ramparts of the Flathead Mountains to the east. Following the\nCanyon upstream to the north, Aragain Falls may be seen, complete with\nrainbow. The mighty Frigid River flows out from a great dark cavern. To\nthe west and south can be seen an immense forest, stretching for miles\naround. A path leads northwest. It is possible to climb down into\nthe canyon from here.",
+    "ldesc": "You are at the top of the Great Canyon on its west wall. From here there is a marvelous view of the canyon and parts of the Frigid River upstream. Across the canyon, the walls of the White Cliffs join the mighty ramparts of the Flathead Mountains to the east. Following the Canyon upstream to the north, Aragain Falls may be seen, complete with rainbow. The mighty Frigid River flows out from a great dark cavern. To the west and south can be seen an immense forest, stretching for miles around. A path leads northwest. It is possible to climb down into the canyon from here.",
     "actionRoutine": "CANYON-VIEW-F",
     "exits": [
       {
@@ -2809,7 +2809,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are standing at the entrance of what might have been a coal mine.\nThe shaft enters the west wall, and there is another exit on the south\nend of the room.",
+    "ldesc": "You are standing at the entrance of what might have been a coal mine. The shaft enters the west wall, and there is another exit on the south end of the room.",
     "parent": "TO",
     "exits": [
       {
@@ -2832,7 +2832,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are in a small room. Strange squeaky sounds may be heard coming\nfrom the passage at the north end. You may also escape to the east.",
+    "ldesc": "You are in a small room. Strange squeaky sounds may be heard coming from the passage at the north end. You may also escape to the east.",
     "exits": [
       {
         "dir": "north",
@@ -2879,7 +2879,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a large room, in the middle of which is a small shaft\ndescending through the floor into darkness below. To the west and\nthe north are exits from this room. Constructed over the top of the\nshaft is a metal framework to which a heavy iron chain is attached.",
+    "ldesc": "This is a large room, in the middle of which is a small shaft descending through the floor into darkness below. To the west and the north are exits from this room. Constructed over the top of the shaft is a metal framework to which a heavy iron chain is attached.",
     "exits": [
       {
         "dir": "down",
@@ -2908,7 +2908,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a small nondescript room. However, from the direction\nof a small descending staircase a foul odor can be detected. To the\nsouth is a narrow tunnel.",
+    "ldesc": "This is a small nondescript room. However, from the direction of a small descending staircase a foul odor can be detected. To the south is a narrow tunnel.",
     "exits": [
       {
         "dir": "down",
@@ -2934,7 +2934,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a small room which smells strongly of coal gas. There is a\nshort climb up some stairs and a narrow tunnel leading east.",
+    "ldesc": "This is a small room which smells strongly of coal gas. There is a short climb up some stairs and a narrow tunnel leading east.",
     "actionRoutine": "BOOM-ROOM",
     "exits": [
       {
@@ -2959,7 +2959,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a very small room. In the corner is a rickety wooden\nladder, leading downward. It might be safe to descend. There is\nalso a staircase leading upward.",
+    "ldesc": "This is a very small room. In the corner is a rickety wooden ladder, leading downward. It might be safe to descend. There is also a staircase leading upward.",
     "exits": [
       {
         "dir": "down",
@@ -2983,7 +2983,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a rather wide room. On one side is the bottom of a\nnarrow wooden ladder. To the west and the south are passages\nleaving the room.",
+    "ldesc": "This is a rather wide room. On one side is the bottom of a narrow wooden ladder. To the west and the south are passages leaving the room.",
     "exits": [
       {
         "dir": "south",
@@ -3028,7 +3028,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a long and narrow passage, which is cluttered with broken\ntimbers. A wide passage comes from the east and turns at the\nwest end of the room into a very narrow passageway. From the west\ncomes a strong draft.",
+    "ldesc": "This is a long and narrow passage, which is cluttered with broken timbers. A wide passage comes from the east and turns at the west end of the room into a very narrow passageway. From the west comes a strong draft.",
     "actionRoutine": "NO-OBJS",
     "exits": [
       {
@@ -3056,7 +3056,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a small drafty room in which is the bottom of a long\nshaft. To the south is a passageway and to the east a very narrow\npassage. In the shaft can be seen a heavy iron chain.",
+    "ldesc": "This is a small drafty room in which is the bottom of a long shaft. To the south is a passageway and to the east a very narrow passage. In the shaft can be seen a heavy iron chain.",
     "actionRoutine": "NO-OBJS",
     "exits": [
       {
@@ -3211,7 +3211,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is a small chamber, which appears to have been part of a\ncoal mine. On the south wall of the chamber the letters \"Granite\nWall\" are etched in the rock. To the east is a long passage, and\nthere is a steep metal slide twisting downward. To the north is\na small opening.",
+    "ldesc": "This is a small chamber, which appears to have been part of a coal mine. On the south wall of the chamber the letters \"Granite Wall\" are etched in the rock. To the east is a long passage, and there is a steep metal slide twisting downward. To the north is a small opening.",
     "exits": [
       {
         "dir": "east",

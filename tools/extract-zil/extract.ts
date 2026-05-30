@@ -159,6 +159,40 @@ function secondString(list: SList): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
+// ZIL string normalization
+// ---------------------------------------------------------------------------
+
+/**
+ * Normalize ZIL string semantics:
+ *   - Replace each '|' with '\n' ('|' is ZIL's explicit line-break character).
+ *   - Collapse runs of (optional-spaces newline optional-spaces) that appear
+ *     in the raw source text into a single space.  In ZIL, a bare newline
+ *     inside a string literal is a word separator, not a line break.
+ *
+ * Applied in order:
+ *   1. Replace '|' with '\n' (explicit ZIL newlines become real newlines).
+ *   2. Collapse source newlines to spaces — but only within the segments
+ *      between the original '|' separators (so the '\n' replacements for
+ *      '|' are preserved).  This is achieved by splitting on '|' first,
+ *      normalising source newlines within each segment, then joining with '\n'.
+ */
+export function normalizeZilString(s: string): string {
+  // Split on '|'; each segment between pipes has its source-level newlines
+  // collapsed.  Leading/trailing whitespace (which comes from source indentation
+  // or line continuation around the '|' separator) is trimmed from each segment
+  // so that adjacent '|' pairs produce clean '\n\n' blank-line breaks.
+  const segments = s.split('|');
+  const normalised = segments.map(seg => {
+    // Collapse optional whitespace + newline + optional whitespace to one space.
+    const collapsed = seg.replace(/[ \t]*\n[ \t]*/g, ' ');
+    // Trim leading/trailing spaces that result from source indentation around '|'.
+    return collapsed.trim();
+  });
+  // Re-join with '\n' — these are the explicit ZIL line breaks.
+  return normalised.join('\n');
+}
+
+// ---------------------------------------------------------------------------
 // Exit extraction from a direction sub-list
 //
 // ZIL exit forms:
@@ -270,17 +304,20 @@ function extractOne(form: SList): ObjectData | null {
 
     switch (tag) {
       case 'DESC': {
-        desc = secondString(item) ?? second(item) ?? '';
+        const rawDesc = secondString(item) ?? second(item) ?? '';
+        desc = normalizeZilString(rawDesc);
         break;
       }
 
       case 'LDESC': {
-        ldesc = secondString(item);
+        const rawLdesc = secondString(item);
+        ldesc = rawLdesc !== undefined ? normalizeZilString(rawLdesc) : undefined;
         break;
       }
 
       case 'FDESC': {
-        fdesc = secondString(item);
+        const rawFdesc = secondString(item);
+        fdesc = rawFdesc !== undefined ? normalizeZilString(rawFdesc) : undefined;
         break;
       }
 
@@ -363,10 +400,10 @@ function extractOne(form: SList): ObjectData | null {
         }
 
         // Everything else is stored as a generic prop
-        // String value
+        // String value — normalize ZIL '|' and source newlines.
         const strVal = secondString(item);
         if (strVal !== undefined) {
-          props[tag] = strVal;
+          props[tag] = normalizeZilString(strVal);
           break;
         }
         // Atom value
