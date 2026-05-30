@@ -571,8 +571,7 @@
       "Sacred"
     ],
     "props": {
-      "GLOBAL": "STAIRS",
-      "PSEUDO": "NAILS"
+      "GLOBAL": "STAIRS"
     },
     "synonyms": [],
     "adjectives": [],
@@ -591,6 +590,16 @@
       {
         "dir": "down",
         "per": "TRAP-DOOR-EXIT"
+      }
+    ],
+    "pseudo": [
+      {
+        "word": "NAILS",
+        "action": "NAILS-PSEUDO"
+      },
+      {
+        "word": "NAIL",
+        "action": "NAILS-PSEUDO"
       }
     ]
   },
@@ -666,9 +675,7 @@
     "flags": [
       "Land"
     ],
-    "props": {
-      "PSEUDO": "CHASM"
-    },
+    "props": {},
     "synonyms": [],
     "adjectives": [],
     "ldesc": "You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east.",
@@ -684,6 +691,12 @@
       {
         "dir": "down",
         "elseMessage": "The chasm probably leads straight to the infernal regions."
+      }
+    ],
+    "pseudo": [
+      {
+        "word": "CHASM",
+        "action": "CHASM-PSEUDO"
       }
     ]
   },
@@ -718,8 +731,7 @@
       "Land"
     ],
     "props": {
-      "GLOBAL": "CHIMNEY",
-      "PSEUDO": "DOOR"
+      "GLOBAL": "CHIMNEY"
     },
     "synonyms": [],
     "adjectives": [],
@@ -732,6 +744,16 @@
       {
         "dir": "up",
         "per": "UP-CHIMNEY-FUNCTION"
+      }
+    ],
+    "pseudo": [
+      {
+        "word": "DOOR",
+        "action": "DOOR-PSEUDO"
+      },
+      {
+        "word": "PAINT",
+        "action": "PAINT-PSEUDO"
       }
     ]
   },
@@ -1374,8 +1396,7 @@
       "Land"
     ],
     "props": {
-      "GLOBAL": "GLOBAL-WATER",
-      "PSEUDO": "LAKE"
+      "GLOBAL": "GLOBAL-WATER"
     },
     "synonyms": [],
     "adjectives": [],
@@ -1403,6 +1424,16 @@
         "ifFlag": "LOW-TIDE",
         "elseMessage": "You would drown."
       }
+    ],
+    "pseudo": [
+      {
+        "word": "LAKE",
+        "action": "LAKE-PSEUDO"
+      },
+      {
+        "word": "CHASM",
+        "action": "CHASM-PSEUDO"
+      }
     ]
   },
   {
@@ -1413,7 +1444,6 @@
       "NonDescript"
     ],
     "props": {
-      "PSEUDO": "STREAM",
       "GLOBAL": "GLOBAL-WATER"
     },
     "synonyms": [],
@@ -1440,6 +1470,12 @@
         "dir": "down",
         "elseMessage": "The dam blocks your way."
       }
+    ],
+    "pseudo": [
+      {
+        "word": "STREAM",
+        "action": "STREAM-PSEUDO"
+      }
     ]
   },
   {
@@ -1450,8 +1486,7 @@
       "Land"
     ],
     "props": {
-      "GLOBAL": "GLOBAL-WATER",
-      "PSEUDO": "LAKE"
+      "GLOBAL": "GLOBAL-WATER"
     },
     "synonyms": [],
     "adjectives": [],
@@ -1467,6 +1502,12 @@
         "ifFlag": "LOW-TIDE",
         "elseMessage": "You would drown."
       }
+    ],
+    "pseudo": [
+      {
+        "word": "LAKE",
+        "action": "LAKE-PSEUDO"
+      }
     ]
   },
   {
@@ -1477,8 +1518,7 @@
       "Land"
     ],
     "props": {
-      "GLOBAL": "GLOBAL-WATER",
-      "PSEUDO": "STREAM"
+      "GLOBAL": "GLOBAL-WATER"
     },
     "synonyms": [],
     "adjectives": [],
@@ -1492,6 +1532,12 @@
         "dir": "west",
         "elseMessage": "The stream emerges from a spot too small for you to enter."
       }
+    ],
+    "pseudo": [
+      {
+        "word": "STREAM",
+        "action": "STREAM-PSEUDO"
+      }
     ]
   },
   {
@@ -1502,8 +1548,7 @@
       "NonDescript"
     ],
     "props": {
-      "GLOBAL": "GLOBAL-WATER",
-      "PSEUDO": "STREAM"
+      "GLOBAL": "GLOBAL-WATER"
     },
     "synonyms": [],
     "adjectives": [],
@@ -1528,6 +1573,12 @@
       {
         "dir": "east",
         "to": "RESERVOIR"
+      }
+    ],
+    "pseudo": [
+      {
+        "word": "STREAM",
+        "action": "STREAM-PSEUDO"
       }
     ]
   },
@@ -1946,8 +1997,7 @@
       "Land"
     ],
     "props": {
-      "GLOBAL": "CRACK",
-      "PSEUDO": "CHASM"
+      "GLOBAL": "CRACK"
     },
     "synonyms": [],
     "adjectives": [],
@@ -1973,6 +2023,12 @@
         "dir": "down",
         "elseMessage": "Are you out of your mind?"
       }
+    ],
+    "pseudo": [
+      {
+        "word": "CHASM",
+        "action": "CHASM-PSEUDO"
+      }
     ]
   },
   {
@@ -1984,8 +2040,7 @@
       "Light"
     ],
     "props": {
-      "GLOBAL": "BODIES",
-      "PSEUDO": "GATE"
+      "GLOBAL": "BODIES"
     },
     "synonyms": [],
     "adjectives": [],
@@ -2001,6 +2056,16 @@
         "to": "LAND-OF-LIVING-DEAD",
         "ifFlag": "LLD-FLAG",
         "elseMessage": "Some invisible force prevents you from passing through the gate."
+      }
+    ],
+    "pseudo": [
+      {
+        "word": "GATE",
+        "action": "GATE-PSEUDO"
+      },
+      {
+        "word": "GATES",
+        "action": "GATE-PSEUDO"
       }
     ]
   },
@@ -2082,9 +2147,7 @@
     "flags": [
       "Land"
     ],
-    "props": {
-      "PSEUDO": "DOME"
-    },
+    "props": {},
     "synonyms": [],
     "adjectives": [],
     "actionRoutine": "DOME-ROOM-FCN",
@@ -2099,6 +2162,12 @@
         "ifFlag": "DOME-FLAG",
         "elseMessage": "You cannot go down without fracturing many bones."
       }
+    ],
+    "pseudo": [
+      {
+        "word": "DOME",
+        "action": "DOME-PSEUDO"
+      }
     ]
   },
   {
@@ -2109,8 +2178,7 @@
       "Land"
     ],
     "props": {
-      "GLOBAL": "STAIRS",
-      "PSEUDO": "DOME"
+      "GLOBAL": "STAIRS"
     },
     "synonyms": [],
     "adjectives": [],
@@ -2127,6 +2195,12 @@
       {
         "dir": "down",
         "to": "NORTH-TEMPLE"
+      }
+    ],
+    "pseudo": [
+      {
+        "word": "DOME",
+        "action": "DOME-PSEUDO"
       }
     ]
   },
@@ -2874,9 +2948,7 @@
     "flags": [
       "Land"
     ],
-    "props": {
-      "PSEUDO": "CHAIN"
-    },
+    "props": {},
     "synonyms": [],
     "adjectives": [],
     "ldesc": "This is a large room, in the middle of which is a small shaft descending through the floor into darkness below. To the west and the north are exits from this room. Constructed over the top of the shaft is a metal framework to which a heavy iron chain is attached.",
@@ -2893,6 +2965,12 @@
         "dir": "north",
         "to": "SMELLY-ROOM"
       }
+    ],
+    "pseudo": [
+      {
+        "word": "CHAIN",
+        "action": "CHAIN-PSEUDO"
+      }
     ]
   },
   {
@@ -2903,8 +2981,7 @@
       "Land"
     ],
     "props": {
-      "GLOBAL": "STAIRS",
-      "PSEUDO": "ODOR"
+      "GLOBAL": "STAIRS"
     },
     "synonyms": [],
     "adjectives": [],
@@ -2918,6 +2995,16 @@
         "dir": "south",
         "to": "SHAFT-ROOM"
       }
+    ],
+    "pseudo": [
+      {
+        "word": "ODOR",
+        "action": "GAS-PSEUDO"
+      },
+      {
+        "word": "GAS",
+        "action": "GAS-PSEUDO"
+      }
     ]
   },
   {
@@ -2929,8 +3016,7 @@
       "Sacred"
     ],
     "props": {
-      "GLOBAL": "STAIRS",
-      "PSEUDO": "GAS"
+      "GLOBAL": "STAIRS"
     },
     "synonyms": [],
     "adjectives": [],
@@ -2944,6 +3030,16 @@
       {
         "dir": "east",
         "to": "MINE-1"
+      }
+    ],
+    "pseudo": [
+      {
+        "word": "GAS",
+        "action": "GAS-PSEUDO"
+      },
+      {
+        "word": "ODOR",
+        "action": "GAS-PSEUDO"
       }
     ]
   },
@@ -3051,9 +3147,7 @@
       "Land",
       "Sacred"
     ],
-    "props": {
-      "PSEUDO": "CHAIN"
-    },
+    "props": {},
     "synonyms": [],
     "adjectives": [],
     "ldesc": "This is a small drafty room in which is the bottom of a long shaft. To the south is a passageway and to the east a very narrow passage. In the shaft can be seen a heavy iron chain.",
@@ -3074,6 +3168,12 @@
         "to": "TIMBER-ROOM",
         "ifFlag": "EMPTY-HANDED",
         "elseMessage": "You cannot fit through this passage with that load."
+      }
+    ],
+    "pseudo": [
+      {
+        "word": "CHAIN",
+        "action": "CHAIN-PSEUDO"
       }
     ]
   },

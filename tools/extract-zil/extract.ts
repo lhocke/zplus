@@ -36,6 +36,22 @@ export interface Exit {
   readonly elseMessage?: string;
 }
 
+/**
+ * One entry in a room's PSEUDO declaration.
+ *
+ * ZIL form: (PSEUDO "word1" routine1 "word2" routine2 ...)
+ * Extracted as: [{ word: "word1", action: "routine1" }, { word: "word2", action: "routine2" }, ...]
+ *
+ * PSEUDO objects are scenery words the parser recognises inside a specific room;
+ * when matched, the action routine is dispatched instead of a normal object lookup.
+ */
+export interface PseudoEntry {
+  /** Noun word (UPPERCASE) that matches this pseudo-object. */
+  word: string;
+  /** Port-native action id to invoke when this word is matched. */
+  action: string;
+}
+
 export interface ObjectData {
   id: ObjectId;
   kind: 'room' | 'thing' | 'container' | 'actor';
@@ -49,6 +65,8 @@ export interface ObjectData {
   adjectives: string[];
   exits?: Exit[];
   actionRoutine?: string;
+  /** Per-room pseudo-objects: scenery words that forward to action routines. */
+  pseudo?: PseudoEntry[];
 }
 
 // ---------------------------------------------------------------------------
@@ -293,6 +311,7 @@ function extractOne(form: SList): ObjectData | null {
   const adjectives: string[] = [];
   const exits: Exit[] = [];
   let actionRoutine: string | undefined;
+  let pseudo: PseudoEntry[] | undefined;
 
   // Walk property sub-lists (items 2..n)
   for (let i = 2; i < form.items.length; i++) {
@@ -382,6 +401,28 @@ function extractOne(form: SList): ObjectData | null {
         break;
       }
 
+      case 'PSEUDO': {
+        // ZIL form: (PSEUDO "word1" routine1 "word2" routine2 ...)
+        // Alternating string (noun word) and atom (action routine name).
+        // Parse all pairs and emit as a pseudo: PseudoEntry[] array on the room.
+        // The old extractor stored only props.PSEUDO = first word; this replaces it.
+        const pairs: PseudoEntry[] = [];
+        let j = 1;
+        while (j + 1 < item.items.length) {
+          const wordNode = item.items[j];
+          const routineNode = item.items[j + 1];
+          if (isString(wordNode) && isAtom(routineNode)) {
+            pairs.push({
+              word: (wordNode as SString).value.toUpperCase(),
+              action: (routineNode as SAtom).value,
+            });
+          }
+          j += 2;
+        }
+        if (pairs.length > 0) pseudo = pairs;
+        break;
+      }
+
       default: {
         // Direction clauses are handled here for ROOM forms
         if (isRoom && DIR_MAP[tag] !== undefined) {
@@ -433,6 +474,7 @@ function extractOne(form: SList): ObjectData | null {
   if (parent !== undefined) record.parent = parent;
   if (actionRoutine !== undefined) record.actionRoutine = actionRoutine;
   if (isRoom && exits.length > 0) record.exits = exits;
+  if (pseudo !== undefined) record.pseudo = pseudo;
 
   return record;
 }

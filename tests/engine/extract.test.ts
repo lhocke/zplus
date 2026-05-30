@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import { extractObjects } from '../../tools/extract-zil/extract.js';
+import { extractObjects, type PseudoEntry } from '../../tools/extract-zil/extract.js';
 import { parseSexpr } from '../../tools/extract-zil/parse-sexpr.js';
 
 // ---------------------------------------------------------------------------
@@ -259,4 +259,95 @@ describe('flag name mapping', () => {
       expect(results[0].flags).toContain(expected);
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// PSEUDO extraction — C3 task
+//
+// The ZIL PSEUDO property is an alternating list of "word" routine pairs.
+// The extractor must emit a pseudo: PseudoEntry[] array (not a single string
+// in props.PSEUDO).
+// ---------------------------------------------------------------------------
+
+describe('PSEUDO extraction — single pair', () => {
+  const src = `<ROOM CHASM-ROOM
+    (IN ROOMS)
+    (DESC "Chasm")
+    (PSEUDO "CHASM" CHASM-PSEUDO)>`;
+
+  const [room] = extractObjects(parseSexpr(src));
+
+  test('pseudo is an array', () => {
+    expect(Array.isArray(room.pseudo)).toBe(true);
+  });
+
+  test('pseudo has exactly one entry', () => {
+    expect(room.pseudo).toHaveLength(1);
+  });
+
+  test('entry word is CHASM', () => {
+    expect(room.pseudo![0].word).toBe('CHASM');
+  });
+
+  test('entry action is CHASM-PSEUDO', () => {
+    expect(room.pseudo![0].action).toBe('CHASM-PSEUDO');
+  });
+
+  test('props does not contain PSEUDO key', () => {
+    expect(room.props['PSEUDO']).toBeUndefined();
+  });
+});
+
+describe('PSEUDO extraction — multi-pair (LIVING-ROOM)', () => {
+  const src = `<ROOM LIVING-ROOM
+    (IN ROOMS)
+    (DESC "Living Room")
+    (PSEUDO "NAILS" NAILS-PSEUDO "NAIL" NAILS-PSEUDO)>`;
+
+  const [room] = extractObjects(parseSexpr(src));
+
+  test('pseudo has two entries', () => {
+    expect(room.pseudo).toHaveLength(2);
+  });
+
+  test('first entry: NAILS → NAILS-PSEUDO', () => {
+    expect(room.pseudo![0]).toEqual({ word: 'NAILS', action: 'NAILS-PSEUDO' } satisfies PseudoEntry);
+  });
+
+  test('second entry: NAIL → NAILS-PSEUDO', () => {
+    expect(room.pseudo![1]).toEqual({ word: 'NAIL', action: 'NAILS-PSEUDO' } satisfies PseudoEntry);
+  });
+});
+
+describe('PSEUDO extraction — STUDIO (two different routines)', () => {
+  const src = `<ROOM STUDIO
+    (IN ROOMS)
+    (DESC "Studio")
+    (PSEUDO "DOOR" DOOR-PSEUDO "PAINT" PAINT-PSEUDO)>`;
+
+  const [room] = extractObjects(parseSexpr(src));
+
+  test('pseudo has two entries', () => {
+    expect(room.pseudo).toHaveLength(2);
+  });
+
+  test('first entry: DOOR → DOOR-PSEUDO', () => {
+    expect(room.pseudo![0]).toEqual({ word: 'DOOR', action: 'DOOR-PSEUDO' } satisfies PseudoEntry);
+  });
+
+  test('second entry: PAINT → PAINT-PSEUDO', () => {
+    expect(room.pseudo![1]).toEqual({ word: 'PAINT', action: 'PAINT-PSEUDO' } satisfies PseudoEntry);
+  });
+});
+
+describe('PSEUDO extraction — room without PSEUDO', () => {
+  const src = `<ROOM MAZE-X
+    (IN ROOMS)
+    (DESC "Maze")>`;
+
+  const [room] = extractObjects(parseSexpr(src));
+
+  test('pseudo is undefined for rooms without PSEUDO', () => {
+    expect(room.pseudo).toBeUndefined();
+  });
 });
