@@ -204,8 +204,7 @@ function resolveNounPhrase(
     return {
       ok: false,
       result: {
-        kind: 'unknown-word',
-        word: noun,
+        kind: 'fail',
         message: `You haven't mentioned any ${noun === 'it' ? 'thing' : 'things'} recently.`,
       },
     };
@@ -217,8 +216,7 @@ function resolveNounPhrase(
     return {
       ok: false,
       result: {
-        kind: 'unknown-word',
-        word: noun,
+        kind: 'fail',
         message: `I don't know the word "${noun}".`,
       },
     };
@@ -228,13 +226,11 @@ function resolveNounPhrase(
     return { ok: true, id: matches[0]!.id };
   }
 
-  // Multiple matches — ambiguous.
+  // Multiple matches — ambiguous; emit a disambiguation prompt.
   return {
     ok: false,
     result: {
-      kind: 'ambiguous',
-      noun,
-      candidates: matches.map(m => m.id),
+      kind: 'disambig',
       message: `Which ${noun} do you mean, ${matches.map(m => m.desc).join(' or ')}?`,
     },
   };
@@ -271,7 +267,9 @@ export class Parser {
     world: World,
   ): ParseResult {
     const tokens = tokenize(input);
-    if (tokens.length === 0) return { kind: 'empty' };
+    if (tokens.length === 0) {
+      return { kind: 'fail', message: 'I beg your pardon?' };
+    }
 
     const scope = collectScope(room, player, world);
 
@@ -281,8 +279,9 @@ export class Parser {
         kind: 'ok',
         command: {
           verb: 'walk',
-          dobjId: undefined,
-          iobjId: undefined,
+          action: 'V-WALK',
+          dobjIds: undefined,
+          iobjIds: undefined,
           prep: normalizeDir(tokens[0]!),
           raw: tokens,
         } satisfies ParsedCommand,
@@ -293,8 +292,7 @@ export class Parser {
     const canonical = lookupVerb(rawVerb);
     if (canonical === undefined) {
       return {
-        kind: 'unknown-word',
-        word: rawVerb,
+        kind: 'fail',
         message: `I don't know the word "${rawVerb}".`,
       };
     }
@@ -303,32 +301,43 @@ export class Parser {
     if (rest.length === 0) {
       return {
         kind: 'ok',
-        command: { verb: canonical, raw: tokens },
+        command: { verb: canonical, action: 'V-' + canonical.toUpperCase(), raw: tokens },
       };
     }
 
     const { dobjTokens, prep, iobjTokens } = splitOnPrep(rest);
 
-    let dobjId: ObjectId | undefined;
-    let iobjId: ObjectId | undefined;
+    let dobjIds: ObjectId[] | undefined;
+    let iobjIds: ObjectId[] | undefined;
 
     // Resolve direct object if any tokens remain.
     if (dobjTokens.length > 0) {
       const r = resolveNounPhrase(dobjTokens, scope, this.itRef);
       if (!r.ok) return r.result;
-      dobjId = r.id;
+      if (r.id !== (undefined as unknown as ObjectId)) {
+        dobjIds = [r.id];
+      }
     }
 
     // Resolve indirect object if a preposition and tokens follow.
     if (prep !== undefined && iobjTokens.length > 0) {
       const r = resolveNounPhrase(iobjTokens, scope, this.itRef);
       if (!r.ok) return r.result;
-      iobjId = r.id;
+      if (r.id !== (undefined as unknown as ObjectId)) {
+        iobjIds = [r.id];
+      }
     }
 
     return {
       kind: 'ok',
-      command: { verb: canonical, dobjId, iobjId, prep, raw: tokens },
+      command: {
+        verb: canonical,
+        action: 'V-' + canonical.toUpperCase(),
+        dobjIds,
+        iobjIds,
+        prep,
+        raw: tokens,
+      },
     };
   }
 
@@ -351,7 +360,7 @@ export class Parser {
     world: World,
   ): ParseResult[] {
     const segments = splitChained(input);
-    if (segments.length === 0) return [{ kind: 'empty' }];
+    if (segments.length === 0) return [{ kind: 'fail', message: 'I beg your pardon?' }];
 
     const results: ParseResult[] = [];
 
@@ -446,8 +455,9 @@ export class Parser {
       kind: 'ok' as const,
       command: {
         verb: canonical,
-        dobjId: obj.id,
-        iobjId: undefined,
+        action: 'V-' + canonical.toUpperCase(),
+        dobjIds: [obj.id],
+        iobjIds: undefined,
         prep: undefined,
         raw: tokens,
       },
@@ -461,8 +471,9 @@ export class Parser {
    * parser errors or disambig prompts).
    */
   bindPronouns(cmd: ParsedCommand): void {
-    if (cmd.dobjId !== undefined) {
-      this.itRef = cmd.dobjId;
+    const dobjId = cmd.dobjIds?.[0];
+    if (dobjId !== undefined) {
+      this.itRef = dobjId;
     }
     // If there is no dobj but there is an iobj, the DO is what gets referenced
     // in most Zork interactions (the acted-upon thing). We leave itRef as-is

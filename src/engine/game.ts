@@ -122,10 +122,6 @@ export class Game {
     let moved = false;
 
     for (const pr of results) {
-      if (pr.kind === 'empty') {
-        continue;
-      }
-
       if (pr.kind !== 'ok') {
         outputs.push(pr.message);
         continue;
@@ -133,9 +129,9 @@ export class Game {
 
       const cmd = pr.command;
 
-      // Resolve objects from ids.
-      const dobj = cmd.dobjId !== undefined ? this.world.get(cmd.dobjId) : undefined;
-      const iobj = cmd.iobjId !== undefined ? this.world.get(cmd.iobjId) : undefined;
+      // Resolve objects from ids (single-object callers use dobjIds?.[0]).
+      const dobj = cmd.dobjIds?.[0] !== undefined ? this.world.get(cmd.dobjIds[0]!) : undefined;
+      const iobj = cmd.iobjIds?.[0] !== undefined ? this.world.get(cmd.iobjIds[0]!) : undefined;
 
       // --- Action-dispatch chain (faithful to PERFORM in gmain.zil) ----------
       // Each step may RTRUE (return true) to short-circuit the remainder.  The
@@ -272,6 +268,9 @@ export class Game {
       score: (delta) => this.scoring.add(delta),
       enableClock: (id) => this.clock.enable(id),
       disableClock: (id) => this.clock.disable(id),
+      // fatal() signals M-FATAL — the PERFORM chain body is added in Wave B;
+      // the slot is held open here so ActionContext satisfies the interface.
+      fatal: () => { /* no-op until Wave B wires runMEnd */ },
     };
   }
 

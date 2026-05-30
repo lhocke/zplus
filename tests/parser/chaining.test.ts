@@ -71,7 +71,7 @@ describe('Parser.parseChained — sequential segment execution', () => {
     expect(results[0]!.kind).toBe('ok');
     const cmd = (results[0] as Extract<ParseResult, { kind: 'ok' }>).command;
     expect(cmd.verb).toBe('take');
-    expect(cmd.dobjId).toBe('LANTERN');
+    expect(cmd.dobjIds?.[0]).toBe('LANTERN');
   });
 
   it('parses both segments of "open mailbox then read leaflet"', () => {
@@ -102,11 +102,11 @@ describe('Parser.parseChained — sequential segment execution', () => {
 
     const cmd0 = (results[0] as Extract<ParseResult, { kind: 'ok' }>).command;
     expect(cmd0.verb).toBe('open');
-    expect(cmd0.dobjId).toBe('MAILBOX');
+    expect(cmd0.dobjIds?.[0]).toBe('MAILBOX');
 
     const cmd1 = (results[1] as Extract<ParseResult, { kind: 'ok' }>).command;
     expect(cmd1.verb).toBe('read');
-    expect(cmd1.dobjId).toBe('LEAFLET');
+    expect(cmd1.dobjIds?.[0]).toBe('LEAFLET');
   });
 
   it('handles compass chaining: "n. e. take lamp"', () => {
@@ -130,7 +130,7 @@ describe('Parser.parseChained — sequential segment execution', () => {
 
     const take = (results[2] as Extract<ParseResult, { kind: 'ok' }>).command;
     expect(take.verb).toBe('take');
-    expect(take.dobjId).toBe('LANTERN');
+    expect(take.dobjIds?.[0]).toBe('LANTERN');
   });
 
   it('propagates pronoun binding across segments in the same chain', () => {
@@ -145,7 +145,7 @@ describe('Parser.parseChained — sequential segment execution', () => {
     expect(results[1]!.kind).toBe('ok');
 
     const cmd1 = (results[1] as Extract<ParseResult, { kind: 'ok' }>).command;
-    expect(cmd1.dobjId).toBe('LANTERN');
+    expect(cmd1.dobjIds?.[0]).toBe('LANTERN');
   });
 
   it('stops processing at the first error in a chain and includes the error', () => {
@@ -154,8 +154,8 @@ describe('Parser.parseChained — sequential segment execution', () => {
     // "take widget" is an unknown noun — processing should stop there.
     const results = parser.parseChained('take widget then take sword', room, null, world);
 
-    // At minimum the first element must be the error.
-    expect(results[0]!.kind).toBe('unknown-word');
+    // At minimum the first element must be the error (fail kind).
+    expect(results[0]!.kind).toBe('fail');
     // The sword command after the error is not returned.
     expect(results).toHaveLength(1);
   });
@@ -177,7 +177,7 @@ describe('Parser — "take all" expansion', () => {
     expect(results.length).toBeGreaterThanOrEqual(3);
     const takeableIds = results
       .filter(r => r.kind === 'ok')
-      .map(r => (r as Extract<ParseResult, { kind: 'ok' }>).command.dobjId);
+      .map(r => (r as Extract<ParseResult, { kind: 'ok' }>).command.dobjIds?.[0]);
 
     expect(takeableIds).toContain('LANTERN');
     expect(takeableIds).toContain('SWORD');
@@ -205,10 +205,10 @@ describe('Parser — "take all" expansion', () => {
       // Any returned result must NOT be an 'ok' take command.
       for (const r of results) {
         if (r.kind === 'ok') {
-          // If an ok result is returned, it should have an undefined dobjId
+          // If an ok result is returned, it should have an undefined dobjIds
           // (i.e. not a concrete object reference), or the test should fail.
           const cmd = (r as Extract<ParseResult, { kind: 'ok' }>).command;
-          expect(cmd.dobjId).toBeUndefined();
+          expect(cmd.dobjIds).toBeUndefined();
         }
       }
     }
@@ -221,7 +221,7 @@ describe('Parser — "take all" expansion', () => {
 
     const takeableIds = results
       .filter(r => r.kind === 'ok')
-      .map(r => (r as Extract<ParseResult, { kind: 'ok' }>).command.dobjId);
+      .map(r => (r as Extract<ParseResult, { kind: 'ok' }>).command.dobjIds?.[0]);
 
     expect(takeableIds).toContain('LANTERN');
     expect(takeableIds).not.toContain('SWORD');
@@ -251,7 +251,7 @@ describe('Parser — "take all" expansion', () => {
 
     const dropIds = results
       .filter(r => r.kind === 'ok')
-      .map(r => (r as Extract<ParseResult, { kind: 'ok' }>).command.dobjId);
+      .map(r => (r as Extract<ParseResult, { kind: 'ok' }>).command.dobjIds?.[0]);
 
     expect(dropIds).toContain('GEM');
     expect(dropIds).toContain('KEY');

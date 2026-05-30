@@ -70,7 +70,7 @@ describe('parse — basic verb+noun resolution', () => {
     expect(result.kind).toBe('ok');
     const cmd = (result as Extract<ParseResult, { kind: 'ok' }>).command;
     expect(cmd.verb).toBe('open');
-    expect(cmd.dobjId).toBe('MAILBOX');
+    expect(cmd.dobjIds?.[0]).toBe('MAILBOX');
   });
 
   it('resolves "take lamp" via synonym to the LANTERN', () => {
@@ -79,7 +79,7 @@ describe('parse — basic verb+noun resolution', () => {
     expect(result.kind).toBe('ok');
     const cmd = (result as Extract<ParseResult, { kind: 'ok' }>).command;
     expect(cmd.verb).toBe('take');
-    expect(cmd.dobjId).toBe('LANTERN');
+    expect(cmd.dobjIds?.[0]).toBe('LANTERN');
   });
 
   it('accepts adjective + noun: "take brass lantern"', () => {
@@ -87,7 +87,7 @@ describe('parse — basic verb+noun resolution', () => {
     const result = parse('take brass lantern', westOfHouse, null, world);
     expect(result.kind).toBe('ok');
     const cmd = (result as Extract<ParseResult, { kind: 'ok' }>).command;
-    expect(cmd.dobjId).toBe('LANTERN');
+    expect(cmd.dobjIds?.[0]).toBe('LANTERN');
   });
 
   it('resolves a verb-only command (no noun)', () => {
@@ -96,32 +96,33 @@ describe('parse — basic verb+noun resolution', () => {
     expect(result.kind).toBe('ok');
     const cmd = (result as Extract<ParseResult, { kind: 'ok' }>).command;
     expect(cmd.verb).toBe('look');
-    expect(cmd.dobjId).toBeUndefined();
+    expect(cmd.dobjIds).toBeUndefined();
   });
 });
 
 describe('parse — unknown word errors', () => {
-  it('returns unknown-word for a completely made-up verb', () => {
+  it('returns fail for a completely made-up verb', () => {
     const { world, westOfHouse } = makeFixtureWorld();
     const result = parse('frobulate mailbox', westOfHouse, null, world);
-    expect(result.kind).toBe('unknown-word');
-    const err = result as Extract<ParseResult, { kind: 'unknown-word' }>;
-    expect(err.word).toBe('frobulate');
+    expect(result.kind).toBe('fail');
+    const err = result as Extract<ParseResult, { kind: 'fail' }>;
     expect(err.message).toMatch(/frobulate/i);
   });
 
-  it('returns unknown-word for an unrecognized noun', () => {
+  it('returns fail for an unrecognized noun', () => {
     const { world, westOfHouse } = makeFixtureWorld();
     const result = parse('take widget', westOfHouse, null, world);
-    expect(result.kind).toBe('unknown-word');
-    const err = result as Extract<ParseResult, { kind: 'unknown-word' }>;
-    expect(err.word).toBe('widget');
+    expect(result.kind).toBe('fail');
+    const err = result as Extract<ParseResult, { kind: 'fail' }>;
+    expect(err.message).toMatch(/widget/i);
   });
 
-  it('returns empty for blank input', () => {
+  it('returns fail with pardon message for blank input', () => {
     const { world, westOfHouse } = makeFixtureWorld();
     const result = parse('', westOfHouse, null, world);
-    expect(result.kind).toBe('empty');
+    expect(result.kind).toBe('fail');
+    const err = result as Extract<ParseResult, { kind: 'fail' }>;
+    expect(err.message).toMatch(/pardon/i);
   });
 });
 
@@ -135,7 +136,7 @@ describe('parse — scope restriction', () => {
     const result = parse('take lantern', north as Room, null, world);
     expect(result.kind).toBe('ok');
     const cmd = (result as Extract<ParseResult, { kind: 'ok' }>).command;
-    expect(cmd.dobjId).toBe('SPARE-LANTERN');
+    expect(cmd.dobjIds?.[0]).toBe('SPARE-LANTERN');
   });
 });
 
@@ -159,8 +160,8 @@ describe('parse — preposition / iobj', () => {
     expect(result.kind).toBe('ok');
     const cmd = (result as Extract<ParseResult, { kind: 'ok' }>).command;
     expect(cmd.verb).toBe('put');
-    expect(cmd.dobjId).toBe('LEAFLET');
-    expect(cmd.iobjId).toBe('MAILBOX');
+    expect(cmd.dobjIds?.[0]).toBe('LEAFLET');
+    expect(cmd.iobjIds?.[0]).toBe('MAILBOX');
     expect(cmd.prep).toBe('in');
   });
 });

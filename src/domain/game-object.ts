@@ -74,6 +74,13 @@ export interface ActionContext {
    * A disabled entry is frozen in place; its tick counter does not advance.
    */
   disableClock(id: string): void;
+  /**
+   * Signal a fatal outcome for the current turn — ZIL M-FATAL.  Handlers call
+   * this when the player dies or the game ends; the PERFORM chain stops and
+   * the continuation slot is cleared.  (TD-4 Wave B wires the full body; this
+   * slot holds the position until then.)
+   */
+  fatal(): void;
 }
 
 export type ActionHandler = (ctx: ActionContext) => HandlerResult;
@@ -97,6 +104,12 @@ export class GameObject {
   handler?: ActionHandler;
   /** ZIL ACTION-routine name (from the data); resolved to `handler` at bootstrap. */
   actionRoutine?: string;
+  /**
+   * ZIL P?CONTFCN — continuation routine id.  When set, PERFORM step 5 calls
+   * this routine after the main action completes.  Data supplied by TD-7;
+   * the slot is held open here so step 5 can occupy its ordered position.
+   */
+  contFcn?: string;
   readonly synonyms: string[];
   readonly adjectives: string[];
 

@@ -62,18 +62,17 @@ function makeLampBottleWorld(): { world: World; room: Room } {
 // ---------------------------------------------------------------------------
 
 describe('Parser — disambiguation', () => {
-  it('returns ambiguous when two objects share a noun with no distinguishing adjective', () => {
+  it('returns disambig when two objects share a noun with no distinguishing adjective', () => {
     const { world, room } = makeTwoLampWorld();
     const parser = new Parser();
     const result = parser.parse('take lamp', room, null, world);
 
-    expect(result.kind).toBe('ambiguous');
-    const amb = result as Extract<ParseResult, { kind: 'ambiguous' }>;
-    expect(amb.noun).toBe('lamp');
-    expect(amb.candidates).toHaveLength(2);
-    expect(amb.candidates).toContain('BRASS-LAMP');
-    expect(amb.candidates).toContain('SILVER-LAMP');
-    expect(amb.message).toMatch(/which lamp do you mean/i);
+    expect(result.kind).toBe('disambig');
+    const dis = result as Extract<ParseResult, { kind: 'disambig' }>;
+    expect(dis.message).toMatch(/which lamp do you mean/i);
+    // Both candidate descriptions should appear in the disambiguation message.
+    expect(dis.message).toMatch(/brass lamp/i);
+    expect(dis.message).toMatch(/silver lamp/i);
   });
 
   it('includes the descriptive names of both candidates in the message', () => {
@@ -81,11 +80,11 @@ describe('Parser — disambiguation', () => {
     const parser = new Parser();
     const result = parser.parse('take lamp', room, null, world);
 
-    expect(result.kind).toBe('ambiguous');
-    const amb = result as Extract<ParseResult, { kind: 'ambiguous' }>;
+    expect(result.kind).toBe('disambig');
+    const dis = result as Extract<ParseResult, { kind: 'disambig' }>;
     // Both desc strings should appear somewhere in the message.
-    expect(amb.message).toMatch(/brass lamp/i);
-    expect(amb.message).toMatch(/silver lamp/i);
+    expect(dis.message).toMatch(/brass lamp/i);
+    expect(dis.message).toMatch(/silver lamp/i);
   });
 
   it('resolves unambiguously when an adjective discriminates between the two lamps', () => {
@@ -95,7 +94,7 @@ describe('Parser — disambiguation', () => {
     const result = parser.parse('take brass lamp', room, null, world);
     expect(result.kind).toBe('ok');
     const cmd = (result as Extract<ParseResult, { kind: 'ok' }>).command;
-    expect(cmd.dobjId).toBe('BRASS-LAMP');
+    expect(cmd.dobjIds?.[0]).toBe('BRASS-LAMP');
   });
 });
 
@@ -112,7 +111,7 @@ describe('Parser — pronoun binding', () => {
     const r1 = parser.parse('take lantern', room, null, world);
     expect(r1.kind).toBe('ok');
     const cmd1 = (r1 as Extract<ParseResult, { kind: 'ok' }>).command;
-    expect(cmd1.dobjId).toBe('CELLAR-LAMP');
+    expect(cmd1.dobjIds?.[0]).toBe('CELLAR-LAMP');
 
     // The lamp was moved by the first parse? No — parser doesn't move things.
     // We need the caller to inform the parser that the command succeeded.
@@ -124,7 +123,7 @@ describe('Parser — pronoun binding', () => {
     const r2 = parser.parse('examine it', room, null, world);
     expect(r2.kind).toBe('ok');
     const cmd2 = (r2 as Extract<ParseResult, { kind: 'ok' }>).command;
-    expect(cmd2.dobjId).toBe('CELLAR-LAMP');
+    expect(cmd2.dobjIds?.[0]).toBe('CELLAR-LAMP');
   });
 
   it('"it" resolves to the indirect object (iobj) when the last command had no dobj', () => {
@@ -156,7 +155,7 @@ describe('Parser — pronoun binding', () => {
     const r2 = parser.parse('examine it', room, null, world);
     expect(r2.kind).toBe('ok');
     const cmd2 = (r2 as Extract<ParseResult, { kind: 'ok' }>).command;
-    expect(cmd2.dobjId).toBe('COIN');
+    expect(cmd2.dobjIds?.[0]).toBe('COIN');
   });
 
   it('"them" resolves to the last plural group when set explicitly', () => {
@@ -173,7 +172,7 @@ describe('Parser — pronoun binding', () => {
     const r2 = parser.parse('examine them', room, null, world);
     expect(r2.kind).toBe('ok');
     const cmd2 = (r2 as Extract<ParseResult, { kind: 'ok' }>).command;
-    expect(cmd2.dobjId).toBe('CELLAR-LAMP');
+    expect(cmd2.dobjIds?.[0]).toBe('CELLAR-LAMP');
   });
 
   it('pronoun "it" yields unknown-word when no previous DO has been set', () => {
@@ -182,11 +181,10 @@ describe('Parser — pronoun binding', () => {
 
     // No command has been issued — "it" has no referent.
     const result = parser.parse('examine it', room, null, world);
-    // Either unknown-word or a special "no referent" error is acceptable;
-    // we specify unknown-word with the word "it" matching the current contract.
-    expect(result.kind).toBe('unknown-word');
-    const err = result as Extract<ParseResult, { kind: 'unknown-word' }>;
-    expect(err.word).toBe('it');
+    // The parser returns a fail result when "it" has no bound referent.
+    expect(result.kind).toBe('fail');
+    const err = result as Extract<ParseResult, { kind: 'fail' }>;
+    expect(err.message).toMatch(/mentioned|referr|any thing/i);
   });
 
   it('pronoun binding updates across sequential turns', () => {
@@ -207,6 +205,6 @@ describe('Parser — pronoun binding', () => {
     const r3 = parser.parse('examine it', room, null, world);
     expect(r3.kind).toBe('ok');
     const cmd3 = (r3 as Extract<ParseResult, { kind: 'ok' }>).command;
-    expect(cmd3.dobjId).toBe('BOTTLE');
+    expect(cmd3.dobjIds?.[0]).toBe('BOTTLE');
   });
 });
