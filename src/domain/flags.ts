@@ -29,6 +29,12 @@ export enum Flag {
   Tool,
   /** TRYTAKEBIT — parser auto-takes the object before the action if not already held. */
   TryTake,
+  /**
+   * WEARBIT — object can be worn (and may currently be worn by the player).
+   * PRE-TAKE checks this: if the item is in the player's inventory AND has WEARBIT,
+   * it prints "You are already wearing it." instead of "You already have that!".
+   */
+  Wearable,
 }
 
 // Capability predicates — thin wrappers so call sites read as intent, not
@@ -65,3 +71,4 @@ export const isSurface      = (o: FlagHost): boolean => o.has(Flag.Surface);
 export const isActor        = (o: FlagHost): boolean => o.has(Flag.Actor);
 export const isTool         = (o: FlagHost): boolean => o.has(Flag.Tool);
 export const isTryTake      = (o: FlagHost): boolean => o.has(Flag.TryTake);
+export const isWearable     = (o: FlagHost): boolean => o.has(Flag.Wearable);

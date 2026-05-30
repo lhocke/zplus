@@ -13,6 +13,93 @@ import {
   normalizePrep,
 } from './vocabulary.js';
 
+// ---------------------------------------------------------------------------
+// PRE-action lookup — Wave B4
+//
+// Resolves the ZIL PRE-* routine name (from syntax.json `preAction` fields)
+// for a given parsed command.  Used at PERFORM step 3 to dispatch the
+// pre-action guard before the default V-* verb at step 7.
+//
+// The lookup distinguishes one-object (no PRSI) and two-object (PRSI present)
+// forms, because many verbs have different preActions for each:
+//   BURN  1-obj → no preAction (match handler claims it via step 6)
+//   BURN  2-obj → PRE-BURN (with-instrument form)
+//   DROP  1-obj → PRE-DROP
+//   DROP  2-obj → PRE-PUT  (drop X in Y)
+//   MOVE  1-obj → PRE-MOVE
+//   MOVE  2-obj → PRE-TURN (move X with tool)
+//
+// Wave C will replace this with full SyntaxEntry form matching from syntax.json
+// (prep-sensitive, dobjLocBit-sensitive).  For Wave B, verb + hasIobj is the
+// minimal discriminant that produces correct behavior for the reachable test corpus.
+//
+// Derived from: python3 analysis of src/data/syntax.json preAction fields.
+// ---------------------------------------------------------------------------
+
+/**
+ * preAction for 1-object forms (no PRSI / hasIobj = false).
+ * Only verbs whose syntax.json 1-object form carries a preAction are listed.
+ */
+const VERB_PRE_1OBJ: Readonly<Record<string, string>> = {
+  board:  'PRE-BOARD',
+  climb:  'PRE-BOARD',  // "climb in X" form
+  drop:   'PRE-DROP',
+  fill:   'PRE-FILL',
+  leave:  'PRE-DROP',
+  move:   'PRE-MOVE',
+  pick:   'PRE-TAKE',   // "pick up X" form
+  pour:   'PRE-DROP',
+  pull:   'PRE-MOVE',
+  read:   'PRE-READ',
+  roll:   'PRE-MOVE',
+  take:   'PRE-TAKE',
+};
+
+/**
+ * preAction for 2-object forms (PRSI present / hasIobj = true).
+ * Only verbs whose syntax.json 2-object form carries a preAction are listed.
+ */
+const VERB_PRE_2OBJ: Readonly<Record<string, string>> = {
+  apply:    'PRE-PUT',
+  burn:     'PRE-BURN',
+  destroy:  'PRE-MUNG',
+  drop:     'PRE-PUT',   // "drop X in Y" → PRE-PUT
+  fill:     'PRE-FILL',
+  give:     'PRE-GIVE',
+  light:    'PRE-BURN',
+  look:     'PRE-READ',  // "look at X with Y" → PRE-READ
+  move:     'PRE-TURN',  // "move X with tool" → PRE-TURN
+  pick:     'PRE-TAKE',  // "pick up X" with iobj (rare)
+  poke:     'PRE-MUNG',
+  pour:     'PRE-DROP',
+  puncture: 'PRE-MUNG',
+  push:     'PRE-TURN',
+  put:      'PRE-PUT',
+  read:     'PRE-READ',
+  squeeze:  'PRE-PUT',
+  take:     'PRE-TAKE',
+  throw:    'PRE-PUT',
+  turn:     'PRE-TURN',
+};
+
+/**
+ * Look up the PRE-* preaction for a canonical verb + iobj-presence combination.
+ *
+ * Returns the ZIL PRE-* routine name (e.g. "PRE-TAKE"), or undefined when the
+ * matched syntax form has no preAction.
+ *
+ * Wave B: uses static maps derived from syntax.json analysis.
+ * Wave C will replace this with full SyntaxEntry matching.
+ */
+function lookupPreActionForVerb(
+  canonicalVerb: string,
+  hasIobj: boolean,
+): string | undefined {
+  return hasIobj
+    ? VERB_PRE_2OBJ[canonicalVerb]
+    : VERB_PRE_1OBJ[canonicalVerb];
+}
+
 // --------------------------------------------------------------------------
 // Scope: what objects are reachable from the current room
 // --------------------------------------------------------------------------
@@ -303,7 +390,12 @@ export class Parser {
     if (rest.length === 0) {
       return {
         kind: 'ok',
-        command: { verb: canonical, action: 'V-' + canonical.toUpperCase(), raw: tokens },
+        command: {
+          verb: canonical,
+          action: 'V-' + canonical.toUpperCase(),
+          preAction: lookupPreActionForVerb(canonical, false),
+          raw: tokens,
+        },
       };
     }
 
@@ -330,6 +422,11 @@ export class Parser {
       }
     }
 
+    // Look up the PRE-* preaction for this verb form (Wave B4).
+    // Wave B uses a static lookup from VERB_PRE_ACTION; Wave C will replace
+    // this with full SyntaxEntry matching from syntax.json.
+    const preAction = lookupPreActionForVerb(canonical, iobjIds !== undefined);
+
     return {
       kind: 'ok',
       command: {
@@ -338,6 +435,7 @@ export class Parser {
         dobjIds,
         iobjIds,
         prep,
+        preAction,
         raw: tokens,
       },
     };
@@ -468,6 +566,7 @@ export class Parser {
         dobjIds: [obj.id],
         iobjIds: undefined,
         prep: undefined,
+        preAction: lookupPreActionForVerb(canonical, false),
         raw: tokens,
       },
     }));

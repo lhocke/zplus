@@ -23,6 +23,20 @@
 import type { ActionContext, ActionHandler, ObjectId } from '../domain/game-object.js';
 import { aboveGroundActions, aboveGroundPer } from './above-ground.js';
 import { lightSourcesActions } from './light-sources.js';
+import {
+  preBoardHandler,
+  preBurnHandler,
+  preDropHandler,
+  preFillHandler,
+  preGiveHandler,
+  preMoveHandler,
+  preMungHandler,
+  prePutHandler,
+  preReadHandler,
+  preSgiveHandler,
+  preTakeHandler,
+  preTurnHandler,
+} from './preactions.js';
 
 /**
  * An exit-resolution routine.  Returns the destination room id, or undefined
@@ -61,8 +75,28 @@ export function lookupPer(name: string): PerRoutine | undefined {
 // Pre-action (PRE-*) registry — B4 populates the bodies; the slot is open now.
 // ---------------------------------------------------------------------------
 
+/**
+ * PRE-* preaction registry — Wave B4.
+ *
+ * Keys are the verbatim ZIL routine names (e.g. "PRE-TAKE").  Values are the
+ * translated TypeScript handlers from preactions.ts.
+ *
+ * Populated per td4-perform-verbs-SPEC.md §6 and gverbs.zil (line citations
+ * in each handler).
+ */
 const PRE_ACTIONS: Record<string, ActionHandler> = {
-  // Bodies added in Wave B4 (td4-perform-verbs-SPEC.md §6).
+  'PRE-BOARD': preBoardHandler,
+  'PRE-BURN':  preBurnHandler,
+  'PRE-DROP':  preDropHandler,
+  'PRE-FILL':  preFillHandler,
+  'PRE-GIVE':  preGiveHandler,
+  'PRE-MOVE':  preMoveHandler,
+  'PRE-MUNG':  preMungHandler,
+  'PRE-PUT':   prePutHandler,
+  'PRE-READ':  preReadHandler,
+  'PRE-SGIVE': preSgiveHandler,
+  'PRE-TAKE':  preTakeHandler,
+  'PRE-TURN':  preTurnHandler,
 };
 
 /**
