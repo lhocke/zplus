@@ -247,6 +247,8 @@ export class Game {
       clearFlag: (obj, flag) => obj.clear(flag),
       moveTo: (obj, dest) => obj.moveTo(dest),
       score: (delta) => this.scoring.add(delta),
+      enableClock: (id) => this.clock.enable(id),
+      disableClock: (id) => this.clock.disable(id),
     };
   }
 

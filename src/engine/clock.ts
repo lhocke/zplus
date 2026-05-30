@@ -207,3 +207,98 @@ export class LanternInterrupt {
     return true;
   }
 }
+
+// ---------------------------------------------------------------------------
+// CANDLE-TABLE — mirrors the ZIL constant from 1actions.zil.
+//
+// GO() queues I-CANDLES with an initial 40-turn countdown (the "full burn"
+// period before warnings begin).  Each subsequent fire advances through the
+// table entries until burnout.
+//
+// Stage sequence (turns of active burning):
+//   40 turns  — "The candles grow shorter."                    (re-queue 20)
+//   60 turns  — "The candles are becoming quite short."        (re-queue 10)
+//   70 turns  — "The candles won't last long now."             (re-queue 5)
+//   75 turns  — burnout (ticks: 0 sentinel fires immediately)
+// ---------------------------------------------------------------------------
+
+const CANDLE_TABLE: ReadonlyArray<{ ticks: number; message: string }> = [
+  { ticks: 20, message: 'The candles grow shorter.' },
+  { ticks: 10, message: 'The candles are becoming quite short.' },
+  { ticks:  5, message: "The candles won't last long now." },
+  { ticks:  0, message: '' },  // burnout sentinel
+];
+
+const CANDLE_INITIAL_TICKS = 40;
+
+// ---------------------------------------------------------------------------
+// CandleInterrupt — faithful TypeScript translation of I-CANDLES from
+// 1actions.zil.
+//
+// Mirrors LanternInterrupt: each fire emits a candle-fuel event and advances
+// the CANDLE_TABLE index.  The burnout sentinel (ticks: 0) triggers a final
+// candle-fuel event with dark:true in the same invocation.
+//
+// Starts disabled; the CANDLES-FCN handler enables it when candles are lit
+// and disables it when extinguished or blown out.
+// ---------------------------------------------------------------------------
+
+export class CandleInterrupt {
+  private tableIndex = 0;
+  private readonly entry: ClockEntry;
+
+  constructor(
+    private readonly clock: Clock,
+    private readonly emitter: EventEmitter,
+    initialTicks = CANDLE_INITIAL_TICKS,
+  ) {
+    const self = this;
+    this.entry = {
+      id: 'I-CANDLES',
+      turnsLeft: initialTicks,
+      enabled: true,
+      tick(): boolean {
+        return self.onFire();
+      },
+    };
+    clock.schedule(this.entry);
+  }
+
+  disable(): void {
+    this.clock.disable('I-CANDLES');
+  }
+
+  enable(): void {
+    this.clock.enable('I-CANDLES');
+  }
+
+  private remainingTurns(): number {
+    return CANDLE_TABLE.slice(this.tableIndex).reduce((acc, s) => acc + s.ticks, 0);
+  }
+
+  private onFire(): boolean {
+    const stage = CANDLE_TABLE[this.tableIndex]!;
+
+    // Emit the warning for this stage.
+    const remaining = this.remainingTurns() - stage.ticks;
+    this.emitter.emit({
+      type: 'candle-fuel',
+      remaining,
+      message: stage.message || undefined,
+      dark: false,
+    });
+
+    // Advance to the next stage.
+    this.tableIndex++;
+    const next = CANDLE_TABLE[this.tableIndex];
+
+    if (!next || next.ticks === 0) {
+      // Burnout: mirrors ZIL LIGHT-INT with tick=0, firing in the same turn.
+      this.emitter.emit({ type: 'candle-fuel', remaining: 0, dark: true });
+      return false; // remove from clock
+    }
+
+    this.entry.turnsLeft = next.ticks;
+    return true;
+  }
+}

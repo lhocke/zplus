@@ -14,11 +14,14 @@ import type { ObjectId } from '../domain/game-object.js';
 import type { EventEmitter } from './events.js';
 import { World } from '../domain/world.js';
 import { Actor } from '../domain/actor.js';
+import { Flag } from '../domain/flags.js';
 import { Rng } from './rng.js';
-import { Clock, LanternInterrupt } from './clock.js';
+import { Clock, LanternInterrupt, CandleInterrupt } from './clock.js';
+import type { ClockEntry } from './clock.js';
 import { SimpleEventEmitter } from './events.js';
 import { Game } from './game.js';
 import { lookupAction } from '../actions/registry.js';
+import { iMatchTick } from '../actions/light-sources.js';
 
 import roomsData from '../data/rooms.json';
 import objectsData from '../data/objects.json';
@@ -58,13 +61,11 @@ const DEFAULT_START_ROOM: ObjectId = 'WEST-OF-HOUSE';
  *  6. Create Rng and EventEmitter.
  *  7. Construct and return Game.
  *
- * Lantern interrupt: the Clock and LanternInterrupt are wired unconditionally;
- * the interrupt counts down from the initial 200-turn period regardless of
- * whether the player is carrying the lantern.  Full lantern-state logic
- * (only draining when lit and carried) belongs in Phase 3 action handlers.
- * TODO (Phase 3): attach the lantern interrupt only when the LANTERN object
- * has Flag.Light set and is in the player's possession, mirroring GO() from
- * 1dungeon.zil which queues I-LANTERN on the first turn the lamp is on.
+ * Lantern interrupt: the I-LANTERN clock entry is registered at startup so the
+ * slot exists from turn 0, matching GO() in 1dungeon.zil.  It starts DISABLED;
+ * the LANTERN action handler (light-sources.ts) enables it on LAMP-ON and
+ * disables it on LAMP-OFF, so fuel only drains while the lamp is actively
+ * burning — faithfully mirroring the ZIL logic in I-LANTERN and LANTERN.
  */
 export function createGame(opts: BootstrapOptions = {}): Game {
   const startRoomId = opts.startRoom ?? DEFAULT_START_ROOM;
@@ -106,10 +107,68 @@ export function createGame(opts: BootstrapOptions = {}): Game {
   const events: EventEmitter = opts.events ?? new SimpleEventEmitter();
   const clock = new Clock();
 
-  // The LanternInterrupt is scheduled unconditionally so the clock entry
-  // exists from game-start (matching gclock.zil behaviour where I-LANTERN is
-  // queued by GO() during game initialisation).
-  new LanternInterrupt(clock, events);
+  // Register the I-LANTERN clock entry so the slot exists from game-start
+  // (GO() in 1dungeon.zil queues it at turn 0).  Start it DISABLED: in the
+  // original, the fuel interrupt only counts down while the lamp is actively
+  // on.  The LANTERN action handler (light-sources.ts) calls
+  // ctx.enableClock('I-LANTERN') on LAMP-ON and ctx.disableClock('I-LANTERN')
+  // on LAMP-OFF, gating drain faithfully.  Burnout turns the lamp off and
+  // emits a 'lantern-fuel' event with dark:true.
+  const lanternInterrupt = new LanternInterrupt(clock, events);
+  lanternInterrupt.disable(); // lamp starts off — no drain until the player turns it on
+
+  // When I-LANTERN fires the burnout event (dark:true), mark the LAMP object
+  // as burned out (Flag.Burned = RMUNGBIT) and clear its light flags.
+  // This mirrors <ROUTINE LIGHT-INT> in 1actions.zil:2328 which FCLEARs
+  // ONBIT and FSETs RMUNGBIT when TICK=0.
+  events.on('lantern-fuel', (e) => {
+    if (!e.dark) return;
+    const lamp = world.get('LAMP');
+    if (lamp === undefined) return;
+    lamp.clear(Flag.OnFire);
+    lamp.clear(Flag.Light);
+    lamp.set(Flag.Burned);
+    // Disable the entry (it is already removed from the clock after burnout,
+    // but this guards against any double-fire edge case).
+    clock.disable('I-LANTERN');
+  });
+
+  // Register I-CANDLES with the GO() initial countdown of 40 turns.  The
+  // candles start lit in the ZIL world data, so the interrupt starts enabled.
+  // CANDLES-FCN disables it when the candles are extinguished.
+  new CandleInterrupt(clock, events, 40);
+
+  // When I-CANDLES fires the burnout event (dark:true), mark CANDLES as
+  // burned out and clear their light/fire flags — mirrors LIGHT-INT with tick=0.
+  events.on('candle-fuel', (e) => {
+    if (!e.dark) return;
+    const candles = world.get('CANDLES');
+    if (candles === undefined) return;
+    candles.clear(Flag.OnFire);
+    candles.clear(Flag.Light);
+    candles.set(Flag.Burned);
+    clock.disable('I-CANDLES');
+  });
+
+  // I-MATCH clock entry: queued for 2 turns when a match is lit.  Starts
+  // disabled; MATCH-FUNCTION calls enableClock('I-MATCH') on lighting and
+  // disableClock('I-MATCH') on extinguishing.
+  const matchOutput: string[] = [];
+  const iMatchEntry: ClockEntry = {
+    id: 'I-MATCH',
+    turnsLeft: 2,
+    enabled: false,
+    tick(): boolean {
+      matchOutput.length = 0;
+      iMatchTick(world, (text) => matchOutput.push(text));
+      // The match-burnout message surfaces via the 'lantern-fuel'-style approach
+      // but for simplicity we emit a turn-complete side-channel.  The current
+      // engine does not yet route clock-fired text to the transcript; wire it
+      // when the transcript layer supports side-channel output.
+      return false; // one-shot; remove after firing
+    },
+  };
+  clock.schedule(iMatchEntry);
 
   // 6. RNG.
   const rng = new Rng(seed);

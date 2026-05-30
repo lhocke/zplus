@@ -64,6 +64,16 @@ export interface ActionContext {
   moveTo(obj: GameObject, dest: GameObject): void;
   /** Add to the score (may be negative) — ZIL `<SCORE n>` / `<SETG SCORE ...>`. */
   score(delta: number): void;
+  /**
+   * Enable a clock interrupt by id — ZIL `<ENABLE <INT …>>` or
+   * `<ENABLE <QUEUE …>>`.  Used by action handlers to gate fuel drain.
+   */
+  enableClock(id: string): void;
+  /**
+   * Disable a clock interrupt by id — ZIL `<DISABLE <INT …>>`.
+   * A disabled entry is frozen in place; its tick counter does not advance.
+   */
+  disableClock(id: string): void;
 }
 
 export type ActionHandler = (ctx: ActionContext) => HandlerResult;

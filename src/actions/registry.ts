@@ -22,6 +22,7 @@
 
 import type { ActionContext, ActionHandler, ObjectId } from '../domain/game-object.js';
 import { aboveGroundActions, aboveGroundPer } from './above-ground.js';
+import { lightSourcesActions } from './light-sources.js';
 
 /**
  * An exit-resolution routine.  Returns the destination room id, or undefined
@@ -35,6 +36,7 @@ export type PerRoutine = (ctx: ActionContext) => ObjectId | undefined;
 
 const ACTIONS: Record<string, ActionHandler> = {
   ...aboveGroundActions,
+  ...lightSourcesActions,
 };
 
 const PER_ROUTINES: Record<string, PerRoutine> = {

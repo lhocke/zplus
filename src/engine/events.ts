@@ -14,6 +14,7 @@ export type EngineEvent =
   | { type: 'turn-complete';   moves: number                                       }
   | { type: 'score-changed';   score: number;                 delta: number        }
   | { type: 'lantern-fuel';    remaining: number; message?: string; dark: boolean  }
+  | { type: 'candle-fuel';     remaining: number; message?: string; dark: boolean  }
   | { type: 'game-over';       won: boolean                                        }
   | { type: 'invocation';      name: 'frotz' | 'rezrov'                            };
 
