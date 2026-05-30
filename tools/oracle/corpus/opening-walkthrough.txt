@@ -1,0 +1,22 @@
+# Opening walkthrough corpus — Zork I oracle harness
+#
+# These commands are deterministic (no combat, no RNG-driven content).
+# Expected: dfrotz R119 output matches our engine's output for each turn.
+#
+# NOTE: RNG-driven content (combat with thief/troll, etc.) is out of scope
+# for exact diffing and should NOT be added to this file.
+
+open mailbox
+read leaflet
+north
+east
+open window
+west
+west
+take sword
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+look

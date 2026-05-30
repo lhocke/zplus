@@ -12,6 +12,7 @@
     "extract": "tsx tools/extract-zil/extract.ts",
     "extract:roomtext": "tsx tools/extract-zil/extract-room-text.ts",
     "play": "tsx tools/play.ts",
+    "oracle": "tsx tools/oracle/run-corpus.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
