@@ -22,6 +22,7 @@ import {
  * Includes:
  *  - Direct children of the room
  *  - Children of open containers in the room
+ *  - GLOBAL objects referenced by the room's GLOBAL prop (ZIL globals)
  *  - Objects carried by the player (parent === null means inventory)
  *
  * The player argument is the actor object; if null we treat inventory as
@@ -49,6 +50,37 @@ function collectScope(room: Room, player: GameObject | null, world: World): Game
 
   // Objects in the room.
   addTree(room, 0);
+
+  // ZIL GLOBAL objects: the room's GLOBAL prop holds the id of an object that
+  // is always accessible from this room regardless of containment.  Add it
+  // (and its visible contents) to scope.
+  const globalId = room.props.get('GLOBAL');
+  if (typeof globalId === 'string') {
+    const globalObj = world.get(globalId);
+    if (globalObj !== undefined && !seen.has(globalObj.id)) {
+      seen.add(globalObj.id);
+      scope.push(globalObj);
+      // Also add visible children of the global (e.g. objects on a table).
+      for (const child of globalObj.children) {
+        if (!seen.has(child.id)) {
+          seen.add(child.id);
+          scope.push(child);
+        }
+      }
+    }
+  }
+
+  // Exit gate objects: any object referenced by an exit's ifFlag is accessible
+  // from this room (the player can interact with it to open the route).
+  for (const exit of room.exits) {
+    if (exit.ifFlag !== undefined) {
+      const gateObj = world.get(exit.ifFlag);
+      if (gateObj !== undefined && !seen.has(gateObj.id)) {
+        seen.add(gateObj.id);
+        scope.push(gateObj);
+      }
+    }
+  }
 
   // Player's inventory (objects whose parent is the player, or null-parent
   // when there is no explicit player object in the world, as in simple tests).

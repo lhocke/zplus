@@ -146,10 +146,22 @@ export class Game {
         handled.push(text);
       };
 
+      const prevRoom = this.here;
       const shortCircuited = this.runActionChain(cmd.verb, dobj, iobj, cmd.prep, tell);
 
       if (shortCircuited) {
-        outputs.push(handled.join('\n'));
+        // Check whether a handler moved the player via ctx.moveTo(actor, dest).
+        // If so, we need to fire onRoomEntered and append the room description.
+        const newRoomAfterHandler = this.player.parent as Room;
+        if (newRoomAfterHandler !== undefined && newRoomAfterHandler !== prevRoom) {
+          moved = true;
+          const enterOut = this.onRoomEntered(newRoomAfterHandler);
+          const roomDesc = this.describeCurrentRoom();
+          const parts = [...handled, ...(enterOut ? [enterOut] : []), roomDesc].filter(s => s.length > 0);
+          outputs.push(parts.join('\n'));
+        } else {
+          outputs.push(handled.join('\n'));
+        }
       } else {
         // No handler claimed the command — run the default verb routine.
         const verbResult = executeVerb({
@@ -161,6 +173,7 @@ export class Game {
           here: this.here,
           world: this.world,
           perResolver: (routineName, here) => this.resolvePer(routineName, here, tell),
+          mlookRunner: (room) => this.runMLook(room),
         });
 
         // A handler may have printed something even while falling through
@@ -173,7 +186,17 @@ export class Game {
           // Player moved — update here reference and fire room entry.
           const newRoom = this.player.parent as Room;
           if (newRoom !== undefined && newRoom !== this.here) {
-            this.onRoomEntered(newRoom);
+            const enterOut = this.onRoomEntered(newRoom);
+            if (enterOut.length > 0) {
+              // M-ENTER messages (e.g. trap door crashing shut) prepend the
+              // room description already appended above.
+              const idx = outputs.length - 1;
+              if (idx >= 0) {
+                outputs[idx] = [enterOut, outputs[idx]].join('\n');
+              } else {
+                outputs.push(enterOut);
+              }
+            }
           }
         }
       }
@@ -311,19 +334,23 @@ export class Game {
 
   /**
    * Fire room entry: run the room's M-ENTER action, update `here`, and emit
-   * the room-entered event.  Mirrors GOTO in 1dungeon.zil (M-ENTER then the
-   * description, which the renderer produces via M-LOOK).
+   * the room-entered event.  Returns any M-ENTER output (e.g. trap door
+   * crashing shut) so the caller can prepend it to the turn transcript.
+   * Mirrors GOTO in 1dungeon.zil (M-ENTER then the description produced by
+   * M-LOOK).
    */
-  private onRoomEntered(room: Room): void {
+  private onRoomEntered(room: Room): string {
     this.here = room;
+    const enterBuf: string[] = [];
     if (room.handler !== undefined) {
-      const ctx = this.makeContext(room, 'walk', undefined, undefined, undefined, M_ENTER, () => {
-        // M-ENTER output is rare; current exemplars don't use it.  Discarded
-        // here rather than threaded into the transcript — wire when needed.
-      });
+      const ctx = this.makeContext(
+        room, 'walk', undefined, undefined, undefined, M_ENTER,
+        (text) => enterBuf.push(text),
+      );
       room.handler(ctx);
     }
     this.emitRoomEntered(room.id);
+    return enterBuf.join('\n');
   }
 
   // -------------------------------------------------------------------------
@@ -356,6 +383,23 @@ export class Game {
     }
 
     return lines.join('\n');
+  }
+
+  /**
+   * Run a room's M-LOOK handler and return the output.  Used as the
+   * `mlookRunner` supplied to the verb layer so that "look" and movement
+   * destinations both produce handler-driven descriptions for rooms that lack
+   * a static ldesc.
+   */
+  private runMLook(room: Room): string {
+    if (room.handler === undefined) return '';
+    const buf: string[] = [];
+    const ctx = this.makeContext(
+      room, 'look', undefined, undefined, undefined, M_LOOK,
+      (text) => buf.push(text),
+    );
+    room.handler(ctx);
+    return buf.join('\n');
   }
 
   private emitRoomEntered(roomId: ObjectId): void {

@@ -20,6 +20,8 @@ const VERB_SYNONYMS: Record<string, string[]> = {
   brush:      ['clean'],
   burn:       ['incinerate', 'ignite'],
   climb:      ['sit'],
+  enter:      ['board', 'through'],
+  move:       [],
   close:      ['shut'],
   cross:      ['ford'],
   cut:        ['slice', 'pierce'],
@@ -71,6 +73,7 @@ const VERB_SYNONYMS: Record<string, string[]> = {
   wake:       ['awake', 'surprise', 'startle'],
   walk:       ['go', 'run', 'proceed', 'step'],
   wave:       ['brandish'],
+  wind:       [],
   win:        ['winnage'],
   yell:       ['scream', 'shout'],
 };

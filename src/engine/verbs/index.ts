@@ -37,6 +37,12 @@ export interface VerbContext {
   readonly world: World;
   /** Optional resolver for Exit.per routine names → destination room id. */
   readonly perResolver?: (routineName: string, here: Room) => string | undefined;
+  /**
+   * Optional: run the M-LOOK action on a room and return its output.  When
+   * supplied by the game engine, the "look" verb uses it to produce a
+   * handler-driven description for rooms that lack a static ldesc.
+   */
+  readonly mlookRunner?: (room: Room) => string;
 }
 
 export interface VerbResult {
@@ -55,16 +61,28 @@ function result(output: string, moved = false): VerbResult {
 }
 
 /**
- * Produce the room description string: name, ldesc, and a list of visible
- * items on the floor (non-player, non-invisible direct children of the room).
+ * Produce the room description string: name, ldesc/M-LOOK, and a list of
+ * visible items on the floor (non-player, non-invisible direct children).
  *
- * `player` is excluded from the listing; objects carried by the player are
- * already children of the player (not the room) and therefore never appear.
+ * `player` is excluded from the listing.  When `mlookRunner` is provided and
+ * the room has no static ldesc but has a handler, the runner is called to
+ * produce a dynamic description via the M-LOOK action — matching the ZIL
+ * `<DESCRIBE-ROOM>` / `GOTO` path.
  */
-function describeRoom(room: Room, player: GameObject): string {
+function describeRoom(
+  room: Room,
+  player: GameObject,
+  mlookRunner?: (r: Room) => string,
+): string {
   const lines: string[] = [];
   lines.push(room.desc);
-  if (room.ldesc) lines.push(room.ldesc);
+
+  if (room.ldesc) {
+    lines.push(room.ldesc);
+  } else if (mlookRunner !== undefined) {
+    const dynamic = mlookRunner(room);
+    if (dynamic.length > 0) lines.push(dynamic);
+  }
 
   const loose: string[] = [];
   for (const child of room.children) {
@@ -84,7 +102,7 @@ function describeRoom(room: Room, player: GameObject): string {
 // --------------------------------------------------------------------------
 
 function verbLook(ctx: VerbContext): VerbResult {
-  return result(describeRoom(ctx.here, ctx.player));
+  return result(describeRoom(ctx.here, ctx.player, ctx.mlookRunner));
 }
 
 function verbGo(ctx: VerbContext): VerbResult {
@@ -106,7 +124,7 @@ function verbGo(ctx: VerbContext): VerbResult {
         const dest = ctx.world.get(destId);
         if (dest !== undefined) {
           ctx.player.moveTo(dest);
-          return result(describeRoom(dest as Room, ctx.player), true);
+          return result(describeRoom(dest as Room, ctx.player, ctx.mlookRunner), true);
         }
       }
       // Resolver returned undefined: the routine decided movement is blocked.
@@ -114,6 +132,15 @@ function verbGo(ctx: VerbContext): VerbResult {
     }
     // No resolver available and exit has no static destination.
     if (exit.to === undefined) {
+      return result(exit.elseMessage ?? "You can't go that way.");
+    }
+  }
+
+  // ifFlag exits: the named object must have Flag.Open set, otherwise the
+  // exit is blocked (ZIL COND checks the object's OPENBIT).
+  if (exit.ifFlag !== undefined) {
+    const gateObj = ctx.world.get(exit.ifFlag);
+    if (gateObj === undefined || !gateObj.has(Flag.Open)) {
       return result(exit.elseMessage ?? "You can't go that way.");
     }
   }
@@ -129,7 +156,7 @@ function verbGo(ctx: VerbContext): VerbResult {
   }
 
   ctx.player.moveTo(dest);
-  return result(describeRoom(dest as Room, ctx.player), true);
+  return result(describeRoom(dest as Room, ctx.player, ctx.mlookRunner), true);
 }
 
 function verbTake(ctx: VerbContext): VerbResult {
