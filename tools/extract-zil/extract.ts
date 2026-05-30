@@ -673,3 +673,76 @@ export function extractVocabulary(nodes: SNode[]): VocabularyData {
 
   return { synonyms, buzzwords: Array.from(buzzSet) };
 }
+
+// ---------------------------------------------------------------------------
+// Main entry — runs when the file is executed directly via `npm run extract`
+// ---------------------------------------------------------------------------
+
+// In ESM with tsx, detect direct execution via import.meta.url vs argv
+const isMain =
+  typeof process !== 'undefined' &&
+  process.argv[1] !== undefined &&
+  (
+    process.argv[1].endsWith('/tools/extract-zil/extract.ts') ||
+    process.argv[1].endsWith('/tools/extract-zil/extract.js')
+  );
+
+if (isMain) {
+  (async () => {
+    const { readFileSync } = await import('node:fs');
+    const { join, resolve } = await import('node:path');
+    const { parseSexpr } = await import('./parse-sexpr.js');
+    const { emitData } = await import('./emit.js');
+
+    const root = resolve(process.argv[1], '../../..');
+    const zilDir = join(root, 'zil');
+    const dataDir = join(root, 'src', 'data');
+    const domainDir = join(root, 'src', 'domain');
+
+    function read(file: string): string {
+      return readFileSync(join(zilDir, file), 'utf8');
+    }
+
+    console.log('Extracting from ZIL sources...');
+
+    // Objects + rooms come from 1dungeon.zil
+    const dungeonNodes = parseSexpr(read('1dungeon.zil'));
+    const objects = extractObjects(dungeonNodes);
+    console.log(`  1dungeon.zil: ${objects.length} objects/rooms`);
+
+    // Syntax definitions come from gsyntax.zil (and a small number from gverbs.zil)
+    const syntaxNodes = parseSexpr(read('gsyntax.zil'));
+    const gverbsNodes = parseSexpr(read('gverbs.zil'));
+    const syntax = [
+      ...extractSyntax(syntaxNodes),
+      ...extractSyntax(gverbsNodes),
+    ];
+    console.log(`  gsyntax.zil + gverbs.zil: ${syntax.length} syntax entries`);
+
+    // Vocabulary (synonyms + buzzwords) across all four files
+    const actionsNodes = parseSexpr(read('1actions.zil'));
+    const vocab = {
+      synonyms: {} as Record<string, string[]>,
+      buzzwords: [] as string[],
+    };
+    for (const nodes of [dungeonNodes, actionsNodes, syntaxNodes, gverbsNodes]) {
+      const v = extractVocabulary(nodes);
+      for (const [k, aliases] of Object.entries(v.synonyms)) {
+        if (!vocab.synonyms[k]) vocab.synonyms[k] = [];
+        for (const a of aliases) {
+          if (!vocab.synonyms[k].includes(a)) vocab.synonyms[k].push(a);
+        }
+      }
+      for (const w of v.buzzwords) {
+        if (!vocab.buzzwords.includes(w)) vocab.buzzwords.push(w);
+      }
+    }
+    console.log(
+      `  vocabulary: ${Object.keys(vocab.synonyms).length} synonym groups, ` +
+      `${vocab.buzzwords.length} buzzwords`
+    );
+
+    emitData(objects, syntax, vocab, { dataDir, domainDir });
+    console.log(`Wrote to ${dataDir} and ${domainDir}`);
+  })();
+}

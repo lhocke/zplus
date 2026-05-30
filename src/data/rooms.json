@@ -1,0 +1,3230 @@
+[
+  {
+    "id": "WEST-OF-HOUSE",
+    "kind": "room",
+    "desc": "West of House",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "WHITE-HOUSE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "parent": "TO",
+    "actionRoutine": "WEST-HOUSE",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "NORTH-OF-HOUSE"
+      },
+      {
+        "dir": "south",
+        "to": "SOUTH-OF-HOUSE"
+      },
+      {
+        "dir": "ne",
+        "to": "NORTH-OF-HOUSE"
+      },
+      {
+        "dir": "se",
+        "to": "SOUTH-OF-HOUSE"
+      },
+      {
+        "dir": "west",
+        "to": "FOREST-1"
+      },
+      {
+        "dir": "east",
+        "elseMessage": "The door is boarded and you can't remove the boards."
+      },
+      {
+        "dir": "sw",
+        "to": "STONE-BARROW",
+        "ifFlag": "WON-FLAG"
+      }
+    ]
+  },
+  {
+    "id": "STONE-BARROW",
+    "kind": "room",
+    "desc": "Stone Barrow",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are standing in front of a massive barrow of stone. In the east face\nis a huge stone door which is open. You cannot see into the dark of the tomb.",
+    "actionRoutine": "STONE-BARROW-FCN",
+    "exits": [
+      {
+        "dir": "ne",
+        "to": "WEST-OF-HOUSE"
+      }
+    ]
+  },
+  {
+    "id": "NORTH-OF-HOUSE",
+    "kind": "room",
+    "desc": "North of House",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "BOARDED-WINDOW"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are facing the north side of a white house. There is no door here,\nand all the windows are boarded up. To the north a narrow path winds through\nthe trees.",
+    "exits": [
+      {
+        "dir": "sw",
+        "to": "WEST-OF-HOUSE"
+      },
+      {
+        "dir": "se",
+        "to": "EAST-OF-HOUSE"
+      },
+      {
+        "dir": "west",
+        "to": "WEST-OF-HOUSE"
+      },
+      {
+        "dir": "east",
+        "to": "EAST-OF-HOUSE"
+      },
+      {
+        "dir": "north",
+        "to": "PATH"
+      },
+      {
+        "dir": "south",
+        "elseMessage": "The windows are all boarded."
+      }
+    ]
+  },
+  {
+    "id": "SOUTH-OF-HOUSE",
+    "kind": "room",
+    "desc": "South of House",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "BOARDED-WINDOW"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are facing the south side of a white house. There is no door here,\nand all the windows are boarded.",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "WEST-OF-HOUSE"
+      },
+      {
+        "dir": "east",
+        "to": "EAST-OF-HOUSE"
+      },
+      {
+        "dir": "ne",
+        "to": "EAST-OF-HOUSE"
+      },
+      {
+        "dir": "nw",
+        "to": "WEST-OF-HOUSE"
+      },
+      {
+        "dir": "south",
+        "to": "FOREST-3"
+      },
+      {
+        "dir": "north",
+        "elseMessage": "The windows are all boarded."
+      }
+    ]
+  },
+  {
+    "id": "EAST-OF-HOUSE",
+    "kind": "room",
+    "desc": "Behind House",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "WHITE-HOUSE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "parent": "TO",
+    "actionRoutine": "EAST-HOUSE",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "NORTH-OF-HOUSE"
+      },
+      {
+        "dir": "south",
+        "to": "SOUTH-OF-HOUSE"
+      },
+      {
+        "dir": "sw",
+        "to": "SOUTH-OF-HOUSE"
+      },
+      {
+        "dir": "nw",
+        "to": "NORTH-OF-HOUSE"
+      },
+      {
+        "dir": "east",
+        "to": "CLEARING"
+      },
+      {
+        "dir": "west",
+        "to": "KITCHEN",
+        "ifFlag": "KITCHEN-WINDOW"
+      }
+    ]
+  },
+  {
+    "id": "FOREST-1",
+    "kind": "room",
+    "desc": "Forest",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "TREE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a forest, with trees in all directions. To the east,\nthere appears to be sunlight.",
+    "actionRoutine": "FOREST-ROOM",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "There is no tree here suitable for climbing."
+      },
+      {
+        "dir": "north",
+        "to": "GRATING-CLEARING"
+      },
+      {
+        "dir": "east",
+        "to": "PATH"
+      },
+      {
+        "dir": "south",
+        "to": "FOREST-3"
+      },
+      {
+        "dir": "west",
+        "elseMessage": "You would need a machete to go further west."
+      }
+    ]
+  },
+  {
+    "id": "FOREST-2",
+    "kind": "room",
+    "desc": "Forest",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "TREE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a dimly lit forest, with large trees all around.",
+    "actionRoutine": "FOREST-ROOM",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "There is no tree here suitable for climbing."
+      },
+      {
+        "dir": "north",
+        "elseMessage": "The forest becomes impenetrable to the north."
+      },
+      {
+        "dir": "east",
+        "to": "MOUNTAINS"
+      },
+      {
+        "dir": "south",
+        "to": "CLEARING"
+      },
+      {
+        "dir": "west",
+        "to": "PATH"
+      }
+    ]
+  },
+  {
+    "id": "MOUNTAINS",
+    "kind": "room",
+    "desc": "Forest",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "TREE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "The forest thins out, revealing impassable mountains.",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "The mountains are impassable."
+      },
+      {
+        "dir": "north",
+        "to": "FOREST-2"
+      },
+      {
+        "dir": "east",
+        "elseMessage": "The mountains are impassable."
+      },
+      {
+        "dir": "south",
+        "to": "FOREST-2"
+      },
+      {
+        "dir": "west",
+        "to": "FOREST-2"
+      }
+    ]
+  },
+  {
+    "id": "FOREST-3",
+    "kind": "room",
+    "desc": "Forest",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "TREE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a dimly lit forest, with large trees all around.",
+    "actionRoutine": "FOREST-ROOM",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "There is no tree here suitable for climbing."
+      },
+      {
+        "dir": "north",
+        "to": "CLEARING"
+      },
+      {
+        "dir": "east",
+        "elseMessage": "The rank undergrowth prevents eastward movement."
+      },
+      {
+        "dir": "south",
+        "elseMessage": "Storm-tossed trees block your way."
+      },
+      {
+        "dir": "west",
+        "to": "FOREST-1"
+      },
+      {
+        "dir": "nw",
+        "to": "SOUTH-OF-HOUSE"
+      }
+    ]
+  },
+  {
+    "id": "PATH",
+    "kind": "room",
+    "desc": "Forest Path",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "TREE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a path winding through a dimly lit forest. The path heads\nnorth-south here. One particularly large tree with some low branches\nstands at the edge of the path.",
+    "actionRoutine": "FOREST-ROOM",
+    "exits": [
+      {
+        "dir": "up",
+        "to": "UP-A-TREE"
+      },
+      {
+        "dir": "north",
+        "to": "GRATING-CLEARING"
+      },
+      {
+        "dir": "east",
+        "to": "FOREST-2"
+      },
+      {
+        "dir": "south",
+        "to": "NORTH-OF-HOUSE"
+      },
+      {
+        "dir": "west",
+        "to": "FOREST-1"
+      }
+    ]
+  },
+  {
+    "id": "UP-A-TREE",
+    "kind": "room",
+    "desc": "Up a Tree",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "TREE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "TREE-ROOM",
+    "exits": [
+      {
+        "dir": "down",
+        "to": "PATH"
+      },
+      {
+        "dir": "up",
+        "elseMessage": "You cannot climb any higher."
+      }
+    ]
+  },
+  {
+    "id": "GRATING-CLEARING",
+    "kind": "room",
+    "desc": "Clearing",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "WHITE-HOUSE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "CLEARING-FCN",
+    "exits": [
+      {
+        "dir": "north",
+        "elseMessage": "The forest becomes impenetrable to the north."
+      },
+      {
+        "dir": "east",
+        "to": "FOREST-2"
+      },
+      {
+        "dir": "west",
+        "to": "FOREST-1"
+      },
+      {
+        "dir": "south",
+        "to": "PATH"
+      },
+      {
+        "dir": "down",
+        "per": "GRATING-EXIT"
+      }
+    ]
+  },
+  {
+    "id": "CLEARING",
+    "kind": "room",
+    "desc": "Clearing",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "TREE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are in a small clearing in a well marked forest path that\nextends to the east and west.",
+    "actionRoutine": "FOREST-ROOM",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "There is no tree here suitable for climbing."
+      },
+      {
+        "dir": "east",
+        "to": "CANYON-VIEW"
+      },
+      {
+        "dir": "north",
+        "to": "FOREST-2"
+      },
+      {
+        "dir": "south",
+        "to": "FOREST-3"
+      },
+      {
+        "dir": "west",
+        "to": "EAST-OF-HOUSE"
+      }
+    ]
+  },
+  {
+    "id": "KITCHEN",
+    "kind": "room",
+    "desc": "Kitchen",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "VALUE": 10,
+      "GLOBAL": "KITCHEN-WINDOW"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "KITCHEN-FCN",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "EAST-OF-HOUSE",
+        "ifFlag": "KITCHEN-WINDOW"
+      },
+      {
+        "dir": "west",
+        "to": "LIVING-ROOM"
+      },
+      {
+        "dir": "out",
+        "to": "EAST-OF-HOUSE",
+        "ifFlag": "KITCHEN-WINDOW"
+      },
+      {
+        "dir": "up",
+        "to": "ATTIC"
+      },
+      {
+        "dir": "down",
+        "to": "STUDIO",
+        "ifFlag": "FALSE-FLAG",
+        "elseMessage": "Only Santa Claus climbs down chimneys."
+      }
+    ]
+  },
+  {
+    "id": "ATTIC",
+    "kind": "room",
+    "desc": "Attic",
+    "flags": [
+      "Land",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is the attic. The only exit is a stairway leading down.",
+    "exits": [
+      {
+        "dir": "down",
+        "to": "KITCHEN"
+      }
+    ]
+  },
+  {
+    "id": "LIVING-ROOM",
+    "kind": "room",
+    "desc": "Living Room",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS",
+      "PSEUDO": "NAILS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "LIVING-ROOM-FCN",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "KITCHEN"
+      },
+      {
+        "dir": "west",
+        "to": "STRANGE-PASSAGE",
+        "ifFlag": "MAGIC-FLAG",
+        "elseMessage": "The door is nailed shut."
+      },
+      {
+        "dir": "down",
+        "per": "TRAP-DOOR-EXIT"
+      }
+    ]
+  },
+  {
+    "id": "CELLAR",
+    "kind": "room",
+    "desc": "Cellar",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "VALUE": 25,
+      "GLOBAL": "TRAP-DOOR"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "CELLAR-FCN",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "TROLL-ROOM"
+      },
+      {
+        "dir": "south",
+        "to": "EAST-OF-CHASM"
+      },
+      {
+        "dir": "up",
+        "to": "LIVING-ROOM",
+        "ifFlag": "TRAP-DOOR"
+      },
+      {
+        "dir": "west",
+        "elseMessage": "You try to ascend the ramp, but it is impossible, and you slide back down."
+      }
+    ]
+  },
+  {
+    "id": "TROLL-ROOM",
+    "kind": "room",
+    "desc": "The Troll Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a small room with passages to the east and south and a\nforbidding hole leading west. Bloodstains and deep scratches\n(perhaps made by an axe) mar the walls.",
+    "actionRoutine": "TROLL-ROOM-F",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "CELLAR"
+      },
+      {
+        "dir": "east",
+        "to": "EW-PASSAGE",
+        "ifFlag": "TROLL-FLAG",
+        "elseMessage": "The troll fends you off with a menacing gesture."
+      },
+      {
+        "dir": "west",
+        "to": "MAZE-1",
+        "ifFlag": "TROLL-FLAG",
+        "elseMessage": "The troll fends you off with a menacing gesture."
+      }
+    ]
+  },
+  {
+    "id": "EAST-OF-CHASM",
+    "kind": "room",
+    "desc": "East of Chasm",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "PSEUDO": "CHASM"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are on the east edge of a chasm, the bottom of which cannot be\nseen. A narrow passage goes north, and the path you are on continues\nto the east.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "CELLAR"
+      },
+      {
+        "dir": "east",
+        "to": "GALLERY"
+      },
+      {
+        "dir": "down",
+        "elseMessage": "The chasm probably leads straight to the infernal regions."
+      }
+    ]
+  },
+  {
+    "id": "GALLERY",
+    "kind": "room",
+    "desc": "Gallery",
+    "flags": [
+      "Land",
+      "Light"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is an art gallery. Most of the paintings have been stolen by\nvandals with exceptional taste. The vandals left through either the\nnorth or west exits.",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "EAST-OF-CHASM"
+      },
+      {
+        "dir": "north",
+        "to": "STUDIO"
+      }
+    ]
+  },
+  {
+    "id": "STUDIO",
+    "kind": "room",
+    "desc": "Studio",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "CHIMNEY",
+      "PSEUDO": "DOOR"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This appears to have been an artist's studio. The walls and floors are\nsplattered with paints of 69 different colors. Strangely enough, nothing\nof value is hanging here. At the south end of the room is an open door\n(also covered with paint). A dark and narrow chimney leads up from a\nfireplace; although you might be able to get up it, it seems unlikely\nyou could get back down.",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "GALLERY"
+      },
+      {
+        "dir": "up",
+        "per": "UP-CHIMNEY-FUNCTION"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-1",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "TROLL-ROOM"
+      },
+      {
+        "dir": "north",
+        "to": "MAZE-1"
+      },
+      {
+        "dir": "south",
+        "to": "MAZE-2"
+      },
+      {
+        "dir": "west",
+        "to": "MAZE-4"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-2",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "MAZE-1"
+      },
+      {
+        "dir": "down",
+        "per": "MAZE-DIODES"
+      },
+      {
+        "dir": "east",
+        "to": "MAZE-3"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-3",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "MAZE-2"
+      },
+      {
+        "dir": "north",
+        "to": "MAZE-4"
+      },
+      {
+        "dir": "up",
+        "to": "MAZE-5"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-4",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "MAZE-3"
+      },
+      {
+        "dir": "north",
+        "to": "MAZE-1"
+      },
+      {
+        "dir": "east",
+        "to": "DEAD-END-1"
+      }
+    ]
+  },
+  {
+    "id": "DEAD-END-1",
+    "kind": "room",
+    "desc": "Dead End",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You have come to a dead end in the maze.",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "MAZE-4"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-5",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.\nA skeleton, probably the remains of a luckless adventurer, lies here.",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "DEAD-END-2"
+      },
+      {
+        "dir": "north",
+        "to": "MAZE-3"
+      },
+      {
+        "dir": "sw",
+        "to": "MAZE-6"
+      }
+    ]
+  },
+  {
+    "id": "DEAD-END-2",
+    "kind": "room",
+    "desc": "Dead End",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You have come to a dead end in the maze.",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "MAZE-5"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-6",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "down",
+        "to": "MAZE-5"
+      },
+      {
+        "dir": "east",
+        "to": "MAZE-7"
+      },
+      {
+        "dir": "west",
+        "to": "MAZE-6"
+      },
+      {
+        "dir": "up",
+        "to": "MAZE-9"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-7",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "up",
+        "to": "MAZE-14"
+      },
+      {
+        "dir": "west",
+        "to": "MAZE-6"
+      },
+      {
+        "dir": "down",
+        "per": "MAZE-DIODES"
+      },
+      {
+        "dir": "east",
+        "to": "MAZE-8"
+      },
+      {
+        "dir": "south",
+        "to": "MAZE-15"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-8",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "ne",
+        "to": "MAZE-7"
+      },
+      {
+        "dir": "west",
+        "to": "MAZE-8"
+      },
+      {
+        "dir": "se",
+        "to": "DEAD-END-3"
+      }
+    ]
+  },
+  {
+    "id": "DEAD-END-3",
+    "kind": "room",
+    "desc": "Dead End",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You have come to a dead end in the maze.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "MAZE-8"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-9",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "MAZE-6"
+      },
+      {
+        "dir": "down",
+        "per": "MAZE-DIODES"
+      },
+      {
+        "dir": "east",
+        "to": "MAZE-10"
+      },
+      {
+        "dir": "south",
+        "to": "MAZE-13"
+      },
+      {
+        "dir": "west",
+        "to": "MAZE-12"
+      },
+      {
+        "dir": "nw",
+        "to": "MAZE-9"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-10",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "MAZE-9"
+      },
+      {
+        "dir": "west",
+        "to": "MAZE-13"
+      },
+      {
+        "dir": "up",
+        "to": "MAZE-11"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-11",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "ne",
+        "to": "GRATING-ROOM"
+      },
+      {
+        "dir": "down",
+        "to": "MAZE-10"
+      },
+      {
+        "dir": "nw",
+        "to": "MAZE-13"
+      },
+      {
+        "dir": "sw",
+        "to": "MAZE-12"
+      }
+    ]
+  },
+  {
+    "id": "GRATING-ROOM",
+    "kind": "room",
+    "desc": "Grating Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "GRATE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "MAZE-11-FCN",
+    "exits": [
+      {
+        "dir": "sw",
+        "to": "MAZE-11"
+      },
+      {
+        "dir": "up",
+        "to": "GRATING-CLEARING",
+        "ifFlag": "GRATE"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-12",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "down",
+        "per": "MAZE-DIODES"
+      },
+      {
+        "dir": "sw",
+        "to": "MAZE-11"
+      },
+      {
+        "dir": "east",
+        "to": "MAZE-13"
+      },
+      {
+        "dir": "up",
+        "to": "MAZE-9"
+      },
+      {
+        "dir": "north",
+        "to": "DEAD-END-4"
+      }
+    ]
+  },
+  {
+    "id": "DEAD-END-4",
+    "kind": "room",
+    "desc": "Dead End",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You have come to a dead end in the maze.",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "MAZE-12"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-13",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "MAZE-9"
+      },
+      {
+        "dir": "down",
+        "to": "MAZE-12"
+      },
+      {
+        "dir": "south",
+        "to": "MAZE-10"
+      },
+      {
+        "dir": "west",
+        "to": "MAZE-11"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-14",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "MAZE-15"
+      },
+      {
+        "dir": "nw",
+        "to": "MAZE-14"
+      },
+      {
+        "dir": "ne",
+        "to": "MAZE-7"
+      },
+      {
+        "dir": "south",
+        "to": "MAZE-7"
+      }
+    ]
+  },
+  {
+    "id": "MAZE-15",
+    "kind": "room",
+    "desc": "Maze",
+    "flags": [
+      "Land",
+      "Maze"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is part of a maze of twisty little passages, all alike.",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "MAZE-14"
+      },
+      {
+        "dir": "south",
+        "to": "MAZE-7"
+      },
+      {
+        "dir": "se",
+        "to": "CYCLOPS-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "CYCLOPS-ROOM",
+    "kind": "room",
+    "desc": "Cyclops Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "CYCLOPS-ROOM-FCN",
+    "exits": [
+      {
+        "dir": "nw",
+        "to": "MAZE-15"
+      },
+      {
+        "dir": "east",
+        "to": "STRANGE-PASSAGE",
+        "ifFlag": "MAGIC-FLAG",
+        "elseMessage": "The east wall is solid rock."
+      },
+      {
+        "dir": "up",
+        "to": "TREASURE-ROOM",
+        "ifFlag": "CYCLOPS-FLAG",
+        "elseMessage": "The cyclops doesn't look like he'll let you past."
+      }
+    ]
+  },
+  {
+    "id": "STRANGE-PASSAGE",
+    "kind": "room",
+    "desc": "Strange Passage",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a long passage. To the west is one entrance. On the\neast there is an old wooden door, with a large opening in it (about\ncyclops sized).",
+    "parent": "TO",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "CYCLOPS-ROOM"
+      },
+      {
+        "dir": "east",
+        "to": "LIVING-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "TREASURE-ROOM",
+    "kind": "room",
+    "desc": "Treasure Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "VALUE": 25,
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a large room, whose east wall is solid granite. A number\nof discarded bags, which crumble at your touch, are scattered about\non the floor. There is an exit down a staircase.",
+    "actionRoutine": "TREASURE-ROOM-FCN",
+    "exits": [
+      {
+        "dir": "down",
+        "to": "CYCLOPS-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "RESERVOIR-SOUTH",
+    "kind": "room",
+    "desc": "Reservoir South",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER",
+      "PSEUDO": "LAKE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "RESERVOIR-SOUTH-FCN",
+    "exits": [
+      {
+        "dir": "se",
+        "to": "DEEP-CANYON"
+      },
+      {
+        "dir": "sw",
+        "to": "CHASM-ROOM"
+      },
+      {
+        "dir": "east",
+        "to": "DAM-ROOM"
+      },
+      {
+        "dir": "west",
+        "to": "STREAM-VIEW"
+      },
+      {
+        "dir": "north",
+        "to": "RESERVOIR",
+        "ifFlag": "LOW-TIDE",
+        "elseMessage": "You would drown."
+      }
+    ]
+  },
+  {
+    "id": "RESERVOIR",
+    "kind": "room",
+    "desc": "Reservoir",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {
+      "PSEUDO": "STREAM",
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "RESERVOIR-FCN",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "RESERVOIR-NORTH"
+      },
+      {
+        "dir": "south",
+        "to": "RESERVOIR-SOUTH"
+      },
+      {
+        "dir": "up",
+        "to": "IN-STREAM"
+      },
+      {
+        "dir": "west",
+        "to": "IN-STREAM"
+      },
+      {
+        "dir": "down",
+        "elseMessage": "The dam blocks your way."
+      }
+    ]
+  },
+  {
+    "id": "RESERVOIR-NORTH",
+    "kind": "room",
+    "desc": "Reservoir North",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER",
+      "PSEUDO": "LAKE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "RESERVOIR-NORTH-FCN",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "ATLANTIS-ROOM"
+      },
+      {
+        "dir": "south",
+        "to": "RESERVOIR",
+        "ifFlag": "LOW-TIDE",
+        "elseMessage": "You would drown."
+      }
+    ]
+  },
+  {
+    "id": "STREAM-VIEW",
+    "kind": "room",
+    "desc": "Stream View",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER",
+      "PSEUDO": "STREAM"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are standing on a path beside a gently flowing stream. The path\nfollows the stream, which flows from west to east.",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "RESERVOIR-SOUTH"
+      },
+      {
+        "dir": "west",
+        "elseMessage": "The stream emerges from a spot too small for you to enter."
+      }
+    ]
+  },
+  {
+    "id": "IN-STREAM",
+    "kind": "room",
+    "desc": "Stream",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER",
+      "PSEUDO": "STREAM"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are on the gently flowing stream. The upstream route is too narrow\nto navigate, and the downstream route is invisible due to twisting\nwalls. There is a narrow beach to land on.",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "The channel is too narrow."
+      },
+      {
+        "dir": "west",
+        "elseMessage": "The channel is too narrow."
+      },
+      {
+        "dir": "out",
+        "to": "STREAM-VIEW"
+      },
+      {
+        "dir": "down",
+        "to": "RESERVOIR"
+      },
+      {
+        "dir": "east",
+        "to": "RESERVOIR"
+      }
+    ]
+  },
+  {
+    "id": "MIRROR-ROOM-1",
+    "kind": "room",
+    "desc": "Mirror Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "MIRROR-ROOM",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "COLD-PASSAGE"
+      },
+      {
+        "dir": "west",
+        "to": "TWISTING-PASSAGE"
+      },
+      {
+        "dir": "east",
+        "to": "SMALL-CAVE"
+      }
+    ]
+  },
+  {
+    "id": "MIRROR-ROOM-2",
+    "kind": "room",
+    "desc": "Mirror Room",
+    "flags": [
+      "Land",
+      "Light"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "MIRROR-ROOM",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "WINDING-PASSAGE"
+      },
+      {
+        "dir": "north",
+        "to": "NARROW-PASSAGE"
+      },
+      {
+        "dir": "east",
+        "to": "TINY-CAVE"
+      }
+    ]
+  },
+  {
+    "id": "SMALL-CAVE",
+    "kind": "room",
+    "desc": "Cave",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a tiny cave with entrances west and north, and a staircase\nleading down.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "MIRROR-ROOM-1"
+      },
+      {
+        "dir": "down",
+        "to": "ATLANTIS-ROOM"
+      },
+      {
+        "dir": "south",
+        "to": "ATLANTIS-ROOM"
+      },
+      {
+        "dir": "west",
+        "to": "TWISTING-PASSAGE"
+      }
+    ]
+  },
+  {
+    "id": "TINY-CAVE",
+    "kind": "room",
+    "desc": "Cave",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a tiny cave with entrances west and north, and a dark,\nforbidding staircase leading down.",
+    "actionRoutine": "CAVE2-ROOM",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "MIRROR-ROOM-2"
+      },
+      {
+        "dir": "west",
+        "to": "WINDING-PASSAGE"
+      },
+      {
+        "dir": "down",
+        "to": "ENTRANCE-TO-HADES"
+      }
+    ]
+  },
+  {
+    "id": "COLD-PASSAGE",
+    "kind": "room",
+    "desc": "Cold Passage",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a cold and damp corridor where a long east-west passageway\nturns into a southward path.",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "MIRROR-ROOM-1"
+      },
+      {
+        "dir": "west",
+        "to": "SLIDE-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "NARROW-PASSAGE",
+    "kind": "room",
+    "desc": "Narrow Passage",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a long and narrow corridor where a long north-south passageway\nbriefly narrows even further.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "ROUND-ROOM"
+      },
+      {
+        "dir": "south",
+        "to": "MIRROR-ROOM-2"
+      }
+    ]
+  },
+  {
+    "id": "WINDING-PASSAGE",
+    "kind": "room",
+    "desc": "Winding Passage",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a winding passage. It seems that there are only exits\non the east and north.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "MIRROR-ROOM-2"
+      },
+      {
+        "dir": "east",
+        "to": "TINY-CAVE"
+      }
+    ]
+  },
+  {
+    "id": "TWISTING-PASSAGE",
+    "kind": "room",
+    "desc": "Twisting Passage",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a winding passage. It seems that there are only exits\non the east and north.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "MIRROR-ROOM-1"
+      },
+      {
+        "dir": "east",
+        "to": "SMALL-CAVE"
+      }
+    ]
+  },
+  {
+    "id": "ATLANTIS-ROOM",
+    "kind": "room",
+    "desc": "Atlantis Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is an ancient room, long under water. There is an exit to\nthe south and a staircase leading up.",
+    "exits": [
+      {
+        "dir": "up",
+        "to": "SMALL-CAVE"
+      },
+      {
+        "dir": "south",
+        "to": "RESERVOIR-NORTH"
+      }
+    ]
+  },
+  {
+    "id": "EW-PASSAGE",
+    "kind": "room",
+    "desc": "East-West Passage",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "VALUE": 5,
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a narrow east-west passageway. There is a narrow stairway\nleading down at the north end of the room.",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "ROUND-ROOM"
+      },
+      {
+        "dir": "west",
+        "to": "TROLL-ROOM"
+      },
+      {
+        "dir": "down",
+        "to": "CHASM-ROOM"
+      },
+      {
+        "dir": "north",
+        "to": "CHASM-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "ROUND-ROOM",
+    "kind": "room",
+    "desc": "Round Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a circular stone room with passages in all directions. Several\nof them have unfortunately been blocked by cave-ins.",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "LOUD-ROOM"
+      },
+      {
+        "dir": "west",
+        "to": "EW-PASSAGE"
+      },
+      {
+        "dir": "north",
+        "to": "NS-PASSAGE"
+      },
+      {
+        "dir": "south",
+        "to": "NARROW-PASSAGE"
+      },
+      {
+        "dir": "se",
+        "to": "ENGRAVINGS-CAVE"
+      }
+    ]
+  },
+  {
+    "id": "DEEP-CANYON",
+    "kind": "room",
+    "desc": "Deep Canyon",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "DEEP-CANYON-F",
+    "exits": [
+      {
+        "dir": "nw",
+        "to": "RESERVOIR-SOUTH"
+      },
+      {
+        "dir": "east",
+        "to": "DAM-ROOM"
+      },
+      {
+        "dir": "sw",
+        "to": "NS-PASSAGE"
+      },
+      {
+        "dir": "down",
+        "to": "LOUD-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "DAMP-CAVE",
+    "kind": "room",
+    "desc": "Damp Cave",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "CRACK"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This cave has exits to the west and east, and narrows to a crack toward\nthe south. The earth is particularly damp here.",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "LOUD-ROOM"
+      },
+      {
+        "dir": "east",
+        "to": "WHITE-CLIFFS-NORTH"
+      },
+      {
+        "dir": "south",
+        "elseMessage": "It is too narrow for most insects."
+      }
+    ]
+  },
+  {
+    "id": "LOUD-ROOM",
+    "kind": "room",
+    "desc": "Loud Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "LOUD-ROOM-FCN",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "DAMP-CAVE"
+      },
+      {
+        "dir": "west",
+        "to": "ROUND-ROOM"
+      },
+      {
+        "dir": "up",
+        "to": "DEEP-CANYON"
+      }
+    ]
+  },
+  {
+    "id": "NS-PASSAGE",
+    "kind": "room",
+    "desc": "North-South Passage",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a high north-south passage, which forks to the northeast.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "CHASM-ROOM"
+      },
+      {
+        "dir": "ne",
+        "to": "DEEP-CANYON"
+      },
+      {
+        "dir": "south",
+        "to": "ROUND-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "CHASM-ROOM",
+    "kind": "room",
+    "desc": "Chasm",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "CRACK",
+      "PSEUDO": "CHASM"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "A chasm runs southwest to northeast and the path follows it. You are\non the south side of the chasm, where a crack opens into a passage.",
+    "exits": [
+      {
+        "dir": "ne",
+        "to": "RESERVOIR-SOUTH"
+      },
+      {
+        "dir": "sw",
+        "to": "EW-PASSAGE"
+      },
+      {
+        "dir": "up",
+        "to": "EW-PASSAGE"
+      },
+      {
+        "dir": "south",
+        "to": "NS-PASSAGE"
+      },
+      {
+        "dir": "down",
+        "elseMessage": "Are you out of your mind?"
+      }
+    ]
+  },
+  {
+    "id": "ENTRANCE-TO-HADES",
+    "kind": "room",
+    "desc": "Entrance to Hades",
+    "flags": [
+      "Land",
+      "Light"
+    ],
+    "props": {
+      "GLOBAL": "BODIES",
+      "PSEUDO": "GATE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "parent": "TO",
+    "actionRoutine": "LLD-ROOM",
+    "exits": [
+      {
+        "dir": "up",
+        "to": "TINY-CAVE"
+      },
+      {
+        "dir": "south",
+        "to": "LAND-OF-LIVING-DEAD",
+        "ifFlag": "LLD-FLAG",
+        "elseMessage": "Some invisible force prevents you from passing through the gate."
+      }
+    ]
+  },
+  {
+    "id": "LAND-OF-LIVING-DEAD",
+    "kind": "room",
+    "desc": "Land of the Dead",
+    "flags": [
+      "Land",
+      "Light"
+    ],
+    "props": {
+      "GLOBAL": "BODIES"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You have entered the Land of the Living Dead. Thousands of lost souls\ncan be heard weeping and moaning. In the corner are stacked the remains\nof dozens of previous adventurers less fortunate than yourself.\nA passage exits to the north.",
+    "exits": [
+      {
+        "dir": "out",
+        "to": "ENTRANCE-TO-HADES"
+      },
+      {
+        "dir": "north",
+        "to": "ENTRANCE-TO-HADES"
+      }
+    ]
+  },
+  {
+    "id": "ENGRAVINGS-CAVE",
+    "kind": "room",
+    "desc": "Engravings Cave",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You have entered a low cave with passages leading northwest and east.",
+    "exits": [
+      {
+        "dir": "nw",
+        "to": "ROUND-ROOM"
+      },
+      {
+        "dir": "east",
+        "to": "DOME-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "EGYPT-ROOM",
+    "kind": "room",
+    "desc": "Egyptian Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a room which looks like an Egyptian tomb. There is an\nascending staircase to the west.",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "NORTH-TEMPLE"
+      },
+      {
+        "dir": "up",
+        "to": "NORTH-TEMPLE"
+      }
+    ]
+  },
+  {
+    "id": "DOME-ROOM",
+    "kind": "room",
+    "desc": "Dome Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "PSEUDO": "DOME"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "DOME-ROOM-FCN",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "ENGRAVINGS-CAVE"
+      },
+      {
+        "dir": "down",
+        "to": "TORCH-ROOM",
+        "ifFlag": "DOME-FLAG",
+        "elseMessage": "You cannot go down without fracturing many bones."
+      }
+    ]
+  },
+  {
+    "id": "TORCH-ROOM",
+    "kind": "room",
+    "desc": "Torch Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS",
+      "PSEUDO": "DOME"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "TORCH-ROOM-FCN",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "You cannot reach the rope."
+      },
+      {
+        "dir": "south",
+        "to": "NORTH-TEMPLE"
+      },
+      {
+        "dir": "down",
+        "to": "NORTH-TEMPLE"
+      }
+    ]
+  },
+  {
+    "id": "NORTH-TEMPLE",
+    "kind": "room",
+    "desc": "Temple",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is the north end of a large temple. On the east wall is an\nancient inscription, probably a prayer in a long-forgotten language.\nBelow the prayer is a staircase leading down. The west wall is solid\ngranite. The exit to the north end of the room is through huge\nmarble pillars.",
+    "exits": [
+      {
+        "dir": "down",
+        "to": "EGYPT-ROOM"
+      },
+      {
+        "dir": "east",
+        "to": "EGYPT-ROOM"
+      },
+      {
+        "dir": "north",
+        "to": "TORCH-ROOM"
+      },
+      {
+        "dir": "out",
+        "to": "TORCH-ROOM"
+      },
+      {
+        "dir": "up",
+        "to": "TORCH-ROOM"
+      },
+      {
+        "dir": "south",
+        "to": "SOUTH-TEMPLE"
+      }
+    ]
+  },
+  {
+    "id": "SOUTH-TEMPLE",
+    "kind": "room",
+    "desc": "Altar",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is the south end of a large temple. In front of you is what\nappears to be an altar. In one corner is a small hole in the floor\nwhich leads into darkness. You probably could not get back up it.",
+    "actionRoutine": "SOUTH-TEMPLE-FCN",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "NORTH-TEMPLE"
+      },
+      {
+        "dir": "down",
+        "to": "TINY-CAVE",
+        "ifFlag": "COFFIN-CURE",
+        "elseMessage": "You haven't a prayer of getting the coffin down there."
+      }
+    ]
+  },
+  {
+    "id": "DAM-ROOM",
+    "kind": "room",
+    "desc": "Dam",
+    "flags": [
+      "Land",
+      "Light"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "DAM-ROOM-FCN",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "DEEP-CANYON"
+      },
+      {
+        "dir": "down",
+        "to": "DAM-BASE"
+      },
+      {
+        "dir": "east",
+        "to": "DAM-BASE"
+      },
+      {
+        "dir": "north",
+        "to": "DAM-LOBBY"
+      },
+      {
+        "dir": "west",
+        "to": "RESERVOIR-SOUTH"
+      }
+    ]
+  },
+  {
+    "id": "DAM-LOBBY",
+    "kind": "room",
+    "desc": "Dam Lobby",
+    "flags": [
+      "Land",
+      "Light"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This room appears to have been the waiting room for groups touring\nthe dam. There are open doorways here to the north and east marked\n\"Private\", and there is a path leading south over the top of the dam.",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "DAM-ROOM"
+      },
+      {
+        "dir": "north",
+        "to": "MAINTENANCE-ROOM"
+      },
+      {
+        "dir": "east",
+        "to": "MAINTENANCE-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "MAINTENANCE-ROOM",
+    "kind": "room",
+    "desc": "Maintenance Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is what appears to have been the maintenance room for Flood\nControl Dam #3. Apparently, this room has been ransacked recently, for\nmost of the valuable equipment is gone. On the wall in front of you is a\ngroup of buttons colored blue, yellow, brown, and red. There are doorways to\nthe west and south.",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "DAM-LOBBY"
+      },
+      {
+        "dir": "west",
+        "to": "DAM-LOBBY"
+      }
+    ]
+  },
+  {
+    "id": "DAM-BASE",
+    "kind": "room",
+    "desc": "Dam Base",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are at the base of Flood Control Dam #3, which looms above you\nand to the north. The river Frigid is flowing by here. Along the\nriver are the White Cliffs which seem to form giant walls stretching\nfrom north to south along the shores of the river as it winds its\nway downstream.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "DAM-ROOM"
+      },
+      {
+        "dir": "up",
+        "to": "DAM-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "RIVER-1",
+    "kind": "room",
+    "desc": "Frigid River",
+    "flags": [
+      "NonDescript",
+      "Sacred",
+      "Light"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are on the Frigid River in the vicinity of the Dam. The river\nflows quietly here. There is a landing on the west shore.",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "You cannot go upstream due to strong currents."
+      },
+      {
+        "dir": "west",
+        "to": "DAM-BASE"
+      },
+      {
+        "dir": "out",
+        "to": "DAM-BASE"
+      },
+      {
+        "dir": "down",
+        "to": "RIVER-2"
+      },
+      {
+        "dir": "east",
+        "elseMessage": "The White Cliffs prevent your landing here."
+      }
+    ]
+  },
+  {
+    "id": "RIVER-2",
+    "kind": "room",
+    "desc": "Frigid River",
+    "flags": [
+      "NonDescript",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "The river turns a corner here making it impossible to see the\nDam. The White Cliffs loom on the east bank and large rocks prevent\nlanding on the west.",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "You cannot go upstream due to strong currents."
+      },
+      {
+        "dir": "down",
+        "to": "RIVER-3"
+      },
+      {
+        "dir": "out",
+        "elseMessage": "There is no safe landing spot here."
+      },
+      {
+        "dir": "east",
+        "elseMessage": "The White Cliffs prevent your landing here."
+      },
+      {
+        "dir": "west",
+        "elseMessage": "Just in time you steer away from the rocks."
+      }
+    ]
+  },
+  {
+    "id": "RIVER-3",
+    "kind": "room",
+    "desc": "Frigid River",
+    "flags": [
+      "NonDescript",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "The river descends here into a valley. There is a narrow beach on the\nwest shore below the cliffs. In the distance a faint rumbling can be\nheard.",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "You cannot go upstream due to strong currents."
+      },
+      {
+        "dir": "down",
+        "to": "RIVER-4"
+      },
+      {
+        "dir": "out",
+        "to": "WHITE-CLIFFS-NORTH"
+      },
+      {
+        "dir": "west",
+        "to": "WHITE-CLIFFS-NORTH"
+      }
+    ]
+  },
+  {
+    "id": "WHITE-CLIFFS-NORTH",
+    "kind": "room",
+    "desc": "White Cliffs Beach",
+    "flags": [
+      "Land",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are on a narrow strip of beach which runs along the base of the\nWhite Cliffs. There is a narrow path heading south along the Cliffs\nand a tight passage leading west into the cliffs themselves.",
+    "actionRoutine": "WHITE-CLIFFS-FUNCTION",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "WHITE-CLIFFS-SOUTH",
+        "ifFlag": "DEFLATE",
+        "elseMessage": "The path is too narrow."
+      },
+      {
+        "dir": "west",
+        "to": "DAMP-CAVE",
+        "ifFlag": "DEFLATE",
+        "elseMessage": "The path is too narrow."
+      }
+    ]
+  },
+  {
+    "id": "WHITE-CLIFFS-SOUTH",
+    "kind": "room",
+    "desc": "White Cliffs Beach",
+    "flags": [
+      "Land",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are on a rocky, narrow strip of beach beside the Cliffs. A\nnarrow path leads north along the shore.",
+    "actionRoutine": "WHITE-CLIFFS-FUNCTION",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "WHITE-CLIFFS-NORTH",
+        "ifFlag": "DEFLATE",
+        "elseMessage": "The path is too narrow."
+      }
+    ]
+  },
+  {
+    "id": "RIVER-4",
+    "kind": "room",
+    "desc": "Frigid River",
+    "flags": [
+      "NonDescript",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "The river is running faster here and the sound ahead appears to be\nthat of rushing water. On the east shore is a sandy beach. A small\narea of beach can also be seen below the cliffs on the west shore.",
+    "actionRoutine": "RIVR4-ROOM",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "You cannot go upstream due to strong currents."
+      },
+      {
+        "dir": "down",
+        "to": "RIVER-5"
+      },
+      {
+        "dir": "out",
+        "elseMessage": "You can land either to the east or the west."
+      },
+      {
+        "dir": "west",
+        "to": "WHITE-CLIFFS-SOUTH"
+      },
+      {
+        "dir": "east",
+        "to": "SANDY-BEACH"
+      }
+    ]
+  },
+  {
+    "id": "RIVER-5",
+    "kind": "room",
+    "desc": "Frigid River",
+    "flags": [
+      "NonDescript",
+      "Sacred",
+      "Light"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "The sound of rushing water is nearly unbearable here. On the east\nshore is a large landing area.",
+    "exits": [
+      {
+        "dir": "up",
+        "elseMessage": "You cannot go upstream due to strong currents."
+      },
+      {
+        "dir": "east",
+        "to": "SHORE"
+      },
+      {
+        "dir": "out",
+        "to": "SHORE"
+      }
+    ]
+  },
+  {
+    "id": "SHORE",
+    "kind": "room",
+    "desc": "Shore",
+    "flags": [
+      "Land",
+      "Sacred",
+      "Light"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are on the east shore of the river. The water here seems somewhat\ntreacherous. A path travels from north to south here, the south end\nquickly turning around a sharp corner.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "SANDY-BEACH"
+      },
+      {
+        "dir": "south",
+        "to": "ARAGAIN-FALLS"
+      }
+    ]
+  },
+  {
+    "id": "SANDY-BEACH",
+    "kind": "room",
+    "desc": "Sandy Beach",
+    "flags": [
+      "Land",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are on a large sandy beach on the east shore of the river, which is\nflowing quickly by. A path runs beside the river to the south here, and\na passage is partially buried in sand to the northeast.",
+    "exits": [
+      {
+        "dir": "ne",
+        "to": "SANDY-CAVE"
+      },
+      {
+        "dir": "south",
+        "to": "SHORE"
+      }
+    ]
+  },
+  {
+    "id": "SANDY-CAVE",
+    "kind": "room",
+    "desc": "Sandy Cave",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a sand-filled cave whose exit is to the southwest.",
+    "exits": [
+      {
+        "dir": "sw",
+        "to": "SANDY-BEACH"
+      }
+    ]
+  },
+  {
+    "id": "ARAGAIN-FALLS",
+    "kind": "room",
+    "desc": "Aragain Falls",
+    "flags": [
+      "Land",
+      "Sacred",
+      "Light"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "FALLS-ROOM",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "ON-RAINBOW",
+        "ifFlag": "RAINBOW-FLAG"
+      },
+      {
+        "dir": "down",
+        "elseMessage": "It's a long way..."
+      },
+      {
+        "dir": "north",
+        "to": "SHORE"
+      },
+      {
+        "dir": "up",
+        "to": "ON-RAINBOW",
+        "ifFlag": "RAINBOW-FLAG"
+      }
+    ]
+  },
+  {
+    "id": "ON-RAINBOW",
+    "kind": "room",
+    "desc": "On the Rainbow",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "RAINBOW"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are on top of a rainbow (I bet you never thought you would walk\non a rainbow), with a magnificent view of the Falls. The rainbow\ntravels east-west here.",
+    "exits": [
+      {
+        "dir": "west",
+        "to": "END-OF-RAINBOW"
+      },
+      {
+        "dir": "east",
+        "to": "ARAGAIN-FALLS"
+      }
+    ]
+  },
+  {
+    "id": "END-OF-RAINBOW",
+    "kind": "room",
+    "desc": "End of Rainbow",
+    "flags": [
+      "Land",
+      "Light"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are on a small, rocky beach on the continuation of the Frigid\nRiver past the Falls. The beach is narrow due to the presence of the\nWhite Cliffs. The river canyon opens here and sunlight shines in\nfrom above. A rainbow crosses over the falls to the east and a narrow\npath continues to the southwest.",
+    "exits": [
+      {
+        "dir": "up",
+        "to": "ON-RAINBOW",
+        "ifFlag": "RAINBOW-FLAG"
+      },
+      {
+        "dir": "ne",
+        "to": "ON-RAINBOW",
+        "ifFlag": "RAINBOW-FLAG"
+      },
+      {
+        "dir": "east",
+        "to": "ON-RAINBOW",
+        "ifFlag": "RAINBOW-FLAG"
+      },
+      {
+        "dir": "sw",
+        "to": "CANYON-BOTTOM"
+      }
+    ]
+  },
+  {
+    "id": "CANYON-BOTTOM",
+    "kind": "room",
+    "desc": "Canyon Bottom",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "GLOBAL-WATER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are beneath the walls of the river canyon which may be climbable\nhere. The lesser part of the runoff of Aragain Falls flows by below.\nTo the north is a narrow path.",
+    "exits": [
+      {
+        "dir": "up",
+        "to": "CLIFF-MIDDLE"
+      },
+      {
+        "dir": "north",
+        "to": "END-OF-RAINBOW"
+      }
+    ]
+  },
+  {
+    "id": "CLIFF-MIDDLE",
+    "kind": "room",
+    "desc": "Rocky Ledge",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "CLIMBABLE-CLIFF"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are on a ledge about halfway up the wall of the river canyon.\nYou can see from here that the main flow from Aragain Falls twists\nalong a passage which it is impossible for you to enter. Below you is the\ncanyon bottom. Above you is more cliff, which appears\nclimbable.",
+    "exits": [
+      {
+        "dir": "up",
+        "to": "CANYON-VIEW"
+      },
+      {
+        "dir": "down",
+        "to": "CANYON-BOTTOM"
+      }
+    ]
+  },
+  {
+    "id": "CANYON-VIEW",
+    "kind": "room",
+    "desc": "Canyon View",
+    "flags": [
+      "Land",
+      "Light",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "CLIMBABLE-CLIFF"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are at the top of the Great Canyon on its west wall. From here\nthere is a marvelous view of the canyon and parts of the Frigid River\nupstream. Across the canyon, the walls of the White Cliffs join the\nmighty ramparts of the Flathead Mountains to the east. Following the\nCanyon upstream to the north, Aragain Falls may be seen, complete with\nrainbow. The mighty Frigid River flows out from a great dark cavern. To\nthe west and south can be seen an immense forest, stretching for miles\naround. A path leads northwest. It is possible to climb down into\nthe canyon from here.",
+    "actionRoutine": "CANYON-VIEW-F",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "CLIFF-MIDDLE"
+      },
+      {
+        "dir": "down",
+        "to": "CLIFF-MIDDLE"
+      },
+      {
+        "dir": "nw",
+        "to": "CLEARING"
+      },
+      {
+        "dir": "west",
+        "to": "FOREST-3"
+      },
+      {
+        "dir": "south",
+        "elseMessage": "Storm-tossed trees block your way."
+      }
+    ]
+  },
+  {
+    "id": "MINE-ENTRANCE",
+    "kind": "room",
+    "desc": "Mine Entrance",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are standing at the entrance of what might have been a coal mine.\nThe shaft enters the west wall, and there is another exit on the south\nend of the room.",
+    "parent": "TO",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "SLIDE-ROOM"
+      },
+      {
+        "dir": "west",
+        "to": "SQUEEKY-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "SQUEEKY-ROOM",
+    "kind": "room",
+    "desc": "Squeaky Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You are in a small room. Strange squeaky sounds may be heard coming\nfrom the passage at the north end. You may also escape to the east.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "BAT-ROOM"
+      },
+      {
+        "dir": "east",
+        "to": "MINE-ENTRANCE"
+      }
+    ]
+  },
+  {
+    "id": "BAT-ROOM",
+    "kind": "room",
+    "desc": "Bat Room",
+    "flags": [
+      "Land",
+      "Sacred"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "BATS-ROOM",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "SQUEEKY-ROOM"
+      },
+      {
+        "dir": "east",
+        "to": "SHAFT-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "SHAFT-ROOM",
+    "kind": "room",
+    "desc": "Shaft Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "PSEUDO": "CHAIN"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a large room, in the middle of which is a small shaft\ndescending through the floor into darkness below. To the west and\nthe north are exits from this room. Constructed over the top of the\nshaft is a metal framework to which a heavy iron chain is attached.",
+    "exits": [
+      {
+        "dir": "down",
+        "elseMessage": "You wouldn't fit and would die if you could."
+      },
+      {
+        "dir": "west",
+        "to": "BAT-ROOM"
+      },
+      {
+        "dir": "north",
+        "to": "SMELLY-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "SMELLY-ROOM",
+    "kind": "room",
+    "desc": "Smelly Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS",
+      "PSEUDO": "ODOR"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a small nondescript room. However, from the direction\nof a small descending staircase a foul odor can be detected. To the\nsouth is a narrow tunnel.",
+    "exits": [
+      {
+        "dir": "down",
+        "to": "GAS-ROOM"
+      },
+      {
+        "dir": "south",
+        "to": "SHAFT-ROOM"
+      }
+    ]
+  },
+  {
+    "id": "GAS-ROOM",
+    "kind": "room",
+    "desc": "Gas Room",
+    "flags": [
+      "Land",
+      "Sacred"
+    ],
+    "props": {
+      "GLOBAL": "STAIRS",
+      "PSEUDO": "GAS"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a small room which smells strongly of coal gas. There is a\nshort climb up some stairs and a narrow tunnel leading east.",
+    "actionRoutine": "BOOM-ROOM",
+    "exits": [
+      {
+        "dir": "up",
+        "to": "SMELLY-ROOM"
+      },
+      {
+        "dir": "east",
+        "to": "MINE-1"
+      }
+    ]
+  },
+  {
+    "id": "LADDER-TOP",
+    "kind": "room",
+    "desc": "Ladder Top",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "LADDER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a very small room. In the corner is a rickety wooden\nladder, leading downward. It might be safe to descend. There is\nalso a staircase leading upward.",
+    "exits": [
+      {
+        "dir": "down",
+        "to": "LADDER-BOTTOM"
+      },
+      {
+        "dir": "up",
+        "to": "MINE-4"
+      }
+    ]
+  },
+  {
+    "id": "LADDER-BOTTOM",
+    "kind": "room",
+    "desc": "Ladder Bottom",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "LADDER"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a rather wide room. On one side is the bottom of a\nnarrow wooden ladder. To the west and the south are passages\nleaving the room.",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "DEAD-END-5"
+      },
+      {
+        "dir": "west",
+        "to": "TIMBER-ROOM"
+      },
+      {
+        "dir": "up",
+        "to": "LADDER-TOP"
+      }
+    ]
+  },
+  {
+    "id": "DEAD-END-5",
+    "kind": "room",
+    "desc": "Dead End",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "You have come to a dead end in the mine.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "LADDER-BOTTOM"
+      }
+    ]
+  },
+  {
+    "id": "TIMBER-ROOM",
+    "kind": "room",
+    "desc": "Timber Room",
+    "flags": [
+      "Land",
+      "Sacred"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a long and narrow passage, which is cluttered with broken\ntimbers. A wide passage comes from the east and turns at the\nwest end of the room into a very narrow passageway. From the west\ncomes a strong draft.",
+    "actionRoutine": "NO-OBJS",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "LADDER-BOTTOM"
+      },
+      {
+        "dir": "west",
+        "to": "LOWER-SHAFT",
+        "ifFlag": "EMPTY-HANDED",
+        "elseMessage": "You cannot fit through this passage with that load."
+      }
+    ]
+  },
+  {
+    "id": "LOWER-SHAFT",
+    "kind": "room",
+    "desc": "Drafty Room",
+    "flags": [
+      "Land",
+      "Sacred"
+    ],
+    "props": {
+      "PSEUDO": "CHAIN"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a small drafty room in which is the bottom of a long\nshaft. To the south is a passageway and to the east a very narrow\npassage. In the shaft can be seen a heavy iron chain.",
+    "actionRoutine": "NO-OBJS",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "MACHINE-ROOM"
+      },
+      {
+        "dir": "out",
+        "to": "TIMBER-ROOM",
+        "ifFlag": "EMPTY-HANDED",
+        "elseMessage": "You cannot fit through this passage with that load."
+      },
+      {
+        "dir": "east",
+        "to": "TIMBER-ROOM",
+        "ifFlag": "EMPTY-HANDED",
+        "elseMessage": "You cannot fit through this passage with that load."
+      }
+    ]
+  },
+  {
+    "id": "MACHINE-ROOM",
+    "kind": "room",
+    "desc": "Machine Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "actionRoutine": "MACHINE-ROOM-FCN",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "LOWER-SHAFT"
+      }
+    ]
+  },
+  {
+    "id": "MINE-1",
+    "kind": "room",
+    "desc": "Coal Mine",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a nondescript part of a coal mine.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "GAS-ROOM"
+      },
+      {
+        "dir": "east",
+        "to": "MINE-1"
+      },
+      {
+        "dir": "ne",
+        "to": "MINE-2"
+      }
+    ]
+  },
+  {
+    "id": "MINE-2",
+    "kind": "room",
+    "desc": "Coal Mine",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a nondescript part of a coal mine.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "MINE-2"
+      },
+      {
+        "dir": "south",
+        "to": "MINE-1"
+      },
+      {
+        "dir": "se",
+        "to": "MINE-3"
+      }
+    ]
+  },
+  {
+    "id": "MINE-3",
+    "kind": "room",
+    "desc": "Coal Mine",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a nondescript part of a coal mine.",
+    "exits": [
+      {
+        "dir": "south",
+        "to": "MINE-3"
+      },
+      {
+        "dir": "sw",
+        "to": "MINE-4"
+      },
+      {
+        "dir": "east",
+        "to": "MINE-2"
+      }
+    ]
+  },
+  {
+    "id": "MINE-4",
+    "kind": "room",
+    "desc": "Coal Mine",
+    "flags": [
+      "Land"
+    ],
+    "props": {},
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a nondescript part of a coal mine.",
+    "exits": [
+      {
+        "dir": "north",
+        "to": "MINE-3"
+      },
+      {
+        "dir": "west",
+        "to": "MINE-4"
+      },
+      {
+        "dir": "down",
+        "to": "LADDER-TOP"
+      }
+    ]
+  },
+  {
+    "id": "SLIDE-ROOM",
+    "kind": "room",
+    "desc": "Slide Room",
+    "flags": [
+      "Land"
+    ],
+    "props": {
+      "GLOBAL": "SLIDE"
+    },
+    "synonyms": [],
+    "adjectives": [],
+    "ldesc": "This is a small chamber, which appears to have been part of a\ncoal mine. On the south wall of the chamber the letters \"Granite\nWall\" are etched in the rock. To the east is a long passage, and\nthere is a steep metal slide twisting downward. To the north is\na small opening.",
+    "exits": [
+      {
+        "dir": "east",
+        "to": "COLD-PASSAGE"
+      },
+      {
+        "dir": "north",
+        "to": "MINE-ENTRANCE"
+      },
+      {
+        "dir": "down",
+        "to": "CELLAR"
+      }
+    ]
+  }
+]

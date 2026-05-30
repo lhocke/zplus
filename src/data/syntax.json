@@ -1,0 +1,2853 @@
+[
+  {
+    "verb": "VERBOSE",
+    "action": "V-VERBOSE"
+  },
+  {
+    "verb": "BRIEF",
+    "action": "V-BRIEF"
+  },
+  {
+    "verb": "SUPER",
+    "action": "V-SUPER-BRIEF"
+  },
+  {
+    "verb": "DIAGNOSE",
+    "action": "V-DIAGNOSE"
+  },
+  {
+    "verb": "INVENTORY",
+    "action": "V-INVENTORY"
+  },
+  {
+    "verb": "QUIT",
+    "action": "V-QUIT"
+  },
+  {
+    "verb": "RESTART",
+    "action": "V-RESTART"
+  },
+  {
+    "verb": "RESTORE",
+    "action": "V-RESTORE"
+  },
+  {
+    "verb": "SAVE",
+    "action": "V-SAVE"
+  },
+  {
+    "verb": "SCORE",
+    "action": "V-SCORE"
+  },
+  {
+    "verb": "SCRIPT",
+    "action": "V-SCRIPT"
+  },
+  {
+    "verb": "UNSCRIPT",
+    "action": "V-UNSCRIPT"
+  },
+  {
+    "verb": "VERSION",
+    "action": "V-VERSION"
+  },
+  {
+    "verb": "$VERIFY",
+    "action": "V-VERIFY"
+  },
+  {
+    "verb": "#RANDOM",
+    "action": "V-RANDOM",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "#COMMAND",
+    "action": "V-COMMAND-FILE"
+  },
+  {
+    "verb": "#RECORD",
+    "action": "V-RECORD"
+  },
+  {
+    "verb": "#UNRECORD",
+    "action": "V-UNRECORD"
+  },
+  {
+    "verb": "ACTIVATE",
+    "action": "V-LAMP-ON",
+    "directObject": {
+      "find": "LIGHTBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "ANSWER",
+    "action": "V-ANSWER"
+  },
+  {
+    "verb": "ANSWER",
+    "action": "V-REPLY",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "APPLY",
+    "action": "V-PUT",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "TO",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-PUT"
+  },
+  {
+    "verb": "ATTACK",
+    "action": "V-ATTACK",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "WEAPONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "BACK",
+    "action": "V-BACK"
+  },
+  {
+    "verb": "BLAST",
+    "action": "V-BLAST"
+  },
+  {
+    "verb": "BLOW",
+    "action": "V-LAMP-OFF",
+    "preposition": "OUT",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "BLOW",
+    "action": "V-INFLATE",
+    "preposition": "UP",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "TOOLBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "HELD",
+        "CARRIED"
+      ]
+    }
+  },
+  {
+    "verb": "BLOW",
+    "action": "V-BLAST",
+    "preposition": "UP",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "BLOW",
+    "action": "V-BREATHE",
+    "preposition": "IN",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "BOARD",
+    "action": "V-BOARD",
+    "directObject": {
+      "find": "VEHBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preAction": "PRE-BOARD"
+  },
+  {
+    "verb": "BRUSH",
+    "action": "V-BRUSH",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "BRUSH",
+    "action": "V-BRUSH",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "BUG",
+    "action": "V-BUG"
+  },
+  {
+    "verb": "BURN",
+    "action": "V-BURN",
+    "directObject": {
+      "find": "BURNBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "FLAMEBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "HAVE"
+      ]
+    },
+    "preAction": "PRE-BURN"
+  },
+  {
+    "verb": "BURN",
+    "action": "V-BURN",
+    "preposition": "DOWN",
+    "directObject": {
+      "find": "BURNBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "FLAMEBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "HAVE"
+      ]
+    },
+    "preAction": "PRE-BURN"
+  },
+  {
+    "verb": "CHOMP",
+    "action": "V-CHOMP"
+  },
+  {
+    "verb": "CLIMB",
+    "action": "V-CLIMB-UP",
+    "preposition": "UP",
+    "directObject": {
+      "find": "RMUNGBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "CLIMB",
+    "action": "V-CLIMB-UP",
+    "preposition": "UP",
+    "directObject": {
+      "find": "CLIMBBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "CLIMB",
+    "action": "V-CLIMB-DOWN",
+    "preposition": "DOWN",
+    "directObject": {
+      "find": "RMUNGBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "CLIMB",
+    "action": "V-CLIMB-DOWN",
+    "preposition": "DOWN",
+    "directObject": {
+      "find": "CLIMBBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "CLIMB",
+    "action": "V-CLIMB-FOO",
+    "directObject": {
+      "find": "CLIMBBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "CLIMB",
+    "action": "V-BOARD",
+    "preposition": "IN",
+    "directObject": {
+      "find": "VEHBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preAction": "PRE-BOARD"
+  },
+  {
+    "verb": "CLIMB",
+    "action": "V-CLIMB-ON",
+    "preposition": "ON",
+    "directObject": {
+      "find": "VEHBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "CLIMB",
+    "action": "V-THROUGH",
+    "preposition": "WITH",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "CLOSE",
+    "action": "V-CLOSE",
+    "directObject": {
+      "find": "DOORBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "COMMAND",
+    "action": "V-COMMAND",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "COUNT",
+    "action": "V-COUNT",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "CROSS",
+    "action": "V-CROSS",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "CUT",
+    "action": "V-CUT",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "WEAPONBIT",
+      "where": [
+        "CARRIED",
+        "HELD"
+      ]
+    }
+  },
+  {
+    "verb": "CURSE",
+    "action": "V-CURSES"
+  },
+  {
+    "verb": "CURSE",
+    "action": "V-CURSES",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "DEFLATE",
+    "action": "V-DEFLATE",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "DESTROY",
+    "action": "V-MUNG",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "HELD",
+        "CARRIED"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "TAKE"
+      ]
+    },
+    "preAction": "PRE-MUNG"
+  },
+  {
+    "verb": "DESTROY",
+    "action": "V-MUNG",
+    "preposition": "DOWN",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "HELD",
+        "CARRIED"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "TAKE"
+      ]
+    },
+    "preAction": "PRE-MUNG"
+  },
+  {
+    "verb": "DESTROY",
+    "action": "V-OPEN",
+    "preposition": "IN",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "HELD",
+        "CARRIED"
+      ]
+    }
+  },
+  {
+    "verb": "DIG",
+    "action": "V-DIG",
+    "preposition": "IN",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "DIG",
+    "action": "V-DIG",
+    "preposition": "IN",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "TOOLBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "DIG",
+    "action": "V-DIG",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "TOOLBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "DISEMBARK",
+    "action": "V-DISEMBARK",
+    "directObject": {
+      "find": "VEHBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "DISENCHANT",
+    "action": "V-DISENCHANT",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "DRINK",
+    "action": "V-DRINK",
+    "directObject": {
+      "find": "DRINKBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "DRINK",
+    "action": "V-DRINK-FROM",
+    "preposition": "FROM",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED"
+      ]
+    }
+  },
+  {
+    "verb": "DROP",
+    "action": "V-DROP",
+    "directObject": {
+      "where": [
+        "HELD",
+        "MANY",
+        "HAVE"
+      ]
+    },
+    "preAction": "PRE-DROP"
+  },
+  {
+    "verb": "DROP",
+    "action": "V-PUT",
+    "directObject": {
+      "where": [
+        "HELD",
+        "MANY",
+        "HAVE"
+      ]
+    },
+    "preposition2": "DOWN",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-PUT"
+  },
+  {
+    "verb": "DROP",
+    "action": "V-PUT",
+    "directObject": {
+      "where": [
+        "HELD",
+        "MANY",
+        "HAVE"
+      ]
+    },
+    "preposition2": "IN",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-PUT"
+  },
+  {
+    "verb": "DROP",
+    "action": "V-PUT-ON",
+    "directObject": {
+      "where": [
+        "HELD",
+        "MANY",
+        "HAVE"
+      ]
+    },
+    "preposition2": "ON",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-PUT"
+  },
+  {
+    "verb": "EAT",
+    "action": "V-EAT",
+    "directObject": {
+      "find": "FOODBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE"
+      ]
+    }
+  },
+  {
+    "verb": "ECHO",
+    "action": "V-ECHO"
+  },
+  {
+    "verb": "ENCHANT",
+    "action": "V-ENCHANT",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "ENTER",
+    "action": "V-ENTER"
+  },
+  {
+    "verb": "ENTER",
+    "action": "V-THROUGH",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "EXIT",
+    "action": "V-EXIT"
+  },
+  {
+    "verb": "EXIT",
+    "action": "V-EXIT",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "EXAMINE",
+    "action": "V-EXAMINE",
+    "directObject": {
+      "where": [
+        "MANY"
+      ]
+    }
+  },
+  {
+    "verb": "EXAMINE",
+    "action": "V-LOOK-INSIDE",
+    "preposition": "IN",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "IN-ROOM",
+        "ON-GROUND",
+        "MANY"
+      ]
+    }
+  },
+  {
+    "verb": "EXAMINE",
+    "action": "V-LOOK-INSIDE",
+    "preposition": "ON",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "IN-ROOM",
+        "ON-GROUND",
+        "MANY"
+      ]
+    }
+  },
+  {
+    "verb": "EXORCISE",
+    "action": "V-EXORCISE",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "EXORCISE",
+    "action": "V-EXORCISE",
+    "preposition": "OUT",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "EXORCISE",
+    "action": "V-EXORCISE",
+    "preposition": "AWAY",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "EXTINGUISH",
+    "action": "V-LAMP-OFF",
+    "directObject": {
+      "find": "ONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "FILL",
+    "action": "V-FILL",
+    "directObject": {
+      "find": "CONTBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-FILL"
+  },
+  {
+    "verb": "FILL",
+    "action": "V-FILL",
+    "directObject": {
+      "find": "CONTBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preAction": "PRE-FILL"
+  },
+  {
+    "verb": "FIND",
+    "action": "V-FIND",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "FOLLOW",
+    "action": "V-FOLLOW"
+  },
+  {
+    "verb": "FOLLOW",
+    "action": "V-FOLLOW",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "FROBOZZ",
+    "action": "V-FROBOZZ"
+  },
+  {
+    "verb": "GIVE",
+    "action": "V-GIVE",
+    "directObject": {
+      "where": [
+        "MANY",
+        "HELD",
+        "HAVE"
+      ]
+    },
+    "preposition2": "TO",
+    "indirectObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND"
+      ]
+    },
+    "preAction": "PRE-GIVE"
+  },
+  {
+    "verb": "GIVE",
+    "action": "V-SGIVE",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND"
+      ]
+    },
+    "indirectObject": {
+      "where": [
+        "MANY",
+        "HELD",
+        "HAVE"
+      ]
+    },
+    "preAction": "PRE-SGIVE"
+  },
+  {
+    "verb": "HATCH",
+    "action": "V-HATCH",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "HELLO",
+    "action": "V-HELLO"
+  },
+  {
+    "verb": "HELLO",
+    "action": "V-HELLO",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "INCANT",
+    "action": "V-INCANT"
+  },
+  {
+    "verb": "INFLAT",
+    "action": "V-INFLATE",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "TOOLBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "HELD",
+        "CARRIED"
+      ]
+    }
+  },
+  {
+    "verb": "JUMP",
+    "action": "V-LEAP"
+  },
+  {
+    "verb": "JUMP",
+    "action": "V-LEAP",
+    "preposition": "OVER",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "JUMP",
+    "action": "V-LEAP",
+    "preposition": "ACROSS",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "JUMP",
+    "action": "V-LEAP",
+    "preposition": "IN",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "JUMP",
+    "action": "V-LEAP",
+    "preposition": "FROM",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "JUMP",
+    "action": "V-LEAP",
+    "preposition": "OFF",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "KICK",
+    "action": "V-KICK",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "KILL",
+    "action": "V-ATTACK",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "WEAPONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "STAB",
+    "action": "V-STAB",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "STAB",
+    "action": "V-ATTACK",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "WEAPONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "KISS",
+    "action": "V-KISS",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "KNOCK",
+    "action": "V-KNOCK",
+    "preposition": "AT",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "KNOCK",
+    "action": "V-KNOCK",
+    "preposition": "ON",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "KNOCK",
+    "action": "V-ATTACK",
+    "preposition": "DOWN",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "LAUNCH",
+    "action": "V-LAUNCH",
+    "directObject": {
+      "find": "VEHBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "LEAN",
+    "action": "V-LEAN-ON",
+    "preposition": "ON",
+    "directObject": {
+      "where": [
+        "HELD",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "LEAVE",
+    "action": "V-LEAVE"
+  },
+  {
+    "verb": "LEAVE",
+    "action": "V-DROP",
+    "directObject": {
+      "where": []
+    },
+    "preAction": "PRE-DROP"
+  },
+  {
+    "verb": "LIGHT",
+    "action": "V-LAMP-ON",
+    "directObject": {
+      "find": "LIGHTBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "LIGHT",
+    "action": "V-BURN",
+    "directObject": {
+      "find": "LIGHTBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "FLAMEBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "TAKE",
+        "HAVE"
+      ]
+    },
+    "preAction": "PRE-BURN"
+  },
+  {
+    "verb": "LISTEN",
+    "action": "V-LISTEN",
+    "preposition": "TO",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "LISTEN",
+    "action": "V-LISTEN",
+    "preposition": "FOR",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "LOCK",
+    "action": "V-LOCK",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "TOOLBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE"
+      ]
+    }
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-LOOK"
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-LOOK",
+    "preposition": "AROUND",
+    "directObject": {
+      "find": "RMUNGBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-LOOK",
+    "preposition": "UP",
+    "directObject": {
+      "find": "RMUNGBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-LOOK",
+    "preposition": "DOWN",
+    "directObject": {
+      "find": "RMUNGBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-EXAMINE",
+    "preposition": "AT",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "MANY"
+      ]
+    }
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-LOOK-ON",
+    "preposition": "ON",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-LOOK-INSIDE",
+    "preposition": "WITH",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "MANY"
+      ]
+    }
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-LOOK-UNDER",
+    "preposition": "UNDER",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-LOOK-BEHIND",
+    "preposition": "BEHIND",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-LOOK-INSIDE",
+    "preposition": "IN",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "MANY"
+      ]
+    }
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-READ",
+    "preposition": "AT",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-READ"
+  },
+  {
+    "verb": "LOOK",
+    "action": "V-FIND",
+    "preposition": "FOR",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "LOWER",
+    "action": "V-LOWER",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "LUBRICATE",
+    "action": "V-OIL",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": [
+        "HELD",
+        "CARRIED"
+      ]
+    }
+  },
+  {
+    "verb": "MAKE",
+    "action": "V-MAKE",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "MELT",
+    "action": "V-MELT",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "FLAMEBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "MOVE",
+    "action": "V-MOVE",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preAction": "PRE-MOVE"
+  },
+  {
+    "verb": "MOVE",
+    "action": "V-PUSH-TO",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "MOVE",
+    "action": "V-PUSH-TO",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "TO",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "MOVE",
+    "action": "V-PUT",
+    "directObject": {
+      "where": [
+        "HELD",
+        "MANY",
+        "HAVE"
+      ]
+    },
+    "preposition2": "IN",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-PUT"
+  },
+  {
+    "verb": "MOVE",
+    "action": "V-TURN",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "TOOLBIT",
+      "where": []
+    },
+    "preAction": "PRE-TURN"
+  },
+  {
+    "verb": "ROLL",
+    "action": "V-MOVE",
+    "preposition": "UP",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preAction": "PRE-MOVE"
+  },
+  {
+    "verb": "ROLL",
+    "action": "V-MOVE",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preAction": "PRE-MOVE"
+  },
+  {
+    "verb": "MUMBLE",
+    "action": "V-MUMBLE"
+  },
+  {
+    "verb": "ODYSSEUS",
+    "action": "V-ODYSSEUS"
+  },
+  {
+    "verb": "OPEN",
+    "action": "V-OPEN",
+    "directObject": {
+      "find": "DOORBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "OPEN",
+    "action": "V-OPEN",
+    "preposition": "UP",
+    "directObject": {
+      "find": "DOORBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "OPEN",
+    "action": "V-OPEN",
+    "directObject": {
+      "find": "DOORBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "TOOLBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "PICK",
+    "action": "V-PICK",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "PICK",
+    "action": "V-PICK",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "PICK",
+    "action": "V-TAKE",
+    "preposition": "UP",
+    "directObject": {
+      "find": "TAKEBIT",
+      "where": [
+        "ON-GROUND",
+        "MANY"
+      ]
+    },
+    "preAction": "PRE-TAKE"
+  },
+  {
+    "verb": "PLAY",
+    "action": "V-PLAY",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "PLUG",
+    "action": "V-PLUG",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "PLUGH",
+    "action": "V-ADVENT"
+  },
+  {
+    "verb": "POKE",
+    "action": "V-MUNG",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "WEAPONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    },
+    "preAction": "PRE-MUNG"
+  },
+  {
+    "verb": "PUNCTURE",
+    "action": "V-MUNG",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "WEAPONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    },
+    "preAction": "PRE-MUNG"
+  },
+  {
+    "verb": "POUR",
+    "action": "V-DROP",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED"
+      ]
+    },
+    "preAction": "PRE-DROP"
+  },
+  {
+    "verb": "POUR",
+    "action": "V-DROP",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED"
+      ]
+    },
+    "preposition2": "IN",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-DROP"
+  },
+  {
+    "verb": "POUR",
+    "action": "V-POUR-ON",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED"
+      ]
+    },
+    "preposition2": "ON",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "POUR",
+    "action": "V-DROP",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED"
+      ]
+    },
+    "preposition2": "FROM",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-DROP"
+  },
+  {
+    "verb": "PRAY",
+    "action": "V-PRAY"
+  },
+  {
+    "verb": "PULL",
+    "action": "V-MOVE",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preAction": "PRE-MOVE"
+  },
+  {
+    "verb": "PULL",
+    "action": "V-MOVE",
+    "preposition": "ON",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preAction": "PRE-MOVE"
+  },
+  {
+    "verb": "PULL",
+    "action": "V-MOVE",
+    "preposition": "UP",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preAction": "PRE-MOVE"
+  },
+  {
+    "verb": "PUMP",
+    "action": "V-PUMP",
+    "preposition": "UP",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "PUMP",
+    "action": "V-PUMP",
+    "preposition": "UP",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "PUSH",
+    "action": "V-PUSH-TO",
+    "directObject": {
+      "where": [
+        "IN-ROOM",
+        "ON-GROUND"
+      ]
+    },
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "PUSH",
+    "action": "V-PUSH-TO",
+    "directObject": {
+      "where": [
+        "IN-ROOM",
+        "ON-GROUND"
+      ]
+    },
+    "preposition2": "TO",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "PUSH",
+    "action": "V-PUSH",
+    "directObject": {
+      "where": [
+        "IN-ROOM",
+        "ON-GROUND",
+        "MANY"
+      ]
+    }
+  },
+  {
+    "verb": "PUSH",
+    "action": "V-PUSH",
+    "preposition": "ON",
+    "directObject": {
+      "where": [
+        "IN-ROOM",
+        "ON-GROUND",
+        "MANY"
+      ]
+    }
+  },
+  {
+    "verb": "PUSH",
+    "action": "V-TURN",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "TOOLBIT",
+      "where": []
+    },
+    "preAction": "PRE-TURN"
+  },
+  {
+    "verb": "PUSH",
+    "action": "V-PUT-UNDER",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "UNDER",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "PUT",
+    "action": "V-PUT",
+    "directObject": {
+      "where": [
+        "HELD",
+        "MANY",
+        "HAVE"
+      ]
+    },
+    "preposition2": "IN",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-PUT"
+  },
+  {
+    "verb": "PUT",
+    "action": "V-PUT-ON",
+    "directObject": {
+      "where": [
+        "HELD",
+        "MANY",
+        "HAVE"
+      ]
+    },
+    "preposition2": "ON",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-PUT"
+  },
+  {
+    "verb": "PUT",
+    "action": "V-DROP",
+    "preposition": "DOWN",
+    "directObject": {
+      "where": [
+        "HELD",
+        "MANY"
+      ]
+    },
+    "preAction": "PRE-DROP"
+  },
+  {
+    "verb": "PUT",
+    "action": "V-PUT-UNDER",
+    "directObject": {
+      "where": [
+        "HELD",
+        "HAVE"
+      ]
+    },
+    "preposition2": "UNDER",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "PUT",
+    "action": "V-LAMP-OFF",
+    "preposition": "OUT",
+    "directObject": {
+      "find": "ONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "PUT",
+    "action": "V-WEAR",
+    "preposition": "ON",
+    "directObject": {
+      "where": [
+        "IN-ROOM",
+        "ON-GROUND",
+        "CARRIED",
+        "MANY"
+      ]
+    }
+  },
+  {
+    "verb": "PUT",
+    "action": "V-PUT-BEHIND",
+    "directObject": {
+      "where": [
+        "HELD",
+        "MANY",
+        "HAVE"
+      ]
+    },
+    "preposition2": "BEHIND",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "RAISE",
+    "action": "V-RAISE",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "RAISE",
+    "action": "V-RAISE",
+    "preposition": "UP",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "RAPE",
+    "action": "V-RAPE",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "READ",
+    "action": "V-READ",
+    "directObject": {
+      "find": "READBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE"
+      ]
+    },
+    "preAction": "PRE-READ"
+  },
+  {
+    "verb": "READ",
+    "action": "V-READ",
+    "preposition": "FROM",
+    "directObject": {
+      "find": "READBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE"
+      ]
+    },
+    "preAction": "PRE-READ"
+  },
+  {
+    "verb": "READ",
+    "action": "V-READ",
+    "directObject": {
+      "find": "READBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-READ"
+  },
+  {
+    "verb": "READ",
+    "action": "V-READ-PAGE",
+    "directObject": {
+      "find": "READBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE"
+      ]
+    },
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "REPENT",
+    "action": "V-REPENT"
+  },
+  {
+    "verb": "RING",
+    "action": "V-RING",
+    "directObject": {
+      "where": [
+        "TAKE"
+      ]
+    }
+  },
+  {
+    "verb": "RING",
+    "action": "V-RING",
+    "directObject": {
+      "where": [
+        "TAKE"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "RUB",
+    "action": "V-RUB",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "RUB",
+    "action": "V-RUB",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "TALK",
+    "action": "V-TELL",
+    "preposition": "TO",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "SAY",
+    "action": "V-SAY"
+  },
+  {
+    "verb": "SEARCH",
+    "action": "V-SEARCH",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SEARCH",
+    "action": "V-SEARCH",
+    "preposition": "IN",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SEARCH",
+    "action": "V-FIND",
+    "preposition": "FOR",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SEND",
+    "action": "V-SEND",
+    "preposition": "FOR",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SHAKE",
+    "action": "V-SHAKE",
+    "directObject": {
+      "where": [
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "SKIP",
+    "action": "V-SKIP"
+  },
+  {
+    "verb": "SLIDE",
+    "action": "V-PUT-UNDER",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "UNDER",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SLIDE",
+    "action": "V-PUSH-TO",
+    "directObject": {
+      "where": [
+        "IN-ROOM",
+        "ON-GROUND"
+      ]
+    },
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SLIDE",
+    "action": "V-PUSH-TO",
+    "directObject": {
+      "where": [
+        "IN-ROOM",
+        "ON-GROUND"
+      ]
+    },
+    "preposition2": "TO",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SMELL",
+    "action": "V-SMELL",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SPIN",
+    "action": "V-SPIN",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SPRAY",
+    "action": "V-SPRAY",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "ON",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SPRAY",
+    "action": "V-SSPRAY",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SQUEEZE",
+    "action": "V-SQUEEZE",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SQUEEZE",
+    "action": "V-PUT",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "ON",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-PUT"
+  },
+  {
+    "verb": "STAND",
+    "action": "V-STAND"
+  },
+  {
+    "verb": "STAND",
+    "action": "V-STAND",
+    "preposition": "UP",
+    "directObject": {
+      "find": "RMUNGBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "STAY",
+    "action": "V-STAY"
+  },
+  {
+    "verb": "STRIKE",
+    "action": "V-ATTACK",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "WEAPONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "STRIKE",
+    "action": "V-STRIKE",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "HELD",
+        "CARRIED"
+      ]
+    }
+  },
+  {
+    "verb": "SWIM",
+    "action": "V-SWIM"
+  },
+  {
+    "verb": "SWIM",
+    "action": "V-SWIM",
+    "preposition": "IN",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SWIM",
+    "action": "V-SWIM",
+    "preposition": "ACROSS",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "SWING",
+    "action": "V-SWING",
+    "directObject": {
+      "find": "WEAPONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "SWING",
+    "action": "V-SWING",
+    "directObject": {
+      "find": "WEAPONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    },
+    "preposition2": "AT",
+    "indirectObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "TAKE",
+    "action": "V-TAKE",
+    "directObject": {
+      "find": "TAKEBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "MANY"
+      ]
+    },
+    "preAction": "PRE-TAKE"
+  },
+  {
+    "verb": "TAKE",
+    "action": "V-BOARD",
+    "preposition": "IN",
+    "directObject": {
+      "find": "VEHBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preAction": "PRE-BOARD"
+  },
+  {
+    "verb": "TAKE",
+    "action": "V-DISEMBARK",
+    "preposition": "OUT",
+    "directObject": {
+      "find": "RMUNGBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "TAKE",
+    "action": "V-CLIMB-ON",
+    "preposition": "ON",
+    "directObject": {
+      "find": "VEHBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "TAKE",
+    "action": "V-STAND",
+    "preposition": "UP",
+    "directObject": {
+      "find": "RMUNGBIT",
+      "where": []
+    }
+  },
+  {
+    "verb": "TAKE",
+    "action": "V-TAKE",
+    "directObject": {
+      "find": "TAKEBIT",
+      "where": [
+        "CARRIED",
+        "IN-ROOM",
+        "MANY"
+      ]
+    },
+    "preposition2": "OUT",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-TAKE"
+  },
+  {
+    "verb": "TAKE",
+    "action": "V-TAKE",
+    "directObject": {
+      "find": "TAKEBIT",
+      "where": [
+        "CARRIED",
+        "IN-ROOM",
+        "MANY"
+      ]
+    },
+    "preposition2": "OFF",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-TAKE"
+  },
+  {
+    "verb": "TAKE",
+    "action": "V-TAKE",
+    "directObject": {
+      "find": "TAKEBIT",
+      "where": [
+        "IN-ROOM",
+        "CARRIED",
+        "MANY"
+      ]
+    },
+    "preposition2": "FROM",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-TAKE"
+  },
+  {
+    "verb": "TELL",
+    "action": "V-TELL",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "TELL",
+    "action": "V-TELL",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "ABOUT",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "THROW",
+    "action": "V-THROW",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    },
+    "preposition2": "AT",
+    "indirectObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "THROW",
+    "action": "V-THROW",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "THROW",
+    "action": "V-OVERBOARD",
+    "directObject": {
+      "where": []
+    },
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "THROW",
+    "action": "V-PUT",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    },
+    "preposition2": "IN",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-PUT"
+  },
+  {
+    "verb": "THROW",
+    "action": "V-PUT-ON",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    },
+    "preposition2": "ON",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-PUT"
+  },
+  {
+    "verb": "THROW",
+    "action": "V-THROW-OFF",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    },
+    "preposition2": "OFF",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "THROW",
+    "action": "V-THROW-OFF",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    },
+    "preposition2": "OVER",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "TIE",
+    "action": "V-TIE",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "TO",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "TIE",
+    "action": "V-TIE-UP",
+    "preposition": "UP",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "TOOLBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "HELD",
+        "CARRIED",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "TREASURE",
+    "action": "V-TREASURE"
+  },
+  {
+    "verb": "TURN",
+    "action": "V-TURN",
+    "directObject": {
+      "find": "TURNBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "RMUNGBIT",
+      "where": []
+    },
+    "preAction": "PRE-TURN"
+  },
+  {
+    "verb": "TURN",
+    "action": "V-LAMP-ON",
+    "preposition": "ON",
+    "directObject": {
+      "find": "LIGHTBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "TURN",
+    "action": "V-LAMP-ON",
+    "preposition": "ON",
+    "directObject": {
+      "where": []
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "where": [
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "TURN",
+    "action": "V-LAMP-OFF",
+    "preposition": "OFF",
+    "directObject": {
+      "find": "ONBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "TURN",
+    "action": "V-TURN",
+    "directObject": {
+      "find": "TURNBIT",
+      "where": []
+    },
+    "preposition2": "TO",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-TURN"
+  },
+  {
+    "verb": "TURN",
+    "action": "V-TURN",
+    "directObject": {
+      "find": "TURNBIT",
+      "where": []
+    },
+    "preposition2": "FOR",
+    "indirectObject": {
+      "where": []
+    },
+    "preAction": "PRE-TURN"
+  },
+  {
+    "verb": "UNLOCK",
+    "action": "V-UNLOCK",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    },
+    "preposition2": "WITH",
+    "indirectObject": {
+      "find": "TOOLBIT",
+      "where": [
+        "HELD",
+        "CARRIED",
+        "ON-GROUND",
+        "IN-ROOM",
+        "TAKE"
+      ]
+    }
+  },
+  {
+    "verb": "UNTIE",
+    "action": "V-UNTIE",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "HELD",
+        "CARRIED"
+      ]
+    }
+  },
+  {
+    "verb": "UNTIE",
+    "action": "V-UNTIE",
+    "directObject": {
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM",
+        "HELD",
+        "CARRIED"
+      ]
+    },
+    "preposition2": "FROM",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WAIT",
+    "action": "V-WAIT"
+  },
+  {
+    "verb": "WAKE",
+    "action": "V-ALARM",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "WAKE",
+    "action": "V-ALARM",
+    "preposition": "UP",
+    "directObject": {
+      "find": "ACTORBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "WALK",
+    "action": "V-WALK-AROUND"
+  },
+  {
+    "verb": "WALK",
+    "action": "V-WALK",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WALK",
+    "action": "V-WALK",
+    "preposition": "AWAY",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WALK",
+    "action": "V-THROUGH",
+    "preposition": "IN",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WALK",
+    "action": "V-THROUGH",
+    "preposition": "WITH",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WALK",
+    "action": "V-THROUGH",
+    "preposition": "ON",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WALK",
+    "action": "V-LEAP",
+    "preposition": "OVER",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WALK",
+    "action": "V-WALK-TO",
+    "preposition": "TO",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WALK",
+    "action": "V-WALK-AROUND",
+    "preposition": "AROUND",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WALK",
+    "action": "V-CLIMB-UP",
+    "preposition": "UP",
+    "directObject": {
+      "find": "CLIMBBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "WALK",
+    "action": "V-CLIMB-DOWN",
+    "preposition": "DOWN",
+    "directObject": {
+      "find": "CLIMBBIT",
+      "where": [
+        "ON-GROUND",
+        "IN-ROOM"
+      ]
+    }
+  },
+  {
+    "verb": "WAVE",
+    "action": "V-WAVE",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "TAKE",
+        "HAVE"
+      ]
+    }
+  },
+  {
+    "verb": "WAVE",
+    "action": "V-WAVE",
+    "directObject": {
+      "where": [
+        "HELD",
+        "CARRIED",
+        "TAKE",
+        "HAVE"
+      ]
+    },
+    "preposition2": "AT",
+    "indirectObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WAVE",
+    "action": "V-WAVE",
+    "preposition": "AT",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WEAR",
+    "action": "V-WEAR",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WIN",
+    "action": "V-WIN"
+  },
+  {
+    "verb": "WIND",
+    "action": "V-WIND",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WIND",
+    "action": "V-WIND",
+    "preposition": "UP",
+    "directObject": {
+      "where": []
+    }
+  },
+  {
+    "verb": "WISH",
+    "action": "V-WISH"
+  },
+  {
+    "verb": "YELL",
+    "action": "V-YELL"
+  },
+  {
+    "verb": "ZORK",
+    "action": "V-ZORK"
+  }
+]

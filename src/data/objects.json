@@ -1,0 +1,2575 @@
+[
+  {
+    "id": "BOARD",
+    "kind": "thing",
+    "desc": "board",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "BOARDS",
+      "BOARD"
+    ],
+    "adjectives": [],
+    "actionRoutine": "BOARD-F"
+  },
+  {
+    "id": "TEETH",
+    "kind": "thing",
+    "desc": "set of teeth",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "OVERBOARD",
+      "TEETH"
+    ],
+    "adjectives": [],
+    "actionRoutine": "TEETH-F"
+  },
+  {
+    "id": "WALL",
+    "kind": "thing",
+    "desc": "surrounding wall",
+    "flags": [],
+    "props": {},
+    "synonyms": [
+      "WALL",
+      "WALLS"
+    ],
+    "adjectives": [
+      "SURROUNDING"
+    ]
+  },
+  {
+    "id": "GRANITE-WALL",
+    "kind": "thing",
+    "desc": "granite wall",
+    "flags": [],
+    "props": {},
+    "synonyms": [
+      "WALL"
+    ],
+    "adjectives": [
+      "GRANITE"
+    ],
+    "actionRoutine": "GRANITE-WALL-F"
+  },
+  {
+    "id": "SONGBIRD",
+    "kind": "thing",
+    "desc": "songbird",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "BIRD",
+      "SONGBIRD"
+    ],
+    "adjectives": [
+      "SONG"
+    ],
+    "actionRoutine": "SONGBIRD-F"
+  },
+  {
+    "id": "WHITE-HOUSE",
+    "kind": "thing",
+    "desc": "white house",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "HOUSE"
+    ],
+    "adjectives": [
+      "WHITE",
+      "BEAUTI",
+      "COLONI"
+    ],
+    "actionRoutine": "WHITE-HOUSE-F"
+  },
+  {
+    "id": "FOREST",
+    "kind": "thing",
+    "desc": "forest",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "FOREST",
+      "TREES",
+      "PINES",
+      "HEMLOCKS"
+    ],
+    "adjectives": [],
+    "actionRoutine": "FOREST-F"
+  },
+  {
+    "id": "TREE",
+    "kind": "thing",
+    "desc": "tree",
+    "flags": [
+      "NonDescript",
+      "Climbable"
+    ],
+    "props": {},
+    "synonyms": [
+      "TREE",
+      "BRANCH"
+    ],
+    "adjectives": [
+      "LARGE",
+      "STORM"
+    ]
+  },
+  {
+    "id": "MOUNTAIN-RANGE",
+    "kind": "thing",
+    "desc": "mountain range",
+    "flags": [
+      "NonDescript",
+      "Climbable"
+    ],
+    "props": {},
+    "synonyms": [
+      "MOUNTAIN",
+      "RANGE"
+    ],
+    "adjectives": [
+      "IMPASSABLE",
+      "FLATHEAD"
+    ],
+    "actionRoutine": "MOUNTAIN-RANGE-F"
+  },
+  {
+    "id": "GLOBAL-WATER",
+    "kind": "thing",
+    "desc": "water",
+    "flags": [
+      "Drink"
+    ],
+    "props": {},
+    "synonyms": [
+      "WATER",
+      "QUANTITY"
+    ],
+    "adjectives": [],
+    "actionRoutine": "WATER-F"
+  },
+  {
+    "id": "WATER",
+    "kind": "thing",
+    "desc": "quantity of water",
+    "flags": [
+      "Takeable",
+      "Drink"
+    ],
+    "props": {
+      "SIZE": 4
+    },
+    "synonyms": [
+      "WATER",
+      "QUANTITY",
+      "LIQUID",
+      "H2O"
+    ],
+    "adjectives": [],
+    "parent": "BOTTLE",
+    "actionRoutine": "WATER-F"
+  },
+  {
+    "id": "KITCHEN-WINDOW",
+    "kind": "thing",
+    "desc": "kitchen window",
+    "flags": [
+      "Door",
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "WINDOW"
+    ],
+    "adjectives": [
+      "KITCHEN",
+      "SMALL"
+    ],
+    "actionRoutine": "KITCHEN-WINDOW-F"
+  },
+  {
+    "id": "CHIMNEY",
+    "kind": "thing",
+    "desc": "chimney",
+    "flags": [
+      "Climbable",
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "CHIMNEY"
+    ],
+    "adjectives": [
+      "DARK",
+      "NARROW"
+    ],
+    "actionRoutine": "CHIMNEY-F"
+  },
+  {
+    "id": "GHOSTS",
+    "kind": "actor",
+    "desc": "number of ghosts",
+    "flags": [
+      "Takeable",
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "GHOSTS",
+      "SPIRITS",
+      "FIENDS",
+      "FORCE"
+    ],
+    "adjectives": [
+      "INVISIBLE",
+      "EVIL"
+    ],
+    "parent": "ENTRANCE-TO-HADES",
+    "actionRoutine": "GHOSTS-F"
+  },
+  {
+    "id": "SKULL",
+    "kind": "thing",
+    "desc": "crystal skull",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "VALUE": 10,
+      "TVALUE": 10
+    },
+    "synonyms": [
+      "SKULL",
+      "HEAD",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "CRYSTAL"
+    ],
+    "fdesc": "Lying in one corner of the room is a beautifully carved crystal skull.\nIt appears to be grinning at you rather nastily.",
+    "parent": "LAND-OF-LIVING-DEAD"
+  },
+  {
+    "id": "LOWERED-BASKET",
+    "kind": "thing",
+    "desc": "basket",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "CAGE",
+      "DUMBWAITER",
+      "BASKET"
+    ],
+    "adjectives": [
+      "LOWERED"
+    ],
+    "ldesc": "From the chain is suspended a basket.",
+    "parent": "LOWER-SHAFT",
+    "actionRoutine": "BASKET-F"
+  },
+  {
+    "id": "RAISED-BASKET",
+    "kind": "container",
+    "desc": "basket",
+    "flags": [
+      "Transparent",
+      "Takeable",
+      "Container",
+      "Open"
+    ],
+    "props": {
+      "CAPACITY": 50
+    },
+    "synonyms": [
+      "CAGE",
+      "DUMBWAITER",
+      "BASKET"
+    ],
+    "adjectives": [],
+    "ldesc": "At the end of the chain is a basket.",
+    "parent": "SHAFT-ROOM",
+    "actionRoutine": "BASKET-F"
+  },
+  {
+    "id": "LUNCH",
+    "kind": "thing",
+    "desc": "lunch",
+    "flags": [
+      "Takeable",
+      "Food"
+    ],
+    "props": {},
+    "synonyms": [
+      "FOOD",
+      "SANDWICH",
+      "LUNCH",
+      "DINNER"
+    ],
+    "adjectives": [
+      "HOT",
+      "PEPPER"
+    ],
+    "ldesc": "A hot pepper sandwich is here.",
+    "parent": "SANDWICH-BAG"
+  },
+  {
+    "id": "BAT",
+    "kind": "actor",
+    "desc": "bat",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "BAT",
+      "VAMPIRE"
+    ],
+    "adjectives": [
+      "VAMPIRE",
+      "DERANGED"
+    ],
+    "parent": "BAT-ROOM",
+    "actionRoutine": "BAT-F"
+  },
+  {
+    "id": "BELL",
+    "kind": "thing",
+    "desc": "brass bell",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "BELL"
+    ],
+    "adjectives": [
+      "SMALL",
+      "BRASS"
+    ],
+    "parent": "NORTH-TEMPLE",
+    "actionRoutine": "BELL-F"
+  },
+  {
+    "id": "HOT-BELL",
+    "kind": "thing",
+    "desc": "red hot brass bell",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "BELL"
+    ],
+    "adjectives": [
+      "BRASS",
+      "HOT",
+      "RED",
+      "SMALL"
+    ],
+    "ldesc": "On the ground is a red hot bell.",
+    "actionRoutine": "HOT-BELL-F"
+  },
+  {
+    "id": "AXE",
+    "kind": "thing",
+    "desc": "bloody axe",
+    "flags": [
+      "Weapon",
+      "Takeable",
+      "NonDescript"
+    ],
+    "props": {
+      "SIZE": 25
+    },
+    "synonyms": [
+      "AXE",
+      "AX"
+    ],
+    "adjectives": [
+      "BLOODY"
+    ],
+    "parent": "TROLL",
+    "actionRoutine": "AXE-F"
+  },
+  {
+    "id": "BOLT",
+    "kind": "thing",
+    "desc": "bolt",
+    "flags": [
+      "NonDescript",
+      "Turnable",
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "BOLT",
+      "NUT"
+    ],
+    "adjectives": [
+      "METAL",
+      "LARGE"
+    ],
+    "parent": "DAM-ROOM",
+    "actionRoutine": "BOLT-F"
+  },
+  {
+    "id": "BUBBLE",
+    "kind": "thing",
+    "desc": "green bubble",
+    "flags": [
+      "NonDescript",
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "BUBBLE"
+    ],
+    "adjectives": [
+      "SMALL",
+      "GREEN",
+      "PLASTIC"
+    ],
+    "parent": "DAM-ROOM",
+    "actionRoutine": "BUBBLE-F"
+  },
+  {
+    "id": "ALTAR",
+    "kind": "container",
+    "desc": "altar",
+    "flags": [
+      "NonDescript",
+      "Surface",
+      "Container",
+      "Open"
+    ],
+    "props": {
+      "CAPACITY": 50
+    },
+    "synonyms": [
+      "ALTAR"
+    ],
+    "adjectives": [],
+    "parent": "SOUTH-TEMPLE"
+  },
+  {
+    "id": "BOOK",
+    "kind": "container",
+    "desc": "black book",
+    "flags": [
+      "Readable",
+      "Takeable",
+      "Container",
+      "Burned",
+      "Turnable"
+    ],
+    "props": {
+      "SIZE": 10,
+      "TEXT": "Commandment #12592|\n|\nOh ye who go about saying unto each:  \"Hello sailor\":|\nDost thou know the magnitude of thy sin before the gods?|\nYea, verily, thou shalt be ground between two stones.|\nShall the angry gods cast thy body into the whirlpool?|\nSurely, thy eye shall be put out with a sharp stick!|\nEven unto the ends of the earth shalt thou wander and|\nUnto the land of the dead shalt thou be sent at last.|\nSurely thou shalt repent of thy cunning."
+    },
+    "synonyms": [
+      "BOOK",
+      "PRAYER",
+      "PAGE",
+      "BOOKS"
+    ],
+    "adjectives": [
+      "LARGE",
+      "BLACK"
+    ],
+    "fdesc": "On the altar is a large black book, open to page 569.",
+    "parent": "ALTAR",
+    "actionRoutine": "BLACK-BOOK"
+  },
+  {
+    "id": "BROKEN-LAMP",
+    "kind": "thing",
+    "desc": "broken lantern",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "LAMP",
+      "LANTERN"
+    ],
+    "adjectives": [
+      "BROKEN"
+    ]
+  },
+  {
+    "id": "SCEPTRE",
+    "kind": "thing",
+    "desc": "sceptre",
+    "flags": [
+      "Takeable",
+      "Weapon"
+    ],
+    "props": {
+      "SIZE": 3,
+      "VALUE": 4,
+      "TVALUE": 6
+    },
+    "synonyms": [
+      "SCEPTRE",
+      "SCEPTER",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "SHARP",
+      "EGYPTIAN",
+      "ANCIENT",
+      "ENAMELED"
+    ],
+    "ldesc": "An ornamented sceptre, tapering to a sharp point, is here.",
+    "fdesc": "A sceptre, possibly that of ancient Egypt itself, is in the coffin. The\nsceptre is ornamented with colored enamel, and tapers to a sharp point.",
+    "parent": "COFFIN",
+    "actionRoutine": "SCEPTRE-FUNCTION"
+  },
+  {
+    "id": "TIMBERS",
+    "kind": "thing",
+    "desc": "broken timber",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 50
+    },
+    "synonyms": [
+      "TIMBERS",
+      "PILE"
+    ],
+    "adjectives": [
+      "WOODEN",
+      "BROKEN"
+    ],
+    "parent": "TIMBER-ROOM"
+  },
+  {
+    "id": "SLIDE",
+    "kind": "thing",
+    "desc": "chute",
+    "flags": [
+      "Climbable"
+    ],
+    "props": {},
+    "synonyms": [
+      "CHUTE",
+      "RAMP",
+      "SLIDE"
+    ],
+    "adjectives": [
+      "STEEP",
+      "METAL",
+      "TWISTING"
+    ],
+    "actionRoutine": "SLIDE-FUNCTION"
+  },
+  {
+    "id": "KITCHEN-TABLE",
+    "kind": "container",
+    "desc": "kitchen table",
+    "flags": [
+      "NonDescript",
+      "Container",
+      "Open",
+      "Surface"
+    ],
+    "props": {
+      "CAPACITY": 50
+    },
+    "synonyms": [
+      "TABLE"
+    ],
+    "adjectives": [
+      "KITCHEN"
+    ],
+    "parent": "KITCHEN"
+  },
+  {
+    "id": "ATTIC-TABLE",
+    "kind": "container",
+    "desc": "table",
+    "flags": [
+      "NonDescript",
+      "Container",
+      "Open",
+      "Surface"
+    ],
+    "props": {
+      "CAPACITY": 40
+    },
+    "synonyms": [
+      "TABLE"
+    ],
+    "adjectives": [],
+    "parent": "ATTIC"
+  },
+  {
+    "id": "SANDWICH-BAG",
+    "kind": "container",
+    "desc": "brown sack",
+    "flags": [
+      "Takeable",
+      "Container",
+      "Burned"
+    ],
+    "props": {
+      "CAPACITY": 9,
+      "SIZE": 9
+    },
+    "synonyms": [
+      "BAG",
+      "SACK"
+    ],
+    "adjectives": [
+      "BROWN",
+      "ELONGATED",
+      "SMELLY"
+    ],
+    "fdesc": "On the table is an elongated brown sack, smelling of hot peppers.",
+    "parent": "KITCHEN-TABLE",
+    "actionRoutine": "SANDWICH-BAG-FCN"
+  },
+  {
+    "id": "TOOL-CHEST",
+    "kind": "container",
+    "desc": "group of tool chests",
+    "flags": [
+      "Container",
+      "Open",
+      "Takeable",
+      "Sacred"
+    ],
+    "props": {},
+    "synonyms": [
+      "CHEST",
+      "CHESTS",
+      "GROUP",
+      "TOOLCHESTS"
+    ],
+    "adjectives": [
+      "TOOL"
+    ],
+    "parent": "MAINTENANCE-ROOM",
+    "actionRoutine": "TOOL-CHEST-FCN"
+  },
+  {
+    "id": "YELLOW-BUTTON",
+    "kind": "thing",
+    "desc": "yellow button",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "BUTTON",
+      "SWITCH"
+    ],
+    "adjectives": [
+      "YELLOW"
+    ],
+    "parent": "MAINTENANCE-ROOM",
+    "actionRoutine": "BUTTON-F"
+  },
+  {
+    "id": "BROWN-BUTTON",
+    "kind": "thing",
+    "desc": "brown button",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "BUTTON",
+      "SWITCH"
+    ],
+    "adjectives": [
+      "BROWN"
+    ],
+    "parent": "MAINTENANCE-ROOM",
+    "actionRoutine": "BUTTON-F"
+  },
+  {
+    "id": "RED-BUTTON",
+    "kind": "thing",
+    "desc": "red button",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "BUTTON",
+      "SWITCH"
+    ],
+    "adjectives": [
+      "RED"
+    ],
+    "parent": "MAINTENANCE-ROOM",
+    "actionRoutine": "BUTTON-F"
+  },
+  {
+    "id": "BLUE-BUTTON",
+    "kind": "thing",
+    "desc": "blue button",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "BUTTON",
+      "SWITCH"
+    ],
+    "adjectives": [
+      "BLUE"
+    ],
+    "parent": "MAINTENANCE-ROOM",
+    "actionRoutine": "BUTTON-F"
+  },
+  {
+    "id": "TROPHY-CASE",
+    "kind": "container",
+    "desc": "trophy case",
+    "flags": [
+      "Transparent",
+      "Container",
+      "NonDescript",
+      "Takeable",
+      "Searchable"
+    ],
+    "props": {
+      "CAPACITY": 10000
+    },
+    "synonyms": [
+      "CASE"
+    ],
+    "adjectives": [
+      "TROPHY"
+    ],
+    "parent": "LIVING-ROOM",
+    "actionRoutine": "TROPHY-CASE-FCN"
+  },
+  {
+    "id": "RUG",
+    "kind": "thing",
+    "desc": "carpet",
+    "flags": [
+      "NonDescript",
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "RUG",
+      "CARPET"
+    ],
+    "adjectives": [
+      "LARGE",
+      "ORIENTAL"
+    ],
+    "parent": "LIVING-ROOM",
+    "actionRoutine": "RUG-FCN"
+  },
+  {
+    "id": "CHALICE",
+    "kind": "container",
+    "desc": "chalice",
+    "flags": [
+      "Takeable",
+      "Container"
+    ],
+    "props": {
+      "CAPACITY": 5,
+      "SIZE": 10,
+      "VALUE": 10,
+      "TVALUE": 5
+    },
+    "synonyms": [
+      "CHALICE",
+      "CUP",
+      "SILVER",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "SILVER",
+      "ENGRAVINGS"
+    ],
+    "ldesc": "There is a silver chalice, intricately engraved, here.",
+    "parent": "TREASURE-ROOM",
+    "actionRoutine": "CHALICE-FCN"
+  },
+  {
+    "id": "GARLIC",
+    "kind": "thing",
+    "desc": "clove of garlic",
+    "flags": [
+      "Takeable",
+      "Food"
+    ],
+    "props": {
+      "SIZE": 4
+    },
+    "synonyms": [
+      "GARLIC",
+      "CLOVE"
+    ],
+    "adjectives": [],
+    "parent": "SANDWICH-BAG",
+    "actionRoutine": "GARLIC-F"
+  },
+  {
+    "id": "TRIDENT",
+    "kind": "thing",
+    "desc": "crystal trident",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 20,
+      "VALUE": 4,
+      "TVALUE": 11
+    },
+    "synonyms": [
+      "TRIDENT",
+      "FORK",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "POSEIDON",
+      "OWN",
+      "CRYSTAL"
+    ],
+    "fdesc": "On the shore lies Poseidon's own crystal trident.",
+    "parent": "ATLANTIS-ROOM"
+  },
+  {
+    "id": "CYCLOPS",
+    "kind": "actor",
+    "desc": "cyclops",
+    "flags": [
+      "Takeable",
+      "NonDescript"
+    ],
+    "props": {
+      "STRENGTH": 10000
+    },
+    "synonyms": [
+      "CYCLOPS",
+      "MONSTER",
+      "EYE"
+    ],
+    "adjectives": [
+      "HUNGRY",
+      "GIANT"
+    ],
+    "parent": "CYCLOPS-ROOM",
+    "actionRoutine": "CYCLOPS-FCN"
+  },
+  {
+    "id": "DAM",
+    "kind": "thing",
+    "desc": "dam",
+    "flags": [
+      "NonDescript",
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "DAM",
+      "GATE",
+      "GATES",
+      "FCD#3"
+    ],
+    "adjectives": [],
+    "parent": "DAM-ROOM",
+    "actionRoutine": "DAM-FUNCTION"
+  },
+  {
+    "id": "TRAP-DOOR",
+    "kind": "thing",
+    "desc": "trap door",
+    "flags": [
+      "Door",
+      "NonDescript",
+      "Invisible"
+    ],
+    "props": {},
+    "synonyms": [
+      "DOOR",
+      "TRAPDOOR",
+      "TRAP-DOOR",
+      "COVER"
+    ],
+    "adjectives": [
+      "TRAP",
+      "DUSTY"
+    ],
+    "parent": "LIVING-ROOM",
+    "actionRoutine": "TRAP-DOOR-FCN"
+  },
+  {
+    "id": "BOARDED-WINDOW",
+    "kind": "thing",
+    "desc": "boarded window",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "WINDOW"
+    ],
+    "adjectives": [
+      "BOARDED"
+    ],
+    "actionRoutine": "BOARDED-WINDOW-FCN"
+  },
+  {
+    "id": "FRONT-DOOR",
+    "kind": "thing",
+    "desc": "door",
+    "flags": [
+      "Door",
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "DOOR"
+    ],
+    "adjectives": [
+      "FRONT",
+      "BOARDED"
+    ],
+    "parent": "WEST-OF-HOUSE",
+    "actionRoutine": "FRONT-DOOR-FCN"
+  },
+  {
+    "id": "BARROW-DOOR",
+    "kind": "thing",
+    "desc": "stone door",
+    "flags": [
+      "Door",
+      "NonDescript",
+      "Open"
+    ],
+    "props": {},
+    "synonyms": [
+      "DOOR"
+    ],
+    "adjectives": [
+      "HUGE",
+      "STONE"
+    ],
+    "parent": "STONE-BARROW",
+    "actionRoutine": "BARROW-DOOR-FCN"
+  },
+  {
+    "id": "BARROW",
+    "kind": "thing",
+    "desc": "stone barrow",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "BARROW",
+      "TOMB"
+    ],
+    "adjectives": [
+      "MASSIVE",
+      "STONE"
+    ],
+    "parent": "STONE-BARROW",
+    "actionRoutine": "BARROW-FCN"
+  },
+  {
+    "id": "BOTTLE",
+    "kind": "container",
+    "desc": "glass bottle",
+    "flags": [
+      "Takeable",
+      "Transparent",
+      "Container"
+    ],
+    "props": {
+      "CAPACITY": 4
+    },
+    "synonyms": [
+      "BOTTLE",
+      "CONTAINER"
+    ],
+    "adjectives": [
+      "CLEAR",
+      "GLASS"
+    ],
+    "fdesc": "A bottle is sitting on the table.",
+    "parent": "KITCHEN-TABLE",
+    "actionRoutine": "BOTTLE-FUNCTION"
+  },
+  {
+    "id": "CRACK",
+    "kind": "thing",
+    "desc": "crack",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "CRACK"
+    ],
+    "adjectives": [
+      "NARROW"
+    ],
+    "actionRoutine": "CRACK-FCN"
+  },
+  {
+    "id": "COFFIN",
+    "kind": "container",
+    "desc": "gold coffin",
+    "flags": [
+      "Takeable",
+      "Container",
+      "Sacred",
+      "Searchable"
+    ],
+    "props": {
+      "CAPACITY": 35,
+      "SIZE": 55,
+      "VALUE": 10,
+      "TVALUE": 15
+    },
+    "synonyms": [
+      "COFFIN",
+      "CASKET",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "SOLID",
+      "GOLD"
+    ],
+    "ldesc": "The solid-gold coffin used for the burial of Ramses II is here.",
+    "parent": "EGYPT-ROOM"
+  },
+  {
+    "id": "GRATE",
+    "kind": "thing",
+    "desc": "grating",
+    "flags": [
+      "Door",
+      "NonDescript",
+      "Invisible"
+    ],
+    "props": {},
+    "synonyms": [
+      "GRATE",
+      "GRATING"
+    ],
+    "adjectives": [],
+    "actionRoutine": "GRATE-FUNCTION"
+  },
+  {
+    "id": "PUMP",
+    "kind": "thing",
+    "desc": "hand-held air pump",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "PUMP",
+      "AIR-PUMP",
+      "TOOL",
+      "TOOLS"
+    ],
+    "adjectives": [
+      "SMALL",
+      "HAND-HELD"
+    ],
+    "parent": "RESERVOIR-NORTH"
+  },
+  {
+    "id": "DIAMOND",
+    "kind": "thing",
+    "desc": "huge diamond",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "VALUE": 10,
+      "TVALUE": 10
+    },
+    "synonyms": [
+      "DIAMOND",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "HUGE",
+      "ENORMOUS"
+    ],
+    "ldesc": "There is an enormous diamond (perfectly cut) here."
+  },
+  {
+    "id": "JADE",
+    "kind": "thing",
+    "desc": "jade figurine",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 10,
+      "VALUE": 5,
+      "TVALUE": 5
+    },
+    "synonyms": [
+      "FIGURINE",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "EXQUISITE",
+      "JADE"
+    ],
+    "ldesc": "There is an exquisite jade figurine here.",
+    "parent": "BAT-ROOM"
+  },
+  {
+    "id": "KNIFE",
+    "kind": "thing",
+    "desc": "nasty knife",
+    "flags": [
+      "Takeable",
+      "Weapon"
+    ],
+    "props": {},
+    "synonyms": [
+      "KNIVES",
+      "KNIFE",
+      "BLADE"
+    ],
+    "adjectives": [
+      "NASTY",
+      "UNRUSTY"
+    ],
+    "fdesc": "On a table is a nasty-looking knife.",
+    "parent": "ATTIC-TABLE",
+    "actionRoutine": "KNIFE-F"
+  },
+  {
+    "id": "BONES",
+    "kind": "thing",
+    "desc": "skeleton",
+    "flags": [
+      "Takeable",
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "BONES",
+      "SKELETON",
+      "BODY"
+    ],
+    "adjectives": [],
+    "parent": "MAZE-5",
+    "actionRoutine": "SKELETON"
+  },
+  {
+    "id": "BURNED-OUT-LANTERN",
+    "kind": "thing",
+    "desc": "burned-out lantern",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 20
+    },
+    "synonyms": [
+      "LANTERN",
+      "LAMP"
+    ],
+    "adjectives": [
+      "RUSTY",
+      "BURNED",
+      "DEAD",
+      "USELESS"
+    ],
+    "fdesc": "The deceased adventurer's useless lantern is here.",
+    "parent": "MAZE-5"
+  },
+  {
+    "id": "BAG-OF-COINS",
+    "kind": "thing",
+    "desc": "leather bag of coins",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 15,
+      "VALUE": 10,
+      "TVALUE": 5
+    },
+    "synonyms": [
+      "BAG",
+      "COINS",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "OLD",
+      "LEATHER"
+    ],
+    "ldesc": "An old leather bag, bulging with coins, is here.",
+    "parent": "MAZE-5",
+    "actionRoutine": "BAG-OF-COINS-F"
+  },
+  {
+    "id": "LAMP",
+    "kind": "thing",
+    "desc": "brass lantern",
+    "flags": [
+      "Takeable",
+      "Light"
+    ],
+    "props": {
+      "SIZE": 15
+    },
+    "synonyms": [
+      "LAMP",
+      "LANTERN",
+      "LIGHT"
+    ],
+    "adjectives": [
+      "BRASS"
+    ],
+    "ldesc": "There is a brass lantern (battery-powered) here.",
+    "fdesc": "A battery-powered brass lantern is on the trophy case.",
+    "parent": "LIVING-ROOM",
+    "actionRoutine": "LANTERN"
+  },
+  {
+    "id": "EMERALD",
+    "kind": "thing",
+    "desc": "large emerald",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "VALUE": 5,
+      "TVALUE": 10
+    },
+    "synonyms": [
+      "EMERALD",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "LARGE"
+    ],
+    "parent": "BUOY"
+  },
+  {
+    "id": "ADVERTISEMENT",
+    "kind": "thing",
+    "desc": "leaflet",
+    "flags": [
+      "Readable",
+      "Takeable",
+      "Burned"
+    ],
+    "props": {
+      "TEXT": "\"WELCOME TO ZORK!|\n|\nZORK is a game of adventure, danger, and low cunning. In it you\nwill explore some of the most amazing territory ever seen by mortals.\nNo computer should be without one!\"",
+      "SIZE": 2
+    },
+    "synonyms": [
+      "ADVERTISEMENT",
+      "LEAFLET",
+      "BOOKLET",
+      "MAIL"
+    ],
+    "adjectives": [
+      "SMALL"
+    ],
+    "ldesc": "A small leaflet is on the ground.",
+    "parent": "MAILBOX"
+  },
+  {
+    "id": "LEAK",
+    "kind": "thing",
+    "desc": "leak",
+    "flags": [
+      "NonDescript",
+      "Invisible"
+    ],
+    "props": {},
+    "synonyms": [
+      "LEAK",
+      "DRIP",
+      "PIPE"
+    ],
+    "adjectives": [],
+    "parent": "MAINTENANCE-ROOM",
+    "actionRoutine": "LEAK-FUNCTION"
+  },
+  {
+    "id": "MACHINE",
+    "kind": "container",
+    "desc": "machine",
+    "flags": [
+      "Container",
+      "NonDescript",
+      "Takeable"
+    ],
+    "props": {
+      "CAPACITY": 50
+    },
+    "synonyms": [
+      "MACHINE",
+      "PDP10",
+      "DRYER",
+      "LID"
+    ],
+    "adjectives": [],
+    "parent": "MACHINE-ROOM",
+    "actionRoutine": "MACHINE-F"
+  },
+  {
+    "id": "INFLATED-BOAT",
+    "kind": "thing",
+    "desc": "magic boat",
+    "flags": [
+      "Takeable",
+      "Burned",
+      "Vehicle",
+      "Open",
+      "Searchable"
+    ],
+    "props": {
+      "CAPACITY": 100,
+      "SIZE": 20,
+      "VTYPE": "NONLANDBIT"
+    },
+    "synonyms": [
+      "BOAT",
+      "RAFT"
+    ],
+    "adjectives": [
+      "INFLAT",
+      "MAGIC",
+      "PLASTIC",
+      "SEAWORTHY"
+    ],
+    "actionRoutine": "RBOAT-FUNCTION"
+  },
+  {
+    "id": "MAILBOX",
+    "kind": "container",
+    "desc": "small mailbox",
+    "flags": [
+      "Container",
+      "Takeable"
+    ],
+    "props": {
+      "CAPACITY": 10
+    },
+    "synonyms": [
+      "MAILBOX",
+      "BOX"
+    ],
+    "adjectives": [
+      "SMALL"
+    ],
+    "parent": "WEST-OF-HOUSE",
+    "actionRoutine": "MAILBOX-F"
+  },
+  {
+    "id": "MATCH",
+    "kind": "thing",
+    "desc": "matchbook",
+    "flags": [
+      "Readable",
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 2,
+      "TEXT": "|\n(Close cover before striking)|\n|\nYOU too can make BIG MONEY in the exciting field of PAPER SHUFFLING!|\n|\nMr. Anderson of Muddle, Mass. says: \"Before I took this course I\nwas a lowly bit twiddler. Now with what I learned at GUE Tech\nI feel really important and can obfuscate and confuse with the best.\"|\n|\nDr. Blank had this to say: \"Ten short days ago all I could look\nforward to was a dead-end job as a doctor. Now I have a promising\nfuture and make really big Zorkmids.\"|\n|\nGUE Tech can't promise these fantastic results to everyone. But when\nyou earn your degree from GUE Tech, your future will be brighter."
+    },
+    "synonyms": [
+      "MATCH",
+      "MATCHES",
+      "MATCHBOOK"
+    ],
+    "adjectives": [
+      "MATCH"
+    ],
+    "ldesc": "There is a matchbook whose cover says \"Visit Beautiful FCD#3\" here.",
+    "parent": "DAM-LOBBY",
+    "actionRoutine": "MATCH-FUNCTION"
+  },
+  {
+    "id": "MIRROR-2",
+    "kind": "thing",
+    "desc": "mirror",
+    "flags": [
+      "Takeable",
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "REFLECTION",
+      "MIRROR",
+      "ENORMOUS"
+    ],
+    "adjectives": [],
+    "parent": "MIRROR-ROOM-2",
+    "actionRoutine": "MIRROR-MIRROR"
+  },
+  {
+    "id": "MIRROR-1",
+    "kind": "thing",
+    "desc": "mirror",
+    "flags": [
+      "Takeable",
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "REFLECTION",
+      "MIRROR",
+      "ENORMOUS"
+    ],
+    "adjectives": [],
+    "parent": "MIRROR-ROOM-1",
+    "actionRoutine": "MIRROR-MIRROR"
+  },
+  {
+    "id": "PAINTING",
+    "kind": "thing",
+    "desc": "painting",
+    "flags": [
+      "Takeable",
+      "Burned"
+    ],
+    "props": {
+      "SIZE": 15,
+      "VALUE": 4,
+      "TVALUE": 6
+    },
+    "synonyms": [
+      "PAINTING",
+      "ART",
+      "CANVAS",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "BEAUTI"
+    ],
+    "ldesc": "A painting by a neglected genius is here.",
+    "fdesc": "Fortunately, there is still one chance for you to be a vandal, for on\nthe far wall is a painting of unparalleled beauty.",
+    "parent": "GALLERY",
+    "actionRoutine": "PAINTING-FCN"
+  },
+  {
+    "id": "CANDLES",
+    "kind": "thing",
+    "desc": "pair of candles",
+    "flags": [
+      "Takeable",
+      "OnFire",
+      "Light"
+    ],
+    "props": {
+      "SIZE": 10
+    },
+    "synonyms": [
+      "CANDLES",
+      "PAIR"
+    ],
+    "adjectives": [
+      "BURNING"
+    ],
+    "fdesc": "On the two ends of the altar are burning candles.",
+    "parent": "SOUTH-TEMPLE",
+    "actionRoutine": "CANDLES-FCN"
+  },
+  {
+    "id": "GUNK",
+    "kind": "thing",
+    "desc": "small piece of vitreous slag",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 10
+    },
+    "synonyms": [
+      "GUNK",
+      "PIECE",
+      "SLAG"
+    ],
+    "adjectives": [
+      "SMALL",
+      "VITREOUS"
+    ],
+    "actionRoutine": "GUNK-FUNCTION"
+  },
+  {
+    "id": "BODIES",
+    "kind": "thing",
+    "desc": "pile of bodies",
+    "flags": [
+      "NonDescript",
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "BODIES",
+      "BODY",
+      "REMAINS",
+      "PILE"
+    ],
+    "adjectives": [
+      "MANGLED"
+    ],
+    "actionRoutine": "BODY-FUNCTION"
+  },
+  {
+    "id": "LEAVES",
+    "kind": "thing",
+    "desc": "pile of leaves",
+    "flags": [
+      "Takeable",
+      "Burned"
+    ],
+    "props": {
+      "SIZE": 25
+    },
+    "synonyms": [
+      "LEAVES",
+      "LEAF",
+      "PILE"
+    ],
+    "adjectives": [],
+    "ldesc": "On the ground is a pile of leaves.",
+    "parent": "GRATING-CLEARING",
+    "actionRoutine": "LEAF-PILE"
+  },
+  {
+    "id": "PUNCTURED-BOAT",
+    "kind": "thing",
+    "desc": "punctured boat",
+    "flags": [
+      "Takeable",
+      "Burned"
+    ],
+    "props": {
+      "SIZE": 20
+    },
+    "synonyms": [
+      "BOAT",
+      "PILE",
+      "PLASTIC"
+    ],
+    "adjectives": [
+      "PLASTIC",
+      "PUNCTURE",
+      "LARGE"
+    ],
+    "actionRoutine": "DBOAT-FUNCTION"
+  },
+  {
+    "id": "INFLATABLE-BOAT",
+    "kind": "thing",
+    "desc": "pile of plastic",
+    "flags": [
+      "Takeable",
+      "Burned"
+    ],
+    "props": {
+      "SIZE": 20
+    },
+    "synonyms": [
+      "BOAT",
+      "PILE",
+      "PLASTIC",
+      "VALVE"
+    ],
+    "adjectives": [
+      "PLASTIC",
+      "INFLAT"
+    ],
+    "ldesc": "There is a folded pile of plastic here which has a small valve\nattached.",
+    "parent": "DAM-BASE",
+    "actionRoutine": "IBOAT-FUNCTION"
+  },
+  {
+    "id": "BAR",
+    "kind": "thing",
+    "desc": "platinum bar",
+    "flags": [
+      "Takeable",
+      "Sacred"
+    ],
+    "props": {
+      "SIZE": 20,
+      "VALUE": 10,
+      "TVALUE": 5
+    },
+    "synonyms": [
+      "BAR",
+      "PLATINUM",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "PLATINUM",
+      "LARGE"
+    ],
+    "ldesc": "On the ground is a large platinum bar.",
+    "parent": "LOUD-ROOM"
+  },
+  {
+    "id": "POT-OF-GOLD",
+    "kind": "thing",
+    "desc": "pot of gold",
+    "flags": [
+      "Takeable",
+      "Invisible"
+    ],
+    "props": {
+      "SIZE": 15,
+      "VALUE": 10,
+      "TVALUE": 10
+    },
+    "synonyms": [
+      "POT",
+      "GOLD",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "GOLD"
+    ],
+    "fdesc": "At the end of the rainbow is a pot of gold.",
+    "parent": "END-OF-RAINBOW"
+  },
+  {
+    "id": "PRAYER",
+    "kind": "thing",
+    "desc": "prayer",
+    "flags": [
+      "Readable",
+      "Sacred",
+      "NonDescript"
+    ],
+    "props": {
+      "TEXT": "The prayer is inscribed in an ancient script, rarely used today. It seems\nto be a philippic against small insects, absent-mindedness, and the picking\nup and dropping of small objects. The final verse consigns trespassers to\nthe land of the dead. All evidence indicates that the beliefs of the ancient\nZorkers were obscure."
+    },
+    "synonyms": [
+      "PRAYER",
+      "INSCRIPTION"
+    ],
+    "adjectives": [
+      "ANCIENT",
+      "OLD"
+    ],
+    "parent": "NORTH-TEMPLE"
+  },
+  {
+    "id": "RAILING",
+    "kind": "thing",
+    "desc": "wooden railing",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "RAILING",
+      "RAIL"
+    ],
+    "adjectives": [
+      "WOODEN"
+    ],
+    "parent": "DOME-ROOM"
+  },
+  {
+    "id": "RAINBOW",
+    "kind": "thing",
+    "desc": "rainbow",
+    "flags": [
+      "NonDescript",
+      "Climbable"
+    ],
+    "props": {},
+    "synonyms": [
+      "RAINBOW"
+    ],
+    "adjectives": [],
+    "actionRoutine": "RAINBOW-FCN"
+  },
+  {
+    "id": "RIVER",
+    "kind": "thing",
+    "desc": "river",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "RIVER"
+    ],
+    "adjectives": [
+      "FRIGID"
+    ],
+    "actionRoutine": "RIVER-FUNCTION"
+  },
+  {
+    "id": "BUOY",
+    "kind": "container",
+    "desc": "red buoy",
+    "flags": [
+      "Takeable",
+      "Container"
+    ],
+    "props": {
+      "CAPACITY": 20,
+      "SIZE": 10
+    },
+    "synonyms": [
+      "BUOY"
+    ],
+    "adjectives": [
+      "RED"
+    ],
+    "fdesc": "There is a red buoy here (probably a warning).",
+    "parent": "RIVER-4",
+    "actionRoutine": "TREASURE-INSIDE"
+  },
+  {
+    "id": "ROPE",
+    "kind": "thing",
+    "desc": "rope",
+    "flags": [
+      "Takeable",
+      "Sacred"
+    ],
+    "props": {
+      "SIZE": 10
+    },
+    "synonyms": [
+      "ROPE",
+      "HEMP",
+      "COIL"
+    ],
+    "adjectives": [
+      "LARGE"
+    ],
+    "fdesc": "A large coil of rope is lying in the corner.",
+    "parent": "ATTIC",
+    "actionRoutine": "ROPE-FUNCTION"
+  },
+  {
+    "id": "RUSTY-KNIFE",
+    "kind": "thing",
+    "desc": "rusty knife",
+    "flags": [
+      "Takeable",
+      "Weapon"
+    ],
+    "props": {
+      "SIZE": 20
+    },
+    "synonyms": [
+      "KNIVES",
+      "KNIFE"
+    ],
+    "adjectives": [
+      "RUSTY"
+    ],
+    "fdesc": "Beside the skeleton is a rusty knife.",
+    "parent": "MAZE-5",
+    "actionRoutine": "RUSTY-KNIFE-FCN"
+  },
+  {
+    "id": "SAND",
+    "kind": "thing",
+    "desc": "sand",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "SAND"
+    ],
+    "adjectives": [],
+    "parent": "SANDY-CAVE",
+    "actionRoutine": "SAND-FUNCTION"
+  },
+  {
+    "id": "BRACELET",
+    "kind": "thing",
+    "desc": "sapphire-encrusted bracelet",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 10,
+      "VALUE": 5,
+      "TVALUE": 5
+    },
+    "synonyms": [
+      "BRACELET",
+      "JEWEL",
+      "SAPPHIRE",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "SAPPHIRE"
+    ],
+    "parent": "GAS-ROOM"
+  },
+  {
+    "id": "SCREWDRIVER",
+    "kind": "thing",
+    "desc": "screwdriver",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {},
+    "synonyms": [
+      "SCREWDRIVER",
+      "TOOL",
+      "TOOLS",
+      "DRIVER"
+    ],
+    "adjectives": [
+      "SCREW"
+    ],
+    "parent": "MAINTENANCE-ROOM"
+  },
+  {
+    "id": "KEYS",
+    "kind": "thing",
+    "desc": "skeleton key",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 10
+    },
+    "synonyms": [
+      "KEY"
+    ],
+    "adjectives": [
+      "SKELETON"
+    ],
+    "parent": "MAZE-5"
+  },
+  {
+    "id": "SHOVEL",
+    "kind": "thing",
+    "desc": "shovel",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 15
+    },
+    "synonyms": [
+      "SHOVEL",
+      "TOOL",
+      "TOOLS"
+    ],
+    "adjectives": [],
+    "parent": "SANDY-BEACH"
+  },
+  {
+    "id": "COAL",
+    "kind": "thing",
+    "desc": "small pile of coal",
+    "flags": [
+      "Takeable",
+      "Burned"
+    ],
+    "props": {
+      "SIZE": 20
+    },
+    "synonyms": [
+      "COAL",
+      "PILE",
+      "HEAP"
+    ],
+    "adjectives": [
+      "SMALL"
+    ],
+    "parent": "DEAD-END-5"
+  },
+  {
+    "id": "LADDER",
+    "kind": "thing",
+    "desc": "wooden ladder",
+    "flags": [
+      "NonDescript",
+      "Climbable"
+    ],
+    "props": {},
+    "synonyms": [
+      "LADDER"
+    ],
+    "adjectives": [
+      "WOODEN",
+      "RICKETY",
+      "NARROW"
+    ]
+  },
+  {
+    "id": "SCARAB",
+    "kind": "thing",
+    "desc": "beautiful jeweled scarab",
+    "flags": [
+      "Takeable",
+      "Invisible"
+    ],
+    "props": {
+      "SIZE": 8,
+      "VALUE": 5,
+      "TVALUE": 5
+    },
+    "synonyms": [
+      "SCARAB",
+      "BUG",
+      "BEETLE",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "BEAUTI",
+      "CARVED",
+      "JEWELED"
+    ],
+    "parent": "SANDY-CAVE"
+  },
+  {
+    "id": "LARGE-BAG",
+    "kind": "thing",
+    "desc": "large bag",
+    "flags": [
+      "Takeable",
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "BAG"
+    ],
+    "adjectives": [
+      "LARGE",
+      "THIEFS"
+    ],
+    "parent": "THIEF",
+    "actionRoutine": "LARGE-BAG-F"
+  },
+  {
+    "id": "STILETTO",
+    "kind": "thing",
+    "desc": "stiletto",
+    "flags": [
+      "Weapon",
+      "Takeable",
+      "NonDescript"
+    ],
+    "props": {
+      "SIZE": 10
+    },
+    "synonyms": [
+      "STILETTO"
+    ],
+    "adjectives": [
+      "VICIOUS"
+    ],
+    "parent": "THIEF",
+    "actionRoutine": "STILETTO-FUNCTION"
+  },
+  {
+    "id": "MACHINE-SWITCH",
+    "kind": "thing",
+    "desc": "switch",
+    "flags": [
+      "NonDescript",
+      "Turnable"
+    ],
+    "props": {},
+    "synonyms": [
+      "SWITCH"
+    ],
+    "adjectives": [],
+    "parent": "MACHINE-ROOM",
+    "actionRoutine": "MSWITCH-FUNCTION"
+  },
+  {
+    "id": "WOODEN-DOOR",
+    "kind": "thing",
+    "desc": "wooden door",
+    "flags": [
+      "Readable",
+      "Door",
+      "NonDescript",
+      "Transparent"
+    ],
+    "props": {
+      "TEXT": "The engravings translate to \"This space intentionally left blank.\""
+    },
+    "synonyms": [
+      "DOOR",
+      "LETTERING",
+      "WRITING"
+    ],
+    "adjectives": [
+      "WOODEN",
+      "GOTHIC",
+      "STRANGE",
+      "WEST"
+    ],
+    "parent": "LIVING-ROOM",
+    "actionRoutine": "FRONT-DOOR-FCN"
+  },
+  {
+    "id": "SWORD",
+    "kind": "thing",
+    "desc": "sword",
+    "flags": [
+      "Takeable",
+      "Weapon"
+    ],
+    "props": {
+      "SIZE": 30,
+      "TVALUE": 0
+    },
+    "synonyms": [
+      "SWORD",
+      "ORCRIST",
+      "GLAMDRING",
+      "BLADE"
+    ],
+    "adjectives": [
+      "ELVISH",
+      "OLD",
+      "ANTIQUE"
+    ],
+    "fdesc": "Above the trophy case hangs an elvish sword of great antiquity.",
+    "parent": "LIVING-ROOM",
+    "actionRoutine": "SWORD-FCN"
+  },
+  {
+    "id": "MAP",
+    "kind": "thing",
+    "desc": "ancient map",
+    "flags": [
+      "Invisible",
+      "Readable",
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 2,
+      "TEXT": "The map shows a forest with three clearings. The largest clearing contains\na house. Three paths leave the large clearing. One of these paths, leading\nsouthwest, is marked \"To Stone Barrow\"."
+    },
+    "synonyms": [
+      "PARCHMENT",
+      "MAP"
+    ],
+    "adjectives": [
+      "ANTIQUE",
+      "OLD",
+      "ANCIENT"
+    ],
+    "fdesc": "In the trophy case is an ancient parchment which appears to be a map.",
+    "parent": "TROPHY-CASE"
+  },
+  {
+    "id": "BOAT-LABEL",
+    "kind": "thing",
+    "desc": "tan label",
+    "flags": [
+      "Readable",
+      "Takeable",
+      "Burned"
+    ],
+    "props": {
+      "SIZE": 2,
+      "TEXT": "  !!!!FROBOZZ MAGIC BOAT COMPANY!!!!|\n|\nHello, Sailor!|\n|\nInstructions for use:|\n|\n   To get into a body of water, say \"Launch\".|\n   To get to shore, say \"Land\" or the direction in which you want\nto maneuver the boat.|\n|\nWarranty:|\n|\n  This boat is guaranteed against all defects for a period of 76\nmilliseconds from date of purchase or until first used, whichever comes first.|\n|\nWarning:|\n   This boat is made of thin plastic.|\n   Good Luck!"
+    },
+    "synonyms": [
+      "LABEL",
+      "FINEPRINT",
+      "PRINT"
+    ],
+    "adjectives": [
+      "TAN",
+      "FINE"
+    ],
+    "parent": "INFLATED-BOAT"
+  },
+  {
+    "id": "THIEF",
+    "kind": "actor",
+    "desc": "thief",
+    "flags": [
+      "Takeable",
+      "Invisible",
+      "Container",
+      "Open"
+    ],
+    "props": {
+      "STRENGTH": 5
+    },
+    "synonyms": [
+      "THIEF",
+      "ROBBER",
+      "MAN",
+      "PERSON"
+    ],
+    "adjectives": [
+      "SHADY",
+      "SUSPICIOUS",
+      "SEEDY"
+    ],
+    "ldesc": "There is a suspicious-looking individual, holding a large bag, leaning\nagainst one wall. He is armed with a deadly stiletto.",
+    "parent": "ROUND-ROOM",
+    "actionRoutine": "ROBBER-FUNCTION"
+  },
+  {
+    "id": "PEDESTAL",
+    "kind": "container",
+    "desc": "pedestal",
+    "flags": [
+      "NonDescript",
+      "Container",
+      "Open",
+      "Surface"
+    ],
+    "props": {
+      "CAPACITY": 30
+    },
+    "synonyms": [
+      "PEDESTAL"
+    ],
+    "adjectives": [
+      "WHITE",
+      "MARBLE"
+    ],
+    "parent": "TORCH-ROOM",
+    "actionRoutine": "DUMB-CONTAINER"
+  },
+  {
+    "id": "TORCH",
+    "kind": "thing",
+    "desc": "torch",
+    "flags": [
+      "Takeable",
+      "OnFire",
+      "Light"
+    ],
+    "props": {
+      "SIZE": 20,
+      "VALUE": 14,
+      "TVALUE": 6
+    },
+    "synonyms": [
+      "TORCH",
+      "IVORY",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "FLAMING",
+      "IVORY"
+    ],
+    "fdesc": "Sitting on the pedestal is a flaming torch, made of ivory.",
+    "parent": "PEDESTAL",
+    "actionRoutine": "TORCH-OBJECT"
+  },
+  {
+    "id": "GUIDE",
+    "kind": "thing",
+    "desc": "tour guidebook",
+    "flags": [
+      "Readable",
+      "Takeable",
+      "Burned"
+    ],
+    "props": {
+      "TEXT": "\"\tFlood Control Dam #3|\n|\nFCD#3 was constructed in year 783 of the Great Underground Empire to\nharness the mighty Frigid River. This work was supported by a grant of\n37 million zorkmids from your omnipotent local tyrant Lord Dimwit\nFlathead the Excessive. This impressive structure is composed of\n370,000 cubic feet of concrete, is 256 feet tall at the center, and 193\nfeet wide at the top. The lake created behind the dam has a volume\nof 1.7 billion cubic feet, an area of 12 million square feet, and a\nshore line of 36 thousand feet.|\n|\nThe construction of FCD#3 took 112 days from ground breaking to\nthe dedication. It required a work force of 384 slaves, 34 slave\ndrivers, 12 engineers, 2 turtle doves, and a partridge in a pear\ntree. The work was managed by a command team composed of 2345\nbureaucrats, 2347 secretaries (at least two of whom could type),\n12,256 paper shufflers, 52,469 rubber stampers, 245,193 red tape\nprocessors, and nearly one million dead trees.|\n|\nWe will now point out some of the more interesting features\nof FCD#3 as we conduct you on a guided tour of the facilities:|\n|\n        1) You start your tour here in the Dam Lobby. You will notice\non your right that...."
+    },
+    "synonyms": [
+      "GUIDE",
+      "BOOK",
+      "BOOKS",
+      "GUIDEBOOKS"
+    ],
+    "adjectives": [
+      "TOUR",
+      "GUIDE"
+    ],
+    "fdesc": "Some guidebooks entitled \"Flood Control Dam #3\" are on the reception\ndesk.",
+    "parent": "DAM-LOBBY"
+  },
+  {
+    "id": "TROLL",
+    "kind": "actor",
+    "desc": "troll",
+    "flags": [
+      "Takeable",
+      "Open"
+    ],
+    "props": {
+      "STRENGTH": 2
+    },
+    "synonyms": [
+      "TROLL"
+    ],
+    "adjectives": [
+      "NASTY"
+    ],
+    "ldesc": "A nasty-looking troll, brandishing a bloody axe, blocks all passages\nout of the room.",
+    "parent": "TROLL-ROOM",
+    "actionRoutine": "TROLL-FCN"
+  },
+  {
+    "id": "TRUNK",
+    "kind": "thing",
+    "desc": "trunk of jewels",
+    "flags": [
+      "Takeable",
+      "Invisible"
+    ],
+    "props": {
+      "SIZE": 35,
+      "VALUE": 15,
+      "TVALUE": 5
+    },
+    "synonyms": [
+      "TRUNK",
+      "CHEST",
+      "JEWELS",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "OLD"
+    ],
+    "ldesc": "There is an old trunk here, bulging with assorted jewels.",
+    "fdesc": "Lying half buried in the mud is an old trunk, bulging with jewels.",
+    "parent": "RESERVOIR",
+    "actionRoutine": "TRUNK-F"
+  },
+  {
+    "id": "TUBE",
+    "kind": "container",
+    "desc": "tube",
+    "flags": [
+      "Takeable",
+      "Container",
+      "Readable"
+    ],
+    "props": {
+      "CAPACITY": 7,
+      "SIZE": 5,
+      "TEXT": "---> Frobozz Magic Gunk Company <---|\n\t  All-Purpose Gunk"
+    },
+    "synonyms": [
+      "TUBE",
+      "TOOTH",
+      "PASTE"
+    ],
+    "adjectives": [],
+    "ldesc": "There is an object which looks like a tube of toothpaste here.",
+    "parent": "MAINTENANCE-ROOM",
+    "actionRoutine": "TUBE-FUNCTION"
+  },
+  {
+    "id": "PUTTY",
+    "kind": "thing",
+    "desc": "viscous material",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 6
+    },
+    "synonyms": [
+      "MATERIAL",
+      "GUNK"
+    ],
+    "adjectives": [
+      "VISCOUS"
+    ],
+    "parent": "TUBE",
+    "actionRoutine": "PUTTY-FCN"
+  },
+  {
+    "id": "ENGRAVINGS",
+    "kind": "thing",
+    "desc": "wall with engravings",
+    "flags": [
+      "Readable",
+      "Sacred"
+    ],
+    "props": {
+      "TEXT": "The engravings were incised in the living rock of the cave wall by\nan unknown hand. They depict, in symbolic form, the beliefs of the\nancient Zorkers. Skillfully interwoven with the bas reliefs are excerpts\nillustrating the major religious tenets of that time. Unfortunately, a\nlater age seems to have considered them blasphemous and just as skillfully\nexcised them."
+    },
+    "synonyms": [
+      "WALL",
+      "ENGRAVINGS",
+      "INSCRIPTION"
+    ],
+    "adjectives": [
+      "OLD",
+      "ANCIENT"
+    ],
+    "ldesc": "There are old engravings on the walls here.",
+    "parent": "ENGRAVINGS-CAVE"
+  },
+  {
+    "id": "OWNERS-MANUAL",
+    "kind": "thing",
+    "desc": "ZORK owner's manual",
+    "flags": [
+      "Readable",
+      "Takeable"
+    ],
+    "props": {
+      "TEXT": "Congratulations!|\n|\nYou are the privileged owner of ZORK I: The Great Underground Empire,\na self-contained and self-maintaining universe. If used and maintained\nin accordance with normal operating practices for small universes, ZORK\nwill provide many months of trouble-free operation."
+    },
+    "synonyms": [
+      "MANUAL",
+      "PIECE",
+      "PAPER"
+    ],
+    "adjectives": [
+      "ZORK",
+      "OWNERS",
+      "SMALL"
+    ],
+    "fdesc": "Loosely attached to a wall is a small piece of paper.",
+    "parent": "STUDIO"
+  },
+  {
+    "id": "CLIMBABLE-CLIFF",
+    "kind": "thing",
+    "desc": "cliff",
+    "flags": [
+      "NonDescript",
+      "Climbable"
+    ],
+    "props": {},
+    "synonyms": [
+      "WALL",
+      "CLIFF",
+      "WALLS",
+      "LEDGE"
+    ],
+    "adjectives": [
+      "ROCKY",
+      "SHEER"
+    ],
+    "actionRoutine": "CLIFF-OBJECT"
+  },
+  {
+    "id": "WHITE-CLIFF",
+    "kind": "thing",
+    "desc": "white cliffs",
+    "flags": [
+      "NonDescript",
+      "Climbable"
+    ],
+    "props": {},
+    "synonyms": [
+      "CLIFF",
+      "CLIFFS"
+    ],
+    "adjectives": [
+      "WHITE"
+    ],
+    "actionRoutine": "WCLIF-OBJECT"
+  },
+  {
+    "id": "WRENCH",
+    "kind": "thing",
+    "desc": "wrench",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "SIZE": 10
+    },
+    "synonyms": [
+      "WRENCH",
+      "TOOL",
+      "TOOLS"
+    ],
+    "adjectives": [],
+    "parent": "MAINTENANCE-ROOM"
+  },
+  {
+    "id": "CONTROL-PANEL",
+    "kind": "thing",
+    "desc": "control panel",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "PANEL"
+    ],
+    "adjectives": [
+      "CONTROL"
+    ],
+    "parent": "DAM-ROOM"
+  },
+  {
+    "id": "NEST",
+    "kind": "container",
+    "desc": "bird's nest",
+    "flags": [
+      "Takeable",
+      "Burned",
+      "Container",
+      "Open",
+      "Searchable"
+    ],
+    "props": {
+      "CAPACITY": 20
+    },
+    "synonyms": [
+      "NEST"
+    ],
+    "adjectives": [
+      "BIRDS"
+    ],
+    "fdesc": "Beside you on the branch is a small bird's nest.",
+    "parent": "UP-A-TREE"
+  },
+  {
+    "id": "EGG",
+    "kind": "container",
+    "desc": "jewel-encrusted egg",
+    "flags": [
+      "Takeable",
+      "Container",
+      "Searchable"
+    ],
+    "props": {
+      "VALUE": 5,
+      "TVALUE": 5,
+      "CAPACITY": 6
+    },
+    "synonyms": [
+      "EGG",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "BIRDS",
+      "ENCRUSTED",
+      "JEWELED"
+    ],
+    "fdesc": "In the bird's nest is a large egg encrusted with precious jewels,\napparently scavenged by a childless songbird. The egg is covered with\nfine gold inlay, and ornamented in lapis lazuli and mother-of-pearl.\nUnlike most eggs, this one is hinged and closed with a delicate looking\nclasp. The egg appears extremely fragile.",
+    "parent": "NEST",
+    "actionRoutine": "EGG-OBJECT"
+  },
+  {
+    "id": "BROKEN-EGG",
+    "kind": "container",
+    "desc": "broken jewel-encrusted egg",
+    "flags": [
+      "Takeable",
+      "Container",
+      "Open"
+    ],
+    "props": {
+      "CAPACITY": 6,
+      "TVALUE": 2
+    },
+    "synonyms": [
+      "EGG",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "BROKEN",
+      "BIRDS",
+      "ENCRUSTED",
+      "JEWEL"
+    ],
+    "ldesc": "There is a somewhat ruined egg here."
+  },
+  {
+    "id": "BAUBLE",
+    "kind": "thing",
+    "desc": "beautiful brass bauble",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "VALUE": 1,
+      "TVALUE": 1
+    },
+    "synonyms": [
+      "BAUBLE",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "BRASS",
+      "BEAUTI"
+    ]
+  },
+  {
+    "id": "CANARY",
+    "kind": "thing",
+    "desc": "golden clockwork canary",
+    "flags": [
+      "Takeable",
+      "Searchable"
+    ],
+    "props": {
+      "VALUE": 6,
+      "TVALUE": 4
+    },
+    "synonyms": [
+      "CANARY",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "CLOCKWORK",
+      "GOLD",
+      "GOLDEN"
+    ],
+    "fdesc": "There is a golden clockwork canary nestled in the egg. It has ruby\neyes and a silver beak. Through a crystal window below its left\nwing you can see intricate machinery inside. It appears to have\nwound down.",
+    "parent": "EGG",
+    "actionRoutine": "CANARY-OBJECT"
+  },
+  {
+    "id": "BROKEN-CANARY",
+    "kind": "thing",
+    "desc": "broken clockwork canary",
+    "flags": [
+      "Takeable"
+    ],
+    "props": {
+      "TVALUE": 1
+    },
+    "synonyms": [
+      "CANARY",
+      "TREASURE"
+    ],
+    "adjectives": [
+      "BROKEN",
+      "CLOCKWORK",
+      "GOLD",
+      "GOLDEN"
+    ],
+    "fdesc": "There is a golden clockwork canary nestled in the egg. It seems to\nhave recently had a bad experience. The mountings for its jewel-like\neyes are empty, and its silver beak is crumpled. Through a cracked\ncrystal window below its left wing you can see the remains of\nintricate machinery. It is not clear what result winding it would\nhave, as the mainspring seems sprung.",
+    "parent": "BROKEN-EGG",
+    "actionRoutine": "CANARY-OBJECT"
+  }
+]
