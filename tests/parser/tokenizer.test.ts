@@ -1,24 +1,24 @@
+/**
+ * Tokenizer tests — Wave C1
+ *
+ * Tests for the new Token[] tokenizer.  Key behaviors:
+ *  - SIBREAKS (period, comma, double-quote) become standalone tokens
+ *  - Nothing is dropped up front — articles, buzzwords, structural words
+ *    (AND/ALL/BUT/THEN) are all preserved for the scan loop to handle
+ *  - "n,e" → ['n', ',', 'e']   (comma is a standalone SIBREAK token)
+ *  - "then" is preserved as-is (not consumed as a segment boundary here)
+ *  - splitChained is gone — lazy drive is Wave C9 / Game.turn
+ */
 import { describe, expect, it } from 'vitest';
-import { tokenize, splitChained } from '../../src/engine/parser/tokenizer';
+import { tokenize, SIBREAK_CHARS } from '../../src/engine/parser/tokenizer';
 
-describe('tokenize', () => {
+describe('tokenize — basic word splitting', () => {
   it('lowercases input', () => {
     expect(tokenize('OPEN MAILBOX')).toEqual(['open', 'mailbox']);
   });
 
-  it('drops articles: a, an, the', () => {
-    expect(tokenize('open the mailbox')).toEqual(['open', 'mailbox']);
-    expect(tokenize('take a lamp')).toEqual(['take', 'lamp']);
-    expect(tokenize('read an inscription')).toEqual(['read', 'inscription']);
-  });
-
-  it('keeps adjectives', () => {
-    expect(tokenize('open the small mailbox')).toEqual(['open', 'small', 'mailbox']);
-    expect(tokenize('take brass lantern')).toEqual(['take', 'brass', 'lantern']);
-  });
-
   it('handles extra whitespace', () => {
-    expect(tokenize('  open   the   mailbox  ')).toEqual(['open', 'mailbox']);
+    expect(tokenize('  open   the   mailbox  ')).toEqual(['open', 'the', 'mailbox']);
   });
 
   it('produces an empty array for blank input', () => {
@@ -32,44 +32,90 @@ describe('tokenize', () => {
   });
 });
 
-describe('splitChained', () => {
-  it('returns a single segment for a plain command', () => {
-    expect(splitChained('open mailbox')).toEqual([['open', 'mailbox']]);
+describe('tokenize — articles and buzzwords are PRESERVED (not dropped)', () => {
+  it('keeps "the" in the token stream', () => {
+    expect(tokenize('open the mailbox')).toEqual(['open', 'the', 'mailbox']);
   });
 
-  it('splits on "." producing tokenized segments', () => {
-    const result = splitChained('n. e. take lamp');
-    expect(result).toHaveLength(3);
-    expect(result[0]).toEqual(['n']);
-    expect(result[1]).toEqual(['e']);
-    expect(result[2]).toEqual(['take', 'lamp']);
+  it('keeps "a" in the token stream', () => {
+    expect(tokenize('take a lamp')).toEqual(['take', 'a', 'lamp']);
   });
 
-  it('splits on "then"', () => {
-    const result = splitChained('open mailbox then read leaflet');
-    expect(result).toHaveLength(2);
-    expect(result[0]).toEqual(['open', 'mailbox']);
-    expect(result[1]).toEqual(['read', 'leaflet']);
+  it('keeps "an" in the token stream', () => {
+    expect(tokenize('read an inscription')).toEqual(['read', 'an', 'inscription']);
   });
 
-  it('splits on both "." and "then" in one input', () => {
-    const result = splitChained('n. open door then go west');
-    expect(result).toHaveLength(3);
-    expect(result[0]).toEqual(['n']);
-    expect(result[1]).toEqual(['open', 'door']);
-    expect(result[2]).toEqual(['go', 'west']);
+  it('keeps "and" as a structural token', () => {
+    expect(tokenize('take lamp and sword')).toEqual(['take', 'lamp', 'and', 'sword']);
   });
 
-  it('drops articles within each chained segment', () => {
-    const result = splitChained('open the mailbox. read the leaflet');
-    expect(result[0]).toEqual(['open', 'mailbox']);
-    expect(result[1]).toEqual(['read', 'leaflet']);
+  it('keeps "all" as a structural token', () => {
+    expect(tokenize('take all')).toEqual(['take', 'all']);
   });
 
-  it('ignores empty segments from consecutive separators', () => {
-    const result = splitChained('n.. e');
-    expect(result).toHaveLength(2);
-    expect(result[0]).toEqual(['n']);
-    expect(result[1]).toEqual(['e']);
+  it('keeps "but" as a structural token', () => {
+    expect(tokenize('take all but lamp')).toEqual(['take', 'all', 'but', 'lamp']);
+  });
+
+  it('keeps "then" as a structural token', () => {
+    expect(tokenize('open mailbox then read it')).toEqual([
+      'open', 'mailbox', 'then', 'read', 'it',
+    ]);
+  });
+});
+
+describe('tokenize — SIBREAKS become standalone tokens', () => {
+  it('period becomes a standalone token', () => {
+    expect(tokenize('n. e')).toEqual(['n', '.', 'e']);
+  });
+
+  it('period with no trailing word', () => {
+    expect(tokenize('n.')).toEqual(['n', '.']);
+  });
+
+  it('comma becomes a standalone token', () => {
+    expect(tokenize('n,e')).toEqual(['n', ',', 'e']);
+  });
+
+  it('"n,e,s" produces comma-delimited direction tokens', () => {
+    expect(tokenize('n,e,s')).toEqual(['n', ',', 'e', ',', 's']);
+  });
+
+  it('double-quote becomes a standalone token', () => {
+    const result = tokenize('say "hello"');
+    expect(result).toEqual(['say', '"', 'hello', '"']);
+  });
+
+  it('consecutive periods each become standalone tokens', () => {
+    // "n.. e" → n, ., ., e  (two separate SIBREAK tokens)
+    expect(tokenize('n.. e')).toEqual(['n', '.', '.', 'e']);
+  });
+
+  it('period directly attached to a word', () => {
+    expect(tokenize('open mailbox. read it')).toEqual([
+      'open', 'mailbox', '.', 'read', 'it',
+    ]);
+  });
+
+  it('comma directly attached to words', () => {
+    expect(tokenize('north,east,south')).toEqual([
+      'north', ',', 'east', ',', 'south',
+    ]);
+  });
+});
+
+describe('tokenize — adjectives and nouns preserved', () => {
+  it('keeps adjectives', () => {
+    expect(tokenize('open the small mailbox')).toEqual(['open', 'the', 'small', 'mailbox']);
+    expect(tokenize('take brass lantern')).toEqual(['take', 'brass', 'lantern']);
+  });
+});
+
+describe('SIBREAK_CHARS constant', () => {
+  it('contains the three SIBREAK characters', () => {
+    expect(SIBREAK_CHARS.has('.')).toBe(true);
+    expect(SIBREAK_CHARS.has(',')).toBe(true);
+    expect(SIBREAK_CHARS.has('"')).toBe(true);
+    expect(SIBREAK_CHARS.size).toBe(3);
   });
 });

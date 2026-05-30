@@ -4,7 +4,67 @@ import type { World } from '../../domain/world.js';
 import type { GameObject } from '../../domain/game-object.js';
 import type { ParsedCommand, ParseResult } from './types.js';
 import { Flag } from '../../domain/flags.js';
-import { tokenize, splitChained } from './tokenizer.js';
+import { tokenize, SIBREAK_CHARS } from './tokenizer.js';
+
+// ---------------------------------------------------------------------------
+// Wave B–era compatibility adapter.
+//
+// The new tokenize() (Wave C1) emits Token[] with SIBREAKS as standalone
+// tokens and NOTHING dropped.  The old parser paths (parse / parseChained)
+// still expect a filtered string[] per segment.  Rather than rewriting the
+// whole scanner here (that is Wave C3+), we keep a private adapter that:
+//   1. Calls the new tokenize() to get the canonical token stream.
+//   2. Splits at the first SIBREAK token (period / comma — take segment 0).
+//   3. Strips articles (the/a/an) from the segment tokens.
+//
+// This adapter is intentionally NOT exported.  Wave C will delete it when
+// it rewrites parse() against the full scan-loop pipeline.
+// ---------------------------------------------------------------------------
+
+const ARTICLES = new Set(['a', 'an', 'the']);
+
+/**
+ * Tokenize a single input segment for the Wave-B parser.
+ * Splits at the first SIBREAK token and drops articles — matching the
+ * pre-C1 behaviour the old parse() paths depended on.
+ */
+function tokenizeSegment(input: string): string[] {
+  const toks = tokenize(input);
+  const result: string[] = [];
+  for (const tok of toks) {
+    if (SIBREAK_CHARS.has(tok)) break;   // stop at first period/comma/quote
+    if (!ARTICLES.has(tok)) result.push(tok);
+  }
+  return result;
+}
+
+/**
+ * Split an input string into segments on SIBREAK tokens (period/comma)
+ * and on the word "then", then tokenize each segment (articles stripped).
+ * This replaces the old splitChained() export from tokenizer.ts.
+ * Kept private here — Wave C9 will delete it when the lazy drive lands.
+ */
+function splitSegments(input: string): string[][] {
+  // Use the new tokenize to get the canonical token stream.
+  const allToks = tokenize(input);
+  const segments: string[][] = [];
+  let current: string[] = [];
+
+  for (const tok of allToks) {
+    if (SIBREAK_CHARS.has(tok) || tok === 'then') {
+      // Flush the current segment (articles stripped).
+      const filtered = current.filter(t => !ARTICLES.has(t));
+      if (filtered.length > 0) segments.push(filtered);
+      current = [];
+    } else {
+      current.push(tok);
+    }
+  }
+  const filtered = current.filter(t => !ARTICLES.has(t));
+  if (filtered.length > 0) segments.push(filtered);
+
+  return segments;
+}
 import {
   lookupVerb,
   DIRECTIONS,
@@ -355,7 +415,8 @@ export class Parser {
     player: GameObject | null,
     world: World,
   ): ParseResult {
-    const tokens = tokenize(input);
+    // Use the Wave-B adapter: split at first SIBREAK, drop articles.
+    const tokens = tokenizeSegment(input);
     if (tokens.length === 0) {
       return { kind: 'fail', message: 'I beg your pardon?' };
     }
@@ -462,7 +523,8 @@ export class Parser {
     player: GameObject | null,
     world: World,
   ): ParseResult[] {
-    const segments = splitChained(input);
+    // Use the Wave-B adapter: split on SIBREAK/then, drop articles per segment.
+    const segments = splitSegments(input);
     if (segments.length === 0) return [{ kind: 'fail', message: 'I beg your pardon?' }];
 
     const results: ParseResult[] = [];
