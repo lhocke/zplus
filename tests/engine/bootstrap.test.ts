@@ -25,6 +25,19 @@ describe('createGame() default', () => {
     const output = g.start();
     expect(output).toContain('West of House');
   });
+
+  it('start() does not list the player actor ("cretin") in room contents', () => {
+    const g = createGame();
+    const output = g.start();
+    expect(output).not.toContain('cretin');
+  });
+
+  it('turn(north) does not list "cretin" in room contents', () => {
+    const g = createGame();
+    g.start();
+    const result = g.turn('north');
+    expect(result.output).not.toContain('cretin');
+  });
 });
 
 // ---------------------------------------------------------------------------

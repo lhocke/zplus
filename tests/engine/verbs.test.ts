@@ -168,6 +168,23 @@ describe('verb: look', () => {
     expect(result.output).toContain('lantern');
     expect(result.output).toContain('mailbox');
   });
+
+  it('does not list the player actor ("yourself") in room contents', () => {
+    const fix = makeFixture();
+    // Player is in the clearing; look should NOT list "yourself" as a room item.
+    const result = executeVerb(ctx(fix, { verb: 'look' }));
+    expect(result.output).not.toContain('yourself');
+  });
+
+  it('does not list items carried by the player as room contents when moving', () => {
+    const fix = makeFixture();
+    // Move lantern to player inventory, then go to FOREST and look.
+    fix.lantern.moveTo(fix.player);
+    const goResult = executeVerb(ctx(fix, { verb: 'walk', prep: 'north' }));
+    // The description of FOREST should not mention "lantern" as a loose item.
+    expect(goResult.output).not.toContain('lantern');
+    expect(goResult.output).not.toContain('yourself');
+  });
 });
 
 describe('verb: go', () => {

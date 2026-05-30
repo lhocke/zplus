@@ -76,6 +76,39 @@ function makeFixture(): Fixture {
 // Tests: Game.start()
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Tests: player exclusion from room descriptions
+// ---------------------------------------------------------------------------
+
+describe('player not listed in room contents', () => {
+  it('start() does not list the player (yourself) in room contents', () => {
+    const { game } = makeFixture();
+    const output = game.start();
+    expect(output).not.toContain('yourself');
+  });
+
+  it('turn(north) output does not list the player in room contents', () => {
+    const { game } = makeFixture();
+    game.start();
+    const result = game.turn('north');
+    expect(result.output).not.toContain('yourself');
+  });
+
+  it('a held item (in player inventory) is not listed as a room item', () => {
+    const { game } = makeFixture();
+    game.start();
+    // Take leaflet from mailbox, then open mailbox; leaflet should appear in
+    // "open" result but NOT in a subsequent look.
+    game.turn('open mailbox');
+    game.turn('take leaflet');
+    // Now look — leaflet is in inventory (player), not in the room.
+    const result = game.turn('look');
+    // The room listing should not show the leaflet as a loose room object.
+    // (It may appear in some contexts but not as "You can see: leaflet.")
+    expect(result.output).not.toMatch(/You can see:.*leaflet/);
+  });
+});
+
 describe('Game.start()', () => {
   it('returns text containing the game title', () => {
     const { game } = makeFixture();

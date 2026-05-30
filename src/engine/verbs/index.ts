@@ -57,8 +57,11 @@ function result(output: string, moved = false): VerbResult {
 /**
  * Produce the room description string: name, ldesc, and a list of visible
  * items on the floor (non-player, non-invisible direct children of the room).
+ *
+ * `player` is excluded from the listing; objects carried by the player are
+ * already children of the player (not the room) and therefore never appear.
  */
-function describeRoom(room: Room): string {
+function describeRoom(room: Room, player: GameObject): string {
   const lines: string[] = [];
   lines.push(room.desc);
   if (room.ldesc) lines.push(room.ldesc);
@@ -66,8 +69,8 @@ function describeRoom(room: Room): string {
   const loose: string[] = [];
   for (const child of room.children) {
     if (child.has(Flag.Invisible)) continue;
-    // Skip the player actor itself.
-    if (child.has(Flag.Invisible)) continue;
+    // Never list the player actor itself as a room item.
+    if (child === player) continue;
     loose.push(child.desc);
   }
   if (loose.length > 0) {
@@ -81,7 +84,7 @@ function describeRoom(room: Room): string {
 // --------------------------------------------------------------------------
 
 function verbLook(ctx: VerbContext): VerbResult {
-  return result(describeRoom(ctx.here));
+  return result(describeRoom(ctx.here, ctx.player));
 }
 
 function verbGo(ctx: VerbContext): VerbResult {
@@ -103,7 +106,7 @@ function verbGo(ctx: VerbContext): VerbResult {
         const dest = ctx.world.get(destId);
         if (dest !== undefined) {
           ctx.player.moveTo(dest);
-          return result(describeRoom(dest as Room), true);
+          return result(describeRoom(dest as Room, ctx.player), true);
         }
       }
       // Resolver returned undefined: the routine decided movement is blocked.
@@ -126,7 +129,7 @@ function verbGo(ctx: VerbContext): VerbResult {
   }
 
   ctx.player.moveTo(dest);
-  return result(describeRoom(dest as Room), true);
+  return result(describeRoom(dest as Room, ctx.player), true);
 }
 
 function verbTake(ctx: VerbContext): VerbResult {
