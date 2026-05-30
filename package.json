@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "extract": "tsx tools/extract-zil/extract.ts",
+    "extract:roomtext": "tsx tools/extract-zil/extract-room-text.ts",
     "play": "tsx tools/play.ts",
     "typecheck": "tsc --noEmit"
   },

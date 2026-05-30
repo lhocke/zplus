@@ -1,0 +1,1183 @@
+[
+  {
+    "id": "WEST-OF-HOUSE",
+    "name": "West of House",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1239
+    },
+    "mlook": [
+      "You are standing in an open field west of a white house, with a boarded front door.",
+      "A secret path leads southwest into the forest."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 7
+    }
+  },
+  {
+    "id": "STONE-BARROW",
+    "name": "Stone Barrow",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1254
+    },
+    "ldesc": "You are standing in front of a massive barrow of stone. In the east face is a huge stone door which is open. You cannot see into the dark of the tomb."
+  },
+  {
+    "id": "NORTH-OF-HOUSE",
+    "name": "North of House",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1264
+    },
+    "ldesc": "You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees."
+  },
+  {
+    "id": "SOUTH-OF-HOUSE",
+    "name": "South of House",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1280
+    },
+    "ldesc": "You are facing the south side of a white house. There is no door here, and all the windows are boarded."
+  },
+  {
+    "id": "EAST-OF-HOUSE",
+    "name": "Behind House",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1295
+    },
+    "mlook": [
+      "You are behind the white house. A path leads into the forest to the east. In one corner of the house there is a small window which is",
+      "open.",
+      "slightly ajar."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 17
+    }
+  },
+  {
+    "id": "FOREST-1",
+    "name": "Forest",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1309
+    },
+    "ldesc": "This is a forest, with trees in all directions. To the east, there appears to be sunlight."
+  },
+  {
+    "id": "FOREST-2",
+    "name": "Forest",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1324
+    },
+    "ldesc": "This is a dimly lit forest, with large trees all around."
+  },
+  {
+    "id": "MOUNTAINS",
+    "name": "Forest",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1337
+    },
+    "ldesc": "The forest thins out, revealing impassable mountains."
+  },
+  {
+    "id": "FOREST-3",
+    "name": "Forest",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1349
+    },
+    "ldesc": "This is a dimly lit forest, with large trees all around."
+  },
+  {
+    "id": "PATH",
+    "name": "Forest Path",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1363
+    },
+    "ldesc": "This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path."
+  },
+  {
+    "id": "UP-A-TREE",
+    "name": "Up a Tree",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1379
+    },
+    "mlook": [
+      "You are about 10 feet above the ground nestled among some large branches. The nearest branch above you is above your reach.",
+      "On the ground below you can see:",
+      "."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 2880
+    }
+  },
+  {
+    "id": "GRATING-CLEARING",
+    "name": "Clearing",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1388
+    },
+    "mlook": [
+      "You are in a clearing, with a forest surrounding you on all sides. A path leads south.",
+      "There is an open grating, descending into darkness.",
+      "There is a grating securely fastened into the ground."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 815
+    }
+  },
+  {
+    "id": "CLEARING",
+    "name": "Clearing",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1410
+    },
+    "ldesc": "You are in a small clearing in a well marked forest path that extends to the east and west."
+  },
+  {
+    "id": "KITCHEN",
+    "name": "Kitchen",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1429
+    },
+    "mlook": [
+      "You are in the kitchen of the white house. A table seems to have been used recently for the preparation of food. A passage leads to the west and a dark staircase can be seen leading upward. A dark chimney leads down and to the east is a small window which is",
+      "open.",
+      "slightly ajar."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 385
+    }
+  },
+  {
+    "id": "ATTIC",
+    "name": "Attic",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1443
+    },
+    "ldesc": "This is the attic. The only exit is a stairway leading down."
+  },
+  {
+    "id": "LIVING-ROOM",
+    "name": "Living Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1451
+    },
+    "mlook": [
+      "You are in the living room. There is a doorway to the east",
+      ". To the west is a cyclops-shaped opening in an old wooden door, above which is some strange gothic lettering,",
+      ", a wooden door with strange gothic lettering to the west, which appears to be nailed shut,",
+      "a trophy case,",
+      "and a rug lying beside an open trap door.",
+      "and a closed trap door at your feet.",
+      "and an open trap door at your feet.",
+      "and a large oriental rug in the center of the room."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 449
+    }
+  },
+  {
+    "id": "CELLAR",
+    "name": "Cellar",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1466
+    },
+    "mlook": [
+      "You are in a dark and damp cellar with a narrow passageway leading north, and a crawlway to the south. On the west is the bottom of a steep metal ramp which is unclimbable."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 531
+    }
+  },
+  {
+    "id": "TROLL-ROOM",
+    "name": "The Troll Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1479
+    },
+    "ldesc": "This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls."
+  },
+  {
+    "id": "EAST-OF-CHASM",
+    "name": "East of Chasm",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1494
+    },
+    "ldesc": "You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east."
+  },
+  {
+    "id": "GALLERY",
+    "name": "Gallery",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1507
+    },
+    "ldesc": "This is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits."
+  },
+  {
+    "id": "STUDIO",
+    "name": "Studio",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1518
+    },
+    "ldesc": "This appears to have been an artist's studio. The walls and floors are splattered with paints of 69 different colors. Strangely enough, nothing of value is hanging here. At the south end of the room is an open door (also covered with paint). A dark and narrow chimney leads up from a fireplace; although you might be able to get up it, it seems unlikely you could get back down."
+  },
+  {
+    "id": "MAZE-1",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1538
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "MAZE-2",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1548
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "MAZE-3",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1557
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "MAZE-4",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1566
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "DEAD-END-1",
+    "name": "Dead End",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1575
+    },
+    "ldesc": "You have come to a dead end in the maze."
+  },
+  {
+    "id": "MAZE-5",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1582
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike. A skeleton, probably the remains of a luckless adventurer, lies here."
+  },
+  {
+    "id": "DEAD-END-2",
+    "name": "Dead End",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1592
+    },
+    "ldesc": "You have come to a dead end in the maze."
+  },
+  {
+    "id": "MAZE-6",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1599
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "MAZE-7",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1609
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "MAZE-8",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1620
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "DEAD-END-3",
+    "name": "Dead End",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1629
+    },
+    "ldesc": "You have come to a dead end in the maze."
+  },
+  {
+    "id": "MAZE-9",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1636
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "MAZE-10",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1648
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "MAZE-11",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1657
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "GRATING-ROOM",
+    "name": "Grating Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1667
+    },
+    "mlook": [
+      "You are in a small room near the maze. There are twisty passages in the immediate vicinity.",
+      "Above you is an open grating with sunlight pouring in.",
+      "Above you is a grating.",
+      "Above you is a grating locked with a skull-and-crossbones lock."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 833
+    }
+  },
+  {
+    "id": "MAZE-12",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1677
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "DEAD-END-4",
+    "name": "Dead End",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1688
+    },
+    "ldesc": "You have come to a dead end in the maze."
+  },
+  {
+    "id": "MAZE-13",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1695
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "MAZE-14",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1705
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "MAZE-15",
+    "name": "Maze",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1715
+    },
+    "ldesc": "This is part of a maze of twisty little passages, all alike."
+  },
+  {
+    "id": "CYCLOPS-ROOM",
+    "name": "Cyclops Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1728
+    },
+    "mlook": [
+      "This room has an exit on the northwest, and a staircase leading up.",
+      "The cyclops is sleeping blissfully at the foot of the stairs.",
+      "The east wall, previously solid, now has a cyclops-sized opening in it.",
+      "A cyclops, who looks prepared to eat horses (much less mere adventurers), blocks the staircase. From his state of health, and the bloodstains on the walls, you gather that he is not very friendly, though he likes people.",
+      "The cyclops is standing in the corner, eyeing you closely. I don't think he likes you very much. He looks extremely hungry, even for a cyclops.",
+      "The cyclops, having eaten the hot peppers, appears to be gasping. His enflamed tongue protrudes from his man-sized mouth."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 1616
+    }
+  },
+  {
+    "id": "STRANGE-PASSAGE",
+    "name": "Strange Passage",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1740
+    },
+    "ldesc": "This is a long passage. To the west is one entrance. On the east there is an old wooden door, with a large opening in it (about cyclops sized)."
+  },
+  {
+    "id": "TREASURE-ROOM",
+    "name": "Treasure Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1752
+    },
+    "ldesc": "This is a large room, whose east wall is solid granite. A number of discarded bags, which crumble at your touch, are scattered about on the floor. There is an exit down a staircase."
+  },
+  {
+    "id": "RESERVOIR-SOUTH",
+    "name": "Reservoir South",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1769
+    },
+    "mlook": [
+      "You are in a long room, to the north of which was formerly a lake. However, with the water level lowered, there is merely a wide stream running through the center of the room.",
+      "You are in a long room. To the north is a large lake, too deep to cross. You notice, however, that the water level appears to be dropping at a rapid rate. Before long, it might be possible to cross to the other side from here.",
+      "You are in a long room, to the north of which is a wide area which was formerly a reservoir, but now is merely a stream. You notice, however, that the level of the stream is rising quickly and that before long it will be impossible to cross here.",
+      "You are in a long room on the south shore of a large lake, far too deep and wide for crossing.",
+      "There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 1415
+    }
+  },
+  {
+    "id": "RESERVOIR",
+    "name": "Reservoir",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1783
+    },
+    "mlook": [
+      "You are on what used to be a large lake, but which is now a large mud pile. There are \"shores\" to the north and south.",
+      "You are on the lake. Beaches can be seen north and south. Upstream a small stream enters the lake through a narrow cleft in the rocks. The dam can be seen downstream."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 1444
+    }
+  },
+  {
+    "id": "RESERVOIR-NORTH",
+    "name": "Reservoir North",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1796
+    },
+    "mlook": [
+      "You are in a large cavernous room, the south of which was formerly a lake. However, with the water level lowered, there is merely a wide stream running through there.",
+      "You are in a large cavernous area. To the south is a wide lake, whose water level appears to be falling rapidly.",
+      "You are in a cavernous area, to the south of which is a very wide stream. The level of the stream is rising rapidly, and it appears that before long it will be impossible to cross to the other side.",
+      "You are in a large cavernous room, north of a large lake.",
+      "There is a slimy stairway leaving the room to the north."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 1464
+    }
+  },
+  {
+    "id": "STREAM-VIEW",
+    "name": "Stream View",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1807
+    },
+    "ldesc": "You are standing on a path beside a gently flowing stream. The path follows the stream, which flows from west to east."
+  },
+  {
+    "id": "IN-STREAM",
+    "name": "Stream",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1819
+    },
+    "ldesc": "You are on the gently flowing stream. The upstream route is too narrow to navigate, and the downstream route is invisible due to twisting walls. There is a narrow beach to land on."
+  },
+  {
+    "id": "MIRROR-ROOM-1",
+    "name": "Mirror Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1839
+    },
+    "mlook": [
+      "You are in a large square room with tall ceilings. On the south wall is an enormous mirror which fills the entire wall. There are exits on the other three sides of the room.",
+      "Unfortunately, the mirror has been destroyed by your recklessness."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 958
+    }
+  },
+  {
+    "id": "MIRROR-ROOM-2",
+    "name": "Mirror Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1848
+    },
+    "mlook": [
+      "You are in a large square room with tall ceilings. On the south wall is an enormous mirror which fills the entire wall. There are exits on the other three sides of the room.",
+      "Unfortunately, the mirror has been destroyed by your recklessness."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 958
+    }
+  },
+  {
+    "id": "SMALL-CAVE",
+    "name": "Cave",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1857
+    },
+    "ldesc": "This is a tiny cave with entrances west and north, and a staircase leading down."
+  },
+  {
+    "id": "TINY-CAVE",
+    "name": "Cave",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1870
+    },
+    "ldesc": "This is a tiny cave with entrances west and north, and a dark, forbidding staircase leading down."
+  },
+  {
+    "id": "COLD-PASSAGE",
+    "name": "Cold Passage",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1883
+    },
+    "ldesc": "This is a cold and damp corridor where a long east-west passageway turns into a southward path."
+  },
+  {
+    "id": "NARROW-PASSAGE",
+    "name": "Narrow Passage",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1893
+    },
+    "ldesc": "This is a long and narrow corridor where a long north-south passageway briefly narrows even further."
+  },
+  {
+    "id": "WINDING-PASSAGE",
+    "name": "Winding Passage",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1903
+    },
+    "ldesc": "This is a winding passage. It seems that there are only exits on the east and north."
+  },
+  {
+    "id": "TWISTING-PASSAGE",
+    "name": "Twisting Passage",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1913
+    },
+    "ldesc": "This is a winding passage. It seems that there are only exits on the east and north."
+  },
+  {
+    "id": "ATLANTIS-ROOM",
+    "name": "Atlantis Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1923
+    },
+    "ldesc": "This is an ancient room, long under water. There is an exit to the south and a staircase leading up."
+  },
+  {
+    "id": "EW-PASSAGE",
+    "name": "East-West Passage",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1938
+    },
+    "ldesc": "This is a narrow east-west passageway. There is a narrow stairway leading down at the north end of the room."
+  },
+  {
+    "id": "ROUND-ROOM",
+    "name": "Round Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1952
+    },
+    "ldesc": "This is a circular stone room with passages in all directions. Several of them have unfortunately been blocked by cave-ins."
+  },
+  {
+    "id": "DEEP-CANYON",
+    "name": "Deep Canyon",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1965
+    },
+    "mlook": [
+      "You are on the south edge of a deep canyon. Passages lead off to the east, northwest and southwest. A stairway leads down.",
+      "You can hear a loud roaring sound, like that of rushing water, from below.",
+      "You can hear the sound of flowing water from below."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 1730
+    }
+  },
+  {
+    "id": "DAMP-CAVE",
+    "name": "Damp Cave",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1976
+    },
+    "ldesc": "This cave has exits to the west and east, and narrows to a crack toward the south. The earth is particularly damp here."
+  },
+  {
+    "id": "LOUD-ROOM",
+    "name": "Loud Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1988
+    },
+    "mlook": [
+      "This is a large room with a ceiling which cannot be detected from the ground. There is a narrow passage from east to west and a stone stairway leading upward.",
+      "The room is eerie in its quietness.",
+      "The room is deafeningly loud with an undetermined rushing sound. The sound seems to reverberate from all of the walls, making it difficult even to think."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 1660
+    }
+  },
+  {
+    "id": "NS-PASSAGE",
+    "name": "North-South Passage",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 1998
+    },
+    "ldesc": "This is a high north-south passage, which forks to the northeast."
+  },
+  {
+    "id": "CHASM-ROOM",
+    "name": "Chasm",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2008
+    },
+    "ldesc": "A chasm runs southwest to northeast and the path follows it. You are on the south side of the chasm, where a crack opens into a passage."
+  },
+  {
+    "id": "ENTRANCE-TO-HADES",
+    "name": "Entrance to Hades",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2027
+    },
+    "mlook": [
+      "You are outside a large gateway, on which is inscribed\n\nAbandon every hope all ye who enter here!\n\nThe gate is open; through it you can see a desolation, with a pile of mangled bodies in one corner. Thousands of voices, lamenting some hideous fate, can be heard.",
+      "The way through the gate is barred by evil spirits, who jeer at your attempts to pass."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 1058
+    }
+  },
+  {
+    "id": "LAND-OF-LIVING-DEAD",
+    "name": "Land of the Dead",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2040
+    },
+    "ldesc": "You have entered the Land of the Living Dead. Thousands of lost souls can be heard weeping and moaning. In the corner are stacked the remains of dozens of previous adventurers less fortunate than yourself. A passage exits to the north."
+  },
+  {
+    "id": "ENGRAVINGS-CAVE",
+    "name": "Engravings Cave",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2057
+    },
+    "ldesc": "You have entered a low cave with passages leading northwest and east."
+  },
+  {
+    "id": "EGYPT-ROOM",
+    "name": "Egyptian Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2066
+    },
+    "ldesc": "This is a room which looks like an Egyptian tomb. There is an ascending staircase to the west."
+  },
+  {
+    "id": "DOME-ROOM",
+    "name": "Dome Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2077
+    },
+    "mlook": [
+      "You are at the periphery of a large dome, which forms the ceiling of another room below. Protecting you from a precipitous drop is a wooden railing which circles the dome.",
+      "Hanging down from the railing is a rope which ends about ten feet from the floor below."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 1030
+    }
+  },
+  {
+    "id": "TORCH-ROOM",
+    "name": "Torch Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2087
+    },
+    "mlook": [
+      "This is a large room with a prominent doorway leading to a down staircase. Above you is a large dome. Up around the edge of the dome (20 feet up) is a wooden railing. In the center of the room sits a white marble pedestal.",
+      "A piece of rope descends from the railing above, ending some five feet above your head."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 1018
+    }
+  },
+  {
+    "id": "NORTH-TEMPLE",
+    "name": "Temple",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2098
+    },
+    "ldesc": "This is the north end of a large temple. On the east wall is an ancient inscription, probably a prayer in a long-forgotten language. Below the prayer is a staircase leading down. The west wall is solid granite. The exit to the north end of the room is through huge marble pillars."
+  },
+  {
+    "id": "SOUTH-TEMPLE",
+    "name": "Altar",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2116
+    },
+    "ldesc": "This is the south end of a large temple. In front of you is what appears to be an altar. In one corner is a small hole in the floor which leads into darkness. You probably could not get back up it."
+  },
+  {
+    "id": "DAM-ROOM",
+    "name": "Dam",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2135
+    },
+    "mlook": [
+      "You are standing on the top of the Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down.",
+      "The water level behind the dam is low: The sluice gates have been opened. Water rushes through the dam and downstream.",
+      "The sluice gates are open, and water rushes through the dam. The water level behind the dam is still high.",
+      "The sluice gates are closed. The water level in the reservoir is quite low, but the level is rising quickly.",
+      "The sluice gates on the dam are closed. Behind the dam, there can be seen a wide reservoir. Water is pouring over the top of the now abandoned dam.",
+      "There is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble",
+      "which is glowing serenely",
+      "."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 1156
+    }
+  },
+  {
+    "id": "DAM-LOBBY",
+    "name": "Dam Lobby",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2147
+    },
+    "ldesc": "This room appears to have been the waiting room for groups touring the dam. There are open doorways here to the north and east marked \"Private\", and there is a path leading south over the top of the dam."
+  },
+  {
+    "id": "MAINTENANCE-ROOM",
+    "name": "Maintenance Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2159
+    },
+    "ldesc": "This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south."
+  },
+  {
+    "id": "DAM-BASE",
+    "name": "Dam Base",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2176
+    },
+    "ldesc": "You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream."
+  },
+  {
+    "id": "RIVER-1",
+    "name": "Frigid River",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2190
+    },
+    "ldesc": "You are on the Frigid River in the vicinity of the Dam. The river flows quietly here. There is a landing on the west shore."
+  },
+  {
+    "id": "RIVER-2",
+    "name": "Frigid River",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2204
+    },
+    "ldesc": "The river turns a corner here making it impossible to see the Dam. The White Cliffs loom on the east bank and large rocks prevent landing on the west."
+  },
+  {
+    "id": "RIVER-3",
+    "name": "Frigid River",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2219
+    },
+    "ldesc": "The river descends here into a valley. There is a narrow beach on the west shore below the cliffs. In the distance a faint rumbling can be heard."
+  },
+  {
+    "id": "WHITE-CLIFFS-NORTH",
+    "name": "White Cliffs Beach",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2233
+    },
+    "ldesc": "You are on a narrow strip of beach which runs along the base of the White Cliffs. There is a narrow path heading south along the Cliffs and a tight passage leading west into the cliffs themselves."
+  },
+  {
+    "id": "WHITE-CLIFFS-SOUTH",
+    "name": "White Cliffs Beach",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2246
+    },
+    "ldesc": "You are on a rocky, narrow strip of beach beside the Cliffs. A narrow path leads north along the shore."
+  },
+  {
+    "id": "RIVER-4",
+    "name": "Frigid River",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2258
+    },
+    "ldesc": "The river is running faster here and the sound ahead appears to be that of rushing water. On the east shore is a sandy beach. A small area of beach can also be seen below the cliffs on the west shore."
+  },
+  {
+    "id": "RIVER-5",
+    "name": "Frigid River",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2274
+    },
+    "ldesc": "The sound of rushing water is nearly unbearable here. On the east shore is a large landing area."
+  },
+  {
+    "id": "SHORE",
+    "name": "Shore",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2286
+    },
+    "ldesc": "You are on the east shore of the river. The water here seems somewhat treacherous. A path travels from north to south here, the south end quickly turning around a sharp corner."
+  },
+  {
+    "id": "SANDY-BEACH",
+    "name": "Sandy Beach",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2298
+    },
+    "ldesc": "You are on a large sandy beach on the east shore of the river, which is flowing quickly by. A path runs beside the river to the south here, and a passage is partially buried in sand to the northeast."
+  },
+  {
+    "id": "SANDY-CAVE",
+    "name": "Sandy Cave",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2311
+    },
+    "ldesc": "This is a sand-filled cave whose exit is to the southwest."
+  },
+  {
+    "id": "ARAGAIN-FALLS",
+    "name": "Aragain Falls",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2319
+    },
+    "mlook": [
+      "You are at the top of Aragain Falls, an enormous waterfall with a drop of about 450 feet. The only path here is on the north end.",
+      "A solid rainbow spans the falls.",
+      "A beautiful rainbow can be seen over the falls and to the west."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 2621
+    }
+  },
+  {
+    "id": "ON-RAINBOW",
+    "name": "On the Rainbow",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2330
+    },
+    "ldesc": "You are on top of a rainbow (I bet you never thought you would walk on a rainbow), with a magnificent view of the Falls. The rainbow travels east-west here."
+  },
+  {
+    "id": "END-OF-RAINBOW",
+    "name": "End of Rainbow",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2342
+    },
+    "ldesc": "You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest."
+  },
+  {
+    "id": "CANYON-BOTTOM",
+    "name": "Canyon Bottom",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2358
+    },
+    "ldesc": "You are beneath the walls of the river canyon which may be climbable here. The lesser part of the runoff of Aragain Falls flows by below. To the north is a narrow path."
+  },
+  {
+    "id": "CLIFF-MIDDLE",
+    "name": "Rocky Ledge",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2370
+    },
+    "ldesc": "You are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable."
+  },
+  {
+    "id": "CANYON-VIEW",
+    "name": "Canyon View",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2384
+    },
+    "ldesc": "You are at the top of the Great Canyon on its west wall. From here there is a marvelous view of the canyon and parts of the Frigid River upstream. Across the canyon, the walls of the White Cliffs join the mighty ramparts of the Flathead Mountains to the east. Following the Canyon upstream to the north, Aragain Falls may be seen, complete with rainbow. The mighty Frigid River flows out from a great dark cavern. To the west and south can be seen an immense forest, stretching for miles around. A path leads northwest. It is possible to climb down into the canyon from here."
+  },
+  {
+    "id": "MINE-ENTRANCE",
+    "name": "Mine Entrance",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2418
+    },
+    "ldesc": "You are standing at the entrance of what might have been a coal mine. The shaft enters the west wall, and there is another exit on the south end of the room."
+  },
+  {
+    "id": "SQUEEKY-ROOM",
+    "name": "Squeaky Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2431
+    },
+    "ldesc": "You are in a small room. Strange squeaky sounds may be heard coming from the passage at the north end. You may also escape to the east."
+  },
+  {
+    "id": "BAT-ROOM",
+    "name": "Bat Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2441
+    },
+    "mlook": [
+      "You are in a small room which has doors only to the east and south."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 2478
+    }
+  },
+  {
+    "id": "SHAFT-ROOM",
+    "name": "Shaft Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2449
+    },
+    "ldesc": "This is a large room, in the middle of which is a small shaft descending through the floor into darkness below. To the west and the north are exits from this room. Constructed over the top of the shaft is a metal framework to which a heavy iron chain is attached."
+  },
+  {
+    "id": "SMELLY-ROOM",
+    "name": "Smelly Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2463
+    },
+    "ldesc": "This is a small nondescript room. However, from the direction of a small descending staircase a foul odor can be detected. To the south is a narrow tunnel."
+  },
+  {
+    "id": "GAS-ROOM",
+    "name": "Gas Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2476
+    },
+    "ldesc": "This is a small room which smells strongly of coal gas. There is a short climb up some stairs and a narrow tunnel leading east."
+  },
+  {
+    "id": "LADDER-TOP",
+    "name": "Ladder Top",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2489
+    },
+    "ldesc": "This is a very small room. In the corner is a rickety wooden ladder, leading downward. It might be safe to descend. There is also a staircase leading upward."
+  },
+  {
+    "id": "LADDER-BOTTOM",
+    "name": "Ladder Bottom",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2501
+    },
+    "ldesc": "This is a rather wide room. On one side is the bottom of a narrow wooden ladder. To the west and the south are passages leaving the room."
+  },
+  {
+    "id": "DEAD-END-5",
+    "name": "Dead End",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2514
+    },
+    "ldesc": "You have come to a dead end in the mine."
+  },
+  {
+    "id": "TIMBER-ROOM",
+    "name": "Timber Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2521
+    },
+    "ldesc": "This is a long and narrow passage, which is cluttered with broken timbers. A wide passage comes from the east and turns at the west end of the room into a very narrow passageway. From the west comes a strong draft."
+  },
+  {
+    "id": "LOWER-SHAFT",
+    "name": "Drafty Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2536
+    },
+    "ldesc": "This is a small drafty room in which is the bottom of a long shaft. To the south is a passageway and to the east a very narrow passage. In the shaft can be seen a heavy iron chain."
+  },
+  {
+    "id": "MACHINE-ROOM",
+    "name": "Machine Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2554
+    },
+    "mlook": [
+      "This is a large, cold room whose sole exit is to the north. In one corner there is a machine which is reminiscent of a clothes dryer. On its face is a switch which is labelled \"START\". The switch does not appear to be manipulable by any human hand (unless the fingers are about 1/16 by 1/4 inch). On the front of the machine is a large lid, which is",
+      "open.",
+      "closed."
+    ],
+    "mlookSource": {
+      "file": "zil/1actions.zil",
+      "line": 2488
+    }
+  },
+  {
+    "id": "MINE-1",
+    "name": "Coal Mine",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2565
+    },
+    "ldesc": "This is a nondescript part of a coal mine."
+  },
+  {
+    "id": "MINE-2",
+    "name": "Coal Mine",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2574
+    },
+    "ldesc": "This is a nondescript part of a coal mine."
+  },
+  {
+    "id": "MINE-3",
+    "name": "Coal Mine",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2583
+    },
+    "ldesc": "This is a nondescript part of a coal mine."
+  },
+  {
+    "id": "MINE-4",
+    "name": "Coal Mine",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2592
+    },
+    "ldesc": "This is a nondescript part of a coal mine."
+  },
+  {
+    "id": "SLIDE-ROOM",
+    "name": "Slide Room",
+    "source": {
+      "file": "zil/1dungeon.zil",
+      "line": 2601
+    },
+    "ldesc": "This is a small chamber, which appears to have been part of a coal mine. On the south wall of the chamber the letters \"Granite Wall\" are etched in the rock. To the east is a long passage, and there is a steep metal slide twisting downward. To the north is a small opening."
+  }
+]
