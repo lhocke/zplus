@@ -1,0 +1,9 @@
+# tooling & planning — never commit
+.claude/
+CLAUDE.md
+.superpowers/
+.remember/
+docs/
+# build
+node_modules/
+dist/
