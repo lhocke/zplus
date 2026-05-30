@@ -92,6 +92,20 @@ export class World {
     this.registry = registry;
   }
 
+  /**
+   * Build a World from pre-constructed GameObject instances.  Useful for
+   * tests that want to hand-wire objects without going through the JSON
+   * extractor pipeline.  Containment must already be set on each object
+   * before calling this; the method only populates the id registry.
+   */
+  static fromObjects(objects: GameObject[]): World {
+    const registry = new Map<ObjectId, GameObject>();
+    for (const obj of objects) {
+      registry.set(obj.id, obj);
+    }
+    return new World(registry);
+  }
+
   static fromData(rawEntries: unknown[]): World {
     const entries = rawEntries as ObjectData[];
 
