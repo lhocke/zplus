@@ -56,3 +56,30 @@ export function lookupAction(name: string): ActionHandler | undefined {
 export function lookupPer(name: string): PerRoutine | undefined {
   return PER_ROUTINES[name];
 }
+
+// ---------------------------------------------------------------------------
+// Pre-action (PRE-*) registry — B4 populates the bodies; the slot is open now.
+// ---------------------------------------------------------------------------
+
+const PRE_ACTIONS: Record<string, ActionHandler> = {
+  // Bodies added in Wave B4 (td4-perform-verbs-SPEC.md §6).
+};
+
+/**
+ * Look up a translated PRE-* routine by its ZIL name (e.g. "PRE-TAKE"),
+ * or undefined when no preaction has been registered for that name.
+ *
+ * PERFORM step 3 calls this at dispatch time using the `preAction` string
+ * carried on the resolved `ParsedCommand`.  A truthy return from the handler
+ * short-circuits the chain (BLOCKS the default V-* from running).
+ */
+export function lookupPreAction(name: string): ActionHandler | undefined {
+  return PRE_ACTIONS[name];
+}
+
+/**
+ * Register a PRE-* handler (used by region modules in Wave B4).
+ */
+export function registerPreAction(name: string, handler: ActionHandler): void {
+  PRE_ACTIONS[name] = handler;
+}

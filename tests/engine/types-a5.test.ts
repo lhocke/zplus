@@ -171,18 +171,30 @@ describe('ActionContext — fatal() method', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 5. GameObject.contFcn — slot exists on the class
+// 5. GameObject.contFcnRoutine / contFcn — slots exist on the class
 // ---------------------------------------------------------------------------
 
-describe('GameObject — contFcn slot', () => {
+describe('GameObject — contFcn slots', () => {
+  it('contFcnRoutine is undefined by default', () => {
+    const obj = new GameObject('TEST', 'test object');
+    expect(obj.contFcnRoutine).toBeUndefined();
+  });
+
+  it('contFcnRoutine can be assigned a string (the ZIL routine name)', () => {
+    const obj = new GameObject('TEST', 'test object');
+    obj.contFcnRoutine = 'LAMP-CONT';
+    expect(obj.contFcnRoutine).toBe('LAMP-CONT');
+  });
+
   it('contFcn is undefined by default', () => {
     const obj = new GameObject('TEST', 'test object');
     expect(obj.contFcn).toBeUndefined();
   });
 
-  it('contFcn can be assigned a string', () => {
+  it('contFcn can be assigned an ActionHandler', () => {
     const obj = new GameObject('TEST', 'test object');
-    obj.contFcn = 'LAMP-CONT';
-    expect(obj.contFcn).toBe('LAMP-CONT');
+    const handler = (_ctx: unknown) => false;
+    obj.contFcn = handler as import('../../src/domain/game-object').ActionHandler;
+    expect(obj.contFcn).toBe(handler);
   });
 });

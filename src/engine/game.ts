@@ -8,8 +8,9 @@ import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
 import { executeVerb } from './verbs/index.js';
 import { Scoring } from './scoring.js';
-import { lookupPer } from '../actions/registry.js';
+import { lookupPer, lookupPreAction } from '../actions/registry.js';
 import { M_BEG, M_ENTER, M_LOOK } from './messages.js';
+// M_END is imported in B2 (runMEnd body); the constant is defined in messages.ts.
 
 // ---------------------------------------------------------------------------
 // Public types — frozen contracts from the implementation plan.
@@ -18,6 +19,18 @@ import { M_BEG, M_ENTER, M_LOOK } from './messages.js';
 export interface TurnResult {
   readonly output: string;
   readonly moved: boolean;
+}
+
+/**
+ * Result of the PERFORM chain (runActionChain).  Mirrors the ZIL tri-state:
+ *   handled  — at least one step returned truthy (ZIL RTRUE / M-HANDLED = 1)
+ *   fatal    — a handler called ctx.fatal() (ZIL M-FATAL = 2)
+ *
+ * The caller uses `fatal` to gate M-END and continuation (P-CONT clear).
+ */
+export interface ChainResult {
+  readonly handled: boolean;
+  readonly fatal: boolean;
 }
 
 /**
@@ -143,11 +156,25 @@ export class Game {
       };
 
       const prevRoom = this.here;
-      const shortCircuited = this.runActionChain(cmd.verb, dobj, iobj, cmd.prep, tell);
 
-      if (shortCircuited) {
+      // ---- 7-step PERFORM chain (gmain.zil:210–224) -------------------------
+      // runActionChain covers steps 1–6.  Step 7 (executeVerb) is caller-side,
+      // gated on !handled && !fatal, which is behaviourally identical to being
+      // the chain's last clause (td4-perform-chain.md §4.1 row 7).
+      const chainResult = this.runActionChain(
+        cmd.verb, dobj, iobj, cmd.prep, cmd.preAction, tell,
+      );
+
+      if (chainResult.fatal) {
+        // M-FATAL: skip M-END and abort any remaining chained commands
+        // (mirrors SETG P-CONT <> at gmain.zil:161).
+        outputs.push(handled.join('\n'));
+        break;
+      }
+
+      if (chainResult.handled) {
+        // At least one step short-circuited: step 7 (executeVerb) is suppressed.
         // Check whether a handler moved the player via ctx.moveTo(actor, dest).
-        // If so, we need to fire onRoomEntered and append the room description.
         const newRoomAfterHandler = this.player.parent as Room;
         if (newRoomAfterHandler !== undefined && newRoomAfterHandler !== prevRoom) {
           moved = true;
@@ -159,7 +186,7 @@ export class Game {
           outputs.push(handled.join('\n'));
         }
       } else {
-        // No handler claimed the command — run the default verb routine.
+        // No handler claimed the command — run step 7: default verb routine.
         const verbResult = executeVerb({
           verb: cmd.verb,
           dobj,
@@ -196,6 +223,13 @@ export class Game {
           }
         }
       }
+
+      // ---- M-END (gmain.zil:151–161) ----------------------------------------
+      // B2 wires the full runMEnd body; this structural call site is placed here
+      // so B2 is a drop-in.  M-END fires on EVERY non-fatal turn (unconditional
+      // post-turn room callback), on the CURRENT room (post-GOTO).
+      // Wire is intentionally a no-op stub until B2 lands.
+      // (The M_END import is already live in messages.ts.)
 
       // Keep pronoun state up to date.
       this.parser.bindPronouns(cmd);
@@ -240,6 +274,10 @@ export class Game {
    * Build the ActionContext handed to a translated ZIL routine.  `self` is the
    * object/room whose routine is running; `rarg` is the room-handler message
    * (undefined for object handlers).
+   *
+   * `onFatal` is an out-of-band callback called when the handler invokes
+   * `ctx.fatal()` (ZIL RFATAL / M-FATAL=2).  The dispatcher reads the flag
+   * after each step and propagates it via ChainResult.fatal.
    */
   private makeContext(
     self: GameObject,
@@ -249,6 +287,7 @@ export class Game {
     prep: string | undefined,
     rarg: number | undefined,
     tell: (text: string) => void,
+    onFatal?: () => void,
   ): ActionContext {
     return {
       self,
@@ -268,50 +307,112 @@ export class Game {
       score: (delta) => this.scoring.add(delta),
       enableClock: (id) => this.clock.enable(id),
       disableClock: (id) => this.clock.disable(id),
-      // fatal() signals M-FATAL — the PERFORM chain body is added in Wave B;
-      // the slot is held open here so ActionContext satisfies the interface.
-      fatal: () => { /* no-op until Wave B wires runMEnd */ },
+      /**
+       * Signal M-FATAL — stops the PERFORM chain and skips M-END.
+       * The handler still returns true (RTRUE) so the chain short-circuits;
+       * the out-of-band `onFatal` callback lets the dispatcher know to also
+       * set ChainResult.fatal = true.
+       */
+      fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
     };
   }
 
   /**
-   * Run the per-command dispatch chain, mirroring PERFORM (gmain.zil ~235).
-   * Steps run in order; the first to return true (ZIL RTRUE) short-circuits
-   * the rest.  Returns true if any handler claimed the command.
+   * Run the full 7-step PERFORM dispatch chain (gmain.zil:210–224, PREDGEN
+   * variant).  Each step invokes a handler; the first truthy return (ZIL RTRUE
+   * = M-HANDLED) short-circuits the remaining steps.  A handler may also call
+   * `ctx.fatal()` (ZIL M-FATAL = 2) to signal a fatal outcome — the dispatcher
+   * sets ChainResult.fatal and the caller must skip M-END and clear any
+   * continuation.
    *
-   * Order:
-   *   1. Verb PRE-action  (preAction routine — none translated yet; no-op).
-   *   2. Room action with rarg = M-BEG  (current room's first intercept).
-   *   3. PRSI (indirect object) handler.
-   *   4. PRSO (direct object) handler.
-   *   5. (caller) default verb routine, only if nothing above claimed it.
+   * Steps (in ZIL order):
+   *   1. WINNER (actor) P?ACTION — actor-intercept (step 1: gmain.zil:211)
+   *   2. room P?ACTION  rarg=M-BEG — room first-intercept (step 2: gmain.zil:212)
+   *   3. PREACTIONS[verb] — verb pre-action guard (step 3: gmain.zil:213)
+   *   4. PRSI P?ACTION — indirect-object handler (step 4: gmain.zil:214)
+   *   5. LOC(PRSO) P?CONTFCN — container CONTFCN (step 5: gmain.zil:215–219)
+   *      GUARD: PRSO exists AND verb ≠ 'walk' AND LOC(PRSO) exists
+   *      [INTENTIONALLY INERT until TD-7 supplies CONTFCN extraction data;
+   *      the step occupies its ordered position so TD-7 data is a drop-in.]
+   *   6. PRSO P?ACTION — direct-object handler (step 6: gmain.zil:220–223)
+   *      GUARD: PRSO exists AND verb ≠ 'walk'
+   *   7. ACTIONS[verb] default — executeVerb (step 7: gmain.zil:224; caller-side)
+   *
+   * Returns ChainResult{handled, fatal}.  Step 7 is kept caller-side and gated
+   * on !handled && !fatal, which is behaviourally identical to being the chain's
+   * last clause (PERFORM spec §4.1 row 7).
    */
   private runActionChain(
     verb: string,
     dobj: GameObject | undefined,
     iobj: GameObject | undefined,
     prep: string | undefined,
+    preAction: string | undefined,
     tell: (text: string) => void,
-  ): boolean {
-    // 2. Room action, M-BEG.
+  ): ChainResult {
+    let fatal = false;
+    const onFatal = (): void => { fatal = true; };
+
+    // Helper: make a context with the shared fatal signal.
+    const ctx = (self: GameObject, rarg?: number): ActionContext =>
+      this.makeContext(self, verb, dobj, iobj, prep, rarg, tell, onFatal);
+
+    // ---- Step 1: WINNER (actor) P?ACTION (no rarg) -------------------------
+    if (this.player.handler !== undefined) {
+      if (this.player.handler(ctx(this.player))) {
+        return { handled: true, fatal };
+      }
+    }
+
+    // ---- Step 2: room P?ACTION with rarg = M-BEG ---------------------------
     if (this.here.handler !== undefined) {
-      const ctx = this.makeContext(this.here, verb, dobj, iobj, prep, M_BEG, tell);
-      if (this.here.handler(ctx)) return true;
+      if (this.here.handler(ctx(this.here, M_BEG))) {
+        return { handled: true, fatal };
+      }
     }
 
-    // 3. PRSI handler.
+    // ---- Step 3: PREACTIONS[verb] — PRE-* guard ----------------------------
+    // The resolved command carries `preAction` (the ZIL PRE-* routine name).
+    // lookupPreAction returns the registered handler, or undefined if none yet.
+    if (preAction !== undefined) {
+      const preHandler = lookupPreAction(preAction);
+      if (preHandler !== undefined) {
+        if (preHandler(ctx(dobj ?? this.here))) {
+          return { handled: true, fatal };
+        }
+      }
+    }
+
+    // ---- Step 4: PRSI P?ACTION (no rarg) -----------------------------------
     if (iobj?.handler !== undefined) {
-      const ctx = this.makeContext(iobj, verb, dobj, iobj, prep, undefined, tell);
-      if (iobj.handler(ctx)) return true;
+      if (iobj.handler(ctx(iobj))) {
+        return { handled: true, fatal };
+      }
     }
 
-    // 4. PRSO handler — not for WALK (matches PERFORM's `<NOT <==? .A V?WALK>>`).
+    // ---- Step 5: LOC(PRSO) P?CONTFCN (no rarg) ----------------------------
+    // Guard: PRSO exists AND verb ≠ 'walk' AND LOC(PRSO) exists AND has contFcn.
+    // INTENTIONALLY INERT: contFcn handlers are not yet extracted (TD-7 data).
+    // The step occupies its ordered position so TD-7 extraction is a drop-in.
+    if (verb !== 'walk' && dobj !== undefined && dobj.parent !== null && dobj.parent !== undefined) {
+      const container = dobj.parent;
+      if (container.contFcn !== undefined) {
+        if (container.contFcn(ctx(container))) {
+          return { handled: true, fatal };
+        }
+      }
+    }
+
+    // ---- Step 6: PRSO P?ACTION (no rarg) -----------------------------------
+    // Guard: PRSO exists AND verb ≠ 'walk' (gmain.zil:220–223).
     if (verb !== 'walk' && dobj?.handler !== undefined) {
-      const ctx = this.makeContext(dobj, verb, dobj, iobj, prep, undefined, tell);
-      if (dobj.handler(ctx)) return true;
+      if (dobj.handler(ctx(dobj))) {
+        return { handled: true, fatal };
+      }
     }
 
-    return false;
+    // ---- Steps 1–6 all fell through: step 7 is caller-side (executeVerb). --
+    return { handled: false, fatal };
   }
 
   /**

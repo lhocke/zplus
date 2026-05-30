@@ -105,11 +105,17 @@ export class GameObject {
   /** ZIL ACTION-routine name (from the data); resolved to `handler` at bootstrap. */
   actionRoutine?: string;
   /**
-   * ZIL P?CONTFCN — continuation routine id.  When set, PERFORM step 5 calls
-   * this routine after the main action completes.  Data supplied by TD-7;
-   * the slot is held open here so step 5 can occupy its ordered position.
+   * ZIL P?CONTFCN — routine name string (from extracted data), resolved to
+   * `contFcn` (an ActionHandler) at bootstrap, mirroring actionRoutine→handler.
+   * Data supplied by TD-7; step 5 occupies its ordered position now and becomes
+   * live when extraction lands.  Intentionally inert until then.
    */
-  contFcn?: string;
+  contFcnRoutine?: string;
+  /**
+   * Resolved CONTFCN handler — called by PERFORM step 5 when dobj is inside a
+   * container and verb !== 'walk'.  Truthy return short-circuits the chain.
+   */
+  contFcn?: ActionHandler;
   readonly synonyms: string[];
   readonly adjectives: string[];
 
