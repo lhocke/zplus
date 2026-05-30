@@ -133,19 +133,30 @@ describe('Parser.parseChained — sequential segment execution', () => {
     expect(take.dobjIds?.[0]).toBe('LANTERN');
   });
 
-  it('propagates pronoun binding across segments in the same chain', () => {
+  it('within-chain IT propagation requires PERFORM prologue (Wave C concern)', () => {
+    // B3 removes in-parser IT-binding: the parser no longer calls bindPronouns()
+    // internally during parseChained.  IT is now bound by the PERFORM prologue
+    // in Game.turn() (gmain.zil:202–203) AFTER each non-WALK command.
+    //
+    // Consequence: "take lantern then examine it" parsed in ONE parseChained call
+    // does NOT resolve "it" — the binding from "take lantern" hasn't happened yet
+    // (parsing precedes dispatch in the current non-interleaved architecture).
+    // Wave C will interleave parse+dispatch so the PERFORM prologue binding fires
+    // before the next segment is parsed.
+    //
+    // This test documents the expected (interim) behavior: the second segment
+    // gets a fail result because "it" has no bound referent yet.
     const { world, room } = makePickupWorld();
     const parser = new Parser();
-    // "take lantern then examine it" — "it" should resolve to LANTERN via
-    // pronoun binding carried across segments.
+    // No prior bindPronouns call — itRef is undefined.
     const results = parser.parseChained('take lantern then examine it', room, null, world);
 
-    expect(results).toHaveLength(2);
+    // The first segment ("take lantern") succeeds.
     expect(results[0]!.kind).toBe('ok');
-    expect(results[1]!.kind).toBe('ok');
-
-    const cmd1 = (results[1] as Extract<ParseResult, { kind: 'ok' }>).command;
-    expect(cmd1.dobjIds?.[0]).toBe('LANTERN');
+    // The second segment ("examine it") fails because IT is unbound at parse time.
+    // (Cross-turn IT works via Game.turn() — see it-binding-b3.test.ts.)
+    expect(results).toHaveLength(2);
+    expect(results[1]!.kind).toBe('fail');
   });
 
   it('stops processing at the first error in a chain and includes the error', () => {

@@ -242,8 +242,10 @@ function resolveNounPhrase(
 
 /**
  * A stateful parser instance.  Call `parse()` to resolve a command string
- * against the current scope, then call `bindPronouns()` with the resulting
- * ParsedCommand to update the pronoun state for the next turn.
+ * against the current scope.  The parser reads `itRef` (the IT pronoun
+ * referent) during noun resolution; the Game writes it by calling
+ * `bindPronouns()` from the PERFORM prologue (gmain.zil:202–203) after each
+ * non-WALK command with a direct object.
  *
  * The canonical pronouns are "it" (last DO) and "them" (same binding — Zork
  * treats them identically for single-object commands).
@@ -346,8 +348,11 @@ export class Parser {
    * "then" — returning one ParseResult per segment.  Processing stops at the
    * first error: the error result is appended and the remainder is discarded.
    *
-   * Pronoun bindings propagate across segments within the same call so that
-   * "take lantern then examine it" resolves "it" to the lantern.
+   * IT pronoun binding is NOT propagated within this call — that is the
+   * PERFORM prologue's job (Game.turn(), gmain.zil:202–203).  The parser only
+   * READS itRef (which the game set on a prior turn).  Within-chain "take lamp
+   * then examine it" requires Wave C's interleaved parse-and-dispatch model;
+   * for now, cross-turn IT binding is the supported path (B3).
    *
    * "take all" / "drop all" and "take all except <noun>" are expanded here:
    * each takeable (or inventory item for drop) in scope becomes its own
@@ -382,9 +387,13 @@ export class Parser {
         // Stop chaining at first error.
         break;
       }
-
-      // Propagate pronoun bindings across segments.
-      this.bindPronouns(result.command);
+      // Note: IT-binding (bindPronouns) is NOT called here.  Per B3, the
+      // authoritative binding site is the PERFORM prologue in Game.turn()
+      // (gmain.zil:202–203), not inside the parser.  The parser only READS
+      // itRef; the game writes it.  Within-chain IT propagation for same-line
+      // segments (e.g. "take lamp then examine it" in one input) is a Wave C
+      // concern — Wave C will interleave parsing and dispatch so the prologue
+      // binding precedes each subsequent segment's parse.
     }
 
     return results;
@@ -465,10 +474,15 @@ export class Parser {
   }
 
   /**
-   * Update pronoun state from a successfully executed command.
+   * Update pronoun state from a successfully resolved command.
    * The direct object becomes the new "it" / "them" referent.
-   * Call this after the engine confirms the command was accepted (not on
-   * parser errors or disambig prompts).
+   *
+   * Called from the PERFORM prologue in Game.turn() (gmain.zil:202–203) for
+   * non-WALK commands that have a direct object — NOT from inside the parser
+   * itself.  The parser only READS itRef during noun resolution; the game
+   * writes it (B3 seam: parser reads, PERFORM prologue writes).
+   *
+   * Also called directly by tests to simulate the game binding a referent.
    */
   bindPronouns(cmd: ParsedCommand): void {
     const dobjId = cmd.dobjIds?.[0];

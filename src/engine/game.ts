@@ -165,6 +165,24 @@ export class Game {
       this.lastIobj = iobj;
       this.lastPrep = cmd.prep;
 
+      // ---- PERFORM prologue: IT-binding (gmain.zil:202–203) ----------------
+      // "if PRSO and PRSI!=IT and verb!=WALK: SETG P-IT-OBJECT PRSO"
+      // Bind the IT pronoun referent HERE — in the PERFORM prologue, before the
+      // 7-step chain — so the parser can read it on the NEXT turn.
+      //
+      // The PRSI!=IT condition cannot be checked here (the iobj is already
+      // resolved by the time we reach dispatch); we simplify to the two
+      // checkable guards: dobj present AND verb !== 'walk'.
+      //
+      // IT-binding is NOT done in the parser (neither in parseChained nor
+      // post-dispatch) — the parser only READS itRef during noun resolution.
+      // Wave C (interleaved parse+dispatch) will interleave this prologue
+      // correctly with multi-segment chains; for now cross-turn binding is
+      // the supported path.
+      if (dobj !== undefined && cmd.verb !== 'walk') {
+        this.parser.bindPronouns(cmd);
+      }
+
       // --- Action-dispatch chain (faithful to PERFORM in gmain.zil) ----------
       // Each step may RTRUE (return true) to short-circuit the remainder.  The
       // handlers print via ctx.tell into `handled`; only if no handler claims
@@ -259,8 +277,9 @@ export class Game {
         }
       }
 
-      // Keep pronoun state up to date.
-      this.parser.bindPronouns(cmd);
+      // (IT pronoun binding was done in the PERFORM prologue above — no
+      //  post-dispatch bindPronouns call here.  The prologue is the authentic
+      //  ZIL site per gmain.zil:202–203.)
     }
 
     this.moveCount += 1;
