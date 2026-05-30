@@ -7,3 +7,5 @@ docs/
 # build
 node_modules/
 dist/
+# local playtest transcripts
+playtest-logs/
