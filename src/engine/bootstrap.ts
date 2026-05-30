@@ -18,6 +18,7 @@ import { Rng } from './rng.js';
 import { Clock, LanternInterrupt } from './clock.js';
 import { SimpleEventEmitter } from './events.js';
 import { Game } from './game.js';
+import { lookupAction } from '../actions/registry.js';
 
 import roomsData from '../data/rooms.json';
 import objectsData from '../data/objects.json';
@@ -76,6 +77,17 @@ export function createGame(opts: BootstrapOptions = {}): Game {
     ...(objectsData as unknown[]),
   ];
   const world = World.fromData(allData);
+
+  // 1b. Resolve each object/room's ZIL ACTION-routine name to a translated
+  //     handler from the registry and attach it.  This is the data-driven
+  //     binding the dispatch chain relies on: an object with no registered
+  //     routine simply has no handler and falls through to the default verb.
+  for (const obj of world.all()) {
+    if (obj.actionRoutine !== undefined) {
+      const handler = lookupAction(obj.actionRoutine);
+      if (handler !== undefined) obj.handler = handler;
+    }
+  }
 
   // 2 & 3. Synthesise and register the PLAYER actor.
   const player = new Actor('PLAYER', 'cretin', {

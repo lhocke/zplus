@@ -1,4 +1,6 @@
 import type { Flag } from './flags.js';
+import type { World } from './world.js';
+import type { Room } from './room.js';
 
 export type ObjectId = string;
 
@@ -15,15 +17,53 @@ export interface Exit {
   readonly elseMessage?: string;
 }
 
+/** true = ZIL RTRUE (handled, suppress the rest); false = fall through. */
 export type HandlerResult = boolean;
 
+/**
+ * Everything a translated ZIL action routine needs at dispatch time.
+ *
+ * The shape mirrors the globals a ZIL routine reaches for: the object whose
+ * routine is running (`self` / the ZIL `OBJECT`), the acting creature
+ * (`actor` / `WINNER`), the parsed verb and objects (`PRSA`/`PRSO`/`PRSI`),
+ * the current room (`HERE`), and the world for id lookups.
+ *
+ * Room handlers branch on `rarg` (M-BEG/M-ENTER/M-LOOK); object handlers get
+ * `rarg === undefined` and branch on `verb`.  The helpers (`hasFlag`/`setFlag`/
+ * `clearFlag`/`moveTo`/`score`) cover the four ZIL primitives — `FSET?`,
+ * `FSET`, `FCLEAR`, `MOVE`, and `SCORE` — that handlers reach for constantly.
+ */
 export interface ActionContext {
+  /** The object/room whose action routine is executing (ZIL implicit OBJECT). */
   readonly self: GameObject;
+  /** The acting creature — normally the player (ZIL WINNER). */
   readonly actor: GameObject;
-  verb: string;
-  dobj?: GameObject;
-  iobj?: GameObject;
+  /** Canonical parsed verb, e.g. 'take', 'read', 'walk' (ZIL PRSA). */
+  readonly verb: string;
+  /** Direct object, if any (ZIL PRSO). */
+  readonly dobj?: GameObject;
+  /** Indirect object, if any (ZIL PRSI). */
+  readonly iobj?: GameObject;
+  /** Preposition for this command, e.g. 'in', 'with' — or a direction for walk. */
+  readonly prep?: string;
+  /** The world, for resolving object ids. */
+  readonly world: World;
+  /** The current room (ZIL HERE / <LOC ,WINNER>). */
+  readonly here: Room;
+  /** Room-handler message: M-BEG/M-ENTER/M-LOOK.  undefined for object handlers. */
+  readonly rarg?: number;
+  /** Print text to the player (ZIL TELL).  Newlines are preserved verbatim. */
   tell(text: string): void;
+  /** Read a flag on an object — ZIL `<FSET? obj flag>`. */
+  hasFlag(obj: GameObject, flag: Flag): boolean;
+  /** Set a flag on an object — ZIL `<FSET obj flag>`. */
+  setFlag(obj: GameObject, flag: Flag): void;
+  /** Clear a flag on an object — ZIL `<FCLEAR obj flag>`. */
+  clearFlag(obj: GameObject, flag: Flag): void;
+  /** Move an object into a destination — ZIL `<MOVE obj dest>`. */
+  moveTo(obj: GameObject, dest: GameObject): void;
+  /** Add to the score (may be negative) — ZIL `<SCORE n>` / `<SETG SCORE ...>`. */
+  score(delta: number): void;
 }
 
 export type ActionHandler = (ctx: ActionContext) => HandlerResult;
@@ -45,6 +85,8 @@ export class GameObject {
   parent: GameObject | null;
   readonly children: Set<GameObject>;
   handler?: ActionHandler;
+  /** ZIL ACTION-routine name (from the data); resolved to `handler` at bootstrap. */
+  actionRoutine?: string;
   readonly synonyms: string[];
   readonly adjectives: string[];
 

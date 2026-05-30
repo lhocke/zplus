@@ -1,4 +1,4 @@
-import type { ObjectId, Dir } from '../domain/game-object.js';
+import type { ObjectId, Dir, GameObject, ActionContext } from '../domain/game-object.js';
 import type { World } from '../domain/world.js';
 import { Flag } from '../domain/flags.js';
 import type { Room } from '../domain/room.js';
@@ -7,6 +7,9 @@ import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
 import { executeVerb } from './verbs/index.js';
+import { Scoring } from './scoring.js';
+import { lookupPer } from '../actions/registry.js';
+import { M_BEG, M_ENTER, M_LOOK } from './messages.js';
 
 // ---------------------------------------------------------------------------
 // Public types — frozen contracts from the implementation plan.
@@ -65,8 +68,8 @@ export class Game {
   private player: Actor;
   private here: Room;
 
+  private readonly scoring: Scoring;
   private moveCount = 0;
-  private scoreValue = 0;
 
   /** Room ids the player has visited at least once. */
   private readonly visited = new Set<ObjectId>();
@@ -79,6 +82,7 @@ export class Game {
     this.clock = opts.clock;
     this.events = opts.events;
     this.parser = new Parser();
+    this.scoring = new Scoring(this.events);
 
     // Resolve the player actor — the Actor whose id is 'PLAYER', or the first
     // Actor found in the world when no canonical id exists (test scenarios).
@@ -133,25 +137,44 @@ export class Game {
       const dobj = cmd.dobjId !== undefined ? this.world.get(cmd.dobjId) : undefined;
       const iobj = cmd.iobjId !== undefined ? this.world.get(cmd.iobjId) : undefined;
 
-      const verbResult = executeVerb({
-        verb: cmd.verb,
-        dobj,
-        iobj,
-        prep: cmd.prep,
-        player: this.player,
-        here: this.here,
-        world: this.world,
-      });
+      // --- Action-dispatch chain (faithful to PERFORM in gmain.zil) ----------
+      // Each step may RTRUE (return true) to short-circuit the remainder.  The
+      // handlers print via ctx.tell into `handled`; only if no handler claims
+      // the command do we fall through to the default verb routine.
+      const handled: string[] = [];
+      const tell = (text: string): void => {
+        handled.push(text);
+      };
 
-      outputs.push(verbResult.output);
+      const shortCircuited = this.runActionChain(cmd.verb, dobj, iobj, cmd.prep, tell);
 
-      if (verbResult.moved) {
-        moved = true;
-        // Player moved — update here reference.
-        const newRoom = this.player.parent as Room;
-        if (newRoom !== undefined && newRoom !== this.here) {
-          this.here = newRoom;
-          this.emitRoomEntered(this.here.id);
+      if (shortCircuited) {
+        outputs.push(handled.join('\n'));
+      } else {
+        // No handler claimed the command — run the default verb routine.
+        const verbResult = executeVerb({
+          verb: cmd.verb,
+          dobj,
+          iobj,
+          prep: cmd.prep,
+          player: this.player,
+          here: this.here,
+          world: this.world,
+          perResolver: (routineName, here) => this.resolvePer(routineName, here, tell),
+        });
+
+        // A handler may have printed something even while falling through
+        // (ZIL routines can TELL then RFALSE); prepend that output.
+        const parts = [...handled, verbResult.output].filter(s => s.length > 0);
+        outputs.push(parts.join('\n'));
+
+        if (verbResult.moved) {
+          moved = true;
+          // Player moved — update here reference and fire room entry.
+          const newRoom = this.player.parent as Room;
+          if (newRoom !== undefined && newRoom !== this.here) {
+            this.onRoomEntered(newRoom);
+          }
         }
       }
 
@@ -183,11 +206,122 @@ export class Game {
       hereName: this.here.desc,
       exits,
       visibleObjects,
-      score: this.scoreValue,
+      score: this.scoring.score,
       maxScore: 350,
       moves: this.moveCount,
       inMaze: this.here.has(Flag.Maze),
     };
+  }
+
+  // -------------------------------------------------------------------------
+  // Action dispatch (PERFORM model)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Build the ActionContext handed to a translated ZIL routine.  `self` is the
+   * object/room whose routine is running; `rarg` is the room-handler message
+   * (undefined for object handlers).
+   */
+  private makeContext(
+    self: GameObject,
+    verb: string,
+    dobj: GameObject | undefined,
+    iobj: GameObject | undefined,
+    prep: string | undefined,
+    rarg: number | undefined,
+    tell: (text: string) => void,
+  ): ActionContext {
+    return {
+      self,
+      actor: this.player,
+      verb,
+      dobj,
+      iobj,
+      prep,
+      world: this.world,
+      here: this.here,
+      rarg,
+      tell,
+      hasFlag: (obj, flag) => obj.has(flag),
+      setFlag: (obj, flag) => obj.set(flag),
+      clearFlag: (obj, flag) => obj.clear(flag),
+      moveTo: (obj, dest) => obj.moveTo(dest),
+      score: (delta) => this.scoring.add(delta),
+    };
+  }
+
+  /**
+   * Run the per-command dispatch chain, mirroring PERFORM (gmain.zil ~235).
+   * Steps run in order; the first to return true (ZIL RTRUE) short-circuits
+   * the rest.  Returns true if any handler claimed the command.
+   *
+   * Order:
+   *   1. Verb PRE-action  (preAction routine — none translated yet; no-op).
+   *   2. Room action with rarg = M-BEG  (current room's first intercept).
+   *   3. PRSI (indirect object) handler.
+   *   4. PRSO (direct object) handler.
+   *   5. (caller) default verb routine, only if nothing above claimed it.
+   */
+  private runActionChain(
+    verb: string,
+    dobj: GameObject | undefined,
+    iobj: GameObject | undefined,
+    prep: string | undefined,
+    tell: (text: string) => void,
+  ): boolean {
+    // 2. Room action, M-BEG.
+    if (this.here.handler !== undefined) {
+      const ctx = this.makeContext(this.here, verb, dobj, iobj, prep, M_BEG, tell);
+      if (this.here.handler(ctx)) return true;
+    }
+
+    // 3. PRSI handler.
+    if (iobj?.handler !== undefined) {
+      const ctx = this.makeContext(iobj, verb, dobj, iobj, prep, undefined, tell);
+      if (iobj.handler(ctx)) return true;
+    }
+
+    // 4. PRSO handler — not for WALK (matches PERFORM's `<NOT <==? .A V?WALK>>`).
+    if (verb !== 'walk' && dobj?.handler !== undefined) {
+      const ctx = this.makeContext(dobj, verb, dobj, iobj, prep, undefined, tell);
+      if (dobj.handler(ctx)) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Resolve an `Exit.per` routine name to a destination room id, running the
+   * registered PER routine.  The routine's output is written through `tell`
+   * (the current command's buffer), so it prints before the destination's
+   * description.  Returns undefined to block the move.
+   */
+  private resolvePer(
+    routineName: string,
+    here: Room,
+    tell: (text: string) => void,
+  ): ObjectId | undefined {
+    const per = lookupPer(routineName);
+    if (per === undefined) return undefined;
+    const ctx = this.makeContext(here, 'walk', undefined, undefined, undefined, undefined, tell);
+    return per(ctx);
+  }
+
+  /**
+   * Fire room entry: run the room's M-ENTER action, update `here`, and emit
+   * the room-entered event.  Mirrors GOTO in 1dungeon.zil (M-ENTER then the
+   * description, which the renderer produces via M-LOOK).
+   */
+  private onRoomEntered(room: Room): void {
+    this.here = room;
+    if (room.handler !== undefined) {
+      const ctx = this.makeContext(room, 'walk', undefined, undefined, undefined, M_ENTER, () => {
+        // M-ENTER output is rare; current exemplars don't use it.  Discarded
+        // here rather than threaded into the transcript — wire when needed.
+      });
+      room.handler(ctx);
+    }
+    this.emitRoomEntered(room.id);
   }
 
   // -------------------------------------------------------------------------
@@ -196,7 +330,21 @@ export class Game {
 
   private describeCurrentRoom(): string {
     const lines: string[] = [this.here.desc];
-    if (this.here.ldesc) lines.push(this.here.ldesc);
+
+    // Room description, faithful to GOTO/M-LOOK: a room with a static ldesc
+    // prints it; an action-driven room (no ldesc) emits its body via the
+    // room handler with rarg = M-LOOK.
+    if (this.here.ldesc) {
+      lines.push(this.here.ldesc);
+    } else if (this.here.handler !== undefined) {
+      const buf: string[] = [];
+      const ctx = this.makeContext(
+        this.here, 'look', undefined, undefined, undefined, M_LOOK,
+        (text) => buf.push(text),
+      );
+      this.here.handler(ctx);
+      if (buf.length > 0) lines.push(buf.join('\n'));
+    }
 
     const loose = Array.from(this.here.children).filter(
       o => !o.has(Flag.Invisible) && o !== this.player,

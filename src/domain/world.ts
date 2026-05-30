@@ -82,6 +82,12 @@ function buildObject(data: ObjectData): GameObject {
     obj.props.set(key, value);
   }
 
+  // Preserve the ZIL ACTION-routine name so bootstrap can resolve it to a
+  // handler via the registry.  Object/room handlers are data-driven by this.
+  if (data.actionRoutine !== undefined) {
+    obj.actionRoutine = data.actionRoutine;
+  }
+
   return obj;
 }
 
