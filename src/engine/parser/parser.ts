@@ -5,6 +5,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import type { ParsedCommand, ParseResult } from './types.js';
 import { Flag } from '../../domain/flags.js';
 import { tokenize, SIBREAK_CHARS } from './tokenizer.js';
+import { syntaxCheck } from './syntax-check.js';
 
 // ---------------------------------------------------------------------------
 // Wave B–era compatibility adapter.
@@ -74,91 +75,13 @@ import {
 } from './vocabulary.js';
 
 // ---------------------------------------------------------------------------
-// PRE-action lookup — Wave B4
+// C3 SYNTAX-CHECK replaces the Wave-B static preAction maps.
 //
-// Resolves the ZIL PRE-* routine name (from syntax.json `preAction` fields)
-// for a given parsed command.  Used at PERFORM step 3 to dispatch the
-// pre-action guard before the default V-* verb at step 7.
-//
-// The lookup distinguishes one-object (no PRSI) and two-object (PRSI present)
-// forms, because many verbs have different preActions for each:
-//   BURN  1-obj → no preAction (match handler claims it via step 6)
-//   BURN  2-obj → PRE-BURN (with-instrument form)
-//   DROP  1-obj → PRE-DROP
-//   DROP  2-obj → PRE-PUT  (drop X in Y)
-//   MOVE  1-obj → PRE-MOVE
-//   MOVE  2-obj → PRE-TURN (move X with tool)
-//
-// Wave C will replace this with full SyntaxEntry form matching from syntax.json
-// (prep-sensitive, dobjLocBit-sensitive).  For Wave B, verb + hasIobj is the
-// minimal discriminant that produces correct behavior for the reachable test corpus.
-//
-// Derived from: python3 analysis of src/data/syntax.json preAction fields.
+// The VERB_PRE_1OBJ / VERB_PRE_2OBJ static maps and lookupPreActionForVerb
+// from Wave B are retired here.  syntaxCheck() (imported from syntax-check.ts)
+// is the authoritative source for action / preAction / locBits — it reads
+// directly from syntax.json declaration order and does not need static mirrors.
 // ---------------------------------------------------------------------------
-
-/**
- * preAction for 1-object forms (no PRSI / hasIobj = false).
- * Only verbs whose syntax.json 1-object form carries a preAction are listed.
- */
-const VERB_PRE_1OBJ: Readonly<Record<string, string>> = {
-  board:  'PRE-BOARD',
-  climb:  'PRE-BOARD',  // "climb in X" form
-  drop:   'PRE-DROP',
-  fill:   'PRE-FILL',
-  leave:  'PRE-DROP',
-  move:   'PRE-MOVE',
-  pick:   'PRE-TAKE',   // "pick up X" form
-  pour:   'PRE-DROP',
-  pull:   'PRE-MOVE',
-  read:   'PRE-READ',
-  roll:   'PRE-MOVE',
-  take:   'PRE-TAKE',
-};
-
-/**
- * preAction for 2-object forms (PRSI present / hasIobj = true).
- * Only verbs whose syntax.json 2-object form carries a preAction are listed.
- */
-const VERB_PRE_2OBJ: Readonly<Record<string, string>> = {
-  apply:    'PRE-PUT',
-  burn:     'PRE-BURN',
-  destroy:  'PRE-MUNG',
-  drop:     'PRE-PUT',   // "drop X in Y" → PRE-PUT
-  fill:     'PRE-FILL',
-  give:     'PRE-GIVE',
-  light:    'PRE-BURN',
-  look:     'PRE-READ',  // "look at X with Y" → PRE-READ
-  move:     'PRE-TURN',  // "move X with tool" → PRE-TURN
-  pick:     'PRE-TAKE',  // "pick up X" with iobj (rare)
-  poke:     'PRE-MUNG',
-  pour:     'PRE-DROP',
-  puncture: 'PRE-MUNG',
-  push:     'PRE-TURN',
-  put:      'PRE-PUT',
-  read:     'PRE-READ',
-  squeeze:  'PRE-PUT',
-  take:     'PRE-TAKE',
-  throw:    'PRE-PUT',
-  turn:     'PRE-TURN',
-};
-
-/**
- * Look up the PRE-* preaction for a canonical verb + iobj-presence combination.
- *
- * Returns the ZIL PRE-* routine name (e.g. "PRE-TAKE"), or undefined when the
- * matched syntax form has no preAction.
- *
- * Wave B: uses static maps derived from syntax.json analysis.
- * Wave C will replace this with full SyntaxEntry matching.
- */
-function lookupPreActionForVerb(
-  canonicalVerb: string,
-  hasIobj: boolean,
-): string | undefined {
-  return hasIobj
-    ? VERB_PRE_2OBJ[canonicalVerb]
-    : VERB_PRE_1OBJ[canonicalVerb];
-}
 
 // --------------------------------------------------------------------------
 // Scope: what objects are reachable from the current room
@@ -291,23 +214,65 @@ function matchNoun(
 // --------------------------------------------------------------------------
 
 /**
- * Given the tokens after the verb, split on the first preposition token,
- * returning [dobjTokens, prep|undefined, iobjTokens].
+ * C3 INTERIM ADAPTER — Two-preposition split.
+ *
+ * Splits the tokens after the verb into prep1 / dobjTokens / prep2 / iobjTokens,
+ * faithfully reflecting the ZIL sentence grammar:
+ *   VERB [prep1] DOBJ [prep2] IOBJ
+ *
+ * If the FIRST non-empty token is a preposition, it is prep1 and the noun
+ * phrase follows it.  Otherwise prep1 is absent and the noun phrase leads.
+ * After the dobj noun phrase, if another preposition is found it becomes prep2.
+ *
+ * Also computes ncn (noun-clause count: 0, 1, or 2) for syntaxCheck.
+ *
+ * NOTE: This is an interim adapter.  The C2 SCAN-LOOP will replace this with
+ * the authoritative P-NCN/P-PREP1/P-PREP2 derivation.
+ *
+ * @param rest  Tokens after the verb (articles already stripped by tokenizeSegment).
  */
-function splitOnPrep(
-  tokens: string[],
-): { dobjTokens: string[]; prep?: string; iobjTokens: string[] } {
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i]!;
-    if (isPreposition(t)) {
-      return {
-        dobjTokens: tokens.slice(0, i),
-        prep: normalizePrep(t),
-        iobjTokens: tokens.slice(i + 1),
-      };
+function splitOnPreps(rest: string[]): {
+  ncn: 0 | 1 | 2;
+  prep1?: string;
+  prep2?: string;
+  dobjTokens: string[];
+  iobjTokens: string[];
+} {
+  if (rest.length === 0) {
+    return { ncn: 0, prep1: undefined, prep2: undefined, dobjTokens: [], iobjTokens: [] };
+  }
+
+  let prep1: string | undefined;
+  let remaining = rest;
+
+  // If the first token is a preposition, consume it as prep1.
+  if (isPreposition(remaining[0]!)) {
+    prep1 = normalizePrep(remaining[0]!);
+    remaining = remaining.slice(1);
+  }
+
+  // Collect dobjTokens up to the next preposition (or end).
+  let dobjTokens: string[] = [];
+  let prep2: string | undefined;
+  let iobjTokens: string[] = [];
+
+  let splitAt = remaining.length; // default: no second prep found
+  for (let i = 0; i < remaining.length; i++) {
+    if (isPreposition(remaining[i]!)) {
+      splitAt = i;
+      prep2 = normalizePrep(remaining[i]!);
+      iobjTokens = remaining.slice(i + 1);
+      break;
     }
   }
-  return { dobjTokens: tokens, prep: undefined, iobjTokens: [] };
+  dobjTokens = remaining.slice(0, splitAt);
+
+  // Count non-empty noun clauses.
+  const hasDobj = dobjTokens.length > 0;
+  const hasIobj = iobjTokens.length > 0;
+  const ncn: 0 | 1 | 2 = hasDobj && hasIobj ? 2 : hasDobj || hasIobj ? 1 : 0;
+
+  return { ncn, prep1, prep2, dobjTokens, iobjTokens };
 }
 
 /**
@@ -448,19 +413,37 @@ export class Parser {
     }
 
     const rest = tokens.slice(1);
-    if (rest.length === 0) {
-      return {
-        kind: 'ok',
-        command: {
-          verb: canonical,
-          action: 'V-' + canonical.toUpperCase(),
-          preAction: lookupPreActionForVerb(canonical, false),
-          raw: tokens,
-        },
-      };
-    }
 
-    const { dobjTokens, prep, iobjTokens } = splitOnPrep(rest);
+    // --- C3 INTERIM ADAPTER -----------------------------------------------
+    // Split rest into prep1 / dobjTokens / prep2 / iobjTokens and derive ncn.
+    // C2 SCAN-LOOP will replace this with the authoritative ZIL P-NCN derivation.
+    const { ncn, prep1, prep2, dobjTokens, iobjTokens } = splitOnPreps(rest);
+
+    // Run SYNTAX-CHECK against the real syntax table (C3).
+    // syntaxCheck requires UPPERCASE verb; canonical is lowercase.
+    const verbUpper = canonical.toUpperCase();
+    const syntaxResult = syntaxCheck(verbUpper, ncn, prep1, prep2);
+
+    // Determine action and preAction from the syntax check result.
+    // On 'needGwim': C4 owns GWIM/orphan prompting; for now fall back to
+    // a best-effort action name so existing engine tests stay green.
+    // The fallback is clearly marked — C4 will handle this properly.
+    let action: string;
+    let preAction: string | undefined;
+    let matchedSyntax: import('./types.js').SyntaxEntry | undefined;
+
+    if (syntaxResult.kind === 'matched') {
+      action = syntaxResult.entry.action;
+      preAction = syntaxResult.entry.preAction;
+      matchedSyntax = syntaxResult.entry;
+    } else {
+      // C4 BRIDGE: no matched form — synthesize a fallback action string
+      // so the old engine dispatch path continues to work until C4 lands.
+      // This preserves backward compatibility per §6 risk note.
+      action = 'V-' + canonical.toUpperCase();
+      preAction = undefined;
+      matchedSyntax = undefined;
+    }
 
     let dobjIds: ObjectId[] | undefined;
     let iobjIds: ObjectId[] | undefined;
@@ -474,8 +457,8 @@ export class Parser {
       }
     }
 
-    // Resolve indirect object if a preposition and tokens follow.
-    if (prep !== undefined && iobjTokens.length > 0) {
+    // Resolve indirect object if iobj tokens follow (after prep2).
+    if (iobjTokens.length > 0) {
       const r = resolveNounPhrase(iobjTokens, scope, this.itRef);
       if (!r.ok) return r.result;
       if (r.id !== (undefined as unknown as ObjectId)) {
@@ -483,20 +466,21 @@ export class Parser {
       }
     }
 
-    // Look up the PRE-* preaction for this verb form (Wave B4).
-    // Wave B uses a static lookup from VERB_PRE_ACTION; Wave C will replace
-    // this with full SyntaxEntry matching from syntax.json.
-    const preAction = lookupPreActionForVerb(canonical, iobjIds !== undefined);
+    // The canonical prep for the ParsedCommand.prep field is prep1 if present,
+    // else prep2 (the C3 grammar uses prep1 as the structurally primary prep).
+    // C4 will use matchedSyntax.prep1/prep2 for precise slot routing.
+    const prepOut = prep1 ?? prep2;
 
     return {
       kind: 'ok',
       command: {
         verb: canonical,
-        action: 'V-' + canonical.toUpperCase(),
+        action,
         dobjIds,
         iobjIds,
-        prep,
+        prep: prepOut,
         preAction,
+        syntax: matchedSyntax,
         raw: tokens,
       },
     };
@@ -620,15 +604,23 @@ export class Parser {
 
     if (matches.length === 0) return [];
 
+    // Get preAction for the 1-obj form of this verb via syntaxCheck (C3).
+    // "take X" (ncn=1, no preps) → syntaxCheck should return matched V-TAKE with PRE-TAKE.
+    const takeResult = syntaxCheck(canonical.toUpperCase(), 1);
+    const expandAction = takeResult.kind === 'matched' ? takeResult.entry.action : 'V-' + canonical.toUpperCase();
+    const expandPreAction = takeResult.kind === 'matched' ? takeResult.entry.preAction : undefined;
+    const expandSyntax = takeResult.kind === 'matched' ? takeResult.entry : undefined;
+
     return matches.map(obj => ({
       kind: 'ok' as const,
       command: {
         verb: canonical,
-        action: 'V-' + canonical.toUpperCase(),
+        action: expandAction,
         dobjIds: [obj.id],
         iobjIds: undefined,
         prep: undefined,
-        preAction: lookupPreActionForVerb(canonical, false),
+        preAction: expandPreAction,
+        syntax: expandSyntax,
         raw: tokens,
       },
     }));
