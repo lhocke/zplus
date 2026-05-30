@@ -1,14 +1,20 @@
 /**
- * ZIL → ObjectData extractor.
+ * ZIL → ObjectData / SyntaxEntry / VocabularyData extractor.
  *
  * Turns parsed ROOM and OBJECT s-expression forms into ObjectData records
  * suitable for writing to src/data/objects.json.
+ *
+ * Also extracts SYNTAX and SYNONYM/BUZZ forms into SyntaxEntry[] and
+ * VocabularyData, suitable for src/data/syntax.json and vocabulary.json.
  *
  * Handles:
  *   - ROOM forms: exits (TO fixed destination or PER routine), flags, DESC/LDESC/FDESC
  *   - OBJECT forms: synonyms, adjectives, parent (from IN clause), flags, props, ACTION
  *   - Flag name mapping: ZIL *BIT atoms → Flag enum string names
  *   - kind inference: room vs thing vs container vs actor (from flags/properties)
+ *   - SYNTAX forms: verb + optional particle, DO slot, prep2, IO slot → action handler
+ *   - SYNONYM forms: canonical word → alias list
+ *   - BUZZ forms: filler words the parser should discard
  */
 
 import type { SNode, SList, SAtom, SString } from './parse-sexpr.js';
@@ -395,7 +401,7 @@ function extractOne(form: SList): ObjectData | null {
 }
 
 // ---------------------------------------------------------------------------
-// Public API
+// Public API — object extraction
 // ---------------------------------------------------------------------------
 
 /**
@@ -413,4 +419,257 @@ export function extractObjects(nodes: SNode[]): ObjectData[] {
     if (record) results.push(record);
   }
   return results;
+}
+
+// ---------------------------------------------------------------------------
+// Syntax types
+// ---------------------------------------------------------------------------
+
+/** One object slot in a SYNTAX declaration: (FIND FLAG?) (scope…). */
+export interface ObjectSlot {
+  /** ZIL flag atom that must be set on the object (e.g. "TAKEBIT"). */
+  readonly find?: string;
+  /** Scope / access constraints (e.g. ["ON-GROUND", "IN-ROOM", "MANY"]). */
+  readonly where: string[];
+}
+
+/**
+ * A parsed SYNTAX declaration from gsyntax.zil.
+ *
+ * Example ZIL:  <SYNTAX TAKE OBJECT (FIND TAKEBIT) (ON-GROUND IN-ROOM MANY)
+ *                              = V-TAKE PRE-TAKE>
+ * Result: { verb: 'TAKE', directObject: {find:'TAKEBIT', where:[...]},
+ *           action: 'V-TAKE', preAction: 'PRE-TAKE' }
+ */
+export interface SyntaxEntry {
+  /** Main verb word, upper-case (e.g. "TAKE"). */
+  readonly verb: string;
+  /** Preposition / particle before the direct-object slot, if any (e.g. "IN", "UP"). */
+  readonly preposition?: string;
+  /** Direct-object slot, if present. */
+  readonly directObject?: ObjectSlot;
+  /** Preposition between direct and indirect object slots, if any (e.g. "FROM", "WITH"). */
+  readonly preposition2?: string;
+  /** Indirect-object slot, if present. */
+  readonly indirectObject?: ObjectSlot;
+  /** Handler routine name (e.g. "V-TAKE"). */
+  readonly action: string;
+  /** Optional pre-action routine name (e.g. "PRE-TAKE"). */
+  readonly preAction?: string;
+}
+
+/**
+ * Aggregated vocabulary data for the parser.
+ *
+ * synonyms maps each canonical word to its aliases
+ * (e.g. "TAKE" → ["GET", "HOLD", "CARRY", "REMOVE", "GRAB", "CATCH"]).
+ *
+ * buzzwords are filler words the parser silently drops
+ * (e.g. "A", "AN", "THE", "IS").
+ */
+export interface VocabularyData {
+  readonly synonyms: Record<string, string[]>;
+  readonly buzzwords: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Syntax extraction helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse one object slot from the items that follow the OBJECT keyword.
+ *
+ * An object slot is represented by zero, one, or two parenthesised lists:
+ *   (FIND FLAGBIT)       — optional find constraint
+ *   (scope1 scope2 …)   — access-scope list
+ *
+ * The two lists are optional and can appear in either order; the presence of
+ * a FIND atom in the first position distinguishes them.
+ *
+ * Returns the slot and advances `pos` past both optional lists.
+ * `pos` must point to the item immediately after the OBJECT atom.
+ */
+function parseObjectSlot(items: SNode[], pos: number): { slot: ObjectSlot; next: number } {
+  let find: string | undefined;
+  const where: string[] = [];
+  let i = pos;
+
+  // Consume up to two optional parenthesised lists after OBJECT
+  while (i < items.length) {
+    const item = items[i];
+    if (!isList(item)) break;
+    const h = head(item as SList);
+    if (h === 'FIND') {
+      const flagAtom = (item as SList).items[1];
+      if (flagAtom && isAtom(flagAtom)) {
+        find = (flagAtom as SAtom).value;
+      }
+      i++;
+    } else {
+      // Scope list — all items are atoms giving access constraints
+      for (const n of (item as SList).items) {
+        if (isAtom(n)) where.push((n as SAtom).value);
+      }
+      i++;
+      // A FIND list may follow the scope list too; peek ahead
+      if (i < items.length && isList(items[i])) {
+        const nextH = head(items[i] as SList);
+        if (nextH === 'FIND') {
+          const flagAtom = (items[i] as SList).items[1];
+          if (flagAtom && isAtom(flagAtom)) {
+            find = (flagAtom as SAtom).value;
+          }
+          i++;
+        }
+      }
+      break;
+    }
+  }
+
+  return { slot: find !== undefined ? { find, where } : { where }, next: i };
+}
+
+/**
+ * Parse a single <SYNTAX …> form into a SyntaxEntry.
+ *
+ * Grammar (simplified):
+ *   <SYNTAX verb
+ *     [particle]
+ *     [OBJECT (FIND flag)? (scope…)]
+ *     [prep2 [OBJECT (FIND flag)? (scope…)]]
+ *     = ACTION [PRE-ACTION]>
+ */
+function parseSyntaxForm(form: SList): SyntaxEntry | null {
+  // Must start with SYNTAX
+  if (head(form) !== 'SYNTAX') return null;
+  // Second item is the verb atom
+  const verbNode = form.items[1];
+  if (!verbNode || !isAtom(verbNode)) return null;
+  const verb = (verbNode as SAtom).value;
+
+  let preposition: string | undefined;
+  let directObject: ObjectSlot | undefined;
+  let preposition2: string | undefined;
+  let indirectObject: ObjectSlot | undefined;
+  let action = '';
+  let preAction: string | undefined;
+
+  const items = form.items;
+  let i = 2; // start after verb
+
+  // Collect everything up to the '=' separator
+  // The '=' sign is an atom with value '='
+  while (i < items.length) {
+    const cur = items[i];
+
+    if (!isAtom(cur)) { i++; continue; }
+    const val = (cur as SAtom).value;
+
+    if (val === '=') {
+      // Action (and optional pre-action) follow the '='
+      const actionNode = items[i + 1];
+      if (actionNode && isAtom(actionNode)) {
+        action = (actionNode as SAtom).value;
+      }
+      const preNode = items[i + 2];
+      if (preNode && isAtom(preNode)) {
+        preAction = (preNode as SAtom).value;
+      }
+      break;
+    }
+
+    if (val === 'OBJECT') {
+      if (directObject === undefined) {
+        // First OBJECT → direct-object slot
+        const parsed = parseObjectSlot(items, i + 1);
+        directObject = parsed.slot;
+        i = parsed.next;
+      } else {
+        // Second OBJECT → indirect-object slot
+        const parsed = parseObjectSlot(items, i + 1);
+        indirectObject = parsed.slot;
+        i = parsed.next;
+      }
+      continue;
+    }
+
+    // Any other atom before a direct-object slot is a particle/preposition.
+    // Any atom between DO and IO is prep2.
+    if (directObject === undefined) {
+      preposition = val;
+    } else {
+      preposition2 = val;
+    }
+    i++;
+  }
+
+  if (!action) return null;
+
+  const entry: Record<string, unknown> = { verb, action };
+  if (preposition !== undefined) entry['preposition'] = preposition;
+  if (directObject !== undefined) entry['directObject'] = directObject;
+  if (preposition2 !== undefined) entry['preposition2'] = preposition2;
+  if (indirectObject !== undefined) entry['indirectObject'] = indirectObject;
+  if (preAction !== undefined) entry['preAction'] = preAction;
+  return entry as unknown as SyntaxEntry;
+}
+
+// ---------------------------------------------------------------------------
+// Public API — syntax + vocabulary extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Walk an array of top-level SNodes and extract every <SYNTAX …> form into a
+ * SyntaxEntry.  All other forms are silently skipped.
+ */
+export function extractSyntax(nodes: SNode[]): SyntaxEntry[] {
+  const results: SyntaxEntry[] = [];
+  for (const node of nodes) {
+    if (!isList(node)) continue;
+    const form = node as SList;
+    if (form.open !== '<') continue;
+    if (head(form) !== 'SYNTAX') continue;
+    const entry = parseSyntaxForm(form);
+    if (entry) results.push(entry);
+  }
+  return results;
+}
+
+/**
+ * Walk an array of top-level SNodes and aggregate all <SYNONYM …> and
+ * <BUZZ …> forms into a VocabularyData record.
+ *
+ * <SYNONYM TAKE GET HOLD …>  → synonyms['TAKE'] = ['GET', 'HOLD', …]
+ * <BUZZ A AN THE IS …>       → buzzwords = ['A', 'AN', 'THE', 'IS', …]
+ */
+export function extractVocabulary(nodes: SNode[]): VocabularyData {
+  const synonyms: Record<string, string[]> = {};
+  const buzzSet = new Set<string>();
+
+  for (const node of nodes) {
+    if (!isList(node)) continue;
+    const form = node as SList;
+    if (form.open !== '<') continue;
+
+    const tag = head(form);
+
+    if (tag === 'SYNONYM') {
+      // First item after the tag is the canonical word; rest are aliases
+      const canonical = form.items[1];
+      if (!canonical || !isAtom(canonical)) continue;
+      const key = (canonical as SAtom).value;
+      if (!synonyms[key]) synonyms[key] = [];
+      for (let j = 2; j < form.items.length; j++) {
+        const n = form.items[j];
+        if (isAtom(n)) synonyms[key].push((n as SAtom).value);
+      }
+    } else if (tag === 'BUZZ') {
+      for (let j = 1; j < form.items.length; j++) {
+        const n = form.items[j];
+        if (isAtom(n)) buzzSet.add((n as SAtom).value);
+      }
+    }
+  }
+
+  return { synonyms, buzzwords: Array.from(buzzSet) };
 }
