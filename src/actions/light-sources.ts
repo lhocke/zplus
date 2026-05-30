@@ -57,7 +57,8 @@ export const lantern: ActionHandler = (ctx) => {
   }
 
   // ZIL verb LAMP-ON → player typed "turn on <lamp>" or "light <lamp>".
-  if (ctx.verb === 'turn' && ctx.prep === 'on') {
+  // ctx.prep is UPPERCASE after C2 normalizePrep() change (matches syntax.json).
+  if (ctx.verb === 'turn' && ctx.prep === 'ON') {
     if (ctx.hasFlag(lamp, Flag.Burned)) {
       ctx.tell("A burned-out lamp won't light.");
       return true;
@@ -70,7 +71,7 @@ export const lantern: ActionHandler = (ctx) => {
   }
 
   // ZIL verb LAMP-OFF → player typed "turn off <lamp>" or "extinguish <lamp>".
-  if (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'off')) {
+  if (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'OFF')) {
     if (ctx.hasFlag(lamp, Flag.Burned)) {
       ctx.tell('The lamp has already burned out.');
       return true;
@@ -122,7 +123,7 @@ export function resetMatchCount(): void {
 export const matchFunction: ActionHandler = (ctx) => {
   const match = ctx.self;
 
-  if (ctx.verb === 'burn' || (ctx.verb === 'turn' && ctx.prep === 'on')) {
+  if (ctx.verb === 'burn' || (ctx.verb === 'turn' && ctx.prep === 'ON')) {
     // ZIL decrements MATCH-COUNT before testing whether it hit zero.
     if (matchCount > 0) matchCount--;
 
@@ -144,7 +145,7 @@ export const matchFunction: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'off')) {
+  if (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'OFF')) {
     if (!ctx.hasFlag(match, Flag.OnFire)) return false;
     ctx.tell('The match is out.');
     ctx.clearFlag(match, Flag.OnFire);
@@ -221,7 +222,7 @@ export const candlesFcn: ActionHandler = (ctx) => {
   // If the candles are the indirect object for this command, fall through.
   if (ctx.iobj === candles) return false;
 
-  if (ctx.verb === 'burn' || (ctx.verb === 'turn' && ctx.prep === 'on')) {
+  if (ctx.verb === 'burn' || (ctx.verb === 'turn' && ctx.prep === 'ON')) {
     if (ctx.hasFlag(candles, Flag.Burned)) {
       ctx.tell(
         "Alas, there's not much left of the candles. Certainly not enough to burn.",
@@ -300,7 +301,7 @@ export const candlesFcn: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'off')) {
+  if (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'OFF')) {
     ctx.disableClock('I-CANDLES');
     if (ctx.hasFlag(candles, Flag.OnFire)) {
       ctx.clearFlag(candles, Flag.OnFire);
@@ -355,7 +356,7 @@ export const torchObject: ActionHandler = (ctx) => {
   }
 
   if (
-    (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'off')) &&
+    (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'OFF')) &&
     ctx.hasFlag(torch, Flag.OnFire)
   ) {
     ctx.tell('You nearly burn your hand trying to extinguish the flame.');

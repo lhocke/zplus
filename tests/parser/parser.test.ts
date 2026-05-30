@@ -162,7 +162,7 @@ describe('parse — preposition / iobj', () => {
     expect(cmd.verb).toBe('put');
     expect(cmd.dobjIds?.[0]).toBe('LEAFLET');
     expect(cmd.iobjIds?.[0]).toBe('MAILBOX');
-    expect(cmd.prep).toBe('in');
+    expect(cmd.prep).toBe('IN');
   });
 });
 
