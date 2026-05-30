@@ -145,6 +145,7 @@ function splitNounPhrase(tokens: string[]): { noun: string; adjectives: string[]
 
 // --------------------------------------------------------------------------
 // Resolve a noun-phrase against scope; return a ParseResult fragment.
+// A resolved pronoun id can be supplied to short-circuit normal lookup.
 // --------------------------------------------------------------------------
 
 type ResolveResult =
@@ -154,17 +155,33 @@ type ResolveResult =
 function resolveNounPhrase(
   tokens: string[],
   scope: GameObject[],
+  pronounRef?: ObjectId,
 ): ResolveResult {
   const phrase = splitNounPhrase(tokens);
   if (phrase === null) return { ok: true, id: undefined as unknown as ObjectId };
 
   const { noun, adjectives } = phrase;
+
+  // Pronoun short-circuit: "it" or "them" with no adjectives resolves to the
+  // caller-supplied referent (or fails if none was bound).
+  const isPronoun = (noun === 'it' || noun === 'them') && adjectives.length === 0;
+  if (isPronoun) {
+    if (pronounRef !== undefined) {
+      return { ok: true, id: pronounRef };
+    }
+    return {
+      ok: false,
+      result: {
+        kind: 'unknown-word',
+        word: noun,
+        message: `You haven't mentioned any ${noun === 'it' ? 'thing' : 'things'} recently.`,
+      },
+    };
+  }
+
   const matches = matchNoun(noun, adjectives, scope);
 
   if (matches.length === 0) {
-    // Not found in scope — but is it a recognized word at all?  We report
-    // "unknown word" for truly unknown terms.  For this implementation we
-    // treat any word that doesn't match anything in scope as unknown.
     return {
       ok: false,
       result: {
@@ -192,16 +209,122 @@ function resolveNounPhrase(
 }
 
 // --------------------------------------------------------------------------
-// Main parse entry point
+// Parser class — stateful: holds pronoun bindings across turns.
+// --------------------------------------------------------------------------
+
+/**
+ * A stateful parser instance.  Call `parse()` to resolve a command string
+ * against the current scope, then call `bindPronouns()` with the resulting
+ * ParsedCommand to update the pronoun state for the next turn.
+ *
+ * The canonical pronouns are "it" (last DO) and "them" (same binding — Zork
+ * treats them identically for single-object commands).
+ */
+export class Parser {
+  /** Last resolved direct-object id — bound to "it" / "them". */
+  private itRef: ObjectId | undefined = undefined;
+
+  /**
+   * Parse a single command string against the current room context.
+   *
+   * @param input   Raw player input (one command segment — no chaining).
+   * @param room    The room the player is currently in (defines scope).
+   * @param player  The player actor for inventory scope; null in tests.
+   * @param world   The full world, used for scope collection.
+   */
+  parse(
+    input: string,
+    room: Room,
+    player: GameObject | null,
+    world: World,
+  ): ParseResult {
+    const tokens = tokenize(input);
+    if (tokens.length === 0) return { kind: 'empty' };
+
+    const scope = collectScope(room, player, world);
+
+    // Compass shorthand: bare direction token → walk <dir>
+    if (tokens.length === 1 && DIRECTIONS.has(tokens[0]!)) {
+      return {
+        kind: 'ok',
+        command: {
+          verb: 'walk',
+          dobjId: undefined,
+          iobjId: undefined,
+          prep: normalizeDir(tokens[0]!),
+          raw: tokens,
+        } satisfies ParsedCommand,
+      };
+    }
+
+    const rawVerb = tokens[0]!;
+    const canonical = lookupVerb(rawVerb);
+    if (canonical === undefined) {
+      return {
+        kind: 'unknown-word',
+        word: rawVerb,
+        message: `I don't know the word "${rawVerb}".`,
+      };
+    }
+
+    const rest = tokens.slice(1);
+    if (rest.length === 0) {
+      return {
+        kind: 'ok',
+        command: { verb: canonical, raw: tokens },
+      };
+    }
+
+    const { dobjTokens, prep, iobjTokens } = splitOnPrep(rest);
+
+    let dobjId: ObjectId | undefined;
+    let iobjId: ObjectId | undefined;
+
+    // Resolve direct object if any tokens remain.
+    if (dobjTokens.length > 0) {
+      const r = resolveNounPhrase(dobjTokens, scope, this.itRef);
+      if (!r.ok) return r.result;
+      dobjId = r.id;
+    }
+
+    // Resolve indirect object if a preposition and tokens follow.
+    if (prep !== undefined && iobjTokens.length > 0) {
+      const r = resolveNounPhrase(iobjTokens, scope, this.itRef);
+      if (!r.ok) return r.result;
+      iobjId = r.id;
+    }
+
+    return {
+      kind: 'ok',
+      command: { verb: canonical, dobjId, iobjId, prep, raw: tokens },
+    };
+  }
+
+  /**
+   * Update pronoun state from a successfully executed command.
+   * The direct object becomes the new "it" / "them" referent.
+   * Call this after the engine confirms the command was accepted (not on
+   * parser errors or disambig prompts).
+   */
+  bindPronouns(cmd: ParsedCommand): void {
+    if (cmd.dobjId !== undefined) {
+      this.itRef = cmd.dobjId;
+    }
+    // If there is no dobj but there is an iobj, the DO is what gets referenced
+    // in most Zork interactions (the acted-upon thing). We leave itRef as-is
+    // when no dobj was present so the previous referent persists.
+  }
+}
+
+// --------------------------------------------------------------------------
+// Module-level parse function — kept for backward compat with Task 2.2 tests.
+// Creates a one-shot parser with no pronoun state.
 // --------------------------------------------------------------------------
 
 /**
  * Parse a single command string against the current room context.
- *
- * @param input   Raw player input (one command segment — no chaining).
- * @param room    The room the player is currently in (defines scope).
- * @param player  The player actor for inventory scope; null in tests.
- * @param world   The full world, used for scope collection.
+ * This is a convenience wrapper around `new Parser().parse(...)` for
+ * callers that do not need pronoun state across turns.
  */
 export function parse(
   input: string,
@@ -209,66 +332,7 @@ export function parse(
   player: GameObject | null,
   world: World,
 ): ParseResult {
-  const tokens = tokenize(input);
-  if (tokens.length === 0) return { kind: 'empty' };
-
-  const scope = collectScope(room, player, world);
-
-  // Compass shorthand: bare direction token → walk <dir>
-  if (tokens.length === 1 && DIRECTIONS.has(tokens[0]!)) {
-    return {
-      kind: 'ok',
-      command: {
-        verb: 'walk',
-        dobjId: undefined,
-        iobjId: undefined,
-        prep: normalizeDir(tokens[0]!),
-        raw: tokens,
-      } satisfies ParsedCommand,
-    };
-  }
-
-  const rawVerb = tokens[0]!;
-  const canonical = lookupVerb(rawVerb);
-  if (canonical === undefined) {
-    return {
-      kind: 'unknown-word',
-      word: rawVerb,
-      message: `I don't know the word "${rawVerb}".`,
-    };
-  }
-
-  const rest = tokens.slice(1);
-  if (rest.length === 0) {
-    return {
-      kind: 'ok',
-      command: { verb: canonical, raw: tokens },
-    };
-  }
-
-  const { dobjTokens, prep, iobjTokens } = splitOnPrep(rest);
-
-  let dobjId: ObjectId | undefined;
-  let iobjId: ObjectId | undefined;
-
-  // Resolve direct object if any tokens remain.
-  if (dobjTokens.length > 0) {
-    const r = resolveNounPhrase(dobjTokens, scope);
-    if (!r.ok) return r.result;
-    dobjId = r.id;
-  }
-
-  // Resolve indirect object if a preposition and tokens follow.
-  if (prep !== undefined && iobjTokens.length > 0) {
-    const r = resolveNounPhrase(iobjTokens, scope);
-    if (!r.ok) return r.result;
-    iobjId = r.id;
-  }
-
-  return {
-    kind: 'ok',
-    command: { verb: canonical, dobjId, iobjId, prep, raw: tokens },
-  };
+  return new Parser().parse(input, room, player, world);
 }
 
 export type { ParsedCommand, ParseResult };
