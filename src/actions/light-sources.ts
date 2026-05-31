@@ -44,6 +44,7 @@ export const lantern: ActionHandler = (ctx) => {
     ctx.enableClock('I-LANTERN');
     ctx.setFlag(lamp, Flag.OnFire);
     ctx.setFlag(lamp, Flag.Light);
+    // ZIL: V-LAMP-ON falls through to default "The [PRSO] is now on." (gverbs.zil:792)
     ctx.tell(fmt(vLampOn.turnedOn, lamp.desc));
     return true;
   }
@@ -55,6 +56,7 @@ export const lantern: ActionHandler = (ctx) => {
     }
     ctx.disableClock('I-LANTERN');
     ctx.clearFlag(lamp, Flag.OnFire);
+    // ZIL: V-LAMP-OFF "The [PRSO] is now off." (gverbs.zil:779)
     ctx.tell(fmt(vLampOff.turnedOff, lamp.desc));
     return true;
   }
