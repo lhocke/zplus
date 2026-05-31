@@ -316,11 +316,12 @@ function _legacyResolveNounPhrase(
     if (pronounRef !== undefined) {
       return { ok: true, id: pronounRef };
     }
+    // ZIL: "I don't see what you're referring to." (gparser.zil:1261)
     return {
       ok: false,
       result: {
         kind: 'fail',
-        message: `You haven't mentioned any ${noun === 'it' ? 'thing' : 'things'} recently.`,
+        message: "I don't see what you're referring to.",
       },
     };
   }
@@ -345,9 +346,43 @@ function _legacyResolveNounPhrase(
     ok: false,
     result: {
       kind: 'disambig',
-      message: `Which ${noun} do you mean, ${matches.map(m => m.desc).join(' or ')}?`,
+      // WHICH-PRINT verbatim format (gparser.zil:820-835)
+      message: disambigMessage(noun, matches),
     },
   };
+}
+
+// --------------------------------------------------------------------------
+// Disambiguation message helper — ZIL WHICH-PRINT (gparser.zil:820-835).
+// Verbatim format: "Which <noun> do you mean, the A, the B, or the C?"
+// With two candidates: "Which <noun> do you mean, the A or the B?"
+// --------------------------------------------------------------------------
+
+/**
+ * Build the WHICH-PRINT disambiguation message.
+ *
+ * ZIL WHICH-PRINT (gparser.zil:820-835) format:
+ *   "Which <noun> do you mean, the <desc1>, the <desc2>, or the <descN>?"
+ *
+ * With exactly two candidates the Oxford comma is omitted:
+ *   "Which <noun> do you mean, the <desc1> or the <desc2>?"
+ *
+ * The noun used is the INPUT noun token (lowercase), not the object's desc.
+ * Each candidate's desc is prefixed with "the ".
+ *
+ * Source: dfrotz live oracle + spec §17 line 571 (bug I-13).
+ */
+function disambigMessage(noun: string, objs: GameObject[]): string {
+  const candidates = objs.map(o => `the ${o.desc}`);
+  let candidateList: string;
+  if (candidates.length <= 2) {
+    candidateList = candidates.join(' or ');
+  } else {
+    const allButLast = candidates.slice(0, -1);
+    const last = candidates[candidates.length - 1]!;
+    candidateList = `${allButLast.join(', ')}, or ${last}`;
+  }
+  return `Which ${noun} do you mean, ${candidateList}?`;
 }
 
 // --------------------------------------------------------------------------
@@ -398,20 +433,14 @@ function resolveNounPhrase(
       if (itObj !== undefined && accessible(itObj, here, player, world)) {
         return { ok: true, id: itRef };
       }
-      // Referent has left scope
-      return {
-        ok: false,
-        result: {
-          kind: 'fail',
-          message: "I don't see what you're referring to.",
-        },
-      };
     }
+    // Either no referent bound, or referent has left scope.
+    // ZIL: "I don't see what you're referring to." (gparser.zil:1261)
     return {
       ok: false,
       result: {
         kind: 'fail',
-        message: `You haven't mentioned any ${noun === 'it' ? 'thing' : 'things'} recently.`,
+        message: "I don't see what you're referring to.",
       },
     };
   }
@@ -443,7 +472,7 @@ function resolveNounPhrase(
         ok: false,
         result: {
           kind: 'disambig',
-          message: `Which ${noun} do you mean, ${objs.map(m => m.desc).join(' or ')}?`,
+          message: disambigMessage(noun, objs),
         },
       };
     }
@@ -453,7 +482,7 @@ function resolveNounPhrase(
         ok: false,
         result: {
           kind: 'disambig',
-          message: `Which ${noun} do you mean, ${objs.map(m => m.desc).join(' or ')}?`,
+          message: disambigMessage(noun, objs),
         },
       };
     }

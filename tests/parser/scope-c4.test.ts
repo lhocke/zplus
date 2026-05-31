@@ -370,19 +370,24 @@ describe('buildScope', () => {
     expect(snap.localGlobals.some(o => o.id === 'WHITE-HOUSE')).toBe(true);
   });
 
-  it('collects globalObjects (parentless non-room world objects)', async () => {
+  it('collects globalObjects (parentless non-room world objects NOT in LOCAL_GLOBAL_IDS)', async () => {
+    // FOREST is a LOCAL-GLOBAL in ZIL (room-gated, not universal).
+    // The correct id to use here is TEETH or WALL — the true ZIL GLOBAL-OBJECTS.
+    // We use a synthetic id 'TEETH' since it IS in objects.json as a real global.
+    // For the unit test, any id NOT in LOCAL_GLOBAL_IDS works.
     const { buildScope } = await import('../../src/engine/parser/scope.js');
 
     const room = makeRoom('ROOM', 'A room');
     room.set(Flag.Light);
     const player = makeActor('PLAYER');
     player.moveTo(room);
-    const forest = makeThing('FOREST', 'forest', ['FOREST', 'TREES']);
-    // No parent — parentless global
+    // Use 'TEETH' — a true GLOBAL-OBJECT in ZIL (not in LOCAL_GLOBAL_IDS)
+    const teeth = makeThing('TEETH', 'set of teeth', ['TEETH', 'OVERBOARD']);
+    // No parent — parentless true global (IN GLOBAL-OBJECTS in ZIL)
 
-    const world = World.fromObjects([room, player, forest]);
+    const world = World.fromObjects([room, player, teeth]);
     const snap = buildScope(room, player, world);
-    expect(snap.globalObjects.some(o => o.id === 'FOREST')).toBe(true);
+    expect(snap.globalObjects.some(o => o.id === 'TEETH')).toBe(true);
   });
 
   it('collects pseudo entries from room.pseudo', async () => {
@@ -439,7 +444,11 @@ describe('buildScope', () => {
     expect(lit(room, player, world)).toBe(false);
   });
 
-  it('lit() returns true when player carries a light source', async () => {
+  it('lit() returns true when player carries a lit (OnFire) light source', async () => {
+    // ZIL LIT? uses ONBIT (Flag.OnFire) to detect a currently-emitting light source.
+    // Flag.Light is LIGHTBIT (the capability); Flag.OnFire is ONBIT (currently ON).
+    // An unlit lamp has Flag.Light only — it does NOT light the room.
+    // A lit lamp has both Flag.Light AND Flag.OnFire — it lights the room.
     const { lit } = await import('../../src/engine/parser/scope.js');
 
     const room = makeRoom('ROOM', 'A dark room');
@@ -447,10 +456,27 @@ describe('buildScope', () => {
     const player = makeActor('PLAYER');
     player.moveTo(room);
     const lamp = makeThing('LAMP', 'lamp', ['LAMP']);
-    lamp.set(Flag.Light);
+    lamp.set(Flag.Light);   // LIGHTBIT — has the capability
+    lamp.set(Flag.OnFire);  // ONBIT — currently emitting light
     lamp.moveTo(player);
     const world = World.fromObjects([room, player, lamp]);
     expect(lit(room, player, world)).toBe(true);
+  });
+
+  it('lit() returns false when player carries an unlit lamp (Light but not OnFire)', async () => {
+    // An unlit lamp has Flag.Light (LIGHTBIT) but NOT Flag.OnFire (ONBIT).
+    // ZIL LIT? checks ONBIT, not LIGHTBIT — so an unlit lamp does NOT light the room.
+    const { lit } = await import('../../src/engine/parser/scope.js');
+
+    const room = makeRoom('ROOM', 'A dark room');
+    const player = makeActor('PLAYER');
+    player.moveTo(room);
+    const lamp = makeThing('LAMP', 'lamp', ['LAMP']);
+    lamp.set(Flag.Light);   // LIGHTBIT only — lamp is not turned on
+    // NOT setting Flag.OnFire (ONBIT)
+    lamp.moveTo(player);
+    const world = World.fromObjects([room, player, lamp]);
+    expect(lit(room, player, world)).toBe(false);
   });
 });
 

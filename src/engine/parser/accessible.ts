@@ -20,14 +20,27 @@ import type { GameObject } from '../../domain/game-object.js';
 import type { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
+import { ROOM_GLOBAL_IDS } from './room-globals.js';
 
 /**
- * Returns true if the object `obj` is the GLOBAL referent for `here`
- * (i.e., its id matches the room.props.GLOBAL string).
+ * Returns true if the object `obj` is in the GLOBAL list for `here`.
+ *
+ * Prefers the compile-time ROOM_GLOBAL_IDS table (full multi-element lists
+ * from ZIL) over rooms.json room.props.GLOBAL (which has only the first element).
+ * Falls back to room.props.GLOBAL for unit-test rooms not in the table.
  */
 function globalIn(obj: GameObject, here: Room): boolean {
-  const globalId = here.props.get('GLOBAL');
-  return typeof globalId === 'string' && globalId === obj.id;
+  // Prefer compile-time full list
+  const tableIds = ROOM_GLOBAL_IDS.get(here.id);
+  if (tableIds !== undefined) {
+    return tableIds.includes(obj.id);
+  }
+  // Fallback: rooms.json scalar or array
+  const globalProp = here.props.get('GLOBAL');
+  if (Array.isArray(globalProp)) {
+    return (globalProp as string[]).includes(obj.id);
+  }
+  return typeof globalProp === 'string' && globalProp === obj.id;
 }
 
 /**
