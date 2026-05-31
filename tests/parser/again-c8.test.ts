@@ -464,3 +464,73 @@ describe('C8 — AGAIN after direction', () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// §9. C8-FIX Integration: game.turn() tests (no manual setLastWon)
+//
+// These are the REQUIRED positive tests from the C8-FIX task.  They exercise
+// the real bootstrap world via game.turn() — the ONLY path that exercises the
+// fix without manually calling setLastWon().
+//
+// Verified against dfrotz R119 oracle:
+//   "take lamp. again" → "Taken.\n\nYou already have that!"
+//   "take sword and lantern" → both objects taken (two "Taken." lines)
+//
+// References:
+//   - C8-FIX (A1): parseChained() updates lastWon after each segment so AGAIN
+//     in segment 2 reads LIVE parse-success (gmain.zil:42 P-WON semantics).
+//   - C8-FIX (B2): "and" only splits segments when the current segment starts
+//     with AGAIN/G; otherwise "and" inside a noun clause is handled by ANDFLG
+//     in resolveNounPhraseList (gparser.zil:459-491).
+// ---------------------------------------------------------------------------
+
+describe('C8-FIX — game.turn() integration (no manual setLastWon)', () => {
+  it('"take lamp. again" — AGAIN as second segment replays "take lamp", producing already-have message', async () => {
+    // dfrotz oracle (LIVING-ROOM, fresh game, no prior commands):
+    //   > take lamp. again
+    //   Taken.
+    //   You already have that!
+    //
+    // The fix: parseChained() sets lastWon=true after "take lamp" succeeds,
+    // so the AGAIN segment sees lastWon=true and replays instead of saying
+    // "That would just repeat a mistake."
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    game.start();
+
+    const result = game.turn('take lamp. again');
+
+    // Both segments must have produced output.
+    expect(result.output).toContain('Taken.');
+    // The AGAIN replay of "take lamp" fires PRE-TAKE which says "You already have that!"
+    // — NOT "That would just repeat a mistake." which was the pre-fix failure.
+    expect(result.output).toContain('You already have that!');
+    expect(result.output).not.toContain('That would just repeat a mistake.');
+  });
+
+  it('"take sword and lantern" — ANDFLG object-list: both sword and lantern are taken', async () => {
+    // dfrotz oracle (LIVING-ROOM, fresh game, both objects present):
+    //   > take sword and lantern
+    //   sword: Taken.
+    //   brass lantern: Taken.
+    //
+    // The fix: "and" no longer splits the command into two segments; instead
+    // resolveNounPhraseList handles the AND as an object-list connector, returning
+    // both SWORD and LAMP as dobjIds; parseChained expands them into two ParseResults.
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    game.start();
+
+    const result = game.turn('take sword and lantern');
+
+    // Both objects should be taken — two "Taken." messages in the output.
+    const takenCount = (result.output.match(/Taken\./g) ?? []).length;
+    expect(takenCount).toBeGreaterThanOrEqual(2);
+    // No "I don't know the word" or "I don't see any" error.
+    expect(result.output).not.toContain("I don't know the word");
+    expect(result.output).not.toContain("I don't see any");
+    // The pre-fix behavior was only sword taken (lantern became a bare-noun
+    // segment with no verb → failed with "I don't know the word 'lamp'").
+    expect(result.output).not.toContain("I don't know the word \"lamp\"");
+  });
+});

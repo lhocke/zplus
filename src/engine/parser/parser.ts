@@ -44,18 +44,18 @@ function tokenizeSegment(input: string): string[] {
 }
 
 /**
- * Split an input string into segments on SIBREAK tokens (period/comma),
- * on the word "then", and on the word "and" when it acts as a command-chain
- * separator (gparser.zil:202-211 for AGAIN, lines 497-502 for verb/direction
- * following AND in noun-scanning).
+ * Split an input string into segments on SIBREAK tokens (period/comma) and on
+ * the word "then".  "and" is treated as a segment separator ONLY when the
+ * current segment begins with AGAIN/G — matching ZIL semantics where "and"
+ * after AGAIN (gparser.zil:202-206) is a continuation separator, but "and"
+ * inside a noun clause (e.g. "take sword and lantern") is an ANDFLG object-list
+ * connector handled by the noun scanner (gparser.zil:459-491), not by command
+ * splitting.
  *
- * "and" is treated as a segment separator here.  In ZIL, "and" after AGAIN
- * (lines 202-206) is always a separator, and "and" before a verb or direction
- * (lines 497-502) is converted to THEN (also a separator).  The port unifies
- * both cases by splitting on "and" at this level.  The noun-list use of "and"
- * (e.g. "take lamp and sword") is not supported by the port's SNARFEM path, so
- * splitting there is harmless (each word becomes its own segment, the bare-noun
- * segment fails gracefully).
+ * C8-FIX (B2): the prior repair treated "and" as a universal separator, which
+ * broke "take sword and lantern" by splitting it into two segments.  Narrowed
+ * to THEN/period only at the segment level; ANDFLG-style AND is handled in
+ * resolveNounPhraseList() in the noun scanning path.
  *
  * This replaces the old splitChained() export from tokenizer.ts.
  * Kept private here — Wave C9 will delete it when the lazy drive lands.
@@ -66,13 +66,27 @@ function splitSegments(input: string): string[][] {
   const segments: string[][] = [];
   let current: string[] = [];
 
+  // Track whether the current segment's first content token is AGAIN/G.
+  // "and" splits a segment only in AGAIN/G context (ZIL gparser.zil:202-206).
+  let currentStartsWithAgain = false;
+
   for (const tok of allToks) {
-    if (SIBREAK_CHARS.has(tok) || tok === 'then' || tok === 'and') {
+    const isStructural =
+      SIBREAK_CHARS.has(tok) ||
+      tok === 'then' ||
+      (tok === 'and' && currentStartsWithAgain);
+
+    if (isStructural) {
       // Flush the current segment (articles stripped).
       const filtered = current.filter(t => !ARTICLES.has(t));
       if (filtered.length > 0) segments.push(filtered);
       current = [];
+      currentStartsWithAgain = false;
     } else {
+      // Detect whether this is the first content token (after any articles).
+      if (current.filter(t => !ARTICLES.has(t)).length === 0 && !ARTICLES.has(tok)) {
+        currentStartsWithAgain = (tok === 'again' || tok === 'g');
+      }
       current.push(tok);
     }
   }
@@ -749,6 +763,77 @@ function resolveNounPhrase(
   }
 }
 
+/**
+ * C8-FIX (ANDFLG): resolve a noun token list that may contain "and" as an
+ * object-list connector (gparser.zil:459-491 CLAUSE ANDFLG mechanism).
+ *
+ * When "and" (or comma) appears between nouns in a dobj clause
+ * (e.g. "take sword and lantern"), ZIL sets ANDFLG and continues scanning to
+ * accumulate multiple objects.  This function handles that case by splitting
+ * on "and", resolving each sub-phrase via resolveNounPhrase, and collecting
+ * all resolved ids into one list.
+ *
+ * Returns:
+ *   { ids: ObjectId[] }    — all resolved object ids (one or more)
+ *   ResolveResult (not ok) — first resolution error, stops accumulation
+ *   { pseudo, action }     — if any sub-phrase resolves to a pseudo-object
+ *
+ * ONLY the dobj slot uses ANDFLG; iobj never has AND lists in ZIL Zork I.
+ */
+type NounListResult =
+  | { kind: 'ids'; ids: ObjectId[] }
+  | { kind: 'fail'; result: ResolveResult };
+
+function resolveNounPhraseList(
+  tokens: string[],
+  snap: import('./scope.js').ScopeSnapshot,
+  here: Room,
+  player: GameObject,
+  world: World,
+  locBits: number,
+  isLit: boolean,
+  itRef: ObjectId | undefined,
+): NounListResult {
+  // Split tokens on "and" to detect ANDFLG-style object lists.
+  // "sword and lantern" → [["sword"], ["lantern"]]
+  // "brass lantern" → [["brass", "lantern"]] (no split)
+  const groups: string[][] = [];
+  let current: string[] = [];
+  for (const tok of tokens) {
+    if (tok === 'and') {
+      if (current.length > 0) groups.push(current);
+      current = [];
+    } else {
+      current.push(tok);
+    }
+  }
+  if (current.length > 0) groups.push(current);
+
+  // Single group — no AND connector; delegate to standard resolveNounPhrase.
+  if (groups.length === 1) {
+    const r = resolveNounPhrase(tokens, snap, here, player, world, locBits, undefined, isLit, itRef);
+    if (r.ok === false) return { kind: 'fail', result: r };
+    if (r.ok === 'pseudo') return { kind: 'fail', result: r };
+    const id = r.id as ObjectId;
+    return { kind: 'ids', ids: id !== undefined ? [id] : [] };
+  }
+
+  // Multiple groups: ANDFLG — resolve each group, accumulate ids.
+  const ids: ObjectId[] = [];
+  for (const group of groups) {
+    const r = resolveNounPhrase(group, snap, here, player, world, locBits, undefined, isLit, itRef);
+    if (r.ok === false) return { kind: 'fail', result: r };
+    if (r.ok === 'pseudo') {
+      // Pseudo-object encountered in an AND list — unusual; treat as fail.
+      return { kind: 'fail', result: { ok: false, result: { kind: 'fail', message: "I don't understand that." } } };
+    }
+    const id = r.id as ObjectId;
+    if (id !== undefined) ids.push(id);
+  }
+
+  return { kind: 'ids', ids };
+}
+
 // --------------------------------------------------------------------------
 // C7: Orphan helper functions (module-level, no class state)
 // --------------------------------------------------------------------------
@@ -1284,33 +1369,37 @@ export class Parser {
     // NOTE: dobjFindBit is the GWIM findBit — only used during GWIM calls,
     // NOT during normal noun resolution (P-GWIMBIT is 0 during THIS-IT? in SEARCH-LIST).
     // Pass undefined for findBitName during normal resolution.
+    //
+    // C8-FIX (ANDFLG): use resolveNounPhraseList to handle "and"-connected
+    // object lists (e.g. "take sword and lantern" → dobjIds [SWORD, LAMP]).
+    // When no "and" is present, resolveNounPhraseList delegates to the standard
+    // resolveNounPhrase, so behaviour is identical to the pre-fix code.
     if (dobjTokens.length > 0) {
-      const r = resolveNounPhrase(
+      const listResult = resolveNounPhraseList(
         dobjTokens, snap, room, effectivePlayer, world,
-        dobjLocBits, undefined /* GWIM only */, isLit, this.itRef,
+        dobjLocBits, isLit, this.itRef,
       );
-      if (r.ok === 'pseudo') {
-        // Pseudo sentinel: return ok command with the pseudo action.
-        // The pseudo action IS the dispatch target (engine seam flagged).
-        return {
-          kind: 'ok',
-          command: {
-            verb: canonical,
-            action: r.action,
-            dobjIds: undefined,
-            iobjIds: undefined,
-            prep: prepOut,
-            preAction: undefined,
-            syntax: matchedSyntax,
-            raw: tokens,
-          },
-        };
-      }
-      if (!r.ok) {
+      if (listResult.kind === 'fail') {
+        const r = listResult.result;
+        if (r.ok === 'pseudo') {
+          // Pseudo sentinel: return ok command with the pseudo action.
+          // The pseudo action IS the dispatch target (engine seam flagged).
+          return {
+            kind: 'ok',
+            command: {
+              verb: canonical,
+              action: r.action,
+              dobjIds: undefined,
+              iobjIds: undefined,
+              prep: prepOut,
+              preAction: undefined,
+              syntax: matchedSyntax,
+              raw: tokens,
+            },
+          };
+        }
         // C7: If disambig, save orphan+disambig state so ORPHAN-MERGE can handle it.
-        if (r.result.kind === 'disambig' && matchedSyntax !== undefined) {
-          // Extract candidates from getObject result by re-resolving.
-          // The disambig message was already built; extract noun from dobjTokens.
+        if (r.ok === false && r.result.kind === 'disambig' && matchedSyntax !== undefined) {
           const dobjNoun = dobjTokens[dobjTokens.length - 1] ?? '';
           const candidateIds = _extractDisambigCandidates(dobjNoun, snap, room, effectivePlayer, world, dobjLocBits, isLit);
           this.orphan = {
@@ -1323,10 +1412,12 @@ export class Parser {
             disambig: { noun: dobjNoun, candidates: candidateIds },
           };
         }
-        return r.result;
-      }
-      if (r.id !== (undefined as unknown as ObjectId)) {
-        dobjIds = [r.id];
+        if (r.ok === false) return r.result;
+      } else {
+        // listResult.kind === 'ids'
+        if (listResult.ids.length > 0) {
+          dobjIds = listResult.ids;
+        }
       }
     }
 
@@ -1444,7 +1535,33 @@ export class Parser {
       // Normal single parse.
       const segment = tokens.join(' ');
       const result = this.parse(segment, room, player, world);
+
+      // C8-FIX (ANDFLG expansion): when the parser resolved multiple dobjIds
+      // from an AND-connected noun list (e.g. "take sword and lantern"), expand
+      // into one ParseResult per object — matching ZIL's PERFORM iteration over
+      // the AND-list.  Each entry is a copy of the base command with a single
+      // dobjId.  Same terminal behaviour as tryExpandAll: break after expansion.
+      if (result.kind === 'ok' && result.command.dobjIds !== undefined && result.command.dobjIds.length > 1) {
+        for (const id of result.command.dobjIds) {
+          results.push({
+            kind: 'ok',
+            command: { ...result.command, dobjIds: [id] },
+          });
+        }
+        this.lastWon = true;
+        break; // AND-list is a terminal segment — don't chain further.
+      }
+
       results.push(result);
+
+      // C8-FIX (A1): update lastWon immediately after each segment parse so
+      // AGAIN in a later segment reads the LIVE parse-success state, not the
+      // stale value from the previous turn.  This matches ZIL semantics where
+      // P-WON = PARSER() return value per call (gmain.zil:42).
+      // game.turn() still calls setLastWon() for execution-level outcomes
+      // (M-FATAL / non-fatal success) — those calls run after parseChained()
+      // returns and correctly set lastWon for the NEXT turn's AGAIN guard.
+      this.lastWon = result.kind === 'ok';
 
       if (result.kind !== 'ok') {
         // Stop chaining at first error.
