@@ -300,15 +300,15 @@ export const prePutHandler: ActionHandler = (ctx: ActionContext): boolean => {
 //   2. PRSI given AND NOT TRANSBIT(PRSI) → "How does one look through a <X>?" RTRUE
 // Otherwise: RFALSE (allow V-READ).
 //
-// LIT: the current room has Flag.Light (or a light source in scope).
-// Simplified: check Flag.Light on the room (matches the engine's current approach).
+// LIT: the current room has Flag.On (ONBIT always-lit after P1-3), or a light
+// source in scope. Simplified: check Flag.On on the room.
 // ---------------------------------------------------------------------------
 
 export const preReadHandler: ActionHandler = (ctx: ActionContext): boolean => {
   const { iobj, here, tell } = ctx;
 
   // Guard 1: dark room
-  if (!here.has(Flag.Light)) {
+  if (!here.has(Flag.On)) {
     tell('It is impossible to read in the dark.');
     return true;
   }

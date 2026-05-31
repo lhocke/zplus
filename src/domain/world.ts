@@ -53,6 +53,8 @@ const FLAG_NAME_MAP: Record<string, Flag> = {
   Tool:         Flag.Tool,
   TryTake:      Flag.TryTake,
   Wearable:     Flag.Wearable,
+  NonLand:      Flag.NonLand,
+  On:           Flag.On,
 };
 
 function buildObject(data: ObjectData): GameObject {

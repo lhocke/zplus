@@ -98,7 +98,7 @@ const DIR_MAP: Record<string, Dir> = {
 
 const FLAG_MAP: Record<string, string> = {
   LIGHTBIT: 'Light',
-  ONBIT: 'Light',        // ONBIT = lamp/room is currently lit
+  ONBIT: 'On',           // ONBIT on rooms = always-lit (outdoor); on objects = currently on (Flag.OnFire handles the object case at runtime)
   TAKEBIT: 'Takeable',
   CONTBIT: 'Container',
   OPENBIT: 'Open',
@@ -119,7 +119,7 @@ const FLAG_MAP: Record<string, string> = {
   MAZEBIT: 'Maze',
   RLANDBIT: 'Land',
   NDESCBIT: 'NonDescript',
-  NONLANDBIT: 'NonDescript',
+  NONLANDBIT: 'NonLand',  // water/non-land rooms (RESERVOIR, RIVER-*); distinct from NDESCBIT
   SEARCHBIT: 'Searchable',
   SURFACEBIT: 'Surface',
   // Flags that don't map 1-to-1 to the enum — kept as raw names

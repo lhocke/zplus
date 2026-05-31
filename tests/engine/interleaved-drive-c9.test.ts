@@ -46,7 +46,7 @@ function buildMailboxWorld(): { game: Game } {
   const room = new Room('WEST', 'West of House', {
     ldesc: 'You are west of a white house.',
   });
-  room.set(Flag.Light);
+  room.set(Flag.On);
 
   const mailbox = new Container('MAILBOX', 'small mailbox', {
     synonyms: ['mailbox', 'box'],
@@ -127,7 +127,7 @@ describe('C9 — interleaved drive: orphan state across turns', () => {
     // Build a world with TWO takeable items — GWIM can't auto-supply (2 candidates),
     // so the parser issues an orphan prompt for "take" with no object.
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A simple room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
 
     const lamp = new Thing('LAMP', 'brass lantern', {
       synonyms: ['lamp', 'lantern'],
@@ -176,7 +176,7 @@ describe('C9 — interleaved drive: orphan state across turns', () => {
 describe('C9 — interleaved drive: lazy continuation chaining', () => {
   it('"look. look" executes two look commands in one turn', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A simple room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
     player.moveTo(room);
 
@@ -197,11 +197,11 @@ describe('C9 — interleaved drive: lazy continuation chaining', () => {
 
   it('direction chaining "n. e." fires both moves in one turn', () => {
     const roomA = new Room('ROOM-A', 'Room A', { ldesc: 'Room A.', exits: [{ dir: 'north', to: 'ROOM-B' }] });
-    roomA.set(Flag.Light);
+    roomA.set(Flag.On);
     const roomB = new Room('ROOM-B', 'Room B', { ldesc: 'Room B.', exits: [{ dir: 'east', to: 'ROOM-C' }, { dir: 'south', to: 'ROOM-A' }] });
-    roomB.set(Flag.Light);
+    roomB.set(Flag.On);
     const roomC = new Room('ROOM-C', 'Room C', { ldesc: 'Room C.', exits: [{ dir: 'west', to: 'ROOM-B' }] });
-    roomC.set(Flag.Light);
+    roomC.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
     player.moveTo(roomA);
 
@@ -230,7 +230,7 @@ describe('C9 — interleaved drive: lazy continuation chaining', () => {
 describe('C9 — interleaved drive: move counter', () => {
   it('a chained "look. look" still counts as ONE move', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A simple room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
     player.moveTo(room);
 
@@ -252,7 +252,7 @@ describe('C9 — interleaved drive: move counter', () => {
     // "MOVES/clock tick only on a parsed+executed command" (reconciliation §2).
     // Use two takeable items so GWIM can't auto-supply and orphan fires.
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A simple room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const lamp = new Thing('LAMP', 'brass lantern', {
       synonyms: ['lamp', 'lantern'],
       adjectives: ['brass'],

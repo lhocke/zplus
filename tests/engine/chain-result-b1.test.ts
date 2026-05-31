@@ -60,7 +60,7 @@ function buildStepWorld(opts: StepWorldOpts = {}): StepWorld {
 
   // --- Room ---
   const room = new Room('ROOM', 'Test Room', { ldesc: 'A bare test room.' });
-  room.set(Flag.Light);
+  room.set(Flag.On);
 
   // Step 2: room M-BEG handler
   room.handler = (ctx: ActionContext) => {
@@ -261,7 +261,7 @@ describe('B1 — existing dispatch tests still pass (regression guard)', () => {
     // Mirror the existing dispatch.test.ts "order" test.
     const log: string[] = [];
     const room = new Room('ROOM2', 'Room', { ldesc: 'Room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     room.handler = (ctx: ActionContext) => {
       if (ctx.rarg === M_BEG && ctx.verb === 'take') { log.push('room'); }
       return false;

@@ -224,15 +224,16 @@ export function buildScope(here: Room, player: GameObject, world: World): ScopeS
  * Returns true if the current room is lit.
  *
  * ZIL LIT? (gparser.zil:1333-1352) logic:
- *   1. Room itself has ONBIT (Flag.Light on rooms means ONBIT) → true
+ *   1. Room itself has ONBIT (Flag.On on rooms = always-lit/outdoor) → true
  *   2. Set P-GWIMBIT = ONBIT (Flag.OnFire for objects)
  *   3. DO-SL WINNER (player) 1 1  — search inventory for any object with ONBIT
  *   4. DO-SL HERE (room) 1 1     — search room contents for any object with ONBIT
  *   else → false
  *
  * Key distinction:
- *   - Rooms use Flag.Light to represent ONBIT (outdoor/permanently-lit rooms
- *     have ONBIT set in ZIL; the extractor maps this to Flag.Light on rooms).
+ *   - Rooms use Flag.On to represent ONBIT (P1-3: outdoor/permanently-lit rooms
+ *     have ONBIT set in ZIL; the extractor maps this to Flag.On on rooms).
+ *     Flag.Light on rooms is LIGHTBIT (capability) — not used for room illumination.
  *   - Objects use Flag.OnFire to represent ONBIT (the "currently emitting light"
  *     bit set dynamically when a lamp is turned on, candles are lit, etc.).
  *     Flag.Light on objects is LIGHTBIT (the capability to be a light source).
@@ -241,8 +242,8 @@ export function buildScope(here: Room, player: GameObject, world: World): ScopeS
  * does NOT make the room lit. Only an active light source (Flag.OnFire) does.
  */
 export function lit(here: Room, player: GameObject, _world: World): boolean {
-  // (1) Room itself has ONBIT → lit  [outdoor rooms have Flag.Light = ONBIT]
-  if (here.has(Flag.Light)) return true;
+  // (1) Room itself has ONBIT (Flag.On) → lit  [outdoor/always-lit rooms]
+  if (here.has(Flag.On)) return true;
 
   // (2+3) Check player inventory for an object with ONBIT (currently emitting light)
   for (const child of player.children) {

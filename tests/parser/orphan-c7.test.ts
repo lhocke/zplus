@@ -37,7 +37,7 @@ import { Parser } from '../../src/engine/parser/parser.js';
 
 function makeRoom(id: string, desc: string, light = true): Room {
   const r = new Room(id, desc);
-  if (light) r.set(Flag.Light);
+  if (light) r.set(Flag.On);
   return r;
 }
 

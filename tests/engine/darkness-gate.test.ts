@@ -54,7 +54,7 @@ describe('darkness gate — describeCurrentRoom (game.ts start)', () => {
   });
 
   it('starting in a lit room shows room description normally', () => {
-    // WEST-OF-HOUSE has Flag.Light set — should render normally
+    // WEST-OF-HOUSE has Flag.On (ONBIT always-lit) set — should render normally
     const g = newGameAt('WEST-OF-HOUSE');
     const out = g.start();
 
@@ -95,7 +95,7 @@ describe('darkness gate — verbLook ("look") in dark room', () => {
 
 describe('darkness gate — entering a dark room via movement', () => {
   it('moving from KITCHEN (lit) up into ATTIC (dark) shows pitch-black message', () => {
-    // KITCHEN has Flag.Light; ATTIC has no Flag.Light and no light source nearby.
+    // KITCHEN has Flag.On (ONBIT always-lit); ATTIC has no Flag.On and no light source nearby.
     // Player has no lamp. Going up should trigger the darkness gate on the
     // destination room description (verbGo path).
     const g = newGameAt('KITCHEN');

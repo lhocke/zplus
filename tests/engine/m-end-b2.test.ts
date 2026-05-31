@@ -59,7 +59,7 @@ function buildProbeWorld(opts: { fatalVerb?: string } = {}): ProbeWorld {
   const mEndCalls: Array<{ verb: string; dobjId: string | undefined; iobjId: string | undefined }> = [];
 
   const room = new Room('PROBE-ROOM', 'Probe Room', { ldesc: 'A minimal probe room.' });
-  room.set(Flag.Light);
+  room.set(Flag.On);
 
   room.handler = (ctx: ActionContext): boolean => {
     if (ctx.rarg === M_BEG && opts.fatalVerb !== undefined && ctx.verb === opts.fatalVerb) {
@@ -201,11 +201,11 @@ describe('B2 — runMEnd: M-END fires on the destination room after movement', (
     const destEndCalls: string[] = [];
 
     const startRoom = new Room('START', 'Start Room', { ldesc: 'The start.' });
-    startRoom.set(Flag.Light);
-    startRoom.set(Flag.Light);
+    startRoom.set(Flag.On);
+    startRoom.set(Flag.On);
 
     const destRoom = new Room('DEST', 'Dest Room', { ldesc: 'The destination.' });
-    destRoom.set(Flag.Light);
+    destRoom.set(Flag.On);
     // Add north exit from start to dest.
     (startRoom as unknown as { exits: Array<{ dir: string; to: string }> }).exits = [];
     startRoom.exits.push({ dir: 'north', to: 'DEST' });

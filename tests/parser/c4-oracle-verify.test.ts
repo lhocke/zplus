@@ -140,7 +140,7 @@ describe('disambiguation message format (WHICH-PRINT verbatim)', () => {
   it('two candidates → "Which X do you mean, the A or the B?"', async () => {
     // Create two objects with the same noun "sword"
     const room = new Room('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'player');
     player.moveTo(room);
 
@@ -164,7 +164,7 @@ describe('disambiguation message format (WHICH-PRINT verbatim)', () => {
 
   it('three candidates → "Which X do you mean, the A, the B, or the C?"', async () => {
     const room = new Room('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'player');
     player.moveTo(room);
 

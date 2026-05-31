@@ -35,6 +35,19 @@ export enum Flag {
    * it prints "You are already wearing it." instead of "You already have that!".
    */
   Wearable,
+  /**
+   * NONLANDBIT — room is a non-land (water) area; drowning/boat logic checks this.
+   * Distinct from NDESCBIT (NonDescript); NONLANDBIT marks water rooms such as
+   * RESERVOIR, IN-STREAM, and RIVER-1..5.
+   */
+  NonLand,
+  /**
+   * ONBIT on rooms — room is always lit (outdoor rooms, open sky areas).
+   * Distinct from Flag.Light (LIGHTBIT = "has the capability to emit light")
+   * and Flag.OnFire (ONBIT on objects = "currently emitting light").
+   * lit() checks Flag.On on the room object to implement the ZIL LIT? room-ONBIT path.
+   */
+  On,
 }
 
 // Capability predicates — thin wrappers so call sites read as intent, not
@@ -72,3 +85,5 @@ export const isActor        = (o: FlagHost): boolean => o.has(Flag.Actor);
 export const isTool         = (o: FlagHost): boolean => o.has(Flag.Tool);
 export const isTryTake      = (o: FlagHost): boolean => o.has(Flag.TryTake);
 export const isWearable     = (o: FlagHost): boolean => o.has(Flag.Wearable);
+export const isNonLand      = (o: FlagHost): boolean => o.has(Flag.NonLand);
+export const isOn           = (o: FlagHost): boolean => o.has(Flag.On);

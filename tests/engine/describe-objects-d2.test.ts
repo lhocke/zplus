@@ -51,7 +51,7 @@ describe('D2: WEST-OF-HOUSE object listing', () => {
     const room = new Room('WEST-OF-HOUSE', 'West of House', {
       ldesc: 'You are standing in an open field west of a white house, with a boarded front door.',
     });
-    room.set(Flag.Light);
+    room.set(Flag.On);
 
     const mailbox = new Container('MAILBOX', 'small mailbox', {
       synonyms: ['mailbox', 'box'],
@@ -98,7 +98,7 @@ describe('D2: NDESCBIT objects skipped', () => {
     const room = new Room('LIVING-ROOM', 'Living Room', {
       ldesc: 'You are in the living room.',
     });
-    room.set(Flag.Light);
+    room.set(Flag.On);
 
     // Trophy case — NonDescript (NDESCBIT), Transparent container
     const trophyCase = new Container('TROPHY-CASE', 'trophy case', {
@@ -168,7 +168,7 @@ describe('D2: NDESCBIT objects skipped', () => {
 describe('D2: fdesc pass 1 vs fallback pass 2', () => {
   function makeRoom() {
     const room = new Room('TEST-ROOM', 'Test Room', { ldesc: 'A test room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
 
     // Item with fdesc and no TOUCHBIT → should show fdesc
     const lampWithFdesc = new Thing('LAMP', 'brass lantern', {
@@ -227,7 +227,7 @@ describe('D2: fdesc pass 1 vs fallback pass 2', () => {
 describe('D2: open/transparent container contents listed', () => {
   function makeRoomWithContainer() {
     const room = new Room('TEST-ROOM', 'Test Room', { ldesc: 'A room with containers.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
 
     // Open container — shows FIRSTER header + contents
     const box = new Container('OPEN-BOX', 'wooden box', {
@@ -297,7 +297,7 @@ describe('D2: open/transparent container contents listed', () => {
 describe('D2: NDESCBIT container with open/transparent contents recurse', () => {
   function makeKitchenLikeRoom() {
     const room = new Room('KITCHEN', 'Kitchen', { ldesc: 'You are in the kitchen.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
 
     // KITCHEN-TABLE: NonDescript, Container, Open, Surface
     const table = new Container('KITCHEN-TABLE', 'kitchen table', {
@@ -393,7 +393,7 @@ describe('D2: NDESCBIT container with open/transparent contents recurse', () => 
 describe('D2: empty room produces no object listing', () => {
   it('shows only room name and ldesc with no object lines', () => {
     const room = new Room('EMPTY', 'Empty Room', { ldesc: 'Nothing here.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
     player.moveTo(room);
     const world = World.fromObjects([room, player]);

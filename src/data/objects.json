@@ -1491,6 +1491,7 @@
     "flags": [
       "Takeable",
       "OnFire",
+      "On",
       "Light"
     ],
     "props": {
@@ -2189,6 +2190,7 @@
     "flags": [
       "Takeable",
       "OnFire",
+      "On",
       "Light"
     ],
     "props": {
@@ -2616,7 +2618,6 @@
       "STEEP"
     ],
     "ldesc": "There's nothing special about the stairs.",
-    "parent": null,
     "actionRoutine": "STAIRS-F"
   }
 ]

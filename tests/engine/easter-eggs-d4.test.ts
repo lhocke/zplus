@@ -40,7 +40,7 @@ const FROBOZZ_RESPONSE = 'The FROBOZZ Corporation created, owns, and operates th
 
 function makeMinimalCtx(verb: string): VerbContext {
   const room = new Room('TEST-ROOM', 'Test Room', { ldesc: 'A test room.' });
-  room.set(Flag.Light);
+  room.set(Flag.On);
   const player = new Actor('ADVENTURER', 'yourself');
   player.moveTo(room);
   const world = World.fromObjects([room, player]);

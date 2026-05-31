@@ -35,13 +35,13 @@ function makeFixture(): Fixture {
     ldesc: 'You are standing in an open field west of a white house, with a boarded front door.',
     exits: [{ dir: 'north', to: 'NORTH-OF-HOUSE' }],
   });
-  westOfHouse.set(Flag.Light);
+  westOfHouse.set(Flag.On);
 
   const northOfHouse = new Room('NORTH-OF-HOUSE', 'North of House', {
     ldesc: 'You are facing the north side of a white house.',
     exits: [{ dir: 'south', to: 'WEST-OF-HOUSE' }],
   });
-  northOfHouse.set(Flag.Light);
+  northOfHouse.set(Flag.On);
 
   const mailbox = new Container('MAILBOX', 'small mailbox', {
     synonyms: ['mailbox', 'box'],

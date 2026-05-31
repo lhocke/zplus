@@ -44,7 +44,7 @@ interface ItWorld {
 
 function buildItWorld(): ItWorld {
   const room = new Room('TEST-ROOM', 'Test Room', { ldesc: 'A test room.' });
-  room.set(Flag.Light);
+  room.set(Flag.On);
 
   const lamp = new Thing('LAMP', 'brass lantern', {
     synonyms: ['lamp', 'lantern'],

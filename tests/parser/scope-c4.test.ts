@@ -328,7 +328,7 @@ describe('buildScope', () => {
     const { buildScope } = await import('../../src/engine/parser/scope.js');
 
     const room = makeRoom('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = makeActor('PLAYER');
     player.moveTo(room);
     const lantern = makeThing('LANTERN', 'lantern', ['LANTERN']);
@@ -343,7 +343,7 @@ describe('buildScope', () => {
     const { buildScope } = await import('../../src/engine/parser/scope.js');
 
     const room = makeRoom('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = makeActor('PLAYER');
     player.moveTo(room);
     const sword = makeThing('SWORD', 'sword', ['SWORD']);
@@ -358,7 +358,7 @@ describe('buildScope', () => {
     const { buildScope } = await import('../../src/engine/parser/scope.js');
 
     const room = makeRoom('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     room.props.set('GLOBAL', 'WHITE-HOUSE');
     const player = makeActor('PLAYER');
     player.moveTo(room);
@@ -378,7 +378,7 @@ describe('buildScope', () => {
     const { buildScope } = await import('../../src/engine/parser/scope.js');
 
     const room = makeRoom('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = makeActor('PLAYER');
     player.moveTo(room);
     // Use 'TEETH' — a true GLOBAL-OBJECT in ZIL (not in LOCAL_GLOBAL_IDS)
@@ -394,7 +394,7 @@ describe('buildScope', () => {
     const { buildScope } = await import('../../src/engine/parser/scope.js');
 
     const room = makeRoom('LIVING-ROOM', 'Living Room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     // Set pseudo directly on the room
     (room as any).pseudo = [
       { word: 'NAILS', action: 'NAILS-PSEUDO' },
@@ -413,7 +413,7 @@ describe('buildScope', () => {
     const { buildScope } = await import('../../src/engine/parser/scope.js');
 
     const room = makeRoom('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = makeActor('PLAYER');
     player.moveTo(room);
 
@@ -422,11 +422,11 @@ describe('buildScope', () => {
     expect(snap.roomTier.some(c => c.obj.id === 'PLAYER')).toBe(false);
   });
 
-  it('lit() returns true when room has Light flag', async () => {
+  it('lit() returns true when room has On flag (ONBIT always-lit)', async () => {
     const { lit } = await import('../../src/engine/parser/scope.js');
 
     const room = makeRoom('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);   // ONBIT on rooms = always-lit (Flag.On after P1-3)
     const player = makeActor('PLAYER');
     player.moveTo(room);
     const world = World.fromObjects([room, player]);
@@ -497,7 +497,7 @@ describe('two-pass retry ordering (getObject)', () => {
     const { SH, SC, SOG, SIR } = await import('../../src/engine/parser/scope-bits.js');
 
     const room = makeRoom('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = makeActor('PLAYER');
     player.moveTo(room);
 
@@ -667,7 +667,7 @@ describe('ParseResult not-here and dark variants', () => {
   it('parse of unknown noun in lit room returns not-here result', () => {
     // "eat sandwich" in a room with no sandwich → not-here
     const room = makeRoom('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = makeActor('PLAYER');
     player.moveTo(room);
     const world = World.fromObjects([room, player]);
@@ -708,7 +708,7 @@ describe('local-globals resolution', () => {
     // A room with GLOBAL = 'WHITE-HOUSE'; the WHITE-HOUSE object has no parent.
     // Parsing "examine house" should find WHITE-HOUSE.
     const room = makeRoom('WEST-OF-HOUSE', 'West of House');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     room.props.set('GLOBAL', 'WHITE-HOUSE');
 
     const player = makeActor('PLAYER');
@@ -739,7 +739,7 @@ describe('local-globals resolution', () => {
 describe('pseudo-object resolution', () => {
   it('resolves "examine nails" in living room to a pseudo sentinel', () => {
     const room = makeRoom('LIVING-ROOM', 'Living Room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     // Set pseudo on the room
     (room as any).pseudo = [
       { word: 'NAILS', action: 'NAILS-PSEUDO' },
@@ -766,7 +766,7 @@ describe('pseudo-object resolution', () => {
 describe('container recursion — open vs closed mailbox', () => {
   it('cannot see leaflet in closed mailbox', () => {
     const room = makeRoom('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = makeActor('PLAYER');
     player.moveTo(room);
 
@@ -787,7 +787,7 @@ describe('container recursion — open vs closed mailbox', () => {
 
   it('can see leaflet in open mailbox', () => {
     const room = makeRoom('ROOM', 'A room');
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = makeActor('PLAYER');
     player.moveTo(room);
 
@@ -816,9 +816,9 @@ describe('container recursion — open vs closed mailbox', () => {
 describe('IT-pronoun staleness', () => {
   it('rejects IT when referent has left scope (different room)', () => {
     const room1 = makeRoom('ROOM1', 'Room 1');
-    room1.set(Flag.Light);
+    room1.set(Flag.On);
     const room2 = makeRoom('ROOM2', 'Room 2');
-    room2.set(Flag.Light);
+    room2.set(Flag.On);
     const player = makeActor('PLAYER');
     player.moveTo(room1);
 

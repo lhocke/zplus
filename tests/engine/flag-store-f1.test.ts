@@ -77,9 +77,9 @@ describe('verbGo ifFlag — ZIL global routing (no world object)', () => {
       ],
       ldesc: 'Room A.',
     });
-    roomA.set(Flag.Light);
+    roomA.set(Flag.On);
     const roomBDest = new Room('ROOM-B', 'Room B', { ldesc: 'Room B.' });
-    roomBDest.set(Flag.Light);
+    roomBDest.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
     player.moveTo(roomA);
     const world = World.fromObjects([roomA, roomBDest, player]);
@@ -158,9 +158,9 @@ describe('verbGo ifFlag — object-backed gate (world object)', () => {
       ],
       ldesc: 'Room A.',
     });
-    roomA.set(Flag.Light);
+    roomA.set(Flag.On);
     const roomB = new Room('ROOM-B', 'Room B', { ldesc: 'Room B.' });
-    roomB.set(Flag.Light);
+    roomB.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
     player.moveTo(roomA);
     const world = World.fromObjects([roomA, roomB, gate, player]);
@@ -213,9 +213,9 @@ describe('verbGo FALSE-FLAG — always impassable', () => {
       ],
       ldesc: 'Room A.',
     });
-    roomA.set(Flag.Light);
+    roomA.set(Flag.On);
     const roomB = new Room('ROOM-B', 'Room B', { ldesc: 'Room B.' });
-    roomB.set(Flag.Light);
+    roomB.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
     player.moveTo(roomA);
     const world = World.fromObjects([roomA, roomB, player]);

@@ -97,7 +97,7 @@ describe('PRE-TAKE handler (direct invocation, gverbs.zil:1353)', () => {
   it('case 2: PRSO IN? WINNER → "You already have that!" (blocking)', () => {
     // Guard 2: dobj is a direct child of player (IN? WINNER).
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
     const gem = new Thing('GEM', 'gem', { synonyms: ['gem'] });
@@ -118,7 +118,7 @@ describe('PRE-TAKE handler (direct invocation, gverbs.zil:1353)', () => {
   it('case 3: LOC(PRSO) is CONTBIT + not OPENBIT → "You can\'t reach..." RTRUE (blocking)', () => {
     // Guard 3: dobj is inside a closed container.
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -148,7 +148,7 @@ describe('PRE-TAKE handler (direct invocation, gverbs.zil:1353)', () => {
   it('case 5: PRSO == LOC(WINNER) → "You\'re inside of it!" (blocking)', () => {
     // Guard 5: dobj is the direct parent of the player.
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
 
     const box = new Container('BOX', 'box', { synonyms: ['box'] });
@@ -172,7 +172,7 @@ describe('PRE-TAKE handler (direct invocation, gverbs.zil:1353)', () => {
   it('case 1: Wearable flag on PRSO IN? WINNER → "You are already wearing it." (blocking)', () => {
     // Guard 1: dobj is in player + has Wearable flag.
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -196,7 +196,7 @@ describe('PRE-TAKE handler (direct invocation, gverbs.zil:1353)', () => {
   it('allows take when object is in room (no guard fires)', () => {
     // No guard fires: object is in room (not in player, not in closed container).
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -224,7 +224,7 @@ describe('PRE-TAKE (end-to-end via Game.turn)', () => {
   it('"You already have that!" when item is already in player inventory', () => {
     // Object is in player's inventory — parser CAN resolve it (player children are in scope).
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A test room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
     player.moveTo(room);
     const gem = new Thing('GEM', 'gem', { synonyms: ['gem'] });
@@ -258,7 +258,7 @@ describe('PRE-TAKE (end-to-end via Game.turn)', () => {
 describe('PRE-GIVE (gverbs.zil:708)', () => {
   it('blocks with verbatim message when player does not hold the object', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -286,7 +286,7 @@ describe('PRE-GIVE (gverbs.zil:708)', () => {
 
   it('allows when player holds the object (HELD? is true)', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -317,7 +317,7 @@ describe('PRE-GIVE (gverbs.zil:708)', () => {
 describe('PRE-PUT (gverbs.zil:1075)', () => {
   it('blocks with same message as PRE-GIVE when player does not hold the item', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -351,7 +351,7 @@ describe('PRE-PUT (gverbs.zil:1075)', () => {
 describe('PRE-BURN (gverbs.zil:243)', () => {
   it('blocks "You didn\'t say with what!" when no iobj given (no PRSI)', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -373,7 +373,7 @@ describe('PRE-BURN (gverbs.zil:243)', () => {
 
   it('blocks "With a <X>??!?" when iobj is present but not FLAMING', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -400,7 +400,7 @@ describe('PRE-BURN (gverbs.zil:243)', () => {
     // FLAMING? = FSET? FLAMEBIT AND FSET? ONBIT
     // Port mapping: Flammable = FLAMEBIT, OnFire = ONBIT
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -434,7 +434,7 @@ describe('PRE-BURN (gverbs.zil:243)', () => {
 describe('PRE-MOVE (gverbs.zil:910)', () => {
   it('blocks "You aren\'t an accomplished enough juggler." when holding the object', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -456,7 +456,7 @@ describe('PRE-MOVE (gverbs.zil:910)', () => {
 
   it('allows when not holding the object (HELD? = false)', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -483,7 +483,7 @@ describe('PRE-MOVE (gverbs.zil:910)', () => {
 describe('PRE-MUNG (gverbs.zil:923)', () => {
   it('blocks "with your bare hands is futile." when no iobj given', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -512,7 +512,7 @@ describe('PRE-MUNG (gverbs.zil:923)', () => {
 
   it('blocks "with a <iobj> is futile." when iobj has no WEAPONBIT', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -539,7 +539,7 @@ describe('PRE-MUNG (gverbs.zil:923)', () => {
 
   it('allows when iobj has WEAPONBIT', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -592,7 +592,7 @@ describe('PRE-READ (gverbs.zil:1137)', () => {
 
   it('allows when room is lit (no iobj)', () => {
     const room = new Room('ROOM', 'Room', { ldesc: 'Lit.' });
-    room.set(Flag.Light); // LIT
+    room.set(Flag.On); // LIT
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -614,7 +614,7 @@ describe('PRE-READ (gverbs.zil:1137)', () => {
   it('blocks "How does one look through a <X>?" when iobj is not TRANSPARENT', () => {
     // Guard: PRSI given AND not TRANSBIT
     const room = new Room('ROOM', 'Room', { ldesc: 'Lit.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -647,7 +647,7 @@ describe('PRE-TURN (gverbs.zil:1488)', () => {
   it('blocks "Your bare hands don\'t appear to be enough." with no iobj for non-BOOK', () => {
     // In Zork 1: no PRSI AND PRSO != BOOK → block
     const room = new Room('ROOM', 'Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -670,7 +670,7 @@ describe('PRE-TURN (gverbs.zil:1488)', () => {
   it('blocks "You can\'t turn that!" when object has no TURNBIT', () => {
     // Guard 2: PRSO not TURNBIT
     const room = new Room('ROOM', 'Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -695,7 +695,7 @@ describe('PRE-TURN (gverbs.zil:1488)', () => {
 
   it('allows when iobj is given and PRSO has TURNBIT', () => {
     const room = new Room('ROOM', 'Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -728,7 +728,7 @@ describe('Step 3 gate: PRE-* block suppresses default verb via Game.turn()', () 
   it('PRE-TAKE "already have that" fires at step 3, suppressing "Taken."', () => {
     // Player holds the gem → PRE-TAKE fires at step 3 → blocks V-TAKE.
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
     player.moveTo(room);
 
@@ -751,7 +751,7 @@ describe('Step 3 gate: PRE-* block suppresses default verb via Game.turn()', () 
     // the test shows "I don't know how to burn" which is a parser issue, not step 3.
     // We still test the handler mechanism here to verify the registry is wired.
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -795,7 +795,7 @@ describe('PRE-DROP (gverbs.zil:474)', () => {
     // PRE-DROP: only fires when PRSO equals LOC(WINNER).
     // Normal case: dropping something in the room → PRSO != LOC(WINNER) → RFALSE.
     const room = new Room('ROOM', 'Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -827,7 +827,7 @@ describe('PRE-FILL (gverbs.zil:646)', () => {
 
   it('blocks with "There is nothing to fill it with." when no iobj and no water nearby', () => {
     const room = new Room('ROOM', 'Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 
@@ -860,7 +860,7 @@ describe('PRE-BOARD (gverbs.zil:201)', () => {
 
   it('blocks with "You have a theory..." when target has no VEHBIT', () => {
     const room = new Room('ROOM', 'Room', { ldesc: 'A room.' });
-    room.set(Flag.Light);
+    room.set(Flag.On);
     const player = new Actor('PLAYER', 'you');
     player.moveTo(room);
 

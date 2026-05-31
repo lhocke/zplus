@@ -221,7 +221,7 @@ describe('Attic: up from kitchen', () => {
   });
 
   it('attic is dark — entering without a light source shows pitch-black message', () => {
-    // ATTIC has no Flag.Light; player has no lamp. ZIL DESCRIBE-ROOM RFALSE
+    // ATTIC has no Flag.On (ONBIT); player has no lamp. ZIL DESCRIBE-ROOM RFALSE
     // path: emit pitch-black message, skip ldesc (gverbs.zil:1637-1649).
     const g = newGameAt('KITCHEN');
     g.start();
@@ -245,10 +245,11 @@ describe('Attic: up from kitchen', () => {
     expect(r.output).toContain('stairway leading down');
   });
 
-  it('attic is dark — no light flag on the room', () => {
+  it('attic is dark — no On (always-lit) flag on the room', () => {
     const w = worldOf(newGameAt('ATTIC'));
     const attic = w.get('ATTIC')!;
-    expect(attic.has(Flag.Light)).toBe(false);
+    // Post P1-3: always-lit rooms use Flag.On (ONBIT); ATTIC is dark, so no Flag.On.
+    expect(attic.has(Flag.On)).toBe(false);
   });
 });
 
@@ -483,7 +484,7 @@ describe('TRAP-DOOR-EXIT per-routine: going down to CELLAR', () => {
 
 describe('CELLAR-FCN: M-LOOK description', () => {
   it('describes the dark damp cellar when lit (lamp in hand)', () => {
-    // CELLAR has no Flag.Light; M-LOOK fires only when lit (gverbs.zil:1671).
+    // CELLAR has no Flag.On (ONBIT); M-LOOK fires only when lit (gverbs.zil:1671).
     // Give the player the lit lamp so the darkness gate is satisfied.
     const g = newGameAt('CELLAR');
     const w = worldOf(g);
