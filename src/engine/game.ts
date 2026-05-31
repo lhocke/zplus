@@ -192,6 +192,14 @@ export class Game {
       // In ZIL, GWIM prints this during PARSER (before PERFORM).  We pre-seed
       // `handled` with it so it appears at the top of the turn output.
       //
+      // allIter (C6): ALL-iteration prefix — when the parser returned this
+      // command as one item in a SNARFEM ALL expansion (e.g. "examine all"),
+      // Game.turn must print "<desc>: " before the action result to match the
+      // ZIL per-object prefix (gmain.zil:121-144).
+      const allIterPrefix = cmd.allIter === true && dobj !== undefined
+        ? `${dobj.desc}: `
+        : '';
+
       // autoTaken (C6): STAKE auto-take — parser marked objects that were
       // auto-taken (not held but takeable). Print "(Taken)" per object
       // (gparser.zil:1291) before the action result.
@@ -237,9 +245,11 @@ export class Game {
           const enterOut = this.onRoomEntered(newRoomAfterHandler);
           const roomDesc = this.describeCurrentRoom();
           const parts = [...handled, ...(enterOut ? [enterOut] : []), roomDesc].filter(s => s.length > 0);
-          outputs.push(parts.join('\n'));
+          const cmdOut = parts.join('\n');
+          outputs.push(allIterPrefix ? allIterPrefix + cmdOut : cmdOut);
         } else {
-          outputs.push(handled.join('\n'));
+          const cmdOut = handled.join('\n');
+          outputs.push(allIterPrefix ? allIterPrefix + cmdOut : cmdOut);
         }
       } else {
         // No handler claimed the command — run step 7: default verb routine.
@@ -258,7 +268,8 @@ export class Game {
         // A handler may have printed something even while falling through
         // (ZIL routines can TELL then RFALSE); prepend that output.
         const parts = [...handled, verbResult.output].filter(s => s.length > 0);
-        outputs.push(parts.join('\n'));
+        const cmdOut = parts.join('\n');
+        outputs.push(allIterPrefix ? allIterPrefix + cmdOut : cmdOut);
 
         if (verbResult.moved) {
           moved = true;

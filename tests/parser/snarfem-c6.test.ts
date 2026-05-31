@@ -503,4 +503,52 @@ describe('C6 integration via Game.turn', () => {
     // The "(Taken)" should appear in the output
     expect(result.output).toContain('(Taken)');
   });
+
+  it('"take all" in LIVING-ROOM: player (cretin) not included in ALL candidates', async () => {
+    // C6 regression guard: the old collectScope included the player as a room child.
+    // The new buildScope-based candidate collection must exclude the player.
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    game.start();
+
+    const result = game.turn('take all');
+    // Player should NEVER appear as a take-all candidate
+    expect(result.output).not.toContain('cretin');
+    // Result should not be an error about MANY-CHECK
+    expect(result.output).not.toContain("You can't use multiple direct objects with");
+  });
+
+  it('"take all" in LIVING-ROOM: output has per-object "<name>: " prefix (ALL-iteration)', async () => {
+    // gmain.zil:121-144: ALL-iteration prints "<objname>: " before each action result.
+    // Game.turn must add this prefix for allIter-flagged commands (C6 SNARFEM).
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    game.start();
+
+    const result = game.turn('take all');
+    // The output must contain at least one "desc: " prefix — takeable objects
+    // in Living Room are sword and brass lantern.
+    const hasSwordPrefix = result.output.includes('sword:') || result.output.includes('sword: ');
+    const hasLanternPrefix = result.output.includes('brass lantern:') || result.output.includes('brass lantern: ');
+    expect(hasSwordPrefix || hasLanternPrefix).toBe(true);
+  });
+
+  it('"examine all" in LIVING-ROOM: player (cretin) not included (scope bug fix)', async () => {
+    // C6 bug: the generic SMANY else-branch in tryExpandAll used the old collectScope
+    // which included the player as a room child.  Fixed to use buildScope tiers.
+    // EXAMINE dobjLocBits=4 (SMANY only, no SOG/SIR/SH/SC) → local/inv search finds
+    // nothing → GLOBAL-CHECK fires.
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    game.start();
+
+    const result = game.turn('examine all');
+    // Player should NEVER appear as an examine-all candidate
+    expect(result.output).not.toContain('cretin');
+    // Room objects should NOT appear (EXAMINE scope bits don't cover room tier)
+    expect(result.output).not.toContain('trophy case');
+  });
 });

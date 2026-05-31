@@ -78,7 +78,7 @@ import {
   normalizePrep,
 } from './vocabulary.js';
 import { gwim, ROOMS_SENTINEL } from './gwim.js';
-import { SMANY, STAKE, SHAVE } from './scope-bits.js';
+import { SMANY, STAKE, SHAVE, SOG, SIR, SH, SC } from './scope-bits.js';
 
 // ---------------------------------------------------------------------------
 // C3 SYNTAX-CHECK replaces the Wave-B static preAction maps.
@@ -1353,38 +1353,135 @@ export class Parser {
       }];
     }
 
+    // Build the authoritative scope snapshot (C4 scope.ts, 4-tier model) when
+    // player is available.  Fall back to the old collectScope only for legacy
+    // null-player test paths (no real gameplay reaches here with player=null
+    // because parseChained checks player before calling tryExpandAll, but keep
+    // the guard for safety).
+    const snap = player !== null ? buildScope(room, player, world) : undefined;
+
+    // ---------------------------------------------------------------------------
+    // ZIL ALL-scope search for candidate collection (gparser.zil:1240-1296).
+    //
+    // When ALL is typed with a verb that has P-SLOCBITS != 0 (e.g. TAKE with
+    // SOG|SIR|SMANY = 52), ZIL does NOT override to -1.  Instead:
+    //   1. Search room tier iff SOG or SIR bits are set.
+    //   2. Search inventory tier iff SH or SC bits are set.
+    //   3. If total found is 0: fall through to GLOBAL-CHECK.
+    //   4. GLOBAL-CHECK first arm: search LOCAL-GLOBALS (room P?GLOBAL list).
+    //   5. If still 0: GLOBAL-CHECK second arm: search GLOBAL-OBJECTS.
+    // The player (ADVENTURER) is always excluded — ZIL clears PLAYER TRANSBIT
+    // before DO-SL HERE to prevent the player from appearing in results.
+    //
+    // For EXAMINE (dobjLocBits=4=SMANY only, no SOG/SIR/SH/SC):
+    //   Room and inventory searches find nothing (no matching scope bits).
+    //   GLOBAL-CHECK fires → LOCAL-GLOBALS (e.g. STAIRS) are found.
+    //   With ALL: collect them all.
+    //
+    // For TAKE (dobjLocBits=52=SOG|SIR|SMANY):
+    //   Room search finds room objects (SOG bit set); inventory search finds none
+    //   (no SH/SC bit). Room results > 0 → GLOBAL-CHECK does not fire.
+    //   With ALL: collect all room objects, filtered by Flag.Takeable.
+    // ---------------------------------------------------------------------------
+
+    function collectByLocBits(bits: number): GameObject[] {
+      if (snap === undefined) {
+        // Fallback: old collectScope (null-player test path only)
+        const scope = collectScope(room, null, world);
+        return scope.filter(o => o !== player && !o.has(Flag.Invisible));
+      }
+      const seen = new Set<string>();
+      const result: GameObject[] = [];
+      const add = (o: GameObject) => {
+        if (seen.has(o.id) || o === player) return;
+        seen.add(o.id);
+        result.push(o);
+      };
+
+      // Tier 1: room contents (SOG or SIR bit set)
+      if (bits & SOG || bits & SIR) {
+        for (const c of snap.roomTier) add(c.obj);
+      }
+      // Tier 2: inventory (SH or SC bit set)
+      if (bits & SH || bits & SC) {
+        for (const c of snap.invTier) add(c.obj);
+      }
+
+      // If nothing found locally: fall through to GLOBAL-CHECK
+      if (result.length === 0) {
+        // GLOBAL-CHECK arm 1: LOCAL-GLOBALS (room P?GLOBAL list)
+        for (const o of snap.localGlobals) add(o);
+        // GLOBAL-CHECK arm 2: GLOBAL-OBJECTS (universal, only if arm 1 also empty)
+        if (result.length === 0) {
+          for (const o of snap.globalObjects) add(o);
+        }
+      }
+
+      return result;
+    }
+
+    // Helper: search all tiers for BUT/EXCEPT noun resolution (uses all tiers
+    // regardless of locBits, since the player might specify any visible object).
+    function allScopeForExcept(): GameObject[] {
+      if (snap === undefined) return collectScope(room, null, world);
+      const seen = new Set<string>();
+      const result: GameObject[] = [];
+      const add = (o: GameObject) => {
+        if (seen.has(o.id) || o === player) return;
+        seen.add(o.id);
+        result.push(o);
+      };
+      for (const c of snap.roomTier) add(c.obj);
+      for (const c of snap.invTier) add(c.obj);
+      for (const o of snap.localGlobals) add(o);
+      for (const o of snap.globalObjects) add(o);
+      return result;
+    }
+
     // Determine excluded object id (for "all except/but <noun>").
     let excludeId: ObjectId | undefined;
     const exceptIdx = Math.max(tokens.indexOf('except', allIdx), tokens.indexOf('but', allIdx));
     if (exceptIdx !== -1 && exceptIdx > allIdx) {
       const exceptTokens = tokens.slice(exceptIdx + 1);
       if (exceptTokens.length > 0) {
-        const scope = collectScope(room, player, world);
+        const allObjects = allScopeForExcept();
         const phrase = splitNounPhrase(exceptTokens);
         if (phrase !== null) {
-          const matchesEx = matchNoun(phrase.noun, phrase.adjectives, scope);
+          const matchesEx = matchNoun(phrase.noun, phrase.adjectives, allObjects);
           if (matchesEx.length === 1) excludeId = matchesEx[0]!.id;
           // If ambiguous or not found, we simply don't exclude anything.
         }
       }
     }
 
-    const scope = collectScope(room, player, world);
-
-    // Collect candidates based on verb:
-    //   TAKE: Flag.Takeable objects in scope (room + inventory)
-    //   DROP: Flag.Takeable objects in player inventory only
-    //   other SMANY verbs: all non-player objects in scope
+    // Collect candidates using the proper ZIL-faithful scope search.
     let candidates: GameObject[];
-    if (canonical === 'take') {
-      candidates = scope.filter(o => o.has(Flag.Takeable));
-    } else if (canonical === 'drop') {
-      candidates = scope.filter(o =>
-        o.has(Flag.Takeable) && (o.parent === null || o.parent === player),
-      );
+    if (canonical === 'drop') {
+      // DROP ALL: inventory-only, Takeable objects.
+      // dobjLocBits for DROP = SH|SMANY|SHAVE = 134: SH bit is set → inventory tier.
+      // Restrict to inventory objects (objects held by player).
+      if (snap !== undefined) {
+        const seen = new Set<string>();
+        candidates = [];
+        for (const c of snap.invTier) {
+          if (!seen.has(c.obj.id) && c.obj !== player && c.obj.has(Flag.Takeable)) {
+            seen.add(c.obj.id);
+            candidates.push(c.obj);
+          }
+        }
+      } else {
+        const scope = collectScope(room, null, world);
+        candidates = scope.filter(o =>
+          o.has(Flag.Takeable) && (o.parent === null || o.parent === player),
+        );
+      }
     } else {
-      // Generic SMANY: all objects in scope
-      candidates = scope.filter(o => !o.has(Flag.Invisible));
+      // All other SMANY verbs (TAKE, EXAMINE, etc.): use locBits-faithful search.
+      const pool = collectByLocBits(dobjLocBits).filter(o => !o.has(Flag.Invisible));
+      // For TAKE: additionally require Flag.Takeable.
+      candidates = canonical === 'take'
+        ? pool.filter(o => o.has(Flag.Takeable))
+        : pool;
     }
 
     const matches = candidates.filter(o => o.id !== excludeId);
@@ -1401,6 +1498,7 @@ export class Parser {
         prep: undefined,
         preAction: expandPreAction,
         syntax: expandSyntax,
+        allIter: true as const,
         raw: tokens,
       },
     }));

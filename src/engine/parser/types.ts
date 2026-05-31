@@ -61,6 +61,12 @@ export interface ParsedCommand {
    * gparser.zil:908-924 (C5).
    */
   readonly gwimText?: string;
+  /**
+   * Set by tryExpandAll (C6 SNARFEM) when this command is one item in an ALL-iteration.
+   * Game.turn must print "<desc>: " before the action result for each such command
+   * (gmain.zil:121-144: ALL-iteration per-object prefix).
+   */
+  readonly allIter?: true;
 }
 
 /**
