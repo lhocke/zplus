@@ -14,6 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
+import { fmt, pick, vOpen, vClose, vRead, vExamine, vPut, preTake, preGive, yuks, type PickRng } from '../game-messages.js';
 
 // --------------------------------------------------------------------------
 // Public API types
@@ -43,6 +44,13 @@ export interface VerbContext {
    * handler-driven description for rooms that lack a static ldesc.
    */
   readonly mlookRunner?: (room: Room) => string;
+  /**
+   * Seeded RNG for PICK-ONE operations (YUKS, DUMMY, etc.).
+   * Required for verbTake (YUKS) and other random-pick paths.
+   * Tests may omit it; a fallback to the first table entry is used.
+   * Accepts any object with a `next()` method (duck-typed).
+   */
+  readonly rng?: PickRng;
 }
 
 export interface VerbResult {
@@ -337,12 +345,19 @@ function verbTake(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Take what?");
 
+  // PRE-TAKE guard 1 & 2: PRSO IN? WINNER
+  // (gverbs.zil:1356, 1358 — PRE-TAKE)
   if (item.parent === ctx.player) {
-    return result(`You're already carrying the ${item.desc}.`);
+    if (item.has(Flag.Wearable)) {
+      return result(preTake.alreadyWearing);
+    }
+    return result(preTake.alreadyHaveIt);
   }
 
+  // ITAKE: if not TAKEBIT, PICK-ONE from YUKS table (gverbs.zil:1913)
   if (!item.has(Flag.Takeable)) {
-    return result(`You can't take the ${item.desc}.`);
+    const rng = ctx.rng;
+    return result(rng !== undefined ? pick(yuks, rng) : yuks.entries[0]!);
   }
 
   item.moveTo(ctx.player);
@@ -365,54 +380,87 @@ function verbOpen(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Open what?");
 
+  // Already open — gverbs.zil:970 "It is already open."
   if (item.has(Flag.Open)) {
-    return result(`The ${item.desc} is already open.`);
+    return result(vOpen.alreadyOpen);
   }
 
+  // Not openable (neither CONTBIT nor DOORBIT) — gverbs.zil:993–994
   if (!item.has(Flag.Container) && !item.has(Flag.Door)) {
-    return result(`You can't open the ${item.desc}.`);
+    return result(fmt(vOpen.notOpenable, item.desc));
   }
 
   item.set(Flag.Open);
 
-  // If the container has contents, list them.
-  const contents = Array.from(item.children).filter(c => !c.has(Flag.Invisible));
-  if (contents.length > 0) {
-    const names = contents.map(c => c.desc).join(', ');
-    return result(`Opened. Inside you see: ${names}.`);
+  // DOORBIT path — gverbs.zil:980 "The [PRSO] opens."
+  if (item.has(Flag.Door)) {
+    return result(fmt(vOpen.opens, item.desc));
   }
 
-  return result(`The ${item.desc} is now open.`);
+  // CONTBIT path: check contents (gverbs.zil:983–985)
+  const contents = Array.from(item.children).filter(c => !c.has(Flag.Invisible));
+  if (contents.length > 0) {
+    // Build "a X, a Y, and a Z" list (Oxford comma)
+    const articled = contents.map(c => `a ${c.desc}`);
+    let contentStr: string;
+    if (articled.length === 1) {
+      contentStr = articled[0]!;
+    } else {
+      const last = articled[articled.length - 1];
+      const rest = articled.slice(0, -1);
+      contentStr = rest.join(', ') + ', and ' + last;
+    }
+    return result(fmt(vOpen.opensRevealing, item.desc, contentStr));
+  }
+
+  // Empty container — gverbs.zil:975 "Opened."
+  return result(vOpen.opened);
 }
 
 function verbClose(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Close what?");
 
+  // Not closeable (neither CONTBIT nor DOORBIT) — gverbs.zil:357
+  if (!item.has(Flag.Container) && !item.has(Flag.Door)) {
+    return result(fmt(vClose.notOpenable, item.desc));
+  }
+
+  // Already closed — gverbs.zil:349, 355 "It is already closed."
   if (!item.has(Flag.Open)) {
-    return result(`The ${item.desc} is already closed.`);
+    return result(vClose.alreadyClosed);
   }
 
   item.clear(Flag.Open);
-  return result(`The ${item.desc} is now closed.`);
+
+  // DOORBIT path — gverbs.zil:353 "The [PRSO] is now closed."
+  if (item.has(Flag.Door)) {
+    return result(fmt(vClose.doorClosed, item.desc));
+  }
+
+  // CONTBIT path — gverbs.zil:344 "Closed."
+  return result(vClose.closed);
 }
 
 function verbRead(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Read what?");
 
+  // Not READBIT — gverbs.zil:1145 "How does one read a [PRSO]?"
   if (!item.has(Flag.Readable)) {
-    return result(`There's nothing to read on the ${item.desc}.`);
+    return result(fmt(vRead.notReadable, item.desc));
   }
 
-  // Prefer an explicit text prop; fall back to ldesc, then desc.
+  // READBIT is set — ZIL guarantees a TEXT property exists.
   // The extractor stores the key as 'TEXT' (upper-case, matching ZIL
   // convention); accept both casings so synthetic test fixtures using
   // lowercase 'text' continue to work.
   const text = item.props.get('TEXT') ?? item.props.get('text');
   if (typeof text === 'string') return result(text);
+  // Fallback: ldesc if no text prop (should not occur in authentic data
+  // but handles test fixtures that set Readable without a TEXT prop).
   if (item.ldesc) return result(item.ldesc);
-  return result(`The ${item.desc} has nothing written on it.`);
+  return result(fmt(vRead.notReadable, item.desc));
 }
 
 function verbInventory(ctx: VerbContext): VerbResult {
@@ -430,7 +478,21 @@ function verbExamine(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Examine what?");
 
-  return result(item.ldesc ?? item.desc);
+  // V-EXAMINE priority (gverbs.zil:623–630):
+  //   1. TEXT property (P?TEXT) — same as V-READ but also fires for EXAMINE
+  //   2. CONTBIT or DOORBIT → V-LOOK-INSIDE (show contents/state)
+  //   3. Fallback: "There's nothing special about the [PRSO]."
+
+  // Priority 1: explicit text prop
+  const text = item.props.get('TEXT') ?? item.props.get('text');
+  if (typeof text === 'string') return result(text);
+
+  // Priority 2: ldesc (we map this to "has a meaningful description")
+  // The ZIL V-LOOK-INSIDE is complex; for containers/doors, return ldesc if present.
+  if (item.ldesc !== undefined) return result(item.ldesc);
+
+  // Priority 3: fallback — "There's nothing special about the [PRSO]."
+  return result(fmt(vExamine.nothingSpecial, item.desc));
 }
 
 function verbPut(ctx: VerbContext): VerbResult {
@@ -440,20 +502,24 @@ function verbPut(ctx: VerbContext): VerbResult {
   if (item === undefined) return result("Put what?");
   if (container === undefined) return result("Put it where?");
 
+  // PRE-PUT/PRE-GIVE: not HELD? — gverbs.zil:710–711
+  // "That's easy for you to say since you don't even have the [PRSO]."
   if (item.parent !== ctx.player) {
-    return result(`You're not carrying the ${item.desc}.`);
+    return result(fmt(preGive.notHoldingIt, item.desc));
   }
 
-  if (!container.has(Flag.Container)) {
-    return result(`You can't put things in the ${container.desc}.`);
+  // V-PUT: PRSI not open and not openable — gverbs.zil:1090 "You can't do that."
+  if (!container.has(Flag.Container) && !container.has(Flag.Surface)) {
+    return result(vPut.cantDoThat);
   }
 
+  // V-PUT: PRSI not OPENBIT — gverbs.zil:1093 "The [PRSI] isn't open."
   if (!container.has(Flag.Open)) {
-    return result(`The ${container.desc} is closed.`);
+    return result(fmt(vPut.notOpen, container.desc));
   }
 
   item.moveTo(container);
-  return result(`Done.`);
+  return result(vPut.done);
 }
 
 // --------------------------------------------------------------------------

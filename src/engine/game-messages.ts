@@ -23,7 +23,12 @@
  */
 
 import rawMessages from '../../src/data/messages.json' with { type: 'json' };
-import type { Rng } from './rng.js';
+
+/** Minimal RNG interface required by pick() — duck-typed for test flexibility. */
+export interface PickRng {
+  /** Returns a pseudo-random float in [0, 1). */
+  next(): number;
+}
 
 // ---------------------------------------------------------------------------
 // Internal type helpers
@@ -65,9 +70,12 @@ export function fmt(template: string, ...args: string[]): string {
 /**
  * Pick one entry at random from a PICK-ONE table, using the seeded RNG.
  * Mirrors ZIL `<PICK-ONE ,TABLE>`.
+ *
+ * Accepts any object with a `next()` method (duck-typed) so test stubs like
+ * `{ next: () => 0.5 }` work without importing the full Rng class.
  */
-export function pick(table: PickTable, rng: Rng): string {
-  const idx = rng.nextInt(table.entries.length);
+export function pick(table: PickTable, rng: PickRng): string {
+  const idx = Math.floor(rng.next() * table.entries.length);
   return table.entries[idx] ?? table.entries[0] ?? '';
 }
 

@@ -49,8 +49,9 @@ export interface GameView {
 }
 
 /**
- * Minimal RNG interface.  A concrete seeded implementation lives in rng.ts
- * (Task 2.8); tests can supply a simple closure.
+ * Minimal RNG interface.  A concrete seeded implementation lives in rng.ts.
+ * Tests can supply a simple stub: `{ next: () => someFloat }`.
+ * This is the same shape as PickRng (both require only `next(): number`).
  */
 export interface Rng {
   /** Returns a pseudo-random float in [0, 1). */
@@ -74,6 +75,7 @@ const INTRO =
 export class Game {
   private readonly world: World;
   private readonly clock: Clock;
+  private readonly rng: Rng;
   readonly events: EventEmitter;
 
   private readonly parser: Parser;
@@ -103,6 +105,7 @@ export class Game {
   ) {
     this.world = world;
     this.clock = opts.clock;
+    this.rng = opts.rng;
     this.events = opts.events;
     this.parser = new Parser();
     this.scoring = new Scoring(this.events);
@@ -311,6 +314,7 @@ export class Game {
           world: this.world,
           perResolver: (routineName, here) => this.resolvePer(routineName, here, tell),
           mlookRunner: (room) => this.runMLook(room),
+          rng: this.rng,
         }, cmd.action);
 
         // A handler may have printed something even while falling through
@@ -434,6 +438,7 @@ export class Game {
       world: this.world,
       here: this.here,
       rarg,
+      rng: this.rng,
       tell,
       hasFlag: (obj, flag) => obj.has(flag),
       setFlag: (obj, flag) => obj.set(flag),

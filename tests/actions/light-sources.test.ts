@@ -264,7 +264,8 @@ describe('LANTERN: verb responses', () => {
   it('turn on lantern confirms with message and sets OnFire flag', () => {
     const g = gameWithLamp();
     const r = g.turn('turn on lantern');
-    expect(r.output).toContain('The lamp is now on.');
+    // ZIL: V-LAMP-ON "The [PRSO] is now on." (gverbs.zil:792), PRSO.desc = "brass lantern"
+    expect(r.output).toContain('The brass lantern is now on.');
 
     const lamp = worldOf(g).get('LAMP');
     expect(lamp?.has(Flag.OnFire)).toBe(true);
@@ -274,7 +275,8 @@ describe('LANTERN: verb responses', () => {
     const g = gameWithLamp();
     g.turn('turn on lantern');
     const r = g.turn('turn off lantern');
-    expect(r.output).toContain('The lamp is now off.');
+    // ZIL: V-LAMP-OFF "The [PRSO] is now off." (gverbs.zil:779), PRSO.desc = "brass lantern"
+    expect(r.output).toContain('The brass lantern is now off.');
 
     const lamp = worldOf(g).get('LAMP');
     expect(lamp?.has(Flag.OnFire)).toBe(false);

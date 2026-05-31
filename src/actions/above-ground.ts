@@ -18,6 +18,17 @@ import type { ActionHandler } from '../domain/game-object.js';
 import { Flag } from '../domain/flags.js';
 import { M_LOOK, M_ENTER } from '../engine/messages.js';
 import type { PerRoutine } from './registry.js';
+import { pick, dummy, type PickRng } from '../engine/game-messages.js';
+
+// ---------------------------------------------------------------------------
+// Local helper: pick from a PICK-ONE table with optional RNG.
+// When no RNG is available (test contexts), falls back to the first entry.
+// ---------------------------------------------------------------------------
+
+function pickDummy(rng: PickRng | undefined): string {
+  if (rng !== undefined) return pick(dummy, rng);
+  return dummy.entries[0] ?? 'Look around.';
+}
 
 // ---------------------------------------------------------------------------
 // Module-level state — mirrors ZIL GLOBAL variables for this region.
@@ -421,7 +432,8 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
     if (ctx.verb === 'open') {
       if (ctx.hasFlag(win, Flag.Open)) {
         // ZIL: <TELL <PICK-ONE ,DUMMY>> — generic "already done" response.
-        ctx.tell("It's already open.");
+        // (OPEN-CLOSE uses DUMMY table: "Look around." / "Too late for that." / "Have your eyes checked.")
+        ctx.tell(pickDummy(ctx.rng));
       } else {
         ctx.tell(
           'With great effort, you open the window far enough to allow entry.',
@@ -430,7 +442,8 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
       }
     } else {
       if (!ctx.hasFlag(win, Flag.Open)) {
-        ctx.tell("It's already closed.");
+        // ZIL: <TELL <PICK-ONE ,DUMMY>>
+        ctx.tell(pickDummy(ctx.rng));
       } else {
         ctx.tell('The window closes (more easily than it opened).');
         ctx.clearFlag(win, Flag.Open);
@@ -609,6 +622,9 @@ export const rugFcn: ActionHandler = (ctx) => {
 export const trapDoorFcn: ActionHandler = (ctx) => {
   const door = ctx.self;
 
+  // Fallback RNG for contexts where no rng is supplied (e.g. tests).
+  // (rng is used indirectly via pickDummy below)
+
   if (ctx.verb === 'raise') {
     // Delegate to open.
     if (ctx.here.id === 'LIVING-ROOM') {
@@ -618,7 +634,8 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
         );
         ctx.setFlag(door, Flag.Open);
       } else {
-        ctx.tell("It's already open.");
+        // ZIL: <TELL <PICK-ONE ,DUMMY>>
+        ctx.tell(pickDummy(ctx.rng));
       }
       return true;
     }
@@ -628,7 +645,8 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
     if (ctx.verb === 'open' || ctx.verb === 'close') {
       if (ctx.verb === 'open') {
         if (ctx.hasFlag(door, Flag.Open)) {
-          ctx.tell("It's already open.");
+          // ZIL: <TELL <PICK-ONE ,DUMMY>>
+          ctx.tell(pickDummy(ctx.rng));
         } else {
           ctx.tell(
             'The door reluctantly opens to reveal a rickety staircase descending into\ndarkness.',
@@ -637,7 +655,8 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
         }
       } else {
         if (!ctx.hasFlag(door, Flag.Open)) {
-          ctx.tell("It's already closed.");
+          // ZIL: <TELL <PICK-ONE ,DUMMY>>
+          ctx.tell(pickDummy(ctx.rng));
         } else {
           ctx.tell('The door swings shut and closes.');
           ctx.clearFlag(door, Flag.Open);
@@ -719,7 +738,8 @@ export const grateFunction: ActionHandler = (ctx) => {
     }
     if (ctx.verb === 'open') {
       if (ctx.hasFlag(grate, Flag.Open)) {
-        ctx.tell("It's already open.");
+        // ZIL: <TELL <PICK-ONE ,DUMMY>>
+        ctx.tell(pickDummy(ctx.rng));
       } else {
         const msg =
           ctx.here.id === 'GRATING-CLEARING'
@@ -740,7 +760,8 @@ export const grateFunction: ActionHandler = (ctx) => {
       }
     } else {
       if (!ctx.hasFlag(grate, Flag.Open)) {
-        ctx.tell("It's already closed.");
+        // ZIL: <TELL <PICK-ONE ,DUMMY>>
+        ctx.tell(pickDummy(ctx.rng));
       } else {
         ctx.tell('The grating is closed.');
         ctx.clearFlag(grate, Flag.Open);

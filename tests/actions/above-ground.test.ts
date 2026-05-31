@@ -96,12 +96,15 @@ describe('KITCHEN-WINDOW-F: open/close/enter', () => {
     expect(win.has(Flag.Open)).toBe(true);
   });
 
-  it('open already-open window reports already open', () => {
+  it('open already-open window returns a DUMMY table entry (ZIL PICK-ONE)', () => {
+    // ZIL OPEN-CLOSE uses <TELL <PICK-ONE ,DUMMY>> for the already-done case.
+    // DUMMY entries: "Look around." / "Too late for that." / "Have your eyes checked."
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
     g.turn('open window');
     const r = g.turn('open window');
-    expect(r.output).toContain("It's already open.");
+    const dummyEntries = ['Look around.', 'Too late for that.', 'Have your eyes checked.'];
+    expect(dummyEntries).toContain(r.output);
   });
 
   it('close window: exact ZIL text', () => {

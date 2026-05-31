@@ -20,6 +20,7 @@
  */
 
 import type { ActionHandler } from '../domain/game-object.js';
+import { fmt, vLampOn, vLampOff } from '../engine/game-messages.js';
 import type { World } from '../domain/world.js';
 import { Flag } from '../domain/flags.js';
 
@@ -66,7 +67,8 @@ export const lantern: ActionHandler = (ctx) => {
     ctx.enableClock('I-LANTERN');
     ctx.setFlag(lamp, Flag.OnFire);
     ctx.setFlag(lamp, Flag.Light);
-    ctx.tell('The lamp is now on.');
+    // ZIL: V-LAMP-ON falls through to default "The [PRSO] is now on." (gverbs.zil:792)
+    ctx.tell(fmt(vLampOn.turnedOn, lamp.desc));
     return true;
   }
 
@@ -78,7 +80,8 @@ export const lantern: ActionHandler = (ctx) => {
     }
     ctx.disableClock('I-LANTERN');
     ctx.clearFlag(lamp, Flag.OnFire);
-    ctx.tell('The lamp is now off.');
+    // ZIL: V-LAMP-OFF "The [PRSO] is now off." (gverbs.zil:779)
+    ctx.tell(fmt(vLampOff.turnedOff, lamp.desc));
     return true;
   }
 

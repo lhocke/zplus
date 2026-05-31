@@ -1,6 +1,7 @@
 import type { Flag } from './flags.js';
 import type { World } from './world.js';
 import type { Room } from './room.js';
+import type { PickRng } from '../engine/game-messages.js';
 
 export type ObjectId = string;
 
@@ -52,6 +53,12 @@ export interface ActionContext {
   readonly here: Room;
   /** Room-handler message: M-BEG/M-ENTER/M-LOOK.  undefined for object handlers. */
   readonly rarg?: number;
+  /**
+   * Seeded RNG for PICK-ONE operations (YUKS, DUMMY, HO-HUM tables).
+   * Optional — handlers should fall back to a deterministic pick when absent.
+   * Accepts any object with a `next()` method (duck-typed).
+   */
+  readonly rng?: PickRng;
   /** Print text to the player (ZIL TELL).  Newlines are preserved verbatim. */
   tell(text: string): void;
   /** Read a flag on an object — ZIL `<FSET? obj flag>`. */
