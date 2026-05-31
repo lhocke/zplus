@@ -739,6 +739,110 @@ function resolveNounPhrase(
 }
 
 // --------------------------------------------------------------------------
+// C7: Orphan helper functions (module-level, no class state)
+// --------------------------------------------------------------------------
+
+/**
+ * Build the verbatim ZIL orphan prompt.
+ *
+ * gparser.zil:758-773:
+ *   "What do you want to " + verbWord + [" the " + thingDesc] + [" " + prep] + "?"
+ *
+ * @param verbWord   Raw typed verb (e.g. "take", "listen")
+ * @param thingDesc  Desc of an already-resolved object (DRIVE2 case only, e.g. "troll").
+ *                   When set, the prompt includes "the <thingDesc>" before the prep.
+ * @param prep       The prep from the missing slot's syntax form (e.g. "WITH", "TO").
+ *                   If set, appended as lowercase after the thing.
+ */
+function buildOrphanPrompt(
+  verbWord: string,
+  thingDesc: string | undefined,
+  prep: string | undefined,
+): string {
+  let msg = `What do you want to ${verbWord}`;
+  if (thingDesc !== undefined) {
+    msg += ` the ${thingDesc}`;
+  }
+  if (prep !== undefined) {
+    msg += ` ${prep.toLowerCase()}`;
+  }
+  msg += '?';
+  return msg;
+}
+
+/**
+ * Re-resolve a noun token against scope to collect the candidate ids for a
+ * disambig orphan.  Used when resolveNounPhrase returns disambig so we can
+ * save the candidate list in OrphanState.
+ *
+ * This is a stripped-down lookup: match by noun synonym across all scope tiers,
+ * returning all matching ids (the full ambiguous set).
+ */
+function _extractDisambigCandidates(
+  noun: string,
+  snap: import('./scope.js').ScopeSnapshot,
+  room: Room,
+  player: GameObject,
+  world: World,
+  locBits: number,
+  isLit: boolean,
+): ObjectId[] {
+  const result = getObject(snap, room, player, world, noun.toUpperCase(), undefined, undefined, locBits, isLit, false);
+  if (result.kind === 'ok' || result.kind === 'disambig') {
+    return result.ids;
+  }
+  return [];
+}
+
+// --------------------------------------------------------------------------
+// C7: OrphanState — parser state saved across turns for orphan/disambig.
+//
+// When SYNTAX-CHECK can't fill a required object slot (GWIM finds 0 or 2+
+// candidates, or disambiguation is needed), the parser saves the in-progress
+// command context and emits a "What do you want to…?" or "Which … do you mean?"
+// prompt. The *next* turn's input is the answer; ORPHAN-MERGE grafts it in.
+//
+// Port model for gparser.zil:P-OFLAG / P-OTBL / P-ACLAUSE / P-ANAM / P-AADJ.
+// --------------------------------------------------------------------------
+
+/**
+ * Which slot the orphan is waiting to fill: dobj (nc1) or iobj (nc2).
+ */
+type OrphanSlot = 'dobj' | 'iobj';
+
+/**
+ * Saved state from the in-progress command that triggered an orphan/disambig.
+ * Carried across turns; cleared after a successful ORPHAN-MERGE.
+ */
+interface OrphanState {
+  /** The canonical verb that triggered the orphan (e.g. "take"). */
+  verb: string;
+  /** The raw verb word as typed (for echo in the prompt). */
+  verbWord: string;
+  /** Canonical prep1 (from the input or matched drive). */
+  prep1?: string;
+  /** Canonical prep2 (from the matched drive). */
+  prep2?: string;
+  /** Which noun slot is missing. */
+  slot: OrphanSlot;
+  /** The matched syntax entry (for action/preAction/locBits). */
+  syntax: import('./types.js').SyntaxEntry;
+  /**
+   * If DRIVE2 fired (dobj was resolved, iobj is missing), the resolved dobj ids.
+   * Used to re-include the dobj in the merged command.
+   */
+  resolvedDobjIds?: ObjectId[];
+  /**
+   * Set when WHICH-PRINT was issued (disambiguation pending).
+   * Contains the ambiguous candidates and the original noun token.
+   */
+  disambig?: {
+    noun: string;          // the noun token from the original input (for re-match)
+    candidates: ObjectId[]; // the ambiguous set from getObject
+  };
+}
+
+// --------------------------------------------------------------------------
 // Parser class — stateful: holds pronoun bindings across turns.
 // --------------------------------------------------------------------------
 
@@ -755,6 +859,14 @@ function resolveNounPhrase(
 export class Parser {
   /** Last resolved direct-object id — bound to "it" / "them". */
   private itRef: ObjectId | undefined = undefined;
+
+  /**
+   * C7 orphan/disambig state.  Set when the parser issued a "What do you want
+   * to…?" or "Which…?" prompt.  Cleared after a successful ORPHAN-MERGE or
+   * when the answer is a fresh command (abandons orphan).
+   * gparser.zil: P-OFLAG (boolean), P-OTBL (saved parse tables).
+   */
+  private orphan: OrphanState | undefined = undefined;
 
   /**
    * Parse a single command string against the current room context.
@@ -801,6 +913,14 @@ export class Parser {
           raw: tokens,
         } satisfies ParsedCommand,
       };
+    }
+
+    // C7: ORPHAN-MERGE — if orphan state is set, try to graft this input as the answer.
+    // gparser.zil:373 (<COND (,P-OFLAG <ORPHAN-MERGE>)>)
+    // ORPHAN-MERGE fires before verb classification — the answer input might be a bare
+    // noun/adjective with no verb, which is the normal case.
+    if (this.orphan !== undefined) {
+      return this._orphanMerge(tokens, room, effectivePlayer, world, snap, isLit);
     }
 
     const rawVerb = tokens[0]!;
@@ -891,24 +1011,19 @@ export class Parser {
         }
 
         if (gwimResult.kind === 'fail') {
-          // 0 or 2+ dobj candidates — C7 will add the proper orphan prompt.
-          // Fallback: use the drive's action without auto-supplying dobj.
-          // This preserves pre-GWIM behavior for callers that handle missing dobj
-          // in their action routine (e.g. verb handlers that check dobj===undefined).
-          //
-          // ZIL would orphan here; C7 replaces this fallback with the orphan prompt.
-          //
-          // DELIBERATE DECISION: fall through to the dobj/iobj resolution block
-          // below with dobjIds=undefined and gwimText=undefined.  The dobjTokens
-          // array is empty (drive1 fires when ncn=0), so no further resolution
-          // happens and the command returns ok with no dobj.
-          //
-          // preAction is preserved from d1 so step-3 handlers still run.
-          // This matches the C4 behavior where preAction was also set from the drive.
-          action = d1.action;
-          preAction = d1.preAction;
-          matchedSyntax = d1;
-          // Fall through to dobj/iobj resolution (dobjTokens.length === 0, so no-op).
+          // C7: 0 or 2+ dobj candidates — emit orphan prompt.
+          // gparser.zil:756-774: ORPHAN(DRIVE1, DRIVE2) → "What do you want to <verb> <prep>?"
+          // Save state so ORPHAN-MERGE can fill the slot on the next turn.
+          this.orphan = {
+            verb: canonical,
+            verbWord: rawVerb,
+            prep1,
+            prep2,
+            slot: 'dobj',
+            syntax: d1,
+          };
+          const msg = buildOrphanPrompt(rawVerb, undefined /* no DRIVE2 thing */, d1.prep1);
+          return { kind: 'orphan', message: msg };
         } else {
           // GWIM success — capture object and parenthetical text.
           // Return early with the GWIM-supplied dobj.
@@ -1044,37 +1159,26 @@ export class Parser {
         }
 
         if (gwimResult.kind === 'fail') {
-          // 0 or 2+ iobj candidates (or self-reference) — C7 will add proper orphan.
-          // Fallback (pre-C7): use the drive's action without auto-supplying iobj.
-          // preAction is cleared to match pre-GWIM stub behavior — handlers that
-          // check iobj===undefined (e.g. MATCH-FUNCTION checking for VERB?=BURN)
-          // fire correctly without being blocked by a pre-action guard.
-          //
-          // ZIL would orphan here; C7 replaces this fallback with the orphan prompt.
-          //
-          // C6: Apply TAKE-CHECK on dobjIds2 before returning. This handles the
-          // case where the dobj was resolved but iobj wasn't (e.g. "throw lamp"
-          // with no actor in scope → GWIM fails for iobj, but SHAVE on dobj fires).
-          const c6d2fail = applyC6Checks(
-            canonical, dobjIds2, undefined,
-            d2.dobjLocBits, d2.iobjLocBits,
-            effectivePlayer, world,
-          );
-          if ('kind' in c6d2fail) return c6d2fail;
-          return {
-            kind: 'ok',
-            command: {
-              verb: canonical,
-              action,
-              dobjIds: dobjIds2,
-              iobjIds: undefined,
-              prep: d2.prep2 ?? prep1 ?? prep2,
-              preAction: undefined,  // pre-C7 fallback: bypass preAction check
-              syntax: matchedSyntax,
-              autoTaken: c6d2fail.autoTaken && c6d2fail.autoTaken.length > 0 ? c6d2fail.autoTaken : undefined,
-              raw: tokens,
-            },
+          // C7: 0 or 2+ iobj candidates — emit orphan prompt.
+          // gparser.zil:756-774: DRIVE2 case — player gave dobj, needs iobj.
+          // Orphan prompt: "What do you want to <verb> the <dobj> <prep2>?"
+          // Save dobj so ORPHAN-MERGE can re-include it in the merged command.
+          this.orphan = {
+            verb: canonical,
+            verbWord: rawVerb,
+            prep1,
+            prep2,
+            slot: 'iobj',
+            syntax: d2,
+            resolvedDobjIds: dobjIds2,
           };
+          // Build the THING description for the orphan prompt.
+          // If dobj was resolved to one object, use its desc for "the <thing>".
+          const dobjDesc = dobjIds2?.[0] !== undefined
+            ? world.get(dobjIds2[0])?.desc
+            : undefined;
+          const msg = buildOrphanPrompt(rawVerb, dobjDesc, d2.prep2);
+          return { kind: 'orphan', message: msg };
         }
 
         // gwimResult.kind === 'ok' and not self-reference
@@ -1148,7 +1252,25 @@ export class Parser {
           },
         };
       }
-      if (!r.ok) return r.result;
+      if (!r.ok) {
+        // C7: If disambig, save orphan+disambig state so ORPHAN-MERGE can handle it.
+        if (r.result.kind === 'disambig' && matchedSyntax !== undefined) {
+          // Extract candidates from getObject result by re-resolving.
+          // The disambig message was already built; extract noun from dobjTokens.
+          const dobjNoun = dobjTokens[dobjTokens.length - 1] ?? '';
+          const candidateIds = _extractDisambigCandidates(dobjNoun, snap, room, effectivePlayer, world, dobjLocBits, isLit);
+          this.orphan = {
+            verb: canonical,
+            verbWord: rawVerb,
+            prep1,
+            prep2,
+            slot: 'dobj',
+            syntax: matchedSyntax,
+            disambig: { noun: dobjNoun, candidates: candidateIds },
+          };
+        }
+        return r.result;
+      }
       if (r.id !== (undefined as unknown as ObjectId)) {
         dobjIds = [r.id];
       }
@@ -1177,7 +1299,24 @@ export class Parser {
           },
         };
       }
-      if (!r.ok) return r.result;
+      if (!r.ok) {
+        // C7: If disambig on iobj, save orphan+disambig state.
+        if (r.result.kind === 'disambig' && matchedSyntax !== undefined) {
+          const iobjNoun = iobjTokens[iobjTokens.length - 1] ?? '';
+          const candidateIds = _extractDisambigCandidates(iobjNoun, snap, room, effectivePlayer, world, iobjLocBits, isLit);
+          this.orphan = {
+            verb: canonical,
+            verbWord: rawVerb,
+            prep1,
+            prep2,
+            slot: 'iobj',
+            syntax: matchedSyntax,
+            resolvedDobjIds: dobjIds,
+            disambig: { noun: iobjNoun, candidates: candidateIds },
+          };
+        }
+        return r.result;
+      }
       if (r.id !== (undefined as unknown as ObjectId)) {
         iobjIds = [r.id];
       }
@@ -1664,6 +1803,294 @@ export class Parser {
       kind: 'ok',
       command: { verb: canonical, action, dobjIds, iobjIds, prep: prepOut, preAction, syntax: matchedSyntax, raw: tokens },
     };
+  }
+
+  /**
+   * C7: ORPHAN-MERGE — handle next-turn input when orphan state is set.
+   *
+   * gparser.zil:543-630 (ORPHAN-MERGE).
+   *
+   * Three cases for the answer input (tokens):
+   *   A) Disambiguation pending (orphan.disambig set):
+   *      The answer should be an adjective or noun that selects one candidate.
+   *      If a matching candidate is found → clear orphan, build ok command.
+   *      If no match → treat as fresh command (discard orphan).
+   *   B) Missing-object answer (no disambig):
+   *      The answer's first token may be:
+   *        - A verb → abandon orphan, re-parse as a fresh command.
+   *        - A noun/adjective → graft into the missing slot, re-process.
+   *   C) Non-fitting answer → abandon orphan, re-parse from scratch.
+   *
+   * ZIL also checks prep compatibility; the port does a simplified version.
+   */
+  private _orphanMerge(
+    tokens: string[],
+    room: Room,
+    player: GameObject,
+    world: World,
+    snap: import('./scope.js').ScopeSnapshot,
+    isLit: boolean,
+  ): ParseResult {
+    const orphan = this.orphan!; // caller guarantees this is set
+
+    // ---- Case A: Disambiguation answer ----------------------------------------
+    if (orphan.disambig !== undefined) {
+      return this._handleDisambigAnswer(tokens, orphan, room, player, world, snap, isLit);
+    }
+
+    // ---- Case B/C: Missing-object answer (orphan with no disambig) -------------
+    return this._handleOrphanAnswer(tokens, orphan, room, player, world, snap, isLit);
+  }
+
+  /**
+   * Handle a disambiguation answer: select one of the ambiguous candidates.
+   *
+   * The answer may be:
+   *   - A bare adjective ("rusty") → filter candidates by adjective
+   *   - A full noun phrase ("rusty sword") → narrow by both noun and adjective
+   *   - A fresh verb → abandon, re-parse
+   */
+  private _handleDisambigAnswer(
+    tokens: string[],
+    orphan: OrphanState,
+    room: Room,
+    player: GameObject,
+    world: World,
+    _snap: import('./scope.js').ScopeSnapshot,
+    _isLit: boolean,
+  ): ParseResult {
+    const { noun: orphanNoun, candidates } = orphan.disambig!;
+
+    // Try to narrow candidates using the answer tokens.
+    // Answer might be just an adjective, or "adj noun", or just a noun.
+    // We try matching the answer tokens against the candidate set.
+    const answerTokens = tokens;
+    const answerNoun = answerTokens[answerTokens.length - 1] ?? '';
+    const answerAdjs = answerTokens.slice(0, -1);
+
+    // Check if the first token is a verb — if so, abandon and re-parse.
+    if (answerTokens.length > 0 && lookupVerb(answerTokens[0]!) !== undefined) {
+      this.orphan = undefined;
+      return this.parse(tokens.join(' '), room, player, world);
+    }
+
+    // Try to select a candidate from the disambig set.
+    const matched = candidates
+      .map(id => world.get(id))
+      .filter((obj): obj is import('../../domain/game-object.js').GameObject => obj !== undefined)
+      .filter(obj => {
+        // If the answer has a noun token, check it against synonyms.
+        const nounLc = answerNoun.toLowerCase();
+        const nounsMatch =
+          nounLc === orphanNoun.toLowerCase() ||
+          obj.synonyms.some(s => s.toLowerCase() === nounLc) ||
+          obj.adjectives.some(a => a.toLowerCase() === nounLc);
+        if (!nounsMatch) return false;
+        // If the answer has adjective tokens, all must match.
+        if (answerAdjs.length > 0) {
+          return answerAdjs.every(adj => {
+            const adjLc = adj.toLowerCase();
+            return (
+              obj.adjectives.some(a => a.toLowerCase() === adjLc) ||
+              obj.synonyms.some(s => s.toLowerCase() === adjLc)
+            );
+          });
+        }
+        return true;
+      });
+
+    if (matched.length === 1) {
+      // Successfully disambiguated.
+      this.orphan = undefined;
+      const syntax = orphan.syntax;
+      const resolvedId = matched[0]!.id;
+
+      if (orphan.slot === 'dobj') {
+        const dobjIds: ObjectId[] = [resolvedId];
+        // Apply C6 checks and return ok.
+        const c6 = applyC6Checks(orphan.verb, dobjIds, undefined, syntax.dobjLocBits, syntax.iobjLocBits, player, world);
+        if ('kind' in c6) return c6;
+        return {
+          kind: 'ok',
+          command: {
+            verb: orphan.verb,
+            action: syntax.action,
+            dobjIds,
+            iobjIds: undefined,
+            prep: orphan.prep1 ?? orphan.prep2,
+            preAction: syntax.preAction,
+            syntax,
+            autoTaken: c6.autoTaken && c6.autoTaken.length > 0 ? c6.autoTaken : undefined,
+            raw: tokens,
+          },
+        };
+      } else {
+        // iobj slot
+        const iobjIds: ObjectId[] = [resolvedId];
+        const dobjIds = orphan.resolvedDobjIds;
+        const c6 = applyC6Checks(orphan.verb, dobjIds, iobjIds, syntax.dobjLocBits, syntax.iobjLocBits, player, world);
+        if ('kind' in c6) return c6;
+        return {
+          kind: 'ok',
+          command: {
+            verb: orphan.verb,
+            action: syntax.action,
+            dobjIds,
+            iobjIds,
+            prep: orphan.prep2 ?? orphan.prep1,
+            preAction: syntax.preAction,
+            syntax,
+            autoTaken: c6.autoTaken && c6.autoTaken.length > 0 ? c6.autoTaken : undefined,
+            raw: tokens,
+          },
+        };
+      }
+    }
+
+    // No match or still ambiguous — abandon orphan, treat as fresh command.
+    this.orphan = undefined;
+    return this.parse(tokens.join(' '), room, player, world);
+  }
+
+  /**
+   * Handle an orphan answer (missing-object case, no disambig).
+   *
+   * The answer might be:
+   *   - A fresh verb → abandon orphan, re-parse
+   *   - A noun phrase → graft into the missing slot, execute
+   */
+  private _handleOrphanAnswer(
+    tokens: string[],
+    orphan: OrphanState,
+    room: Room,
+    player: GameObject,
+    world: World,
+    snap: import('./scope.js').ScopeSnapshot,
+    isLit: boolean,
+  ): ParseResult {
+    const firstToken = tokens[0] ?? '';
+
+    // If first token is a verb, abandon orphan and re-parse as a fresh command.
+    if (lookupVerb(firstToken) !== undefined) {
+      this.orphan = undefined;
+      return this.parse(tokens.join(' '), room, player, world);
+    }
+
+    // The answer is a noun phrase. Graft it into the missing slot.
+    const syntax = orphan.syntax;
+
+    if (orphan.slot === 'dobj') {
+      const dobjLocBits = syntax.dobjLocBits;
+      const r = resolveNounPhrase(
+        tokens, snap, room, player, world,
+        dobjLocBits, undefined, isLit, this.itRef,
+      );
+
+      if (r.ok === 'pseudo') {
+        this.orphan = undefined;
+        return {
+          kind: 'ok',
+          command: {
+            verb: orphan.verb,
+            action: r.action,
+            dobjIds: undefined,
+            iobjIds: undefined,
+            prep: orphan.prep1 ?? orphan.prep2,
+            preAction: undefined,
+            syntax,
+            raw: tokens,
+          },
+        };
+      }
+
+      if (!r.ok) {
+        // Re-resolve failed — check if disambig; if so, save new disambig state.
+        if (r.result.kind === 'disambig') {
+          const noun = tokens[tokens.length - 1] ?? '';
+          const candidateIds = _extractDisambigCandidates(noun, snap, room, player, world, dobjLocBits, isLit);
+          this.orphan = { ...orphan, disambig: { noun, candidates: candidateIds } };
+        } else {
+          this.orphan = undefined;
+        }
+        return r.result;
+      }
+
+      this.orphan = undefined;
+      // r.ok === true here (pseudo handled above)
+      const dobjIds: ObjectId[] = r.id !== (undefined as unknown as ObjectId) ? [r.id] : [];
+      const c6 = applyC6Checks(orphan.verb, dobjIds.length > 0 ? dobjIds : undefined, undefined, syntax.dobjLocBits, syntax.iobjLocBits, player, world);
+      if ('kind' in c6) return c6;
+      return {
+        kind: 'ok',
+        command: {
+          verb: orphan.verb,
+          action: syntax.action,
+          dobjIds: dobjIds.length > 0 ? dobjIds : undefined,
+          iobjIds: undefined,
+          prep: orphan.prep1 ?? orphan.prep2,
+          preAction: syntax.preAction,
+          syntax,
+          autoTaken: c6.autoTaken && c6.autoTaken.length > 0 ? c6.autoTaken : undefined,
+          raw: tokens,
+        },
+      };
+    } else {
+      // iobj slot: answer fills the iobj
+      const iobjLocBits = syntax.iobjLocBits;
+      const r = resolveNounPhrase(
+        tokens, snap, room, player, world,
+        iobjLocBits, undefined, isLit, this.itRef,
+      );
+
+      if (r.ok === 'pseudo') {
+        this.orphan = undefined;
+        return {
+          kind: 'ok',
+          command: {
+            verb: orphan.verb,
+            action: r.action,
+            dobjIds: orphan.resolvedDobjIds,
+            iobjIds: undefined,
+            prep: orphan.prep2 ?? orphan.prep1,
+            preAction: undefined,
+            syntax,
+            raw: tokens,
+          },
+        };
+      }
+
+      if (!r.ok) {
+        if (r.result.kind === 'disambig') {
+          const noun = tokens[tokens.length - 1] ?? '';
+          const candidateIds = _extractDisambigCandidates(noun, snap, room, player, world, iobjLocBits, isLit);
+          this.orphan = { ...orphan, disambig: { noun, candidates: candidateIds } };
+        } else {
+          this.orphan = undefined;
+        }
+        return r.result;
+      }
+
+      this.orphan = undefined;
+      // r.ok === true here (pseudo handled above)
+      const iobjIds: ObjectId[] = r.id !== (undefined as unknown as ObjectId) ? [r.id] : [];
+      const dobjIds = orphan.resolvedDobjIds;
+      const c6 = applyC6Checks(orphan.verb, dobjIds, iobjIds.length > 0 ? iobjIds : undefined, syntax.dobjLocBits, syntax.iobjLocBits, player, world);
+      if ('kind' in c6) return c6;
+      return {
+        kind: 'ok',
+        command: {
+          verb: orphan.verb,
+          action: syntax.action,
+          dobjIds,
+          iobjIds: iobjIds.length > 0 ? iobjIds : undefined,
+          prep: orphan.prep2 ?? orphan.prep1,
+          preAction: syntax.preAction,
+          syntax,
+          autoTaken: c6.autoTaken && c6.autoTaken.length > 0 ? c6.autoTaken : undefined,
+          raw: tokens,
+        },
+      };
+    }
   }
 
   /**

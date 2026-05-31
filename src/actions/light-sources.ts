@@ -123,7 +123,25 @@ export function resetMatchCount(): void {
 export const matchFunction: ActionHandler = (ctx) => {
   const match = ctx.self;
 
-  if (ctx.verb === 'burn' || (ctx.verb === 'turn' && ctx.prep === 'ON')) {
+  // ZIL MATCH-FUNCTION condition: <AND <VERB? LAMP-ON BURN> <EQUAL? ,PRSO ,MATCH>>
+  // The match must be the DIRECT OBJECT (PRSO) for this branch to fire.
+  // When the match is the INDIRECT OBJECT (PRSI = iobj, e.g. "burn candles with match"),
+  // this branch does NOT fire — the match is a flame source, not the target.
+  // Port: ctx.dobj is PRSO; ctx.self is the object whose handler fires.
+  // In step 6 (PRSO action), ctx.dobj === ctx.self (match is dobj).
+  // In step 4 (PRSI action), ctx.dobj === candles (≠ match), so we skip.
+  const matchIsDobj = ctx.dobj === match;
+
+  // ZIL MATCH-FUNCTION checks <VERB? LAMP-ON BURN>:
+  //   LAMP-ON action = 'turn on' (TURN verb + ON prep) OR 'activate'/'light' verb
+  //   BURN action    = 'burn' verb
+  // Port: ctx.verb is the canonical input verb word; 'light' → V-LAMP-ON,
+  // 'activate' → V-LAMP-ON, 'turn on' → V-LAMP-ON (verb='turn', prep='ON').
+  const isLampOn =
+    ctx.verb === 'turn' && ctx.prep === 'ON' ||
+    ctx.verb === 'activate' ||
+    ctx.verb === 'light';
+  if (matchIsDobj && (ctx.verb === 'burn' || isLampOn)) {
     // ZIL decrements MATCH-COUNT before testing whether it hit zero.
     if (matchCount > 0) matchCount--;
 

@@ -54,11 +54,18 @@ function heldByPlayer(obj: GameObject, player: GameObject): boolean {
 // Internal utility: isFlaming?
 //
 // ZIL: FLAMING? OBJ = (FSET? OBJ FLAMEBIT) AND (FSET? OBJ ONBIT)
-// Port: Flag.Flammable AND Flag.OnFire
+// Port flag mapping (per find-bits.ts):
+//   FLAMEBIT → Flag.OnFire  (the object is a flame source)
+//   ONBIT    → Flag.Light   (the object is currently emitting light/fire)
+// So FLAMING? = Flag.OnFire AND Flag.Light.
+//
+// The burning MATCH gets both Flag.OnFire and Flag.Light when struck.
+// The TORCH has both from the start (always burning).
+// An object that has only Flag.Flammable (BURNBIT = can be burned) is NOT flaming.
 // ---------------------------------------------------------------------------
 
 function isFlaming(obj: GameObject): boolean {
-  return obj.has(Flag.Flammable) && obj.has(Flag.OnFire);
+  return obj.has(Flag.OnFire) && obj.has(Flag.Light);
 }
 
 // ---------------------------------------------------------------------------

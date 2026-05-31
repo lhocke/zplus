@@ -102,11 +102,18 @@ export function gwim(
   // no noun, no adjective — pure flag-based search.
   // We replicate the two-pass logic using scope tiers directly.
   //
-  // FLAMEBIT special case: require Flag.Flammable to match the ZIL FLAMING?
-  // predicate (FLAMEBIT AND ONBIT). Without this, lit candles (ONBIT only)
-  // match the FLAMEBIT filter, causing "burn X" to find candles as flame source.
-  const requireFlammable = findBitName === 'FLAMEBIT';
-  const candidates = findGwimCandidates(findFlag, locBits, snap, here, player, world, isLit, excludeIds, requireFlammable);
+  // C7: Removed requireFlammable check.
+  // The dobj-exclusion mechanism (excludeIds) already removes the dobj object from
+  // iobj GWIM candidates. When "burn X" is typed, GWIM excludes X (the burnable
+  // object) from the FLAMEBIT search, so burning candles/torch in scope are only
+  // found if they are NOT the dobj. This means if only the match is burning (not the
+  // dobj), GWIM finds exactly 1 → succeeds. The requireFlammable check incorrectly
+  // required Flag.Flammable (BURNBIT) instead of distinguishing FLAMEBIT from ONBIT,
+  // and broke the case where the burning match (OnFire only, no Flammable) is a
+  // valid FLAMEBIT (flame source) for lighting candles.
+  // ZIL: FLAMING? = FSET? FLAMEBIT AND FSET? ONBIT. In our port both map to
+  // Flag.OnFire (merged). The dobj exclusion is the correct disambiguation mechanism.
+  const candidates = findGwimCandidates(findFlag, locBits, snap, here, player, world, isLit, excludeIds);
 
   if (candidates.length !== 1) {
     // 0 matches → caller orphans; 2+ → ambiguous, caller orphans
@@ -150,7 +157,6 @@ function findGwimCandidates(
   world: World,
   isLit: boolean,
   excludeIds?: ReadonlySet<string>,
-  requireFlammable?: boolean,  // when true: object must also have Flag.Flammable
 ): string[] {
   const found: string[] = [];
   const seen = new Set<string>();
@@ -163,8 +169,6 @@ function findGwimCandidates(
     if (obj === undefined) return;
     // GWIM uses thisItQ with no noun/adj, only the gwimBit flag filter.
     if (!thisItQ(obj, undefined, undefined, findFlag)) return;
-    // FLAMEBIT special case: require Flag.Flammable to match ZIL FLAMING? semantics.
-    if (requireFlammable && !obj.has(Flag.Flammable)) return;
     seen.add(id);
     found.push(id);
   }

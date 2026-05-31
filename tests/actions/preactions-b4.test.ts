@@ -406,8 +406,11 @@ describe('PRE-BURN (gverbs.zil:243)', () => {
     paper.moveTo(room);
 
     const torch = new Thing('TORCH', 'torch', { synonyms: ['torch'] });
-    torch.set(Flag.Flammable); // FLAMEBIT
-    torch.set(Flag.OnFire);   // ONBIT (lit)
+    // C7 fix: isFlaming now checks OnFire AND Light (matching FLAMEBIT AND ONBIT
+    // per find-bits.ts: FLAMEBIT→OnFire, ONBIT→Light). Old mapping was wrong
+    // (FLAMEBIT→Flammable, ONBIT→OnFire).
+    torch.set(Flag.OnFire);   // FLAMEBIT in ZIL = Flag.OnFire in port
+    torch.set(Flag.Light);    // ONBIT in ZIL = Flag.Light in port (currently emitting light)
     torch.moveTo(player);
 
     const world = World.fromObjects([room, paper, torch, player]);

@@ -301,20 +301,22 @@ describe('LANTERN: verb responses', () => {
 describe('MATCH: lighting and messages', () => {
   beforeEach(() => resetMatchCount());
 
-  it('burning a match outputs exact ZIL text', () => {
+  it('lighting a match outputs exact ZIL text', () => {
+    // Use "light match" (LIGHT verb, V-LAMP-ON action) — 1-object form,
+    // no GWIM iobj needed. MATCH-FUNCTION handles <VERB? LAMP-ON BURN>.
     const g = newGameAt('DAM-LOBBY');
     g.start();
     g.turn('take matchbook');
 
-    const r = g.turn('burn match');
+    const r = g.turn('light match');
     expect(r.output).toContain('One of the matches starts to burn.');
   });
 
-  it('burning a match sets OnFire and Light flags', () => {
+  it('lighting a match sets OnFire and Light flags', () => {
     const g = newGameAt('DAM-LOBBY');
     g.start();
     g.turn('take matchbook');
-    g.turn('burn match');
+    g.turn('light match');
 
     const match = worldOf(g).get('MATCH');
     expect(match?.has(Flag.OnFire)).toBe(true);
@@ -325,7 +327,7 @@ describe('MATCH: lighting and messages', () => {
     const g = newGameAt('DAM-LOBBY');
     g.start();
     g.turn('take matchbook');
-    g.turn('burn match');
+    g.turn('light match');
 
     const r = g.turn('examine match');
     expect(r.output).toContain('The match is burning.');
@@ -346,26 +348,26 @@ describe('MATCH: lighting and messages', () => {
     const g = newGameAt('DAM-LOBBY');
     g.start();
     g.turn('take matchbook');
-    g.turn('burn match');
+    g.turn('light match');
 
     const r = g.turn('extinguish match');
     expect(r.output).toContain('The match is out.');
   });
 
   it('running out of matches: exact ZIL text', () => {
-    // MATCH-COUNT starts at 6.  Each burn call decrements by 1.
-    // Burn 5 times (extinguishing each time so the auto-quench interrupt
+    // MATCH-COUNT starts at 6.  Each light call decrements by 1.
+    // Light 5 times (extinguishing each time so the auto-quench interrupt
     // does not re-decrement).  On the 6th attempt the count is 0.
     const g = newGameAt('DAM-LOBBY');
     g.start();
     g.turn('take matchbook');
 
     for (let i = 0; i < 5; i++) {
-      g.turn('burn match');
+      g.turn('light match');
       g.turn('extinguish match');
     }
 
-    const r = g.turn('burn match');
+    const r = g.turn('light match');
     expect(r.output).toContain("I'm afraid that you have run out of matches.");
   });
 });
@@ -415,21 +417,26 @@ describe('CANDLES: behavior and messages', () => {
     expect(r.output).toContain('The candles are not lighted.');
   });
 
-  it('lighting unlit candles with a burning match: "(with the match)"', () => {
+  it('lighting unlit candles with a burning match: GWIM parenthetical + "The candles are lit."', () => {
     // Start in SOUTH-TEMPLE with candles; teleport MATCH into inventory.
+    // Use "light match" (LIGHT verb, 1-object form) to avoid C7 orphan for BURN 2-obj.
+    // With C7: "burn candles" → GWIM finds burning match as iobj →
+    //   parenthetical "(with the matchbook)" printed by GWIM, then "The candles are lit."
+    // ZIL: MATCH.desc = "matchbook" so the parenthetical uses that string.
     const g = gameWithCandlesAndMatch();
     g.turn('extinguish candles'); // candles now unlit
-    g.turn('burn match');         // light the match
+    g.turn('light match');         // light the match (LIGHT = V-LAMP-ON, handled by MATCH-FUNCTION)
 
     const r = g.turn('burn candles');
-    expect(r.output).toContain('(with the match)');
+    // GWIM auto-supplies the burning match as iobj → parenthetical with MATCH's desc
+    expect(r.output).toContain('(with the matchbook)');
     expect(worldOf(g).get('CANDLES')?.has(Flag.OnFire)).toBe(true);
   });
 
   it('lighting unlit candles with a burning match: "The candles are lit."', () => {
     const g = gameWithCandlesAndMatch();
     g.turn('extinguish candles');
-    g.turn('burn match');
+    g.turn('light match');
 
     const r = g.turn('burn candles');
     expect(r.output).toContain('The candles are lit.');
@@ -438,7 +445,7 @@ describe('CANDLES: behavior and messages', () => {
   it('lighting already-lit candles reports already lit', () => {
     const g = gameWithCandlesAndMatch();
     // Candles are still lit at this point (not extinguished).
-    g.turn('burn match');
+    g.turn('light match');
 
     const r = g.turn('burn candles');
     // The ZIL text: "The candles are already lit."

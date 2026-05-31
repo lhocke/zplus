@@ -345,9 +345,10 @@ describe('STAKE — auto-take when STAKE bit set and object not held', () => {
 // ---------------------------------------------------------------------------
 
 describe('SHAVE — must-have hard error when object not held', () => {
-  it('"throw lamp" when lamp is in room (not held) → SHAVE fail', () => {
-    // THROW dobjLocBits=194 = SH|SC|SHAVE (no STAKE).
-    // If the lamp is in the room (not held), THROW should fail with SHAVE message.
+  it('"drop lamp" when lamp is in room (not held) → SHAVE fail', () => {
+    // DROP dobjLocBits=134 = SH|SMANY|SHAVE (no STAKE).
+    // DROP is a 1-object verb so no GWIM iobj is needed — SHAVE fires directly.
+    // If the lamp is in the room (not held), DROP should fail with SHAVE message.
     const room = makeRoom('ROOM', 'A room');
     const player = makeActor('PLAYER');
     player.moveTo(room);
@@ -359,8 +360,8 @@ describe('SHAVE — must-have hard error when object not held', () => {
     const world = World.fromObjects([room, player, lamp]);
     const parser = new Parser();
 
-    // "throw lamp" — lamp not held → SHAVE → "You don't have the brass lantern."
-    const result = parser.parse('throw lamp', room, player, world);
+    // "drop lamp" — lamp not held → SHAVE → "You don't have the brass lantern."
+    const result = parser.parse('drop lamp', room, player, world);
     expect(result.kind).toBe('fail');
     if (result.kind === 'fail') {
       expect(result.message).toMatch(/You don't have the/);
@@ -368,8 +369,9 @@ describe('SHAVE — must-have hard error when object not held', () => {
     }
   });
 
-  it('"throw lamp" when lamp IS held → succeeds (no SHAVE error)', () => {
+  it('"drop lamp" when lamp IS held → succeeds (no SHAVE error)', () => {
     // When the object is in player inventory, SHAVE check passes.
+    // DROP is a 1-object verb (no GWIM needed).
     const room = makeRoom('ROOM', 'A room');
     const player = makeActor('PLAYER');
     player.moveTo(room);
@@ -381,8 +383,8 @@ describe('SHAVE — must-have hard error when object not held', () => {
     const world = World.fromObjects([room, player, lamp]);
     const parser = new Parser();
 
-    // "throw lamp" — lamp held → SHAVE passes → ok
-    const result = parser.parse('throw lamp', room, player, world);
+    // "drop lamp" — lamp held → SHAVE passes → ok
+    const result = parser.parse('drop lamp', room, player, world);
     expect(result.kind).toBe('ok');
     if (result.kind === 'ok') {
       expect(result.command.dobjIds?.[0]).toBe('LAMP');
@@ -392,6 +394,7 @@ describe('SHAVE — must-have hard error when object not held', () => {
   it('SHAVE fail message format: "You don\'t have the <desc>." (ends with period)', () => {
     // Verbatim: "You don't have the <desc>." (gparser.zil:1285-1286)
     // The desc is the object's desc field (lowercase name), not the id.
+    // Use DROP (1-object verb with SHAVE) to test the message format.
     const room = makeRoom('ROOM', 'A room');
     const player = makeActor('PLAYER');
     player.moveTo(room);
@@ -403,8 +406,8 @@ describe('SHAVE — must-have hard error when object not held', () => {
     const world = World.fromObjects([room, player, rope]);
     const parser = new Parser();
 
-    // "throw rope" — THROW has SHAVE, rope not held → SHAVE → "You don't have the coarse rope."
-    const result = parser.parse('throw rope', room, player, world);
+    // "drop rope" — DROP has SHAVE, rope not held → SHAVE → "You don't have the coarse rope."
+    const result = parser.parse('drop rope', room, player, world);
     expect(result.kind).toBe('fail');
     if (result.kind === 'fail') {
       expect(result.message).toBe("You don't have the coarse rope.");

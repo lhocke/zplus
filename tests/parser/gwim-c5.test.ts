@@ -303,11 +303,9 @@ describe('Parser integration — GWIM auto-supply', () => {
     }
   });
 
-  it('"attack troll" with no weapon → fallback ok with no iobj (pre-C7 stub)', () => {
+  it('"attack troll" with no weapon → C7 orphan prompt (GWIM fails)', () => {
     // With no weapon in scope, GWIM(WEAPONBIT) finds 0 candidates.
-    // Pre-C7 fallback: returns ok with action=V-ATTACK, dobj=TROLL, iobj=undefined.
-    // The V-ATTACK handler will deal with missing iobj (e.g. fight unarmed).
-    // C7 will add the proper orphan prompt when GWIM fails.
+    // C7: GWIM fail → orphan "What do you want to attack the troll with?"
     const room = makeRoom('ROOM', 'A room');
     const player = makeActor('PLAYER');
     player.moveTo(room);
@@ -321,13 +319,12 @@ describe('Parser integration — GWIM auto-supply', () => {
     const parser = new Parser();
     const result = parser.parse('attack troll', room, player, world);
 
-    // Pre-C7: falls back to ok with no iobj (not a proper orphan prompt yet)
-    expect(result.kind).toBe('ok');
-    if (result.kind === 'ok') {
-      expect(result.command.dobjIds).toContain('TROLL');
-      expect(result.command.iobjIds).toBeUndefined();
-      // No gwimText when GWIM failed
-      expect(result.command.gwimText).toBeUndefined();
+    // C7: GWIM fail for iobj (WEAPONBIT) → orphan prompt
+    expect(result.kind).toBe('orphan');
+    if (result.kind === 'orphan') {
+      // DRIVE2: player provided dobj (troll), missing iobj (weapon WITH)
+      expect(result.message).toContain('attack');
+      expect(result.message).toMatch(/with\?$/);
     }
   });
 
@@ -348,11 +345,10 @@ describe('Parser integration — GWIM auto-supply', () => {
     }
   });
 
-  it('"climb up" with no climbable object → fallback ok with no dobj (pre-C7 stub)', () => {
+  it('"climb up" with no climbable object → C7 orphan prompt (GWIM fails)', () => {
     // SYNTAX-CHECK last-wins: CLIMB UP drive1=CLIMBBIT form (last among UP forms).
     // GWIM(CLIMBBIT, 48) finds 0 climbable objects.
-    // Pre-C7 fallback: returns ok with action=V-CLIMB-UP, dobj=undefined.
-    // C7 will add proper orphan/fail for GWIM-fail cases.
+    // C7: GWIM fail → orphan "What do you want to climb up?"
     //
     // NOTE: "look around" / "look up" use RMUNGBIT because LOOK AROUND/UP only has
     // one form (RMUNGBIT, no competing CLIMBBIT). CLIMB UP has two forms; last-wins
@@ -365,12 +361,10 @@ describe('Parser integration — GWIM auto-supply', () => {
     const parser = new Parser();
     const result = parser.parse('climb up', room, player, world);
 
-    // Pre-C7: GWIM fail → fallback ok with no dobj
-    expect(result.kind).toBe('ok');
-    if (result.kind === 'ok') {
-      expect(result.command.action).toBe('V-CLIMB-UP');
-      expect(result.command.dobjIds).toBeUndefined();
-      expect(result.command.gwimText).toBeUndefined();
+    // C7: GWIM fail for dobj (CLIMBBIT) → orphan prompt
+    expect(result.kind).toBe('orphan');
+    if (result.kind === 'orphan') {
+      expect(result.message).toContain('climb');
     }
   });
 });
