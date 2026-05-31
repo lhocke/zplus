@@ -134,27 +134,62 @@ export class Game {
 
   /** Execute one command line (may contain chained commands via "then" / "."). */
   turn(input: string): TurnResult {
-    const results = this.parser.parseChained(
-      input,
-      this.here,
-      this.player,
-      this.world,
-    );
+    // -------------------------------------------------------------------------
+    // C9: Interleaved per-segment drive (replaces eager parseChained).
+    //
+    // Algorithm (td1-parser-algorithm.md §15):
+    //   1. Call parser.parseSegment(input) — which internally handles:
+    //        a. Continuation queue → pops next queued segment (ignores `input`).
+    //        b. Orphan pending → treats `input` as the orphan answer.
+    //        c. Fresh input → splits on THEN/period, queues remainder,
+    //           parses first segment.
+    //   2. Switch on ParseResult.kind:
+    //        'ok'         → execute (PERFORM); bind IT in prologue; if
+    //                       parser.hasContinuation() loop back to step 1.
+    //        'fail'       → print message; parser.clearContinuation(); done.
+    //        'orphan'/'disambig' → print message; done without counting a move.
+    //   3. Move counter increments only when at least one command executed.
+    //      Per ZIL semantics: orphan/disambig prompts do NOT count as moves.
+    //
+    // The interleaved prologue (IT-binding after each segment) is what enables
+    // "open mailbox. read it" to work within a single turn() call.
+    // -------------------------------------------------------------------------
 
     const outputs: string[] = [];
     let moved = false;
 
-    for (const pr of results) {
-      if (pr.kind !== 'ok') {
+    // Track whether we executed at least one segment (for move counter).
+    let executedAny = false;
+
+    // Loop: parse and execute segments until the continuation queue is empty
+    // or an orphan/disambig/fatal halts us.
+    let isFirstCall = true;
+    while (true) {
+      // On the first iteration use the real `input`; subsequent iterations pass
+      // '' because parseSegment pulls from the continuation queue.
+      const rawLine = isFirstCall ? input : '';
+      isFirstCall = false;
+
+      const pr = this.parser.parseSegment(rawLine, this.here, this.player, this.world);
+
+      if (pr.kind === 'orphan' || pr.kind === 'disambig') {
+        // Awaiting answer on the NEXT turn — no execution, no move.
         outputs.push(pr.message);
-        // C8: parse failed (any non-ok kind) → lastWon = false.
-        // P-WON equivalent: PARSER() returned false (gparser.zil / gmain.zil:42).
-        // Note: 'orphan'/'disambig' also set lastWon=false; AGAIN guard #2 (orphan set)
-        // fires before #3 (!lastWon) so the guard ordering is correct regardless.
         this.parser.setLastWon(false);
-        continue;
+        // Do NOT loop — leave orphan state for next turn.
+        break;
       }
 
+      if (pr.kind !== 'ok') {
+        // Parse failure: print message, clear continuation, stop.
+        outputs.push(pr.message);
+        this.parser.setLastWon(false);
+        this.parser.clearContinuation();
+        break;
+      }
+
+      // ---- ok: execute the segment ----------------------------------------
+      executedAny = true;
       const cmd = pr.command;
 
       // Resolve objects from ids (single-object callers use dobjIds?.[0]).
@@ -172,18 +207,16 @@ export class Game {
 
       // ---- PERFORM prologue: IT-binding (gmain.zil:202–203) ----------------
       // "if PRSO and PRSI!=IT and verb!=WALK: SETG P-IT-OBJECT PRSO"
-      // Bind the IT pronoun referent HERE — in the PERFORM prologue, before the
-      // 7-step chain — so the parser can read it on the NEXT turn.
+      // Bind the IT pronoun referent HERE — in the PERFORM prologue, BEFORE the
+      // 7-step chain — so the parser can read it on the NEXT SEGMENT (or turn).
+      //
+      // CRITICAL for C9: this binding fires between segments within a single
+      // turn() call, enabling "open mailbox. read it" to resolve "it" to the
+      // mailbox after the first segment executes.
       //
       // The PRSI!=IT condition cannot be checked here (the iobj is already
       // resolved by the time we reach dispatch); we simplify to the two
       // checkable guards: dobj present AND verb !== 'walk'.
-      //
-      // IT-binding is NOT done in the parser (neither in parseChained nor
-      // post-dispatch) — the parser only READS itRef during noun resolution.
-      // Wave C (interleaved parse+dispatch) will interleave this prologue
-      // correctly with multi-segment chains; for now cross-turn binding is
-      // the supported path.
       if (dobj !== undefined && cmd.verb !== 'walk') {
         this.parser.bindPronouns(cmd);
       }
@@ -239,6 +272,7 @@ export class Game {
         // (mirrors SETG P-CONT <> at gmain.zil:161).
         // C8: M-FATAL counts as a non-win; AGAIN should not replay a fatal command.
         this.parser.setLastWon(false);
+        this.parser.clearContinuation();
         outputs.push(handled.join('\n'));
         break;
       }
@@ -318,14 +352,24 @@ export class Game {
         }
       }
 
-      // (IT pronoun binding was done in the PERFORM prologue above — no
-      //  post-dispatch bindPronouns call here.  The prologue is the authentic
-      //  ZIL site per gmain.zil:202–203.)
+      // ---- Loop control: continue if more segments pending ------------------
+      if (!this.parser.hasContinuation()) {
+        break; // No more continuation segments — done for this turn.
+      }
+      // Otherwise loop back to parseSegment() to consume the next segment.
     }
 
-    this.moveCount += 1;
-    this.clock.advance();
-    this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+    // -------------------------------------------------------------------------
+    // Move counter: increment only if we actually executed a command.
+    // Per ZIL semantics, orphan/disambig prompts do NOT count as moves
+    // (gmain.zil main loop: MOVES incremented only when PARSER() returned true
+    // AND PERFORM ran, i.e. only on a successful command execution).
+    // -------------------------------------------------------------------------
+    if (executedAny) {
+      this.moveCount += 1;
+      this.clock.advance();
+      this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+    }
 
     return { output: outputs.join('\n'), moved };
   }

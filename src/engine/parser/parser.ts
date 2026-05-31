@@ -982,6 +982,31 @@ export class Parser {
   private lastWon: boolean = false;
 
   /**
+   * C9: Continuation token segments (P-CONT equivalent).
+   *
+   * When the scan loop hits a THEN/period separator, the remaining input is
+   * stored here as pre-split segments (already filtered through splitSegments).
+   * Game.turn's interleaved loop calls parseSegment() which consumes segments
+   * from this queue without re-reading user input.
+   *
+   * Stored as an array of token arrays (not raw strings) because splitSegments
+   * already did the article-stripping — we don't want to re-process.
+   * Each entry is one segment's tokens.
+   */
+  private continuation: string[][] | undefined = undefined;
+
+  /**
+   * C9: Pre-parsed result queue for ALL/AND expansion.
+   *
+   * When tryExpandAll() or ANDFLG returns multiple ParseResults (e.g. "take all"
+   * expands to one result per object), the extras are queued here so Game.turn()
+   * can process them one at a time via parseSegment().  Each call to parseSegment
+   * that finds entries here dequeues the next pre-parsed result directly —
+   * no re-tokenization needed.
+   */
+  private parsedQueue: ParseResult[] | undefined = undefined;
+
+  /**
    * Called by Game.turn() after each command executes (or fails to parse).
    * Sets P-WON equivalent: true = last command succeeded, false = it failed.
    *
@@ -989,6 +1014,155 @@ export class Parser {
    */
   setLastWon(won: boolean): void {
     this.lastWon = won;
+  }
+
+  /**
+   * C9: True when there are pending continuation segments or pre-parsed results
+   * queued.  Game.turn() loops while this is true without reading new user input.
+   *
+   * gparser.zil: P-CONT (the continuation token buffer).
+   */
+  hasContinuation(): boolean {
+    return (
+      (this.continuation !== undefined && this.continuation.length > 0) ||
+      (this.parsedQueue !== undefined && this.parsedQueue.length > 0)
+    );
+  }
+
+  /**
+   * C9: True when the parser is awaiting input to answer an orphan/disambig
+   * prompt.  Game.turn() must:
+   *   1. Skip the move counter increment for the CURRENT turn.
+   *   2. On the NEXT turn, call parseSegment() with the user's answer so
+   *      ORPHAN-MERGE can graft it into the saved command.
+   *
+   * gparser.zil: P-OFLAG (whether an orphan is pending).
+   */
+  isAwaitingInput(): boolean {
+    return this.orphan !== undefined;
+  }
+
+  /**
+   * C9: Clear the continuation queue and parsed queue (P-CONT clear on M-FATAL).
+   * Called by Game.turn() when M-FATAL fires, per gmain.zil:161.
+   */
+  clearContinuation(): void {
+    this.continuation = undefined;
+    this.parsedQueue = undefined;
+  }
+
+  /**
+   * C9: The interleaved-drive entry point for Game.turn().
+   *
+   * Implements input acquisition (gparser.zil:131-153) from Game.turn's
+   * perspective:
+   *   0. If pre-parsed queue non-empty (from ALL/AND expansion) → dequeue the
+   *      next pre-parsed result and return it directly.
+   *   1. If continuation queue non-empty → pop the front segment, dispatch
+   *      through the full parse path for that segment (do NOT read rawLine).
+   *   2. Else if orphan pending → tokenize rawLine as the answer, run ORPHAN-MERGE.
+   *   3. Else → tokenize rawLine, detect THEN/period, queue remainder as
+   *      continuation, dispatch the first segment through the full parse path.
+   *
+   * "Full parse path" means: check for tryExpandAll (ALL/AND expansion) first,
+   * then parse() for a single command.  Multi-result expansions queue their
+   * extras into parsedQueue for subsequent parseSegment() calls.
+   *
+   * After a successful parse: if there are still tokens beyond the current
+   * segment in this input string, they are queued as continuation segments.
+   * Game.turn() loops calling parseSegment() (with rawLine='') until
+   * hasContinuation() returns false.
+   *
+   * @param rawLine  The player's raw input for this turn (ignored when
+   *                 consuming a continuation segment, a pre-parsed queue
+   *                 entry, or answering an orphan from a prior chained segment).
+   * @param room     Current room.
+   * @param player   Player actor.
+   * @param world    The world.
+   */
+  parseSegment(
+    rawLine: string,
+    room: Room,
+    player: GameObject,
+    world: World,
+  ): ParseResult {
+    // Path 0: pre-parsed result queue (ALL/AND expansion overflow).
+    if (this.parsedQueue !== undefined && this.parsedQueue.length > 0) {
+      const next = this.parsedQueue.shift()!;
+      if (this.parsedQueue.length === 0) {
+        this.parsedQueue = undefined;
+      }
+      return next;
+    }
+
+    let tokens: string[];
+
+    if (this.continuation !== undefined && this.continuation.length > 0) {
+      // Path 1: consume the next queued continuation segment.
+      tokens = this.continuation.shift()!;
+      if (this.continuation.length === 0) {
+        this.continuation = undefined;
+      }
+
+    } else if (this.orphan !== undefined) {
+      // Path 2: orphan pending — rawLine is the answer.
+      // parse() handles the ORPHAN-MERGE branch internally (§7, §10).
+      return this.parse(rawLine, room, player, world);
+
+    } else {
+      // Path 3: fresh input — split on THEN/period, queue remainder.
+      const allSegments = splitSegments(rawLine);
+      if (allSegments.length === 0) {
+        return { kind: 'fail', message: 'I beg your pardon?' };
+      }
+      // Queue segments 2..N as continuation (in order).
+      if (allSegments.length > 1) {
+        this.continuation = allSegments.slice(1);
+      }
+      tokens = allSegments[0]!;
+    }
+
+    // Dispatch tokens through the full parse path:
+    //   a. tryExpandAll for ALL/AND expansion (multi-result).
+    //   b. parse() for a single command.
+    //
+    // This mirrors what parseChained() did per segment, but routes through
+    // parseSegment() instead of collecting into an array.
+    const expanded = this.tryExpandAll(tokens, room, player, world);
+    if (expanded !== null) {
+      if (expanded.length === 0) {
+        // "take all" with nothing to take — return a no-op or empty result.
+        // parseChained returned empty array; we return a benign ok with no dobj.
+        return { kind: 'fail', message: "There's nothing here to take." };
+      }
+      // Queue extras as pre-parsed results (except the first which we return).
+      if (expanded.length > 1) {
+        this.parsedQueue = expanded.slice(1);
+      }
+      return expanded[0]!;
+    }
+
+    // Check for ANDFLG expansion (multiple dobjIds from AND-connected noun list).
+    // parse() handles ANDFLG internally; if it returns ok with multiple dobjIds,
+    // split into individual commands.
+    const singleResult = this.parse(tokens.join(' '), room, player, world);
+    if (
+      singleResult.kind === 'ok' &&
+      singleResult.command.dobjIds !== undefined &&
+      singleResult.command.dobjIds.length > 1
+    ) {
+      // Expand into one result per dobjId (allIter flag for "<desc>: " prefix).
+      const expanded2: ParseResult[] = singleResult.command.dobjIds.map(id => ({
+        kind: 'ok' as const,
+        command: { ...singleResult.command, dobjIds: [id], allIter: true as const },
+      }));
+      if (expanded2.length > 1) {
+        this.parsedQueue = expanded2.slice(1);
+      }
+      return expanded2[0]!;
+    }
+
+    return singleResult;
   }
 
   /**
