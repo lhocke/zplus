@@ -14,7 +14,7 @@
  *   - DRIVE1 fallback (bare verb, ncn=0, 1-obj form)
  *   - DRIVE1 bare-verb + form-has-prep1 path (LISTEN/TALK/SEND etc.) — ZIL:720
  *   - DRIVE2 fallback (two-obj verb, ncn=1, matching prep1)
- *   - DRIVE last-wins (ZIL divergence from spec pseudocode)
+ *   - DRIVE first-wins (observable: first-declared form wins; ZIL byte table reversed)
  *   - No-verb fail (verbatim ZIL string)
  *   - Recognize fail ("That sentence isn't one I recognize.") — ZIL:734
  *   - prepEq direct tests
@@ -280,7 +280,7 @@ describe('syntaxCheck() — DRIVE fallbacks', () => {
     expect(r.kind).toBe('needGwim');
     if (r.kind === 'needGwim') {
       expect(r.drive1).toBeDefined();
-      // drive1 should be a TAKE 1-obj form (the last qualifying one per last-wins).
+      // drive1 should be a TAKE form (the first qualifying one per first-wins).
       expect(r.drive1!.verb).toBe('TAKE');
     }
   });
@@ -350,10 +350,11 @@ describe('syntaxCheck() — DRIVE fallbacks', () => {
 // ---------------------------------------------------------------------------
 
 describe('syntaxCheck() — DRIVE1 bare-verb + form-has-prep1 (gparser.zil:720)', () => {
-  test('bare LISTEN (ncn=0, no prep) → needGwim with drive1 set to last LISTEN form', () => {
+  test('bare LISTEN (ncn=0, no prep) → needGwim with drive1 set to first LISTEN form', () => {
     // LISTEN has no num=0 form; all forms have prep1 (TO, FOR).
-    // ZIL: P-PREP1==0 → OR fires → DRIVE1 set for both TO and FOR forms; last=FOR form.
-    // drive1 must be defined (so C4 can emit "What do you want to listen for?").
+    // ZIL: P-PREP1==0 → OR fires → DRIVE1 eligible for both TO and FOR forms.
+    // First-wins (observable behavior): drive1 = first LISTEN form (prep1=TO).
+    // Oracle: dfrotz > listen => "What do you want to listen to?"
     const listenForms = getForms('LISTEN');
     expect(listenForms.length).toBeGreaterThan(0);
     // All LISTEN forms have a non-null prep1.
@@ -363,10 +364,10 @@ describe('syntaxCheck() — DRIVE1 bare-verb + form-has-prep1 (gparser.zil:720)'
     expect(r.kind).toBe('needGwim');
     if (r.kind === 'needGwim') {
       expect(r.drive1).toBeDefined();
-      // Last-wins: drive1 is the last LISTEN form (prep1=FOR per gsyntax.zil).
-      const lastListenForm = listenForms[listenForms.length - 1]!;
-      expect(r.drive1).toBe(lastListenForm);
-      expect(r.drive1!.prep1).toBe('FOR');
+      // First-wins: drive1 is the first LISTEN form (prep1=TO per gsyntax.zil).
+      const firstListenForm = listenForms[0]!;
+      expect(r.drive1).toBe(firstListenForm);
+      expect(r.drive1!.prep1).toBe('TO');
     }
   });
 
@@ -448,28 +449,31 @@ describe('syntaxCheck() — recognize fail (gparser.zil:734)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Section 9: DRIVE last-wins (ZIL divergence from spec pseudocode §306/§310)
+// Section 9: DRIVE first-wins (observable behavior: first-declared form wins)
 //
-// The spec pseudocode writes drive1 = drive1 ?? form (first-wins).
-// The actual ZIL at gparser.zil:722/725 is unconditional SET — LAST wins.
-// This test documents and pins the deliberate divergence.
+// The spec pseudocode writes drive1 = drive1 ?? form (first-wins), matching
+// observable behavior. Although the ZIL source uses unconditional SET (last-wins
+// over the byte table), the ZIL compiler stores forms in REVERSE declaration
+// order — so "last over reversed order" = first declared.
+// Net observable: first-declared form wins for DRIVE1/DRIVE2.
+// Verified: dfrotz > listen => "What do you want to listen to?" (TO is first).
 // ---------------------------------------------------------------------------
 
-describe('syntaxCheck() — DRIVE last-wins (ZIL gparser.zil:722/725)', () => {
-  test('TAKE ncn=0 drive1: last qualifying form wins, not first', () => {
+describe('syntaxCheck() — DRIVE first-wins (observable, gparser.zil:722/725)', () => {
+  test('TAKE ncn=0 drive1: first qualifying form wins', () => {
     // ZIL DRIVE1 gate (gparser.zil:718-722): num>=1 AND ncn===0 AND
     // (P-PREP1==0 OR typed-prep matches form-prep).
     // For bare TAKE (ncn=0, no prep typed = prep1===undefined): P-PREP1 is 0,
     // so the OR's first arm fires for ALL num>=1 forms regardless of form.prep1.
-    // ALL 8 TAKE forms are DRIVE1-eligible. Last-wins → drive1 = form 7 (prep2=FROM).
+    // ALL 8 TAKE forms are DRIVE1-eligible. First-wins → drive1 = form 0.
     const takeForms = getForms('TAKE');
-    // The last TAKE form in declaration order (all 8 are eligible, last wins).
-    const lastTakeForm = takeForms[takeForms.length - 1]!;
+    // The first TAKE form in declaration order (all 8 are eligible, first wins).
+    const firstTakeForm = takeForms[0]!;
 
     const r = syntaxCheck('TAKE', 0);
     expect(r.kind).toBe('needGwim');
     if (r.kind === 'needGwim') {
-      expect(r.drive1).toBe(lastTakeForm); // object-identity, last-wins
+      expect(r.drive1).toBe(firstTakeForm); // object-identity, first-wins
     }
   });
 });

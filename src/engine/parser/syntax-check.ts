@@ -13,14 +13,21 @@
  *
  * Defers ALL object resolution, GWIM, and orphan/CANT-ORPHAN prompting to C4.
  *
- * ─── DRIVE NOTE (ZIL last-wins divergence from spec pseudocode) ──────────────
+ * ─── DRIVE NOTE (observable first-wins behavior) ─────────────────────────────
  * The spec pseudocode (algorithm §306/§310) writes drive1 = drive1 ?? form
- * (first-wins). The actual ZIL at gparser.zil:722/725 is an unconditional
- * <SET DRIVE1 .SYN> / <SET DRIVE2 .SYN> — it runs every qualifying pass, so
- * the LAST qualifying form wins. This implementation faithfully follows the ZIL
- * (last-wins), using plain assignment (drive1 = form / drive2 = form).
- * For most verbs only one form is DRIVE-eligible so the two behaviors coincide;
- * the divergence only matters for a verb with two DRIVE-eligible forms.
+ * (first-wins). The ZIL source at gparser.zil:722/725 uses an unconditional
+ * <SET DRIVE1 .SYN> (last-wins over the byte table), BUT the ZIL compiler
+ * stores syntax forms in REVERSE declaration order in the byte table — so the
+ * last form processed by the ZIL loop is the first form declared in gsyntax.zil.
+ * Net observable effect: first-declared form wins for DRIVE1/DRIVE2.
+ *
+ * Verified against dfrotz (ground truth):
+ *   > listen  → "What do you want to listen to?"   (LISTEN TO declared first)
+ *   > knock   → "What do you want to knock at?"    (KNOCK AT declared first)
+ * Both confirm first-declared wins.
+ *
+ * This implementation uses drive1 = drive1 ?? form (first-wins in declaration
+ * order), matching observable behavior.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -85,7 +92,7 @@ export function syntaxCheck(
 
   const forms = getForms(verb); // [] for unknown verbs
 
-  // ZIL DRIVE state: last-wins (see DRIVE NOTE above).
+  // DRIVE state: first-wins in declaration order (see DRIVE NOTE above).
   let drive1: SyntaxEntry | undefined;
   let drive2: SyntaxEntry | undefined;
 
@@ -105,15 +112,12 @@ export function syntaxCheck(
     //
     // The OR's first arm fires when NO prep was typed (prep1===undefined in TS).
     // In that case ANY form with num>=1 qualifies for DRIVE1, regardless of
-    // the form's own prep1.  The old implementation gated on prepEq(form.prep1, prep1),
-    // which only matches when BOTH are undefined — excluding forms with a prep1 when
-    // the player typed a bare verb.  Concrete example: bare LISTEN has no num=0 form;
-    // ZIL sets DRIVE1 to the LISTEN-TO form and emits the orphan prompt; the old
-    // implementation returned drive1=undefined and emitted the wrong response.
+    // the form's own prep1.  This lets bare LISTEN (no num=0 form) reach the
+    // LISTEN TO form as drive1 and emit the correct orphan prompt.
     //
-    // drive1 = form  (LAST qualifying wins per ZIL's unconditional SET)
+    // drive1 = drive1 ?? form  (FIRST qualifying wins — see DRIVE NOTE)
     if (num >= 1 && ncn === 0 && (prep1 === undefined || prepEq(form.prep1, prep1))) {
-      drive1 = form;
+      drive1 = drive1 ?? form;
       continue;
     }
 
@@ -122,9 +126,9 @@ export function syntaxCheck(
 
     // gparser.zil:724-725 — DRIVE2 accumulation:
     // num === 2, ncn === 1 (have dobj but not iobj yet).
-    // drive2 = form  (LAST qualifying wins per ZIL's unconditional SET)
+    // drive2 = drive2 ?? form  (FIRST qualifying wins — see DRIVE NOTE)
     if (num === 2 && ncn === 1) {
-      drive2 = form;
+      drive2 = drive2 ?? form;
       continue;
     }
 

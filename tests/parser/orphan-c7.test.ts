@@ -99,9 +99,10 @@ describe('C7 — ORPHAN prompt: bare transitive verb', () => {
   });
 
   it('"listen" → orphan prompt (LISTEN has no 0-obj form → drive1 fires)', () => {
-    // LISTEN has two forms: LISTEN TO OBJECT (index 113) and LISTEN FOR OBJECT (index 114).
-    // SYNTAX-CHECK last-wins for DRIVE1: both qualify, last wins = LISTEN FOR form.
-    // GWIM will find 0 or 2+ objects → orphan with prep = FOR.
+    // LISTEN has two forms: LISTEN TO OBJECT (declared first) and LISTEN FOR OBJECT.
+    // SYNTAX-CHECK first-wins for DRIVE1: first qualifying form wins = LISTEN TO.
+    // GWIM will find 0 or 2+ objects → orphan with prep = TO.
+    // Oracle: dfrotz (zork1.z3) > listen => "What do you want to listen to?"
     const room = makeRoom('ROOM', 'A room');
     const player = makeActor('PLAYER');
     player.moveTo(room);
@@ -111,8 +112,8 @@ describe('C7 — ORPHAN prompt: bare transitive verb', () => {
     const result = parser.parse('listen', room, player, world);
     expect(result.kind).toBe('orphan');
     if (result.kind === 'orphan') {
-      // Last-wins DRIVE1 = LISTEN FOR form → prep = "for"
-      expect(result.message).toBe('What do you want to listen for?');
+      // First-wins DRIVE1 = LISTEN TO form → prep = "to"
+      expect(result.message).toBe('What do you want to listen to?');
     }
   });
 });
@@ -367,10 +368,10 @@ describe('C7 — ORPHAN-MERGE: disambiguation answer merges', () => {
 // ---------------------------------------------------------------------------
 
 describe('C7 — ORPHAN prompt includes prep when drive has one', () => {
-  it('"listen" → "What do you want to listen for?" (includes the FOR prep, last-wins drive1)', () => {
-    // LISTEN has two forms: LISTEN TO OBJECT and LISTEN FOR OBJECT.
-    // Last-wins DRIVE1 gives the FOR form.
-    // Orphan prompt: "What do you want to listen for?"
+  it('"listen" → "What do you want to listen to?" (includes the TO prep, first-wins drive1)', () => {
+    // LISTEN has two forms: LISTEN TO OBJECT (declared first) and LISTEN FOR OBJECT.
+    // First-wins DRIVE1 gives the TO form.
+    // Oracle: dfrotz (zork1.z3) > listen => "What do you want to listen to?"
     const room = makeRoom('ROOM', 'A room');
     const player = makeActor('PLAYER');
     player.moveTo(room);
@@ -380,7 +381,7 @@ describe('C7 — ORPHAN prompt includes prep when drive has one', () => {
     const result = parser.parse('listen', room, player, world);
     expect(result.kind).toBe('orphan');
     if (result.kind === 'orphan') {
-      expect(result.message).toBe('What do you want to listen for?');
+      expect(result.message).toBe('What do you want to listen to?');
     }
   });
 });

@@ -254,12 +254,10 @@ describe('Parser integration — GWIM auto-supply', () => {
   });
 
   it('"turn on" with ONLY a lamp in scope → gwimText="(brass lantern)" (bare branch)', () => {
-    // SYNTAX-CHECK last-wins gives drive1 = TURN ON OBJECT WITH OBJECT(HAVE) (form3).
-    // That form's dobjFindBit=None and dobjLocBits=0 → GWIM with no findBit.
-    // With no findBit: thisItQ passes for ALL non-invisible objects.
-    // When the room has ONLY the lamp (no trophy case, rug, sword, etc.), exactly
-    // 1 object matches → GWIM succeeds → "(brass lantern)".
-    // (In LIVING-ROOM with 5+ objects, it would be ambiguous and produce orphan.)
+    // SYNTAX-CHECK first-wins gives drive1 = TURN ON OBJECT (LIGHTBIT form, form1).
+    // That form's dobjFindBit=LIGHTBIT → GWIM finds the lamp (only LIGHTBIT object).
+    // Exactly 1 match → GWIM succeeds → "(brass lantern)".
+    // (In a room with no LIGHTBIT objects it would orphan.)
     const room = makeRoom('ROOM', 'A room');
     const player = makeActor('PLAYER');
     player.moveTo(room);
@@ -345,14 +343,13 @@ describe('Parser integration — GWIM auto-supply', () => {
     }
   });
 
-  it('"climb up" with no climbable object → C7 orphan prompt (GWIM fails)', () => {
-    // SYNTAX-CHECK last-wins: CLIMB UP drive1=CLIMBBIT form (last among UP forms).
-    // GWIM(CLIMBBIT, 48) finds 0 climbable objects.
-    // C7: GWIM fail → orphan "What do you want to climb up?"
+  it('"climb up" → ok with ROOMS_SENTINEL (RMUNGBIT first-wins)', () => {
+    // SYNTAX-CHECK first-wins: CLIMB UP drive1=RMUNGBIT form (first among UP forms).
+    // GWIM(RMUNGBIT) returns ROOMS_SENTINEL immediately — same as "look up".
+    // Oracle: dfrotz > climb up => "You can't go that way." (action fires, not orphan).
     //
-    // NOTE: "look around" / "look up" use RMUNGBIT because LOOK AROUND/UP only has
-    // one form (RMUNGBIT, no competing CLIMBBIT). CLIMB UP has two forms; last-wins
-    // gives CLIMBBIT as drive1, so RMUNGBIT is never reached for CLIMB UP.
+    // NOTE: CLIMB UP has two forms: [0]=RMUNGBIT and [1]=CLIMBBIT.
+    // First-wins gives RMUNGBIT as drive1; GWIM returns ROOMS_SENTINEL → ok.
     const room = makeRoom('ROOM', 'A room');
     const player = makeActor('PLAYER');
     player.moveTo(room);
@@ -361,10 +358,11 @@ describe('Parser integration — GWIM auto-supply', () => {
     const parser = new Parser();
     const result = parser.parse('climb up', room, player, world);
 
-    // C7: GWIM fail for dobj (CLIMBBIT) → orphan prompt
-    expect(result.kind).toBe('orphan');
-    if (result.kind === 'orphan') {
-      expect(result.message).toContain('climb');
+    // First-wins drive1=RMUNGBIT → GWIM returns ROOMS_SENTINEL → ok (matches dfrotz)
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.command.action).toBe('V-CLIMB-UP');
+      expect(result.command.dobjIds).toEqual([ROOMS_SENTINEL]);
     }
   });
 });
