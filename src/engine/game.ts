@@ -187,7 +187,12 @@ export class Game {
       // Each step may RTRUE (return true) to short-circuit the remainder.  The
       // handlers print via ctx.tell into `handled`; only if no handler claims
       // the command do we fall through to the default verb routine.
+      //
+      // gwimText (C5): GWIM auto-supply parenthetical "(with the sword)" etc.
+      // In ZIL, GWIM prints this during PARSER (before PERFORM).  We pre-seed
+      // `handled` with it so it appears at the top of the turn output.
       const handled: string[] = [];
+      if (cmd.gwimText !== undefined) handled.push(cmd.gwimText);
       const tell = (text: string): void => {
         handled.push(text);
       };

@@ -77,6 +77,7 @@ import {
   isPreposition,
   normalizePrep,
 } from './vocabulary.js';
+import { gwim, ROOMS_SENTINEL } from './gwim.js';
 
 // ---------------------------------------------------------------------------
 // C3 SYNTAX-CHECK replaces the Wave-B static preAction maps.
@@ -635,19 +636,248 @@ export class Parser {
       return { kind: 'fail', message: syntaxResult.message };
     }
 
+    // gwimText accumulates parenthetical text from GWIM auto-supply (C5).
+    let gwimText: string | undefined;
+
     if (syntaxResult.kind === 'matched') {
       action = syntaxResult.entry.action;
       preAction = syntaxResult.entry.preAction;
       matchedSyntax = syntaxResult.entry;
     } else {
-      // syntaxResult.kind === 'needGwim': thin GWIM entry point (C4).
-      // Full DRIVE1/DRIVE2 GWIM elaboration (orphan prompts, auto-supply) is deferred.
-      // For now: use the drive's action name and locBits for scope resolution,
-      // but do NOT propagate preAction (it may check for iobj that GWIM would supply).
-      const drive = syntaxResult.drive1 ?? syntaxResult.drive2;
-      action = drive?.action ?? ('V-' + canonical.toUpperCase());
-      preAction = undefined;  // GWIM preAction deferred — full GWIM not yet wired
-      matchedSyntax = drive;  // Use drive for locBits during dobj scope resolution
+      // syntaxResult.kind === 'needGwim' — C5 GWIM (gparser.zil:739-775).
+      //
+      // DRIVE1: ncn==0, player typed verb [+prep] but no nouns. Auto-supply dobj.
+      // DRIVE2: ncn==1, player typed verb + dobj but no iobj. Auto-supply iobj.
+      //
+      // P-END-ON-PREP (gparser.zil:326): set when a prep was scanned and nothing
+      // followed it (no noun clause opened). In our interim model: endOnPrep is
+      // true iff ncn===0 AND prep1 is set (typed prep with no noun).
+      const endOnPrep = ncn === 0 && prep1 !== undefined;
+
+      if (syntaxResult.drive1 !== undefined) {
+        // DRIVE1: auto-supply dobj from drive1.dobjFindBit.
+        const d1 = syntaxResult.drive1;
+        action = d1.action;
+        preAction = d1.preAction;
+        matchedSyntax = d1;
+
+        const gwimResult = gwim(
+          d1.dobjFindBit,    // findBit name (e.g. "LIGHTBIT", "RMUNGBIT")
+          d1.dobjLocBits,    // scope bits
+          d1.prep1,          // prep to print in parenthetical (e.g. "ON")
+          endOnPrep,         // whether prep was a trailing-prep (no noun followed)
+          snap,
+          room,
+          effectivePlayer,
+          world,
+          isLit,
+        );
+
+        if (gwimResult.kind === 'rooms') {
+          // RMUNGBIT sentinel: no parenthetical, ROOMS_SENTINEL as dobjId.
+          // Return immediately — no further noun resolution needed.
+          return {
+            kind: 'ok',
+            command: {
+              verb: canonical,
+              action,
+              dobjIds: [ROOMS_SENTINEL],
+              iobjIds: undefined,
+              prep: prep1 ?? prep2,
+              preAction,
+              syntax: matchedSyntax,
+              raw: tokens,
+            },
+          };
+        }
+
+        if (gwimResult.kind === 'fail') {
+          // 0 or 2+ dobj candidates — C7 will add the proper orphan prompt.
+          // Fallback: use the drive's action without auto-supplying dobj.
+          // This preserves pre-GWIM behavior for callers that handle missing dobj
+          // in their action routine (e.g. verb handlers that check dobj===undefined).
+          //
+          // ZIL would orphan here; C7 replaces this fallback with the orphan prompt.
+          //
+          // DELIBERATE DECISION: fall through to the dobj/iobj resolution block
+          // below with dobjIds=undefined and gwimText=undefined.  The dobjTokens
+          // array is empty (drive1 fires when ncn=0), so no further resolution
+          // happens and the command returns ok with no dobj.
+          //
+          // preAction is preserved from d1 so step-3 handlers still run.
+          // This matches the C4 behavior where preAction was also set from the drive.
+          action = d1.action;
+          preAction = d1.preAction;
+          matchedSyntax = d1;
+          // Fall through to dobj/iobj resolution (dobjTokens.length === 0, so no-op).
+        } else {
+          // GWIM success — capture object and parenthetical text.
+          // Return early with the GWIM-supplied dobj.
+          gwimText = gwimResult.text;
+          const prepOut2 = prep1 ?? prep2;
+          let iobjIds2: ObjectId[] | undefined;
+
+          if (iobjTokens.length > 0) {
+            const iobjLocBits2 = matchedSyntax?.iobjLocBits ?? 0;
+            const r = resolveNounPhrase(
+              iobjTokens, snap, room, effectivePlayer, world,
+              iobjLocBits2, undefined, isLit, this.itRef,
+            );
+            if (r.ok === 'pseudo') {
+              return {
+                kind: 'ok',
+                command: {
+                  verb: canonical,
+                  action,
+                  dobjIds: [gwimResult.id],
+                  iobjIds: undefined,
+                  prep: prepOut2,
+                  preAction,
+                  syntax: matchedSyntax,
+                  gwimText,
+                  raw: tokens,
+                },
+              };
+            }
+            if (!r.ok) return r.result;
+            if (r.id !== (undefined as unknown as ObjectId)) {
+              iobjIds2 = [r.id];
+            }
+          }
+
+          return {
+            kind: 'ok',
+            command: {
+              verb: canonical,
+              action,
+              dobjIds: [gwimResult.id],
+              iobjIds: iobjIds2,
+              prep: prepOut2,
+              preAction,
+              syntax: matchedSyntax,
+              gwimText,
+              raw: tokens,
+            },
+          };
+        }
+
+      } else if (syntaxResult.drive2 !== undefined) {
+        // DRIVE2: player gave dobj but not iobj. Auto-supply iobj from drive2.iobjFindBit.
+        const d2 = syntaxResult.drive2;
+        action = d2.action;
+        preAction = d2.preAction;
+        matchedSyntax = d2;
+
+        // Resolve the typed dobj first (normal path).
+        let dobjIds2: ObjectId[] | undefined;
+        if (dobjTokens.length > 0) {
+          const dobjLocBits2 = d2.dobjLocBits ?? 0;
+          const r = resolveNounPhrase(
+            dobjTokens, snap, room, effectivePlayer, world,
+            dobjLocBits2, undefined, isLit, this.itRef,
+          );
+          if (r.ok === 'pseudo') {
+            return {
+              kind: 'ok',
+              command: {
+                verb: canonical,
+                action,
+                dobjIds: undefined,
+                iobjIds: undefined,
+                prep: prep1 ?? prep2,
+                preAction,
+                syntax: matchedSyntax,
+                raw: tokens,
+              },
+            };
+          }
+          if (!r.ok) return r.result;
+          if (r.id !== (undefined as unknown as ObjectId)) {
+            dobjIds2 = [r.id];
+          }
+        }
+
+        // GWIM for iobj. drive2 iobj slot: prep2 is the prep, endOnPrep=false
+        // (the player typed a dobj noun, so the prep wasn't a trailing-prep).
+        // Exclude the dobj id from GWIM candidates — an object cannot be its own
+        // indirect object (prevents "burn candles" from finding lit candles as iobj).
+        const dobjExclude = dobjIds2 !== undefined
+          ? new Set<string>(dobjIds2)
+          : undefined;
+        const gwimResult = gwim(
+          d2.iobjFindBit,   // findBit name (e.g. "WEAPONBIT")
+          d2.iobjLocBits,   // scope bits
+          d2.prep2,         // prep (e.g. "WITH")
+          false,            // endOnPrep: false because dobj was present
+          snap,
+          room,
+          effectivePlayer,
+          world,
+          isLit,
+          dobjExclude,      // exclude the dobj from iobj candidates
+        );
+
+        if (gwimResult.kind === 'rooms') {
+          // RMUNGBIT in iobj slot (rare): use ROOMS_SENTINEL for iobjId.
+          return {
+            kind: 'ok',
+            command: {
+              verb: canonical,
+              action,
+              dobjIds: dobjIds2,
+              iobjIds: [ROOMS_SENTINEL],
+              prep: prep1 ?? prep2,
+              preAction,
+              syntax: matchedSyntax,
+              raw: tokens,
+            },
+          };
+        }
+
+        if (gwimResult.kind === 'fail') {
+          // 0 or 2+ iobj candidates (or self-reference) — C7 will add proper orphan.
+          // Fallback (pre-C7): use the drive's action without auto-supplying iobj.
+          // preAction is cleared to match pre-GWIM stub behavior — handlers that
+          // check iobj===undefined (e.g. MATCH-FUNCTION checking for VERB?=BURN)
+          // fire correctly without being blocked by a pre-action guard.
+          //
+          // ZIL would orphan here; C7 replaces this fallback with the orphan prompt.
+          return {
+            kind: 'ok',
+            command: {
+              verb: canonical,
+              action,
+              dobjIds: dobjIds2,
+              iobjIds: undefined,
+              prep: d2.prep2 ?? prep1 ?? prep2,
+              preAction: undefined,  // pre-C7 fallback: bypass preAction check
+              syntax: matchedSyntax,
+              raw: tokens,
+            },
+          };
+        }
+
+        // gwimResult.kind === 'ok' and not self-reference
+        return {
+          kind: 'ok',
+          command: {
+            verb: canonical,
+            action,
+            dobjIds: dobjIds2,
+            iobjIds: [gwimResult.id],
+            prep: d2.prep2 ?? prep1 ?? prep2,
+            preAction,
+            syntax: matchedSyntax,
+            gwimText: gwimResult.text,
+            raw: tokens,
+          },
+        };
+
+      } else {
+        // Neither drive1 nor drive2 set — should not reach here (syntaxCheck
+        // returns kind:'fail' when both are undefined). Defensive fallback.
+        return { kind: 'fail', message: "That sentence isn't one I recognize." };
+      }
     }
 
     // The canonical prep for the ParsedCommand.prep field is prep1 if present,
@@ -733,6 +963,7 @@ export class Parser {
         prep: prepOut,
         preAction,
         syntax: matchedSyntax,
+        gwimText,
         raw: tokens,
       },
     };

@@ -54,6 +54,13 @@ export interface ParsedCommand {
   readonly numberValue?: number;
   readonly autoTaken?: ObjectId[];
   readonly raw: string[];
+  /**
+   * Parenthetical text auto-printed by GWIM (Get What I Mean).
+   * Set when GWIM auto-supplied a missing object and printed e.g. "(with the sword)".
+   * Game.turn prepends this to the command's output so the player sees it before the action result.
+   * gparser.zil:908-924 (C5).
+   */
+  readonly gwimText?: string;
 }
 
 /**
