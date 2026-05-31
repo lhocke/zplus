@@ -60,8 +60,8 @@ import { ROOM_GLOBAL_IDS } from './room-globals.js';
  */
 export const GLOBAL_OBJECT_IDS: ReadonlySet<string> = new Set<string>([
   'TEETH',
-  'WALL',
   'GRANITE-WALL',
+  'WALL',
 ]);
 
 // ---------------------------------------------------------------------------

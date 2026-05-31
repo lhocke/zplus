@@ -956,15 +956,20 @@ describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
 // ---------------------------------------------------------------------------
 
 describe('"examine wall" disambiguates when two global walls match (oracle A2)', () => {
-  it('output contains "which" — disambiguation fired for WALL vs GRANITE-WALL', async () => {
+  it('output matches oracle verbatim — "the granite wall or the surrounding wall"', async () => {
+    // dfrotz oracle (ground truth, stable across 3 runs):
+    //   "Which wall do you mean, the granite wall or the surrounding wall?"
+    // GLOBAL_OBJECT_IDS order [TEETH, GRANITE-WALL, WALL] ensures collectGlobalObjects()
+    // enumerates GRANITE-WALL before WALL, so disambigMessage() renders in oracle order.
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
     const result = g.turn('examine wall');
-    // Both WALL and GRANITE-WALL share synonym "WALL" and are in GLOBAL_OBJECT_IDS.
-    // After A2 fix, GLOBAL-CHECK accumulates both → disambig → WHICH-PRINT fires.
+    // Exact oracle wording (byte-verbatim):
+    expect(result.output).toBe('Which wall do you mean, the granite wall or the surrounding wall?');
+    // Confirm disambiguation fired (redundant given the exact match above, but explicit):
     expect(result.output.toLowerCase()).toContain('which');
-    // Must NOT silently resolve to just one wall (no "can't see" either)
+    // Must NOT silently resolve to just one wall:
     expect(result.output.toLowerCase()).not.toMatch(/can't see/);
   });
 });
