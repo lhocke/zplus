@@ -6,7 +6,7 @@ import type { Actor } from '../domain/actor.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
-import { executeVerb, describeRoomObjects } from './verbs/index.js';
+import { executeVerb, describeRoomObjects, META_ACTIONS } from './verbs/index.js';
 import { lit } from './parser/scope.js';
 import { describeRoom as describeRoomMsgs } from './game-messages.js';
 import { Scoring } from './scoring.js';
@@ -187,6 +187,14 @@ export class Game {
 
     // Track whether we executed at least one segment (for move counter).
     let executedAny = false;
+    // Track whether any non-meta segment executed (for clock tick gating).
+    // consumedTime is set-once (never cleared) in the ok-execute branch when
+    // cmd.action is not in META_ACTIONS.  Mixed-segment rule: ANY non-meta
+    // segment in a chained turn makes the whole turn consume time.
+    // C9 NON-REGRESSION: consumedTime is only ever set inside the ok-execute
+    // branch, so a failed parse / orphan / disambig leaves it false, and
+    // `executedAny && consumedTime` stays false — byte-identical to C9.
+    let consumedTime = false;
 
     // Loop: parse and execute segments until the continuation queue is empty
     // or an orphan/disambig/fatal halts us.
@@ -218,6 +226,11 @@ export class Game {
       // ---- ok: execute the segment ----------------------------------------
       executedAny = true;
       const cmd = pr.command;
+      // Meta-verb suppression: commands in META_ACTIONS do not consume time
+      // (ZIL gmain.zil:171-172 VERB? guard around CLOCKER).
+      if (!META_ACTIONS.has(cmd.action)) {
+        consumedTime = true;
+      }
 
       // Resolve objects from ids (single-object callers use dobjIds?.[0]).
       const dobj = cmd.dobjIds?.[0] !== undefined ? this.world.get(cmd.dobjIds[0]!) : undefined;
@@ -455,14 +468,36 @@ export class Game {
     }
 
     // -------------------------------------------------------------------------
-    // Move counter: increment only if we actually executed a command.
-    // Per ZIL semantics, orphan/disambig prompts do NOT count as moves
-    // (gmain.zil main loop: MOVES incremented only when PARSER() returned true
-    // AND PERFORM ran, i.e. only on a successful command execution).
+    // Move counter + clock: increment and tick only when a real (non-meta)
+    // command executed this turn.
+    //
+    // executedAny governs output/lastWon assembly (unchanged).
+    // consumedTime is the NEW co-gate: only non-META_ACTIONS segments set it.
+    //
+    // C9 NON-REGRESSION: consumedTime is only set inside the ok-execute branch.
+    // A failed parse / orphan / disambig leaves both flags false, so the clock
+    // never ticks — byte-identical to the original C9 behaviour.
+    //
+    // Meta suppression: V-SCORE/V-SAVE/etc. set executedAny (they ran) but
+    // leave consumedTime=false, so the clock does NOT tick for them.
+    //
+    // Clock transcript routing: advance() returns string[] of interrupt text.
+    // These lines append AFTER the command output AND after M-END (M-END is
+    // already merged before this block), matching ZIL CLOCKER running after
+    // M-END at end of turn.
     // -------------------------------------------------------------------------
-    if (executedAny) {
+    if (executedAny && consumedTime) {
       this.moveCount += 1;
-      this.clock.advance();
+      const clockLines = this.clock.advance();
+      if (clockLines.length > 0) {
+        const clockText = clockLines.join('\n');
+        const idx = outputs.length - 1;
+        if (idx >= 0) {
+          outputs[idx] = [outputs[idx], clockText].filter(s => s.length > 0).join('\n');
+        } else {
+          outputs.push(clockText);
+        }
+      }
       this.events.emit({ type: 'turn-complete', moves: this.moveCount });
     }
 

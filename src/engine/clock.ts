@@ -1,6 +1,22 @@
 import type { EventEmitter } from './events.js';
 
 // ---------------------------------------------------------------------------
+// ClockTickContext — passed into tick() on every fire so interrupt routines
+// can push transcript text back into the current turn's output.
+//
+// Two channels, two concerns:
+//   tell()  — transcript text (human-readable warning lines).
+//   events  — state mutation (flags / HUD via EventEmitter).
+// The two must NOT be conflated: event handlers must not re-render
+// event.message to screen or warnings will double.
+// ---------------------------------------------------------------------------
+
+export interface ClockTickContext {
+  /** Push a non-empty string into the advance() return buffer. */
+  tell(text: string): void;
+}
+
+// ---------------------------------------------------------------------------
 // ClockEntry — a single registered interrupt.
 //
 // Mirrors the slot layout from gclock.zil:
@@ -8,16 +24,21 @@ import type { EventEmitter } from './events.js';
 //   C-TICK     (1) — turns remaining until the callback fires
 //   C-RTN      (2) — the routine to call
 //
-// tick() is invoked when turnsLeft reaches 0.  Return true to re-schedule
-// (the entry's turnsLeft must already be reset before returning); false if
-// the entry should be removed from the active set after firing.
+// tick(ctx) is invoked when turnsLeft reaches 0 (countdown) or on every
+// advance() when turnsLeft < 0 (demon mode — the ZIL QUEUE I-* -1 convention).
+// Return true to keep the entry scheduled; false to self-remove permanently.
+//
+// Demon convention (ZIL: QUEUE I-FIGHT -1):
+//   turnsLeft < 0 → fires every advance(), turnsLeft is NEVER decremented.
+//   A demon returning false self-removes permanently.
+//   A demon that should merely pause must use disable() / return true and no-op.
 // ---------------------------------------------------------------------------
 
 export interface ClockEntry {
   id: string;
   turnsLeft: number;
   enabled: boolean;
-  tick(): boolean;
+  tick(ctx: ClockTickContext): boolean;
 }
 
 // Serialisable snapshot shape — matches the SaveState.clock field from the
@@ -59,18 +80,40 @@ export class Clock {
     if (e) e.enabled = false;
   }
 
-  /** Called once per player turn, after the command executes. */
-  advance(): void {
+  /**
+   * Called once per player turn, after the command executes.
+   *
+   * Returns any transcript text pushed by interrupt tick() callbacks via
+   * ctx.tell().  Callers that ignore the return value are unaffected.
+   *
+   * Three regimes keyed on the SIGN of turnsLeft (the ZIL tick==-1 convention):
+   *   turnsLeft === 0  → DORMANT: skip entirely (ZIL parked slot).
+   *   turnsLeft < 0    → DEMON: fire every advance(), never decrement.
+   *                      tick() returning false self-removes permanently.
+   *   turnsLeft > 0    → COUNTDOWN: decrement then fire at zero (unchanged).
+   */
+  advance(): string[] {
+    const lines: string[] = [];
+    const ctx: ClockTickContext = { tell: (t) => { if (t) lines.push(t); } };
     const toRemove: string[] = [];
 
     for (const entry of this.entries.values()) {
       if (!entry.enabled) continue;
-      if (entry.turnsLeft <= 0) continue;  // tick=0 means dormant (ZIL behaviour)
+      if (entry.turnsLeft === 0) continue;  // dormant: parked slot (ZIL behaviour)
 
+      if (entry.turnsLeft < 0) {
+        // DEMON: fire every turn, never decrement turnsLeft (stays pinned).
+        // tick() returning false self-removes permanently.
+        const keep = entry.tick(ctx);
+        if (!keep) toRemove.push(entry.id);
+        continue;  // never decrement a demon
+      }
+
+      // COUNTDOWN: decrement then fire when turnsLeft reaches zero.
       entry.turnsLeft -= 1;
 
       if (entry.turnsLeft === 0) {
-        const rescheduled = entry.tick();
+        const rescheduled = entry.tick(ctx);
         if (!rescheduled) {
           toRemove.push(entry.id);
         }
@@ -80,6 +123,8 @@ export class Clock {
     for (const id of toRemove) {
       this.entries.delete(id);
     }
+
+    return lines;
   }
 
   /** Snapshot for SaveState serialisation. */
@@ -161,8 +206,8 @@ export class LanternInterrupt {
       id: 'I-LANTERN',
       turnsLeft: initialTicks,
       enabled: true,
-      tick(): boolean {
-        return self.onFire();
+      tick(ctx): boolean {
+        return self.onFire(ctx);
       },
     };
     clock.schedule(this.entry);
@@ -180,10 +225,11 @@ export class LanternInterrupt {
     return LAMP_TABLE.slice(this.tableIndex).reduce((acc, s) => acc + s.ticks, 0);
   }
 
-  private onFire(): boolean {
+  private onFire(ctx: ClockTickContext): boolean {
     const stage = LAMP_TABLE[this.tableIndex]!;
 
     // Emit the warning for the stage that just triggered.
+    // EVENT CHANNEL: state mutation (flags / HUD) — preserve this as-is.
     const remaining = this.remainingTurns() - stage.ticks;
     this.emitter.emit({
       type: 'lantern-fuel',
@@ -191,6 +237,12 @@ export class LanternInterrupt {
       message: stage.message || undefined,
       dark: false,
     });
+
+    // TRANSCRIPT CHANNEL: push warning text into the turn output.
+    // Two channels, two concerns — events handle state; ctx.tell handles text.
+    if (stage.message) {
+      ctx.tell(stage.message);
+    }
 
     // Advance to next stage.
     this.tableIndex++;
@@ -257,8 +309,8 @@ export class CandleInterrupt {
       id: 'I-CANDLES',
       turnsLeft: initialTicks,
       enabled: true,
-      tick(): boolean {
-        return self.onFire();
+      tick(ctx): boolean {
+        return self.onFire(ctx);
       },
     };
     clock.schedule(this.entry);
@@ -276,10 +328,11 @@ export class CandleInterrupt {
     return CANDLE_TABLE.slice(this.tableIndex).reduce((acc, s) => acc + s.ticks, 0);
   }
 
-  private onFire(): boolean {
+  private onFire(ctx: ClockTickContext): boolean {
     const stage = CANDLE_TABLE[this.tableIndex]!;
 
     // Emit the warning for this stage.
+    // EVENT CHANNEL: state mutation (flags / HUD) — preserve this as-is.
     const remaining = this.remainingTurns() - stage.ticks;
     this.emitter.emit({
       type: 'candle-fuel',
@@ -287,6 +340,11 @@ export class CandleInterrupt {
       message: stage.message || undefined,
       dark: false,
     });
+
+    // TRANSCRIPT CHANNEL: push warning text into the turn output.
+    if (stage.message) {
+      ctx.tell(stage.message);
+    }
 
     // Advance to the next stage.
     this.tableIndex++;

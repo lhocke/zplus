@@ -153,18 +153,14 @@ export function createGame(opts: BootstrapOptions = {}): Game {
   // I-MATCH clock entry: queued for 2 turns when a match is lit.  Starts
   // disabled; MATCH-FUNCTION calls enableClock('I-MATCH') on lighting and
   // disableClock('I-MATCH') on extinguishing.
-  const matchOutput: string[] = [];
+  // iMatchTick already accepts a tell callback, so its lines flow straight
+  // into the transcript via the advance() return-value channel.
   const iMatchEntry: ClockEntry = {
     id: 'I-MATCH',
     turnsLeft: 2,
     enabled: false,
-    tick(): boolean {
-      matchOutput.length = 0;
-      iMatchTick(world, (text) => matchOutput.push(text));
-      // The match-burnout message surfaces via the 'lantern-fuel'-style approach
-      // but for simplicity we emit a turn-complete side-channel.  The current
-      // engine does not yet route clock-fired text to the transcript; wire it
-      // when the transcript layer supports side-channel output.
+    tick(ctx): boolean {
+      iMatchTick(world, ctx.tell);
       return false; // one-shot; remove after firing
     },
   };

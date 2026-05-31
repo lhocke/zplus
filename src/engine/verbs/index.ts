@@ -897,6 +897,34 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-FROBOZZ':   verbFrobozz, // FROBOZZ → gverbs.zil:704
 };
 
+// ---------------------------------------------------------------------------
+// META_ACTIONS — verbs that do NOT advance time (clock.advance() + moveCount).
+//
+// Verbatim from gmain.zil:171-172: the VERB? guard around CLOCKER.
+// Key on cmd.action (resolved V-* id = ZIL PRSA), consistent with P2
+// dispatch-on-cmd.action convention.
+//
+// Pre-authored for correctness on arrival; only V-SCORE is live today.
+// Mixed-chain meta-LAST case (e.g. "take lamp. score") is an oracle-divergence
+// point to verify against dfrotz once SAVE/SCRIPT/etc. are implemented —
+// for standalone SCORE all readings agree.
+// ---------------------------------------------------------------------------
+
+export const META_ACTIONS: ReadonlySet<string> = new Set([
+  'V-TELL',
+  'V-BRIEF',
+  'V-SUPER-BRIEF',
+  'V-VERBOSE',
+  'V-SAVE',
+  'V-VERSION',
+  'V-QUIT',
+  'V-RESTART',
+  'V-SCORE',
+  'V-SCRIPT',
+  'V-UNSCRIPT',
+  'V-RESTORE',
+]);
+
 /**
  * Execute a verb given a fully-populated VerbContext.
  *
