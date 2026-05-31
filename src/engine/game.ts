@@ -216,8 +216,9 @@ export class Game {
       //
       // The PRSI!=IT condition cannot be checked here (the iobj is already
       // resolved by the time we reach dispatch); we simplify to the two
-      // checkable guards: dobj present AND verb !== 'walk'.
-      if (dobj !== undefined && cmd.verb !== 'walk') {
+      // checkable guards: dobj present AND action ≠ V-WALK.
+      // P2: guard on resolved action (ZIL PRSA), not verb word.
+      if (dobj !== undefined && cmd.action !== 'V-WALK') {
         this.parser.bindPronouns(cmd);
       }
 
@@ -264,7 +265,7 @@ export class Game {
       // gated on !handled && !fatal, which is behaviourally identical to being
       // the chain's last clause (td4-perform-chain.md §4.1 row 7).
       const chainResult = this.runActionChain(
-        cmd.verb, dobj, iobj, cmd.prep, cmd.preAction, tell,
+        cmd.verb, cmd.action, dobj, iobj, cmd.prep, cmd.preAction, tell,
       );
 
       if (chainResult.fatal) {
@@ -298,6 +299,8 @@ export class Game {
         }
       } else {
         // No handler claimed the command — run step 7: default verb routine.
+        // P2: dispatch on cmd.action (resolved V-* id), not cmd.verb (verb word).
+        // Faithful to ZIL PERFORM dispatching on PRSA (gmain.zil:283–284).
         const verbResult = executeVerb({
           verb: cmd.verb,
           dobj,
@@ -308,7 +311,7 @@ export class Game {
           world: this.world,
           perResolver: (routineName, here) => this.resolvePer(routineName, here, tell),
           mlookRunner: (room) => this.runMLook(room),
-        });
+        }, cmd.action);
 
         // A handler may have printed something even while falling through
         // (ZIL routines can TELL then RFALSE); prepend that output.
@@ -476,6 +479,7 @@ export class Game {
    */
   private runActionChain(
     verb: string,
+    action: string,
     dobj: GameObject | undefined,
     iobj: GameObject | undefined,
     prep: string | undefined,
@@ -523,10 +527,11 @@ export class Game {
     }
 
     // ---- Step 5: LOC(PRSO) P?CONTFCN (no rarg) ----------------------------
-    // Guard: PRSO exists AND verb ≠ 'walk' AND LOC(PRSO) exists AND has contFcn.
+    // Guard: PRSO exists AND action ≠ V-WALK AND LOC(PRSO) exists AND has contFcn.
+    // P2: guard on resolved action (ZIL PRSA), not verb word.
     // INTENTIONALLY INERT: contFcn handlers are not yet extracted (TD-7 data).
     // The step occupies its ordered position so TD-7 extraction is a drop-in.
-    if (verb !== 'walk' && dobj !== undefined && dobj.parent !== null && dobj.parent !== undefined) {
+    if (action !== 'V-WALK' && dobj !== undefined && dobj.parent !== null && dobj.parent !== undefined) {
       const container = dobj.parent;
       if (container.contFcn !== undefined) {
         if (container.contFcn(ctx(container))) {
@@ -536,8 +541,9 @@ export class Game {
     }
 
     // ---- Step 6: PRSO P?ACTION (no rarg) -----------------------------------
-    // Guard: PRSO exists AND verb ≠ 'walk' (gmain.zil:220–223).
-    if (verb !== 'walk' && dobj?.handler !== undefined) {
+    // Guard: PRSO exists AND action ≠ V-WALK (gmain.zil:220–223).
+    // P2: guard on resolved action (ZIL PRSA), not verb word.
+    if (action !== 'V-WALK' && dobj?.handler !== undefined) {
       if (dobj.handler(ctx(dobj))) {
         return { handled: true, fatal };
       }

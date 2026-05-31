@@ -288,6 +288,11 @@ function verbPut(ctx: VerbContext): VerbResult {
 
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
+/**
+ * Legacy verb-word keyed table — used as fallback when action is unknown or
+ * when a handler was registered under the verb word rather than V-* action id.
+ * Kept so existing callers that pass only a verb word continue to work.
+ */
 const HANDLERS: Record<string, VerbHandler> = {
   look:      verbLook,
   walk:      verbGo,      // parser normalizes "go/run/proceed" → "walk"
@@ -302,13 +307,47 @@ const HANDLERS: Record<string, VerbHandler> = {
 };
 
 /**
+ * Primary dispatch table keyed on the resolved V-* action id (ParsedCommand.action).
+ *
+ * ZIL PERFORM dispatches on PRSA (the action number), not on the verb word
+ * (gmain.zil:283–284).  This table is the port equivalent: the parser resolves
+ * the syntax form → V-* action id, and executeVerb selects the handler here.
+ *
+ * Multi-action verbs (LOOK→{V-LOOK,V-EXAMINE,V-READ,…}, WALK→{V-WALK,…}, etc.)
+ * are the motivating case: "look at mailbox" resolves to V-EXAMINE and must run
+ * verbExamine, not verbLook.
+ */
+const ACTION_HANDLERS: Record<string, VerbHandler> = {
+  'V-LOOK':      verbLook,
+  'V-WALK':      verbGo,
+  'V-TAKE':      verbTake,
+  'V-DROP':      verbDrop,
+  'V-OPEN':      verbOpen,
+  'V-CLOSE':     verbClose,
+  'V-READ':      verbRead,
+  'V-INVENTORY': verbInventory,
+  'V-EXAMINE':   verbExamine,
+  'V-PUT':       verbPut,
+};
+
+/**
  * Execute a verb given a fully-populated VerbContext.
  *
- * Returns a VerbResult with the output text and a moved flag.  Unknown verbs
- * get a generic "I don't understand" response rather than throwing — the turn
- * loop can pass those to object handlers before giving up.
+ * Dispatches on `action` (the V-* action id from ParsedCommand.action) when
+ * provided, falling back to `ctx.verb` (the verb word) for backward compat.
+ * Unknown verbs get a generic "I don't understand" response — the turn loop
+ * can pass those to object handlers before giving up.
  */
-export function executeVerb(ctx: VerbContext): VerbResult {
+export function executeVerb(ctx: VerbContext, action?: string): VerbResult {
+  // Primary: dispatch on resolved action id (ZIL PERFORM on PRSA).
+  if (action !== undefined) {
+    const actionHandler = ACTION_HANDLERS[action];
+    if (actionHandler !== undefined) {
+      return actionHandler(ctx);
+    }
+  }
+  // Fallback: dispatch on verb word (for callers that pre-date P2 fix,
+  // and for actions not yet in ACTION_HANDLERS).
   const handler = HANDLERS[ctx.verb];
   if (handler === undefined) {
     return result(`I don't know how to "${ctx.verb}".`);

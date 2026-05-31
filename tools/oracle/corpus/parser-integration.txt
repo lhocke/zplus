@@ -1,0 +1,58 @@
+# Parser-engine integration corpus — permanent gate for SEAM bugs
+#
+# Exercises the parser↔engine integration path (game.turn()) to catch
+# regressions in the direction fast-path (P1) and action-based dispatch (P2).
+#
+# Format: one command per line; blank lines and lines starting with # are ignored.
+# Run via the oracle harness or the parser-integration vitest suite.
+#
+# Baseline room: WEST-OF-HOUSE (canonical Zork I start).
+#
+# Coverage:
+#   Direction fast-path (P1) — go/walk + each canonical direction
+go west
+walk west
+go north
+walk north
+go south
+walk south
+go east
+walk east
+go ne
+walk ne
+go nw
+walk nw
+go se
+walk se
+go sw
+walk sw
+go up
+walk up
+go down
+walk down
+go in
+walk in
+go out
+walk out
+#   Bare direction tokens (case A — already worked before P1 fix)
+west
+north
+south
+east
+ne
+nw
+w
+n
+s
+e
+#   Action dispatch (P2) — multi-action verbs that resolve to a non-default action
+examine mailbox
+look at mailbox
+#   Standard single-action verbs (regression guard — must still work)
+take mailbox
+take all
+open mailbox
+#   Known-bad verb (recognized as a verb, not a parse error)
+xyzzy
+#   Unknown word (parse error path)
+frobozz

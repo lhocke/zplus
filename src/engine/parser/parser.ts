@@ -1247,6 +1247,24 @@ export class Parser {
 
     const rest = tokens.slice(1);
 
+    // Direction fast-path, case B (gparser.zil:281–283): WALK <dir>.
+    // verb resolves to 'walk' AND the single remaining token is a direction word.
+    // Short-circuits BEFORE SYNTAX-CHECK + object resolution (as ZIL does).
+    // Mirrors case A (bare direction) at line 1216 above.
+    if (canonical === 'walk' && rest.length === 1 && DIRECTIONS.has(rest[0]!)) {
+      return {
+        kind: 'ok',
+        command: {
+          verb: 'walk',
+          action: 'V-WALK',
+          dobjIds: undefined,
+          iobjIds: undefined,
+          prep: normalizeDir(rest[0]!),
+          raw: tokens,
+        } satisfies ParsedCommand,
+      };
+    }
+
     // --- C3 INTERIM ADAPTER -----------------------------------------------
     // Split rest into prep1 / dobjTokens / prep2 / iobjTokens and derive ncn.
     // C2 SCAN-LOOP will replace this with the authoritative ZIL P-NCN derivation.
@@ -2109,6 +2127,23 @@ export class Parser {
     }
 
     const rest = tokens.slice(1);
+
+    // Direction fast-path, case B (gparser.zil:281–283): WALK <dir>.
+    // Mirror of the main-parser path above (same fix for the legacy null-player path).
+    if (canonical === 'walk' && rest.length === 1 && DIRECTIONS.has(rest[0]!)) {
+      return {
+        kind: 'ok',
+        command: {
+          verb: 'walk',
+          action: 'V-WALK',
+          dobjIds: undefined,
+          iobjIds: undefined,
+          prep: normalizeDir(rest[0]!),
+          raw: tokens,
+        },
+      };
+    }
+
     const { ncn, prep1, prep2, dobjTokens, iobjTokens } = splitOnPreps(rest);
     const verbUpper = canonical.toUpperCase();
     const syntaxResult = syntaxCheck(verbUpper, ncn, prep1, prep2);
