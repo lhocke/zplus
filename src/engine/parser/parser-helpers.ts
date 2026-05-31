@@ -161,7 +161,7 @@ export function matchNoun(
 // Split the tokens after the verb into prep1 / dobjTokens / prep2 / iobjTokens,
 // reflecting the ZIL sentence grammar: VERB [prep1] DOBJ [prep2] IOBJ.
 // Also computes ncn (noun-clause count: 0, 1, or 2) for syntaxCheck.
-// gparser.zil:1294 (interim adapter — C2 SCAN-LOOP will replace this).
+// gparser.zil:1294
 export function splitOnPreps(rest: string[]): {
   ncn: 0 | 1 | 2;
   prep1?: string;
@@ -214,7 +214,6 @@ export function splitNounPhrase(tokens: string[]): { noun: string; adjectives: s
 
 // Legacy null-player noun resolver (used only when player=null is passed).
 // Uses old matchNoun + collectScope logic without lighting checks.
-// Removed when C9 rewrites the full scan-loop.
 
 export type LegacyResolveResult =
   | { ok: true; id: ObjectId }
@@ -411,8 +410,8 @@ export type ResolveResult =
   | { ok: false; result: ParseResult }
   | { ok: 'pseudo'; action: string };
 
-// C4 noun-phrase resolver. Replaces the old matchNoun+collectScope approach.
-// gparser.zil:1294 (getObject pipeline)
+// Noun-phrase resolver using the getObject pipeline.
+// gparser.zil:1294
 export function resolveNounPhrase(
   tokens: string[],
   snap: ScopeSnapshot,
@@ -431,7 +430,7 @@ export function resolveNounPhrase(
 
   // Pronoun short-circuit: "it" or "them" with no adjectives resolves to the
   // caller-supplied referent (or fails if none was bound).
-  // C4: validate referent via accessible() before accepting it.
+  // Validate referent via accessible() before accepting it.
   const isPronoun = (noun === 'it' || noun === 'them') && adjectives.length === 0;
   if (isPronoun) {
     if (itRef !== undefined) {
@@ -539,8 +538,8 @@ export type NounListResult =
   | { kind: 'ids'; ids: ObjectId[] }
   | { kind: 'fail'; result: ResolveResult };
 
-// C8-FIX (ANDFLG): resolve a noun token list that may contain "and" as an
-// object-list connector (gparser.zil:459-491 CLAUSE ANDFLG mechanism).
+// Resolve a noun token list that may contain "and" as an object-list connector.
+// gparser.zil:459-491 CLAUSE ANDFLG mechanism.
 export function resolveNounPhraseList(
   tokens: string[],
   snap: ScopeSnapshot,

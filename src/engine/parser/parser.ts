@@ -31,9 +31,9 @@ import {
   allScopeForExcept,
 } from './parser-helpers.js';
 
-// OrphanSlot and OrphanState stay class-side (Phase 1 invariant #0).
-// They are consumed by the class field (this.orphan) and all orphan methods,
-// none of which move to parser-helpers.ts, so there's no cross-file type edge.
+// OrphanSlot and OrphanState stay class-side: consumed by this.orphan and all
+// orphan methods, none of which live in parser-helpers.ts, so there's no
+// cross-file type edge and no circular-import hazard.
 
 type OrphanSlot = 'dobj' | 'iobj';
 
@@ -54,13 +54,11 @@ interface OrphanState {
 export class Parser {
   private itRef: ObjectId | undefined = undefined;
 
-  // C7 orphan/disambig state. Set when the parser issued a "What do you want
+  // Orphan/disambig state. Set when the parser issued a "What do you want
   // to…?" or "Which…?" prompt. Cleared after a successful ORPHAN-MERGE or
   // when the answer is a fresh command (abandons orphan).
   // gparser.zil: P-OFLAG (boolean), P-OTBL (saved parse tables).
   private orphan: OrphanState | undefined = undefined;
-
-  // C8: AGAIN/G state (gparser.zil:192-233)
 
   // The raw input string of the last non-AGAIN command that was parsed.
   // Replays on AGAIN/G. Port equivalent of AGAIN-LEXV (gparser.zil:36).
@@ -70,13 +68,13 @@ export class Parser {
   // Set by the game harness via setLastWon() after each turn.
   private lastWon: boolean = false;
 
-  // C9: Continuation token segments (P-CONT equivalent).
+  // Continuation token segments (P-CONT equivalent).
   // When the scan loop hits a THEN/period separator, the remaining input is
   // stored here as pre-split segments. Game.turn's interleaved loop calls
   // parseSegment() which consumes segments from this queue.
   private continuation: string[][] | undefined = undefined;
 
-  // C9: Pre-parsed result queue for ALL/AND expansion.
+  // Pre-parsed result queue for ALL/AND expansion.
   // When tryExpandAll() or ANDFLG returns multiple ParseResults, the extras
   // are queued here so Game.turn() can process them one at a time.
   private parsedQueue: ParseResult[] | undefined = undefined;
@@ -85,7 +83,7 @@ export class Parser {
     this.lastWon = won;
   }
 
-  // C9: True when there are pending continuation segments or pre-parsed results
+  // True when there are pending continuation segments or pre-parsed results
   // queued. Game.turn() loops while this is true without reading new user input.
   // gparser.zil: P-CONT (the continuation token buffer).
   hasContinuation(): boolean {
@@ -95,30 +93,25 @@ export class Parser {
     );
   }
 
-  // C9: True when the parser is awaiting input to answer an orphan/disambig
+  // True when the parser is awaiting input to answer an orphan/disambig
   // prompt. gparser.zil: P-OFLAG (whether an orphan is pending).
   isAwaitingInput(): boolean {
     return this.orphan !== undefined;
   }
 
-  // C9: Clear the continuation queue and parsed queue (P-CONT clear on M-FATAL).
+  // Clear the continuation queue and parsed queue (P-CONT clear on M-FATAL).
   // Called by Game.turn() when M-FATAL fires, per gmain.zil:161.
   clearContinuation(): void {
     this.continuation = undefined;
     this.parsedQueue = undefined;
   }
 
-  // C9: The interleaved-drive entry point for Game.turn().
-  //
-  // Implements input acquisition (gparser.zil:131-153) from Game.turn's
-  // perspective:
-  //   0. If pre-parsed queue non-empty (from ALL/AND expansion) → dequeue the
-  //      next pre-parsed result and return it directly.
-  //   1. If continuation queue non-empty → pop the front segment, dispatch
-  //      through the full parse path for that segment (do NOT read rawLine).
-  //   2. Else if orphan pending → tokenize rawLine as the answer, run ORPHAN-MERGE.
-  //   3. Else → tokenize rawLine, detect THEN/period, queue remainder as
-  //      continuation, dispatch the first segment through the full parse path.
+  // Interleaved-drive entry point for Game.turn().
+  // Implements input acquisition (gparser.zil:131-153):
+  //   0. Pre-parsed queue non-empty → dequeue next result directly.
+  //   1. Continuation queue non-empty → pop the front segment, run parse path.
+  //   2. Orphan pending → rawLine is the answer, run ORPHAN-MERGE.
+  //   3. Fresh input → split on THEN/period, queue remainder, run parse path.
   parseSegment(
     rawLine: string,
     room: Room,
@@ -198,8 +191,7 @@ export class Parser {
       return { kind: 'fail', message: 'I beg your pardon?' };
     }
 
-    // C8: AGAIN/G detection (gparser.zil:192-233)
-    // Check BEFORE orphan-merge, BEFORE verb classification.
+    // AGAIN/G detection (gparser.zil:192-233) — check before orphan-merge.
     if (tokens[0] === 'again' || tokens[0] === 'g') {
       return this._handleAgain(tokens, input, room, player, world);
     }
@@ -233,12 +225,11 @@ export class Parser {
       };
     }
 
-    // C7: ORPHAN-MERGE — if orphan state is set, try to graft this input as the answer.
+    // ORPHAN-MERGE: graft this input as the answer to a pending orphan.
     // gparser.zil:373 (<COND (,P-OFLAG <ORPHAN-MERGE>)>)
-    // Fires before verb classification — the answer input might be a bare
-    // noun/adjective with no verb, which is the normal case.
+    // Fires before verb classification — the answer is normally a bare noun.
     if (this.orphan !== undefined) {
-      return this._orphanMerge(tokens, room, effectivePlayer, world, snap, isLit);
+      return this.handleOrphanAnswer(tokens, room, effectivePlayer, world, snap, isLit);
     }
 
     const rawVerb = tokens[0]!;
@@ -268,7 +259,6 @@ export class Parser {
       };
     }
 
-    // C3 interim adapter: split rest into prep1/dobjTokens/prep2/iobjTokens.
     const { ncn, prep1, prep2, dobjTokens, iobjTokens } = splitOnPreps(rest);
 
     const verbUpper = canonical.toUpperCase();
@@ -290,11 +280,9 @@ export class Parser {
       preAction = syntaxResult.entry.preAction;
       matchedSyntax = syntaxResult.entry;
     } else {
-      // syntaxResult.kind === 'needGwim' — C5 GWIM (gparser.zil:739-775).
-      //
-      // DRIVE1: ncn==0, player typed verb [+prep] but no nouns. Auto-supply dobj.
-      // DRIVE2: ncn==1, player typed verb + dobj but no iobj. Auto-supply iobj.
-      //
+      // GWIM (gparser.zil:739-775):
+      //   DRIVE1: ncn==0, player typed verb [+prep] but no nouns. Auto-supply dobj.
+      //   DRIVE2: ncn==1, player typed verb + dobj but no iobj. Auto-supply iobj.
       // P-END-ON-PREP (gparser.zil:326): true iff ncn===0 AND prep1 is set.
       const endOnPrep = ncn === 0 && prep1 !== undefined;
 
@@ -333,7 +321,7 @@ export class Parser {
         }
 
         if (gwimResult.kind === 'fail') {
-          // C7: 0 or 2+ dobj candidates — emit orphan prompt.
+          // 0 or 2+ dobj candidates — emit orphan prompt.
           // gparser.zil:756-774: ORPHAN(DRIVE1) → "What do you want to <verb> <prep>?"
           this.orphan = {
             verb: canonical,
@@ -472,7 +460,7 @@ export class Parser {
         }
 
         if (gwimResult.kind === 'fail') {
-          // C7: 0 or 2+ iobj candidates — emit orphan prompt.
+          // 0 or 2+ iobj candidates — emit orphan prompt.
           // gparser.zil:756-774: DRIVE2 — player gave dobj, needs iobj.
           this.orphan = {
             verb: canonical,
@@ -528,8 +516,9 @@ export class Parser {
     const dobjLocBits = matchedSyntax?.dobjLocBits ?? 0;
     const iobjLocBits = matchedSyntax?.iobjLocBits ?? 0;
 
-    // C8-FIX (ANDFLG): use resolveNounPhraseList to handle "and"-connected
-    // object lists (e.g. "take sword and lantern" → dobjIds [SWORD, LAMP]).
+    // ANDFLG: resolveNounPhraseList handles "and"-connected object lists
+    // (e.g. "take sword and lantern" → dobjIds [SWORD, LAMP]).
+    // gparser.zil:459-491 CLAUSE ANDFLG mechanism.
     if (dobjTokens.length > 0) {
       const listResult = resolveNounPhraseList(
         dobjTokens, snap, room, effectivePlayer, world,
@@ -552,7 +541,7 @@ export class Parser {
             },
           };
         }
-        // C7: If disambig, save orphan+disambig state so ORPHAN-MERGE can handle it.
+        // disambig on dobj: save orphan state so ORPHAN-MERGE can handle it next turn.
         if (r.ok === false && r.result.kind === 'disambig' && matchedSyntax !== undefined) {
           const dobjNoun = dobjTokens[dobjTokens.length - 1] ?? '';
           const candidateIds = _extractDisambigCandidates(dobjNoun, snap, room, effectivePlayer, world, dobjLocBits, isLit);
@@ -595,7 +584,7 @@ export class Parser {
         };
       }
       if (!r.ok) {
-        // C7: If disambig on iobj, save orphan+disambig state.
+        // disambig on iobj: save orphan state.
         if (r.result.kind === 'disambig' && matchedSyntax !== undefined) {
           const iobjNoun = iobjTokens[iobjTokens.length - 1] ?? '';
           const candidateIds = _extractDisambigCandidates(iobjNoun, snap, room, effectivePlayer, world, iobjLocBits, isLit);
@@ -666,9 +655,8 @@ export class Parser {
       const segment = tokens.join(' ');
       const result = this.parse(segment, room, player, world);
 
-      // C8-FIX (ANDFLG expansion): when the parser resolved multiple dobjIds
-      // from an AND-connected noun list, expand into one ParseResult per object.
-      // Each entry has allIter:true so game.turn() prints "<desc>: " prefix.
+      // ANDFLG expansion: multiple dobjIds from an AND-connected noun list
+      // expand into one ParseResult per object with allIter:true.
       if (result.kind === 'ok' && result.command.dobjIds !== undefined && result.command.dobjIds.length > 1) {
         for (const id of result.command.dobjIds) {
           results.push({
@@ -682,9 +670,8 @@ export class Parser {
 
       results.push(result);
 
-      // C8-FIX (A1): update lastWon immediately after each segment parse so
-      // AGAIN in a later segment reads the LIVE parse-success state.
-      // Matches ZIL semantics where P-WON = PARSER() return value per call (gmain.zil:42).
+      // Update lastWon immediately so AGAIN in a later segment reads the live
+      // parse-success state. ZIL: P-WON = PARSER() return value per call (gmain.zil:42).
       this.lastWon = result.kind === 'ok';
 
       if (result.kind !== 'ok') {
@@ -695,11 +682,9 @@ export class Parser {
     return results;
   }
 
-  // C6: Try to interpret a token array as an "all" or "all except <noun>" form
-  // for any SMANY-enabled verb. Returns an array of ParseResults (one per
-  // matching object) when the pattern is recognised. Returns null when the
-  // pattern is not applicable (no 'all' keyword).
-  //
+  // Try to interpret a token array as an "all" or "all except <noun>" form
+  // for any SMANY-enabled verb. Returns one ParseResult per matching object,
+  // or null when there's no 'all' keyword.
   // SNARFEM (gparser.zil:978-1030) + MANY-CHECK (gparser.zil:1294-1313).
   private tryExpandAll(
     tokens: string[],
@@ -742,7 +727,7 @@ export class Parser {
       dobjLocBits = 0;
     }
 
-    // C6 MANY-CHECK: if the verb lacks SMANY, "all" → MANY-CHECK error immediately.
+    // MANY-CHECK: if the verb lacks SMANY, "all" fails immediately.
     // gparser.zil:1294-1313: if P-PRSO.length > 1 and no SMANY → fail
     if (!(dobjLocBits & SMANY)) {
       return [{
@@ -787,9 +772,8 @@ export class Parser {
       }
     } else {
       const pool = collectByLocBits(dobjLocBits, room, player, snap, world).filter(o => !o.has(Flag.Invisible));
-      // A1: For TAKE, gate by Takeable OR TryTake (gmain.zil:137-138).
-      // Objects with only TryTake (rug, trophy case) are reported with their
-      // refusal lines — the old filter (Takeable only) dropped them.
+      // For TAKE, include TryTake objects (rug, trophy case) so their refusal
+      // lines fire — gmain.zil:137-138.
       candidates = canonical === 'take'
         ? pool.filter(o => o.has(Flag.Takeable) || o.has(Flag.TryTake))
         : pool;
@@ -815,9 +799,8 @@ export class Parser {
     }));
   }
 
-  // LEGACY backward-compat path for tests that pass player=null.
-  // Uses the old collectScope + matchNoun approach (no lighting check).
-  // Removed when C9 rewrites the full scan-loop.
+  // Legacy backward-compat path for tests that pass player=null.
+  // Uses collectScope + matchNoun (no lighting check).
   private _parseLegacyNullPlayer(
     _input: string,
     tokens: string[],
@@ -905,7 +888,7 @@ export class Parser {
     };
   }
 
-  // C8: AGAIN/G handler (gparser.zil:192-233)
+  // AGAIN/G handler (gparser.zil:192-233)
   private _handleAgain(
     tokens: string[],
     _rawInput: string,
@@ -943,9 +926,17 @@ export class Parser {
     return this.parse(this.lastInput, room, player, world);
   }
 
-  // C7: ORPHAN-MERGE — handle next-turn input when orphan state is set.
-  // gparser.zil:543-630 (ORPHAN-MERGE).
-  private _orphanMerge(
+  // ORPHAN-MERGE — handle next-turn input when orphan state is set.
+  // gparser.zil:543-630
+  //
+  // Two branches:
+  //   disambig — answer selects from the saved ambiguous candidates
+  //   missing-object — answer fills the missing noun slot
+  //
+  // All state mutations (this.orphan writes, the {...orphan, disambig} re-save,
+  // verb-abandon early-returns) stay inline with their exact current ordering —
+  // the clear-vs-re-save order is multi-turn-disambig-state-load-bearing.
+  private handleOrphanAnswer(
     tokens: string[],
     room: Room,
     player: GameObject,
@@ -955,115 +946,58 @@ export class Parser {
   ): ParseResult {
     const orphan = this.orphan!;
 
+    // ---- Disambiguation branch ------------------------------------------------
     if (orphan.disambig !== undefined) {
-      return this._handleDisambigAnswer(tokens, orphan, room, player, world, snap, isLit);
-    }
+      const { noun: orphanNoun, candidates } = orphan.disambig;
 
-    return this._handleOrphanAnswer(tokens, orphan, room, player, world, snap, isLit);
-  }
+      const answerNoun = tokens[tokens.length - 1] ?? '';
+      const answerAdjs = tokens.slice(0, -1);
 
-  // Handle a disambiguation answer: select one of the ambiguous candidates.
-  private _handleDisambigAnswer(
-    tokens: string[],
-    orphan: OrphanState,
-    room: Room,
-    player: GameObject,
-    world: World,
-    _snap: ScopeSnapshot,
-    _isLit: boolean,
-  ): ParseResult {
-    const { noun: orphanNoun, candidates } = orphan.disambig!;
+      if (tokens.length > 0 && lookupVerb(tokens[0]!) !== undefined) {
+        this.orphan = undefined;
+        return this.parse(tokens.join(' '), room, player, world);
+      }
 
-    const answerTokens = tokens;
-    const answerNoun = answerTokens[answerTokens.length - 1] ?? '';
-    const answerAdjs = answerTokens.slice(0, -1);
+      // Narrow the saved candidate set using the answer tokens.
+      const matched = candidates
+        .map(id => world.get(id))
+        .filter((obj): obj is GameObject => obj !== undefined)
+        .filter(obj => {
+          const nounLc = answerNoun.toLowerCase();
+          const nounsMatch =
+            nounLc === orphanNoun.toLowerCase() ||
+            obj.synonyms.some(s => s.toLowerCase() === nounLc) ||
+            obj.adjectives.some(a => a.toLowerCase() === nounLc);
+          if (!nounsMatch) return false;
+          if (answerAdjs.length > 0) {
+            return answerAdjs.every(adj => {
+              const adjLc = adj.toLowerCase();
+              return (
+                obj.adjectives.some(a => a.toLowerCase() === adjLc) ||
+                obj.synonyms.some(s => s.toLowerCase() === adjLc)
+              );
+            });
+          }
+          return true;
+        });
 
-    if (answerTokens.length > 0 && lookupVerb(answerTokens[0]!) !== undefined) {
+      if (matched.length === 1) {
+        this.orphan = undefined;
+        const resolvedId = matched[0]!.id;
+        if (orphan.slot === 'dobj') {
+          const prep = orphan.prep1 ?? orphan.prep2;
+          return this.buildOrphanOkCommand(orphan, [resolvedId], undefined, prep, tokens, player, world);
+        } else {
+          const prep = orphan.prep2 ?? orphan.prep1;
+          return this.buildOrphanOkCommand(orphan, orphan.resolvedDobjIds, [resolvedId], prep, tokens, player, world);
+        }
+      }
+
       this.orphan = undefined;
       return this.parse(tokens.join(' '), room, player, world);
     }
 
-    const matched = candidates
-      .map(id => world.get(id))
-      .filter((obj): obj is import('../../domain/game-object.js').GameObject => obj !== undefined)
-      .filter(obj => {
-        const nounLc = answerNoun.toLowerCase();
-        const nounsMatch =
-          nounLc === orphanNoun.toLowerCase() ||
-          obj.synonyms.some(s => s.toLowerCase() === nounLc) ||
-          obj.adjectives.some(a => a.toLowerCase() === nounLc);
-        if (!nounsMatch) return false;
-        if (answerAdjs.length > 0) {
-          return answerAdjs.every(adj => {
-            const adjLc = adj.toLowerCase();
-            return (
-              obj.adjectives.some(a => a.toLowerCase() === adjLc) ||
-              obj.synonyms.some(s => s.toLowerCase() === adjLc)
-            );
-          });
-        }
-        return true;
-      });
-
-    if (matched.length === 1) {
-      this.orphan = undefined;
-      const syntax = orphan.syntax;
-      const resolvedId = matched[0]!.id;
-
-      if (orphan.slot === 'dobj') {
-        const dobjIds: ObjectId[] = [resolvedId];
-        const c6 = applyC6Checks(orphan.verb, dobjIds, undefined, syntax.dobjLocBits, syntax.iobjLocBits, player, world);
-        if ('kind' in c6) return c6;
-        return {
-          kind: 'ok',
-          command: {
-            verb: orphan.verb,
-            action: syntax.action,
-            dobjIds,
-            iobjIds: undefined,
-            prep: orphan.prep1 ?? orphan.prep2,
-            preAction: syntax.preAction,
-            syntax,
-            autoTaken: c6.autoTaken && c6.autoTaken.length > 0 ? c6.autoTaken : undefined,
-            raw: tokens,
-          },
-        };
-      } else {
-        const iobjIds: ObjectId[] = [resolvedId];
-        const dobjIds = orphan.resolvedDobjIds;
-        const c6 = applyC6Checks(orphan.verb, dobjIds, iobjIds, syntax.dobjLocBits, syntax.iobjLocBits, player, world);
-        if ('kind' in c6) return c6;
-        return {
-          kind: 'ok',
-          command: {
-            verb: orphan.verb,
-            action: syntax.action,
-            dobjIds,
-            iobjIds,
-            prep: orphan.prep2 ?? orphan.prep1,
-            preAction: syntax.preAction,
-            syntax,
-            autoTaken: c6.autoTaken && c6.autoTaken.length > 0 ? c6.autoTaken : undefined,
-            raw: tokens,
-          },
-        };
-      }
-    }
-
-    this.orphan = undefined;
-    return this.parse(tokens.join(' '), room, player, world);
-  }
-
-  // Handle an orphan answer (missing-object case, no disambig).
-  private _handleOrphanAnswer(
-    tokens: string[],
-    orphan: OrphanState,
-    room: Room,
-    player: GameObject,
-    world: World,
-    snap: ScopeSnapshot,
-    isLit: boolean,
-  ): ParseResult {
+    // ---- Missing-object branch ------------------------------------------------
     const firstToken = tokens[0] ?? '';
 
     if (lookupVerb(firstToken) !== undefined) {
@@ -1075,10 +1009,7 @@ export class Parser {
 
     if (orphan.slot === 'dobj') {
       const dobjLocBits = syntax.dobjLocBits;
-      const r = resolveNounPhrase(
-        tokens, snap, room, player, world,
-        dobjLocBits, undefined, isLit, this.itRef,
-      );
+      const r = resolveNounPhrase(tokens, snap, room, player, world, dobjLocBits, undefined, isLit, this.itRef);
 
       if (r.ok === 'pseudo') {
         this.orphan = undefined;
@@ -1110,28 +1041,12 @@ export class Parser {
 
       this.orphan = undefined;
       const dobjIds: ObjectId[] = r.id !== (undefined as unknown as ObjectId) ? [r.id] : [];
-      const c6 = applyC6Checks(orphan.verb, dobjIds.length > 0 ? dobjIds : undefined, undefined, syntax.dobjLocBits, syntax.iobjLocBits, player, world);
-      if ('kind' in c6) return c6;
-      return {
-        kind: 'ok',
-        command: {
-          verb: orphan.verb,
-          action: syntax.action,
-          dobjIds: dobjIds.length > 0 ? dobjIds : undefined,
-          iobjIds: undefined,
-          prep: orphan.prep1 ?? orphan.prep2,
-          preAction: syntax.preAction,
-          syntax,
-          autoTaken: c6.autoTaken && c6.autoTaken.length > 0 ? c6.autoTaken : undefined,
-          raw: tokens,
-        },
-      };
+      const prep = orphan.prep1 ?? orphan.prep2;
+      return this.buildOrphanOkCommand(orphan, dobjIds.length > 0 ? dobjIds : undefined, undefined, prep, tokens, player, world);
+
     } else {
       const iobjLocBits = syntax.iobjLocBits;
-      const r = resolveNounPhrase(
-        tokens, snap, room, player, world,
-        iobjLocBits, undefined, isLit, this.itRef,
-      );
+      const r = resolveNounPhrase(tokens, snap, room, player, world, iobjLocBits, undefined, isLit, this.itRef);
 
       if (r.ok === 'pseudo') {
         this.orphan = undefined;
@@ -1163,24 +1078,41 @@ export class Parser {
 
       this.orphan = undefined;
       const iobjIds: ObjectId[] = r.id !== (undefined as unknown as ObjectId) ? [r.id] : [];
-      const dobjIds = orphan.resolvedDobjIds;
-      const c6 = applyC6Checks(orphan.verb, dobjIds, iobjIds.length > 0 ? iobjIds : undefined, syntax.dobjLocBits, syntax.iobjLocBits, player, world);
-      if ('kind' in c6) return c6;
-      return {
-        kind: 'ok',
-        command: {
-          verb: orphan.verb,
-          action: syntax.action,
-          dobjIds,
-          iobjIds: iobjIds.length > 0 ? iobjIds : undefined,
-          prep: orphan.prep2 ?? orphan.prep1,
-          preAction: syntax.preAction,
-          syntax,
-          autoTaken: c6.autoTaken && c6.autoTaken.length > 0 ? c6.autoTaken : undefined,
-          raw: tokens,
-        },
-      };
+      const prep = orphan.prep2 ?? orphan.prep1;
+      return this.buildOrphanOkCommand(orphan, orphan.resolvedDobjIds, iobjIds.length > 0 ? iobjIds : undefined, prep, tokens, player, world);
     }
+  }
+
+  // Build the ok ParseResult for a resolved orphan slot.
+  // prep is PRE-COMPUTED by the caller per slot (dobj: prep1??prep2, iobj: prep2??prep1)
+  // so neither slot's prep can flip inside this builder.
+  // autoTaken is included only when c6.autoTaken.length > 0.
+  private buildOrphanOkCommand(
+    orphan: OrphanState,
+    dobjIds: ObjectId[] | undefined,
+    iobjIds: ObjectId[] | undefined,
+    prep: string | undefined,
+    tokens: string[],
+    player: GameObject,
+    world: World,
+  ): ParseResult {
+    const syntax = orphan.syntax;
+    const c6 = applyC6Checks(orphan.verb, dobjIds, iobjIds, syntax.dobjLocBits, syntax.iobjLocBits, player, world);
+    if ('kind' in c6) return c6;
+    return {
+      kind: 'ok',
+      command: {
+        verb: orphan.verb,
+        action: syntax.action,
+        dobjIds,
+        iobjIds,
+        prep,
+        preAction: syntax.preAction,
+        syntax,
+        autoTaken: c6.autoTaken && c6.autoTaken.length > 0 ? c6.autoTaken : undefined,
+        raw: tokens,
+      },
+    };
   }
 
   // Update pronoun state from a successfully resolved command.
