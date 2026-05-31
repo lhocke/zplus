@@ -390,11 +390,36 @@ export class Game {
           moved = true;
           // Player moved — update here reference and fire room entry.
           const newRoom = this.player.parent as Room;
-          if (newRoom !== undefined && newRoom !== this.here) {
+
+          if (verbResult.movedIntoDark) {
+            // Dark destination path (ZIL GOTO order):
+            //   1. darkPlaceEntered notice (already in verbResult.output)
+            //   2. M-ENTER action — appended AFTER the dark notice
+            //   3. describeCurrentRoom() — V-FIRST-LOOK → pitch-black message
+            // Both lines appear on the SAME turn, in this order.
+            // Note: onRoomEntered + M-ENTER only fire when the room changed.
+            let enterOut = '';
+            if (newRoom !== undefined && newRoom !== this.here) {
+              enterOut = this.onRoomEntered(newRoom);
+            }
+            const roomDesc = this.describeCurrentRoom();
+            const mergedParts = [
+              outputs[outputs.length - 1] ?? '',
+              enterOut,
+              roomDesc,
+            ].filter(s => s.length > 0);
+            const idx = outputs.length - 1;
+            if (idx >= 0) {
+              outputs[idx] = mergedParts.join('\n');
+            } else {
+              outputs.push(mergedParts.join('\n'));
+            }
+          } else if (newRoom !== undefined && newRoom !== this.here) {
+            // Lit destination path: fire M-ENTER and prepend its output.
+            // ZIL order: M-ENTER fires, then V-FIRST-LOOK/DESCRIBE-ROOM.
+            // verbResult.output already contains the room description from enterDest.
             const enterOut = this.onRoomEntered(newRoom);
             if (enterOut.length > 0) {
-              // M-ENTER messages (e.g. trap door crashing shut) prepend the
-              // room description already appended above.
               const idx = outputs.length - 1;
               if (idx >= 0) {
                 outputs[idx] = [enterOut, outputs[idx]].join('\n');

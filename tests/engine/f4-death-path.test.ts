@@ -8,11 +8,21 @@
  *   C. VerbResult.fatal channel and post-executeVerb fatal break.
  *   D. gameOver halt: turn() returns empty after 3rd death sets gameOver.
  *   E. Grue gate in verbGo — dark→dark PROB 80% → death; dark→dark no-kill =
- *      darkPlaceEntered; lit→dark first step = darkPlaceEntered only.
+ *      darkPlaceEntered + pitch-black (same turn); lit→dark first step =
+ *      darkPlaceEntered + pitch-black (same turn).
  *   F. deaths wired into VerbContext (V-DIAGNOSE reflects live count).
+ *   G. Oracle ordering: darkPlaceEntered → M-ENTER → pitch-black (same turn).
  *
  * ZIL references: 1actions.zil:4046-4099, gverbs.zil:2045-2120.
  * Messages: messages.json goto.* (grue gate) and defaultVerbs.jigsUp (death).
+ *
+ * Oracle (dfrotz R119) corrections:
+ *   - On ANY dark destination move (lit→dark or dark→dark, grue not firing),
+ *     BOTH "You have moved into a dark place." AND "It is pitch black..."
+ *     appear on the SAME turn — verified against dfrotz R119.
+ *   - Ordering for LIVING-ROOM→down (Cellar): darkPlaceEntered first, then
+ *     M-ENTER ("trap door crashes shut"), then pitch-black — matching ZIL GOTO
+ *     gverbs.zil:2119 (dark notice), then M-ENTER action, then V-FIRST-LOOK.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -333,5 +343,69 @@ describe('F4 resurrection — player moves to FOREST-1', () => {
 
     // FOREST-1 ldesc contains "This is a forest" or similar.
     expect(r.output).toMatch(/forest/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// G. Oracle ordering — darkPlaceEntered + M-ENTER + pitch-black on same turn
+//
+// Verified against dfrotz R119 (Zork I Reference Implementation):
+//   - lit→dark (KITCHEN→up→ATTIC): same-turn output = darkPlaceEntered + pitch-black
+//   - dark→dark no-grue (MAZE-1 safe RNG): same-turn output = darkPlaceEntered + pitch-black
+//   - LIVING-ROOM→down→CELLAR: darkPlaceEntered → M-ENTER ("trap door") → pitch-black
+//
+// ZIL GOTO gverbs.zil order:
+//   2119: TELL "You have moved into a dark place."  (dark notice)
+//   then M-ENTER action fires
+//   then V-FIRST-LOOK → DESCRIBE-ROOM → pitch-black message
+// ---------------------------------------------------------------------------
+
+import { resetKitchenWindowFlag, resetRugMoved } from '../../src/actions/above-ground.js';
+
+describe('G. Oracle ordering — pitch-black on same turn as darkPlaceEntered', () => {
+  it('lit→dark move (KITCHEN→up→ATTIC): darkPlaceEntered AND pitch-black on same turn', () => {
+    // dfrotz oracle: KITCHEN up → outputs both on the same turn.
+    const g = newGameAt('KITCHEN');
+    g.start();
+    const r = g.turn('up');
+
+    expect(r.output).toContain('You have moved into a dark place.');
+    expect(r.output).toContain('It is pitch black. You are likely to be eaten by a grue.');
+    expect(r.output).not.toContain('This is the attic');
+  });
+
+  it('dark→dark no-grue move (MAZE-1 safe RNG): darkPlaceEntered AND pitch-black on same turn', () => {
+    // dfrotz oracle: each dark→dark move (grue not firing) produces both lines.
+    const g = newGameAt('MAZE-1');
+    (g as unknown as { rng: Rng }).rng = safeRng();
+    g.start();
+    const r = g.turn('north');
+
+    expect(r.output).toContain('You have moved into a dark place.');
+    expect(r.output).toContain('It is pitch black. You are likely to be eaten by a grue.');
+  });
+
+  it('LIVING-ROOM→down→CELLAR ordering: darkPlaceEntered then M-ENTER then pitch-black', () => {
+    // dfrotz oracle turn 8 ('down' into Cellar):
+    //   (1) "You have moved into a dark place."
+    //   (2) "The trap door crashes shut, and you hear someone barring it."
+    //   (3) "It is pitch black. You are likely to be eaten by a grue."
+    // ZIL GOTO: dark-notice at 2119, then M-ENTER action, then V-FIRST-LOOK.
+    resetRugMoved();
+    resetKitchenWindowFlag();
+    const g = newGameAt('LIVING-ROOM');
+    g.start();
+    g.turn('move rug');
+    g.turn('open trap door');
+    const r = g.turn('down');
+
+    const lines = r.output.split('\n').filter(l => l.length > 0);
+    const idxDark   = lines.findIndex(l => l.includes('You have moved into a dark place.'));
+    const idxTrap   = lines.findIndex(l => l.includes('trap door crashes shut'));
+    const idxPitch  = lines.findIndex(l => l.includes('It is pitch black.'));
+
+    expect(idxDark).toBeGreaterThanOrEqual(0);
+    expect(idxTrap).toBeGreaterThan(idxDark);
+    expect(idxPitch).toBeGreaterThan(idxTrap);
   });
 });

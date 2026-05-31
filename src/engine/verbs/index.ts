@@ -146,14 +146,28 @@ export interface VerbResult {
    * break: skips M-END and aborts remaining chained segments.
    */
   readonly fatal?: boolean;
+  /**
+   * True when the player moved into a dark room (lit→dark or dark→dark without
+   * grue kill).  game.ts uses this to:
+   *   1. Append M-ENTER AFTER darkPlaceEntered (ZIL order: dark-notice then M-ENTER).
+   *   2. Append describeCurrentRoom() (pitch-black line) after M-ENTER — matching
+   *      ZIL V-FIRST-LOOK which runs after M-ENTER for all moves.
+   * For lit destinations this field is absent; M-ENTER is prepended as usual.
+   */
+  readonly movedIntoDark?: boolean;
 }
 
 // --------------------------------------------------------------------------
 // Internal helpers
 // --------------------------------------------------------------------------
 
-function result(output: string, moved = false, fatal = false): VerbResult {
-  return { output, moved, fatal };
+function result(
+  output: string,
+  moved = false,
+  fatal = false,
+  movedIntoDark = false,
+): VerbResult {
+  return { output, moved, fatal, movedIntoDark };
 }
 
 // --------------------------------------------------------------------------
@@ -440,10 +454,15 @@ function verbGo(ctx: VerbContext): VerbResult {
 
     // Step 5: moved-into-dark notice (ZIL lines 2117-2120).
     // Fires when new room is dark (first step into darkness, or grue didn't fire).
-    // Return immediately — do NOT also call describeRoom.
+    //
+    // movedIntoDark=true signals game.ts to:
+    //   1. Append M-ENTER AFTER this notice (ZIL: dark-notice then M-ENTER action).
+    //   2. Append describeCurrentRoom() after M-ENTER — ZIL V-FIRST-LOOK runs after
+    //      M-ENTER and produces the pitch-black line for the now-dark room.
+    // Both darkPlaceEntered and the pitch-black line appear on the SAME turn.
     if (!newLit) {
       ctx.clearContinuation?.();
-      return result(goto.darkPlaceEntered, true);
+      return result(goto.darkPlaceEntered, true, false, /*movedIntoDark*/true);
     }
 
     // Step 6: lit destination — normal room description.
