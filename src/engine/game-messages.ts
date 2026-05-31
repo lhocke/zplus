@@ -112,6 +112,7 @@ export const preMung        = dv.preMung;
 export const preMove        = dv.preMove;
 export const preRead        = dv.preRead;
 export const preTake        = dv.preTake;
+export const jigsUp         = dv.jigsUp;
 export const scoreUpd       = dv.scoreUpd;
 export const tellNoPrsi     = dv.tellNoPrsi;
 export const vAdvent        = dv.vAdvent;
@@ -240,6 +241,7 @@ export const MSG = {
   describeRoom,
   finish,
   goto,
+  jigsUp,
   hackHack,
   hellos,
   hitSpot,

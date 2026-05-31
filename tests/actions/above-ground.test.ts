@@ -220,15 +220,22 @@ describe('Attic: up from kitchen', () => {
     expect(g.view().here).toBe('ATTIC');
   });
 
-  it('attic is dark — entering without a light source shows pitch-black message', () => {
-    // ATTIC has no Flag.On (ONBIT); player has no lamp. ZIL DESCRIBE-ROOM RFALSE
-    // path: emit pitch-black message, skip ldesc (gverbs.zil:1637-1649).
+  it('attic is dark — entering without a light source shows moved-into-dark message', () => {
+    // ATTIC has no Flag.On (ONBIT); player has no lamp.
+    //
+    // ZIL GOTO (gverbs.zil:2117-2120): when old room was lit (KITCHEN has Flag.On)
+    // and new room is dark (ATTIC), emit "You have moved into a dark place." on the
+    // first step — the grue gate only fires dark→dark.  A subsequent LOOK gives the
+    // pitch-black message.
     const g = newGameAt('KITCHEN');
     g.start();
     const r = g.turn('up');
-    expect(r.output).toContain('It is pitch black.');
+    expect(r.output).toContain('You have moved into a dark place.');
     // ldesc NOT shown in the dark
     expect(r.output).not.toContain('This is the attic');
+    // Subsequent look gives pitch-black
+    const look = g.turn('look');
+    expect(look.output).toContain('It is pitch black.');
   });
 
   it('attic shows ldesc when lit (lamp in hand)', () => {

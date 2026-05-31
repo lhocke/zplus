@@ -12,7 +12,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { createGame } from '../../src/engine/bootstrap';
-import { newGameAt } from '../helpers/new-game';
 import { Game } from '../../src/engine/game';
 import { World } from '../../src/domain/world';
 import { Room } from '../../src/domain/room';
@@ -28,7 +27,11 @@ const rng: Rng = { next: () => 0 };
 
 describe('action dispatch — MAZE-DIODES (PER routine)', () => {
   it('is a one-way passage that warns and lands deterministically in MAZE-4', () => {
-    const g = newGameAt('MAZE-2');
+    // Use seed 999999 which produces values > 0.8 (safe from grue) so the
+    // MAZE-DIODES routing can be verified without interference from the grue gate.
+    const g = createGame({ startRoom: 'MAZE-2', seed: 999999 });
+    // Override rng to never trigger grue (rng.next()=0.99 → 99 ≥ 80 → no grue).
+    (g as unknown as { rng: Rng }).rng = { next: () => 0.99 };
     const r = g.turn('down');
 
     // The no-return warning from <ROUTINE MAZE-DIODES> (1actions.zil:898).

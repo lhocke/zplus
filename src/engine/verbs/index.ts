@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vPut, preTake, preGive, yuks, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vPut, preTake, preGive, yuks, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 
 // --------------------------------------------------------------------------
@@ -100,6 +100,39 @@ export interface VerbContext {
    * Optional: game.ts always supplies this; test contexts may omit it.
    */
   readonly setGlobal?: (name: string, value?: boolean) => void;
+
+  // ---- F4 death-path fields --------------------------------------------------
+
+  /**
+   * Inject the jigsUp death handler.  Called by verbGo when the grue kills the
+   * player.  Receives the death message string; game.ts wires it to
+   * `this.jigsUp(desc, tell)`.  Optional: test contexts omit it (grue gate
+   * is disabled when jigsUp is undefined).
+   */
+  readonly jigsUp?: (deathMessage: string) => void;
+
+  /**
+   * ALWAYS-LIT global (ghost immunity).  When true the grue cannot kill.
+   * Never true in P0-3; wired into the grue gate as `ctx.alwaysLit || lit(...)`.
+   * Optional: defaults to false when absent.
+   */
+  readonly alwaysLit?: boolean;
+
+  /**
+   * PROB(pct) — roll a random integer-percent, return true if ≤ pct.
+   * ZIL PROB N = roll 1..100, true if the result ≤ N.
+   * Port semantics: rng.next()*100 < pct (equivalent for our float RNG).
+   * Optional: when absent, verbGo uses `() => false` so grue never triggers in
+   * test contexts that don't supply an rng.
+   */
+  readonly prob?: (pct: number) => boolean;
+
+  /**
+   * Clear the parser continuation queue (ZIL `<SETG P-CONT <>>`).
+   * Called by verbGo's moved-into-dark path to stop chained commands.
+   * Optional: game.ts supplies it; test contexts may omit it.
+   */
+  readonly clearContinuation?: () => void;
 }
 
 export interface VerbResult {
@@ -107,14 +140,20 @@ export interface VerbResult {
   readonly output: string;
   /** True when the player's location changed as a result of this verb. */
   readonly moved: boolean;
+  /**
+   * True when the verb caused a fatal outcome (e.g. grue kill via jigsUp).
+   * game.ts checks this after executeVerb and mirrors the chainResult.fatal
+   * break: skips M-END and aborts remaining chained segments.
+   */
+  readonly fatal?: boolean;
 }
 
 // --------------------------------------------------------------------------
 // Internal helpers
 // --------------------------------------------------------------------------
 
-function result(output: string, moved = false): VerbResult {
-  return { output, moved };
+function result(output: string, moved = false, fatal = false): VerbResult {
+  return { output, moved, fatal };
 }
 
 // --------------------------------------------------------------------------
@@ -359,6 +398,58 @@ function verbGo(ctx: VerbContext): VerbResult {
     return result("You can't go that way.");
   }
 
+  // Safe fallback for test contexts that don't supply prob.
+  const prob = ctx.prob ?? (() => false);
+
+  // -------------------------------------------------------------------------
+  // enterDest — single closure for both move paths.
+  //
+  // ZIL GOTO (gverbs.zil:2048-2120): capture OLIT against the OLD room
+  // BEFORE the move, then recompute LIT against the NEW dest AFTER the move.
+  //
+  // Grue gate (ZIL `<AND <NOT OLIT> <NOT LIT> <PROB 80>>`):
+  //   • Only fires when both old AND new room are dark (dark→dark).
+  //   • Does NOT fire on the first step into darkness (oldLit=true→newLit=false).
+  //   • NONLANDBIT rooms are exempt (void/nonland cells).
+  //   • alwaysLit overrides: ghost-mode immunity (always false in P0-3).
+  //
+  // TODO(F5): when ghost-mode (alwaysLit=true) lands, thread alwaysLit into
+  // lit() itself — it affects the darkness gate at game.ts:630, not only here.
+  // -------------------------------------------------------------------------
+  const enterDest = (dest: Room): VerbResult => {
+    // Step 1: capture OLIT against the OLD room BEFORE the move.
+    const oldLit = (ctx.alwaysLit ?? false) || lit(ctx.here, ctx.player, ctx.world);
+
+    // Step 2: move the player.
+    ctx.player.moveTo(dest);
+
+    // Step 3: recompute LIT against the NEW dest AFTER the move.
+    const newLit = (ctx.alwaysLit ?? false) || lit(dest, ctx.player, ctx.world);
+
+    // Step 4: grue gate (ZIL lines 2095-2116).
+    // Conditions: oldLit=false AND newLit=false AND NOT NonLand AND PROB 80.
+    if (!oldLit && !newLit && !dest.has(Flag.NonLand) && prob(80)) {
+      // Sprayed sub-case: sinister noises, no kill.
+      if (ctx.getGlobal?.('SPRAYED?')) {
+        return result(goto.sinisterDark, true);
+      }
+      // Kill sub-case: route through jigsUp, return fatal.
+      ctx.jigsUp?.(goto.grueSlitherRoom);
+      return result('', /*moved*/true, /*fatal*/true);
+    }
+
+    // Step 5: moved-into-dark notice (ZIL lines 2117-2120).
+    // Fires when new room is dark (first step into darkness, or grue didn't fire).
+    // Return immediately — do NOT also call describeRoom.
+    if (!newLit) {
+      ctx.clearContinuation?.();
+      return result(goto.darkPlaceEntered, true);
+    }
+
+    // Step 6: lit destination — normal room description.
+    return result(describeRoom(dest, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal), true);
+  };
+
   // Exit with a `per` routine — try the resolver first.
   if (exit.per !== undefined) {
     const resolver = ctx.perResolver;
@@ -367,8 +458,7 @@ function verbGo(ctx: VerbContext): VerbResult {
       if (destId !== undefined) {
         const dest = ctx.world.get(destId);
         if (dest !== undefined) {
-          ctx.player.moveTo(dest);
-          return result(describeRoom(dest as Room, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal), true);
+          return enterDest(dest as Room);
         }
       }
       // Resolver returned undefined: the routine decided movement is blocked.
@@ -409,8 +499,7 @@ function verbGo(ctx: VerbContext): VerbResult {
     return result("You can't go that way.");
   }
 
-  ctx.player.moveTo(dest);
-  return result(describeRoom(dest as Room, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal), true);
+  return enterDest(dest as Room);
 }
 
 function verbTake(ctx: VerbContext): VerbResult {

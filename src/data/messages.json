@@ -635,6 +635,13 @@
     "scoreUpd": {
       "_source": "gverbs.zil:1861-1862",
       "whisper": "An almost inaudible voice whispers in your ear, \"Look to your treasures for the final secret.\""
+    },
+    "jigsUp": {
+      "_source": "1actions.zil:4046-4099 (JIGS-UP)",
+      "youHaveDied": "****  You have died  ****",
+      "deserveAnotherChance": "Now, let's take a look here...\nWell, you probably deserve another chance.  I can't quite fix you\nup completely, but you can't have everything.",
+      "suicidalManiac": "You clearly are a suicidal maniac.  We don't allow psychotics in the\ncave, since they may harm other adventurers.  Your remains will be\ninstalled in the Land of the Living Dead, where your fellow\nadventurers may gloat over them.",
+      "talented": "It takes a talented person to be killed while already dead. YOU are such\na talent. Unfortunately, it takes a talented person to deal with it.\nI am not such a talent. Sorry."
     }
   },
 

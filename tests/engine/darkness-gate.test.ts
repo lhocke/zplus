@@ -94,18 +94,27 @@ describe('darkness gate — verbLook ("look") in dark room', () => {
 // ---------------------------------------------------------------------------
 
 describe('darkness gate — entering a dark room via movement', () => {
-  it('moving from KITCHEN (lit) up into ATTIC (dark) shows pitch-black message', () => {
+  it('moving from KITCHEN (lit) up into ATTIC (dark) shows moved-into-dark message', () => {
     // KITCHEN has Flag.On (ONBIT always-lit); ATTIC has no Flag.On and no light source nearby.
-    // Player has no lamp. Going up should trigger the darkness gate on the
-    // destination room description (verbGo path).
+    // Player has no lamp.
+    //
+    // ZIL GOTO (gverbs.zil:2117-2120): when old room was lit and new room is dark
+    // (lit→dark, first step into darkness), emit "You have moved into a dark place."
+    // and stop — do NOT also call describeRoom.  On the NEXT turn, looking gives
+    // the pitch-black message.  This matches ZIL: the grue gate fires only on
+    // dark→dark; the lit→dark transition just warns.
     const g = newGameAt('KITCHEN');
     g.start();
 
     const r = g.turn('up');
 
-    // ATTIC is dark
-    expect(r.output).toContain('It is pitch black.');
+    // First step into ATTIC: moved-into-dark notice (not pitch-black yet).
+    expect(r.output).toContain('You have moved into a dark place.');
     expect(r.output).not.toContain('This is the attic');
+
+    // Subsequent LOOK gives the pitch-black message.
+    const look = g.turn('look');
+    expect(look.output).toContain('It is pitch black.');
   });
 });
 

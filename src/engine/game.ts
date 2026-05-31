@@ -13,6 +13,7 @@ import { Scoring } from './scoring.js';
 import { FlagStore } from './flag-store.js';
 import { lookupPer, lookupPreAction } from '../actions/registry.js';
 import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
+import { jigsUp as jigsUpMsgs } from './game-messages.js';
 
 // ---------------------------------------------------------------------------
 // Public types — frozen contracts from the implementation plan.
@@ -89,6 +90,20 @@ export class Game {
   private readonly scoring: Scoring;
   private moveCount = 0;
 
+  // ---- F4 death-state fields (ZIL globals) ----------------------------------
+  // Placed here (Game facade) rather than FlagStore: deaths is a counter and
+  // gameOver gates turn() re-entry — both are facade control-flow state.
+  // Promote dead/alwaysLit to FlagStore when ghost-mode (F5) needs them.
+
+  /** DEATHS global — number of times the player has died. */
+  private deaths = 0;
+  /** DEAD global — ghost mode; set/read only by the re-death guard. Inert in P0-3. */
+  private dead = false;
+  /** ALWAYS-LIT global — ghost immunity. Never true in P0-3. */
+  private alwaysLit = false;
+  /** FINISH/RFATAL latch — halts turn() re-entry once set. */
+  private gameOver = false;
+
   /**
    * Stashed command context for M-END (gmain.zil:151–161).
    * LIVING-ROOM-FCN's M-END branch reads VERB?, PRSO, PRSI to determine whether
@@ -142,6 +157,10 @@ export class Game {
 
   /** Execute one command line (may contain chained commands via "then" / "."). */
   turn(input: string): TurnResult {
+    // F4: gameOver guard — once a 3rd death or re-death sets gameOver, halt.
+    // No restart machine yet (deferred F5/endgame).
+    if (this.gameOver) return { output: '', moved: false };
+
     // -------------------------------------------------------------------------
     // C9: Interleaved per-segment drive (replaces eager parseChained).
     //
@@ -331,10 +350,35 @@ export class Game {
           score:  this.scoring.score,
           moves:  this.moveCount,
           rank:   () => this.scoring.rank(),
-          deaths: 0,  // DEATHS global (TD-3 §9.4); 0 until jigsUp is wired (Wave S3)
+          deaths: this.deaths,
           getGlobal: (n) => this.flags.get(n),
           setGlobal: (n, v = true) => this.flags.set(n, v),
+          // F4: death-path fields wired into VerbContext.
+          jigsUp: (desc) => this.jigsUp(desc, tell),
+          alwaysLit: this.alwaysLit,
+          prob: (pct) => this.rng.next() * 100 < pct,
+          clearContinuation: () => this.parser.clearContinuation(),
         }, cmd.action);
+
+        // F4: fatal from step 7 (verbResult.fatal) — mirrors chainResult.fatal break.
+        // jigsUp already emitted death text via `tell` (into `handled`).
+        // moved=true lets us update this.here to FOREST-1 for the resurrection render,
+        // but the fatal flag skips M-END and aborts remaining chained segments.
+        if (verbResult.fatal) {
+          this.parser.setLastWon(false);
+          this.parser.clearContinuation();
+          // Update here to the player's current room (FOREST-1 after resurrection,
+          // or the room where they died if gameOver was set before moveTo).
+          if (verbResult.moved) {
+            moved = true;
+            const newRoom = this.player.parent as Room;
+            if (newRoom !== undefined && newRoom !== this.here) {
+              this.here = newRoom;
+            }
+          }
+          outputs.push([...handled, verbResult.output].filter(s => s.length > 0).join('\n'));
+          break;
+        }
 
         // A handler may have printed something even while falling through
         // (ZIL routines can TELL then RFALSE); prepend that output.
@@ -722,5 +766,63 @@ export class Game {
       }
     }
     this.events.emit({ type: 'room-entered', room: roomId, firstVisit });
+  }
+
+  // -------------------------------------------------------------------------
+  // jigsUp — shared death entry point (ZIL JIGS-UP, 1actions.zil:4046-4099)
+  //
+  // Called by verbGo's grue path and (future) combat death handlers.
+  // Emits via the injected `tell` so both callers share one sequencer.
+  // Mutates this.dead/deaths/gameOver and moves the player.
+  //
+  // Deferred (TODO(F5)):
+  //   - Ghost-mode / Hades branch (ENTRANCE-TO-HADES, SOUTH-TEMPLE TOUCHBIT)
+  //   - RANDOMIZE-OBJECTS scatter
+  //   - KILL-INTERRUPTS
+  //   - DEAD-FUNCTION install
+  //   - Sprayed-grue kill variant (grueSlitherVehicle)
+  //   - FINISH end-screen / restart UI
+  //   - "Bad luck, huh?" LUCKY branch
+  // -------------------------------------------------------------------------
+  private jigsUp(deathMessage: string, tell: (s: string) => void): void {
+    // Re-death guard (ZIL: ,DEAD check 1actions.zil:4048-4053).
+    // Fires when the player is already in ghost mode (DEAD=T).
+    // In P0-3 this is never true, but the guard is required for combat-death
+    // reuse correctness (F5 ghost mode will set dead=true).
+    if (this.dead) {
+      tell(jigsUpMsgs.talented);
+      this.gameOver = true;
+      return;
+    }
+
+    // Death message then banner.
+    tell(deathMessage);
+    tell(jigsUpMsgs.youHaveDied);
+
+    // SCORE-UPD -10 death penalty (1actions.zil:4058).
+    this.scoring.scoreUpd(-10);
+
+    // 3-strike check: ZIL `<NOT <L? ,DEATHS 2>>` = deaths >= 2.
+    // Increment ONLY on the resurrection branch (below), matching 1actions.zil:4074.
+    if (this.deaths >= 2) {
+      tell(jigsUpMsgs.suicidalManiac);
+      this.gameOver = true;
+      return;
+    }
+
+    // Resurrection branch.
+    this.deaths += 1;
+    tell(jigsUpMsgs.deserveAnotherChance);
+
+    // Move player to FOREST-1.
+    const forest1 = this.world.get('FOREST-1') as Room;
+    this.player.moveTo(forest1);
+    this.here = forest1;
+
+    // Fire room entry so the resurrection room renders and stays consistent
+    // with the UI/score-by-room layer.
+    const enterOut = this.onRoomEntered(forest1);
+    if (enterOut) tell(enterOut);
+    tell(this.describeCurrentRoom());
   }
 }
