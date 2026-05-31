@@ -175,8 +175,8 @@ export class Game {
     //                       parser.hasContinuation() loop back to step 1.
     //        'fail'       → print message; parser.clearContinuation(); done.
     //        'orphan'/'disambig' → print message; done without counting a move.
-    //   3. Move counter increments only when at least one command executed.
-    //      Per ZIL semantics: orphan/disambig prompts do NOT count as moves.
+    //   3. Move counter increments once per non-meta executed command (inside
+    //      the loop).  Orphan/disambig/failed-parse do NOT count as moves.
     //
     // The interleaved prologue (IT-binding after each segment) is what enables
     // "open mailbox. read it" to work within a single turn() call.
@@ -184,17 +184,6 @@ export class Game {
 
     const outputs: string[] = [];
     let moved = false;
-
-    // Track whether we executed at least one segment (for move counter).
-    let executedAny = false;
-    // Track whether any non-meta segment executed (for clock tick gating).
-    // consumedTime is set-once (never cleared) in the ok-execute branch when
-    // cmd.action is not in META_ACTIONS.  Mixed-segment rule: ANY non-meta
-    // segment in a chained turn makes the whole turn consume time.
-    // C9 NON-REGRESSION: consumedTime is only ever set inside the ok-execute
-    // branch, so a failed parse / orphan / disambig leaves it false, and
-    // `executedAny && consumedTime` stays false — byte-identical to C9.
-    let consumedTime = false;
 
     // Loop: parse and execute segments until the continuation queue is empty
     // or an orphan/disambig/fatal halts us.
@@ -224,13 +213,10 @@ export class Game {
       }
 
       // ---- ok: execute the segment ----------------------------------------
-      executedAny = true;
       const cmd = pr.command;
       // Meta-verb suppression: commands in META_ACTIONS do not consume time
       // (ZIL gmain.zil:171-172 VERB? guard around CLOCKER).
-      if (!META_ACTIONS.has(cmd.action)) {
-        consumedTime = true;
-      }
+      const segmentConsumesTime = !META_ACTIONS.has(cmd.action);
 
       // Resolve objects from ids (single-object callers use dobjIds?.[0]).
       const dobj = cmd.dobjIds?.[0] !== undefined ? this.world.get(cmd.dobjIds[0]!) : undefined;
@@ -354,12 +340,11 @@ export class Game {
           rng: this.rng,
           scoreObj: (obj) => this.scoring.scoreObj(obj),
           // V-SCORE / V-DIAGNOSE fields (TD3-2):
-          // `moveCount` is incremented at the END of turn() after all execution.
-          // V-SCORE must report the count BEFORE this turn's increment — the
-          // dfrotz oracle confirms: "score" as the first command prints "0 moves"
-          // (not 1), and "look" then "score" prints "1 move" (not 2).  ZIL MOVES
-          // is also not incremented by the SCORE verb itself (it is a no-time verb
-          // in ZIL — CLOCKER does not run for it).  Pass this.moveCount directly.
+          // moveCount is incremented per-segment (inside the loop) immediately
+          // after each non-meta command executes, so SCORE reads the post-tick
+          // count of preceding commands in the same chain.  A standalone "score"
+          // on turn 1 reads 0 (no preceding real command ticked yet); "open mailbox.
+          // score" reads 1 (the mailbox segment ticked before SCORE dispatches).
           score:  this.scoring.score,
           moves:  this.moveCount,
           rank:   () => this.scoring.rank(),
@@ -460,45 +445,30 @@ export class Game {
         }
       }
 
+      // ---- Per-segment MOVES + CLOCKER tick -----------------------------------
+      // ZIL CLOCKER runs once per executed command (gclock.zil) — fire here,
+      // after M-END, for each non-meta segment.  A failed parse / orphan /
+      // disambig never reaches this path, so C9 no-tick behaviour is intact.
+      if (segmentConsumesTime) {
+        this.moveCount += 1;
+        const clockLines = this.clock.advance();
+        if (clockLines.length > 0) {
+          const clockText = clockLines.join('\n');
+          const idx = outputs.length - 1;
+          if (idx >= 0) {
+            outputs[idx] = [outputs[idx], clockText].filter(s => s.length > 0).join('\n');
+          } else {
+            outputs.push(clockText);
+          }
+        }
+        this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+      }
+
       // ---- Loop control: continue if more segments pending ------------------
       if (!this.parser.hasContinuation()) {
         break; // No more continuation segments — done for this turn.
       }
       // Otherwise loop back to parseSegment() to consume the next segment.
-    }
-
-    // -------------------------------------------------------------------------
-    // Move counter + clock: increment and tick only when a real (non-meta)
-    // command executed this turn.
-    //
-    // executedAny governs output/lastWon assembly (unchanged).
-    // consumedTime is the NEW co-gate: only non-META_ACTIONS segments set it.
-    //
-    // C9 NON-REGRESSION: consumedTime is only set inside the ok-execute branch.
-    // A failed parse / orphan / disambig leaves both flags false, so the clock
-    // never ticks — byte-identical to the original C9 behaviour.
-    //
-    // Meta suppression: V-SCORE/V-SAVE/etc. set executedAny (they ran) but
-    // leave consumedTime=false, so the clock does NOT tick for them.
-    //
-    // Clock transcript routing: advance() returns string[] of interrupt text.
-    // These lines append AFTER the command output AND after M-END (M-END is
-    // already merged before this block), matching ZIL CLOCKER running after
-    // M-END at end of turn.
-    // -------------------------------------------------------------------------
-    if (executedAny && consumedTime) {
-      this.moveCount += 1;
-      const clockLines = this.clock.advance();
-      if (clockLines.length > 0) {
-        const clockText = clockLines.join('\n');
-        const idx = outputs.length - 1;
-        if (idx >= 0) {
-          outputs[idx] = [outputs[idx], clockText].filter(s => s.length > 0).join('\n');
-        } else {
-          outputs.push(clockText);
-        }
-      }
-      this.events.emit({ type: 'turn-complete', moves: this.moveCount });
     }
 
     return { output: outputs.join('\n'), moved };

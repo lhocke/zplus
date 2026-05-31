@@ -228,7 +228,7 @@ describe('C9 — interleaved drive: lazy continuation chaining', () => {
 // ---------------------------------------------------------------------------
 
 describe('C9 — interleaved drive: move counter', () => {
-  it('a chained "look. look" still counts as ONE move', () => {
+  it('a chained "look. look" counts as TWO moves (one per real command)', () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A simple room.' });
     room.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
@@ -244,7 +244,7 @@ describe('C9 — interleaved drive: move counter', () => {
 
     expect(game.view().moves).toBe(0);
     game.turn('look. look');
-    expect(game.view().moves).toBe(1);
+    expect(game.view().moves).toBe(2);
   });
 
   it('an orphan turn does NOT increment the move counter', () => {
