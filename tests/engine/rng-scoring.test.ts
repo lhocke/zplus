@@ -123,44 +123,59 @@ describe('Scoring', () => {
     expect(events[1]!.score).toBe(40);
   });
 
-  it('rank() returns the correct title at score boundaries', () => {
-    const { scoring } = makeScoring();
+  it('rank() returns the correct title at score boundaries (8-rank table)', () => {
+    // ZIL source: 1actions.zil:4026–4044.  Exclusive lower bounds (> N) except
+    // the top rank which is exact (== 350).
+    //
+    //  SCORE == 350  → Master Adventurer
+    //  SCORE > 330   → Wizard
+    //  SCORE > 300   → Master
+    //  SCORE > 200   → Adventurer
+    //  SCORE > 100   → Junior Adventurer
+    //  SCORE > 50    → Novice Adventurer
+    //  SCORE > 25    → Amateur Adventurer
+    //  else          → Beginner
+    const cases: Array<[number, string]> = [
+      [0,   'Beginner'],
+      [25,  'Beginner'],         // 25 is NOT > 25
+      [26,  'Amateur Adventurer'],
+      [50,  'Amateur Adventurer'], // 50 is NOT > 50
+      [51,  'Novice Adventurer'],
+      [100, 'Novice Adventurer'],  // 100 is NOT > 100
+      [101, 'Junior Adventurer'],
+      [200, 'Junior Adventurer'],  // 200 is NOT > 200
+      [201, 'Adventurer'],
+      [300, 'Adventurer'],         // 300 is NOT > 300
+      [301, 'Master'],
+      [330, 'Master'],             // 330 is NOT > 330
+      [331, 'Wizard'],
+      [349, 'Wizard'],             // 349 != 350
+      [350, 'Master Adventurer'],  // exact match
+    ];
 
-    // Below the first threshold → "Beginner"
-    expect(scoring.rank()).toBe('Beginner');
-
-    scoring.add(25);
-    expect(scoring.rank()).toBe('Beginner');
-
-    scoring.add(25); // 50 total
-    expect(scoring.rank()).toBe('Amateur Adventurer');
-
-    scoring.add(50); // 100
-    expect(scoring.rank()).toBe('Junior Adventurer');
-
-    scoring.add(100); // 200
-    expect(scoring.rank()).toBe('Adventurer');
-
-    scoring.add(100); // 300
-    expect(scoring.rank()).toBe('Master Adventurer');
-
-    scoring.add(50); // 350
-    expect(scoring.rank()).toBe('Master Adventurer');
+    for (const [score, expectedRank] of cases) {
+      const e2 = new SimpleEventEmitter();
+      const sc = new Scoring(e2);
+      sc.add(score);
+      expect(sc.rank()).toBe(expectedRank);
+    }
   });
 
-  it('rank thresholds cover the full 350-point range', () => {
-    // All rank labels used in Zork I:
+  it('rank thresholds cover all 8 Zork I ranks', () => {
+    // All rank labels in the correct 8-rank table (td3-scoring-death-SPEC.md §7).
     const allRanks = [
       'Beginner',
       'Amateur Adventurer',
+      'Novice Adventurer',
       'Junior Adventurer',
       'Adventurer',
+      'Master',
+      'Wizard',
       'Master Adventurer',
     ];
     const seen = new Set<string>();
 
     for (let s = 0; s <= 350; s++) {
-      // Re-create to test a specific score cleanly.
       const e2 = new SimpleEventEmitter();
       const sc2 = new Scoring(e2);
       sc2.add(s);

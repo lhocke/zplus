@@ -73,6 +73,8 @@ function makeCtx(
     clearFlag: (o, f) => o.clear(f),
     moveTo:  (o, d) => o.moveTo(d),
     score:   () => {},
+    scoreObj: () => {},
+    recomputeTrophy: () => {},
     enableClock: () => {},
     disableClock: () => {},
     fatal:   () => { gotFatal = true; },

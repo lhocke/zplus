@@ -72,6 +72,18 @@ export interface ActionContext {
   /** Add to the score (may be negative) — ZIL `<SCORE n>` / `<SETG SCORE ...>`. */
   score(delta: number): void;
   /**
+   * Award the one-time VALUE of an object to BASE-SCORE then zero its VALUE —
+   * ZIL SCORE-OBJ (gverbs.zil:1867–1870).  Idempotent: a zeroed VALUE awards
+   * nothing.  Used for ITAKE and first-visit room awards.
+   */
+  scoreObj(obj: GameObject): void;
+  /**
+   * Recompute the live trophy-case TVALUE component and update the total score.
+   * Equivalent to ZIL: SETG SCORE <+ ,BASE-SCORE <OTVAL-FROB>> then SCORE-UPD 0.
+   * Called by LIVING-ROOM-FCN M-END on TAKE / PUT-to-TROPHY-CASE.
+   */
+  recomputeTrophy(trophyCase: GameObject): void;
+  /**
    * Enable a clock interrupt by id — ZIL `<ENABLE <INT …>>` or
    * `<ENABLE <QUEUE …>>`.  Used by action handlers to gate fuel drain.
    */

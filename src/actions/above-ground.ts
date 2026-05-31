@@ -16,7 +16,7 @@
 
 import type { ActionHandler } from '../domain/game-object.js';
 import { Flag } from '../domain/flags.js';
-import { M_LOOK, M_ENTER } from '../engine/messages.js';
+import { M_LOOK, M_ENTER, M_END } from '../engine/messages.js';
 import type { PerRoutine } from './registry.js';
 import { pick, dummy, type PickRng } from '../engine/game-messages.js';
 
@@ -163,6 +163,10 @@ export const kitchenFcn: ActionHandler = (ctx) => {
  *
  * M-LOOK produces the dynamic description that reflects the rug/trap-door state
  * and whether the cyclops has smashed the west door (MAGIC-FLAG).
+ *
+ * M-END (1actions.zil:477–485): on TAKE or PUT-to-TROPHY-CASE, recompute the
+ * live trophy-case TVALUE component and update the total score.  This is the
+ * load-bearing hook that makes SCORE = BASE-SCORE + OTVAL-FROB(TROPHY-CASE).
  */
 export const livingRoomFcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
@@ -195,6 +199,25 @@ export const livingRoomFcn: ActionHandler = (ctx) => {
     ctx.tell(text);
     return true;
   }
+
+  if (ctx.rarg === M_END) {
+    // 1actions.zil:478–482: recompute trophy-case score on TAKE or
+    // PUT-to-TROPHY-CASE only.
+    const isTake = ctx.verb === 'take';
+    const isPutToCase =
+      ctx.verb === 'put' &&
+      ctx.iobj !== undefined &&
+      ctx.iobj.id === 'TROPHY-CASE';
+
+    if (isTake || isPutToCase) {
+      const trophyCase = ctx.world.get('TROPHY-CASE');
+      if (trophyCase !== undefined) {
+        ctx.recomputeTrophy(trophyCase);
+      }
+    }
+    return false; // RFALSE — never short-circuits subsequent chain steps
+  }
+
   return false;
 };
 

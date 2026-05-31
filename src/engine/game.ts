@@ -315,6 +315,7 @@ export class Game {
           perResolver: (routineName, here) => this.resolvePer(routineName, here, tell),
           mlookRunner: (room) => this.runMLook(room),
           rng: this.rng,
+          scoreObj: (obj) => this.scoring.scoreObj(obj),
         }, cmd.action);
 
         // A handler may have printed something even while falling through
@@ -445,6 +446,8 @@ export class Game {
       clearFlag: (obj, flag) => obj.clear(flag),
       moveTo: (obj, dest) => obj.moveTo(dest),
       score: (delta) => this.scoring.add(delta),
+      scoreObj: (obj) => this.scoring.scoreObj(obj),
+      recomputeTrophy: (trophyCase) => this.scoring.recomputeTrophy(trophyCase),
       enableClock: (id) => this.clock.enable(id),
       disableClock: (id) => this.clock.disable(id),
       /**
@@ -680,6 +683,16 @@ export class Game {
   private emitRoomEntered(roomId: ObjectId): void {
     const firstVisit = !this.visited.has(roomId);
     this.visited.add(roomId);
+    // First-visit room VALUE award (SCORE-OBJ applied to the room object).
+    // ZIL: room M-BEG / first-visit logic calls SCORE-OBJ(HERE) on first entry.
+    // We apply it here — after the room is confirmed as first-visit — using the
+    // same SCORE-OBJ mechanism as object pickups (VALUE zeroed after award).
+    if (firstVisit) {
+      const room = this.world.get(roomId);
+      if (room !== undefined) {
+        this.scoring.scoreObj(room);
+      }
+    }
     this.events.emit({ type: 'room-entered', room: roomId, firstVisit });
   }
 }

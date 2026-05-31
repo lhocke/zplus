@@ -51,6 +51,11 @@ export interface VerbContext {
    * Accepts any object with a `next()` method (duck-typed).
    */
   readonly rng?: PickRng;
+  /**
+   * Award the one-time VALUE of an object and zero it — ZIL SCORE-OBJ.
+   * Optional: only supplied by game.ts; test callers may omit it.
+   */
+  readonly scoreObj?: (obj: GameObject) => void;
 }
 
 export interface VerbResult {
@@ -361,6 +366,13 @@ function verbTake(ctx: VerbContext): VerbResult {
   }
 
   item.moveTo(ctx.player);
+
+  // SCORE-OBJ: award the one-time pickup VALUE, then zero it so re-taking
+  // does not re-award (gverbs.zil:1959–1963 ITAKE calls SCORE-OBJ(PRSO)).
+  if (ctx.scoreObj !== undefined) {
+    ctx.scoreObj(item);
+  }
+
   return result('Taken.');
 }
 
