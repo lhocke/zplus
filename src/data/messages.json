@@ -1,0 +1,735 @@
+{
+  "_source": "Verbatim strings extracted from ZIL source (zil/gverbs.zil, zil/1actions.zil). Normalized per project rules: | → \\n, bare newline+indent → single space.",
+
+  "roomObjectListing": {
+    "_source": "gverbs.zil:1704 (DESCRIBE-OBJECT level-0 fallthrough)",
+    "thereIsA": "There is a ",
+    "hereS": " here.",
+    "providingLight": " (providing light)",
+    "containsHeader": "The %s contains:",
+    "sittingOnHeader": "Sitting on the %s is:",
+    "actorHoldsHeader": "The %s is holding:",
+    "youAreCarrying": "You are carrying:",
+    "yourTreasures": "Your collection of treasures consists of:"
+  },
+
+  "defaultVerbs": {
+    "vVerbose": {
+      "_source": "gverbs.zil:16",
+      "response": "Maximum verbosity."
+    },
+    "vBrief": {
+      "_source": "gverbs.zil:21",
+      "response": "Brief descriptions."
+    },
+    "vSuperBrief": {
+      "_source": "gverbs.zil:25",
+      "response": "Superbrief descriptions."
+    },
+    "vInventory": {
+      "_source": "gverbs.zil:31",
+      "emptyHanded": "You are empty-handed."
+    },
+    "vQuit": {
+      "_source": "gverbs.zil:58, 61",
+      "prompt": "Do you wish to leave the game? (Y is affirmative): ",
+      "declined": "Ok."
+    },
+    "vRestart": {
+      "_source": "gverbs.zil:65, 67",
+      "prompt": "Do you wish to restart? (Y is affirmative): ",
+      "restarting": "Restarting."
+    },
+    "finish": {
+      "_source": "gverbs.zil:38-41, 46, 49, 51, 68, 73, 76, 80",
+      "prompt": "Would you like to restart the game from the beginning, restore a saved game position, or end this session of the game?\n(Type RESTART, RESTORE, or QUIT):\n>",
+      "failed": "Failed.",
+      "ok": "Ok."
+    },
+    "vVerify": {
+      "_source": "gverbs.zil:124, 126, 128",
+      "verifying": "Verifying disk...",
+      "diskOk": "The disk is correct.",
+      "diskFailure": "** Disk Failure **"
+    },
+    "vAdvent": {
+      "_source": "gverbs.zil:154",
+      "response": "A hollow voice says \"Fool.\""
+    },
+    "vAlarm": {
+      "_source": "gverbs.zil:166, 168",
+      "actorAwake": "He's wide awake, or haven't you noticed...",
+      "notSleeping": "The %s isn't sleeping."
+    },
+    "vAnswer": {
+      "_source": "gverbs.zil:171",
+      "response": "Nobody seems to be awaiting your answer."
+    },
+    "vAttack": {
+      "_source": "gverbs.zil:178-179, 183, 185, 188",
+      "nonActor": "I've known strange people, but fighting a %s?",
+      "bareHands": "Trying to attack a %s with your bare hands is suicidal.",
+      "notHoldingWeapon": "You aren't even holding the %s.",
+      "notAWeapon": "Trying to attack the %s with a %s is suicidal."
+    },
+    "vBack": {
+      "_source": "gverbs.zil:196",
+      "response": "Sorry, my memory is poor. Please give a direction."
+    },
+    "vBlast": {
+      "_source": "gverbs.zil:199",
+      "response": "You can't blast anything by using words."
+    },
+    "preBoard": {
+      "_source": "gverbs.zil:211, 213, 221",
+      "mustBeOnGround": "The %s must be on the ground to be boarded.",
+      "alreadyInVehicle": "You are already in the %s!",
+      "noBoardingTheory": "You have a theory on how to board a %s, perhaps?"
+    },
+    "vBoard": {
+      "_source": "gverbs.zil:225",
+      "boarded": "You are now in the %s."
+    },
+    "vBrush": {
+      "_source": "gverbs.zil:234",
+      "response": "If you wish, but heaven only knows why."
+    },
+    "vBug": {
+      "_source": "gverbs.zil:237-238",
+      "response": "Bug? Not in a flawless program like this! (Cough, cough)."
+    },
+    "tellNoPrsi": {
+      "_source": "gverbs.zil:241",
+      "response": "You didn't say with what!"
+    },
+    "preBurn": {
+      "_source": "gverbs.zil:249",
+      "notAFlame": "With a %s??!?"
+    },
+    "vBurn": {
+      "_source": "gverbs.zil:262-267, 272, 274",
+      "burningHeldIn": "The %s catches fire. Unfortunately, you were in it at the time.",
+      "burningHeldHolding": "The %s catches fire. Unfortunately, you were holding it at the time.",
+      "consumed": "The %s catches fire and is consumed.",
+      "cantBurn": "You can't burn a %s."
+    },
+    "vChomp": {
+      "_source": "gverbs.zil:277",
+      "response": "Preposterous!"
+    },
+    "vClimbUp": {
+      "_source": "gverbs.zil:309-316, 323, 329, 332, 334",
+      "stairsDontLeadUp": "The %s doesn't lead upward.",
+      "stairsDontLeadDown": "The %s doesn't lead downward.",
+      "climbingWalls": "Climbing the walls is to no avail.",
+      "noClimbableTrees": "There are no climbable trees here.",
+      "cantGoThatWay": "You can't go that way.",
+      "cantDoThat": "You can't do that!"
+    },
+    "vClose": {
+      "_source": "gverbs.zil:339, 344, 346, 349, 353, 355, 357",
+      "notOpenable": "You must tell me how to do that to a %s.",
+      "alreadyClosed": "It is already closed.",
+      "closed": "Closed.",
+      "doorClosed": "The %s is now closed.",
+      "wentDark": "It is now pitch black.",
+      "cannotClose": "You cannot close that."
+    },
+    "vCommand": {
+      "_source": "gverbs.zil:361, 363",
+      "paysNoAttention": "The %s pays no attention.",
+      "notTalkable": "You cannot talk to that!"
+    },
+    "vCount": {
+      "_source": "gverbs.zil:367, 369",
+      "blessings": "Well, for one, you are playing Zork...",
+      "generic": "You have lost your mind."
+    },
+    "vCross": {
+      "_source": "gverbs.zil:372",
+      "response": "You can't cross that!"
+    },
+    "vCurses": {
+      "_source": "gverbs.zil:377, 379, 381-382",
+      "actor": "Insults of this nature won't help you.",
+      "nonActor": "What a loony!",
+      "general": "Such language in a high-class establishment like this!"
+    },
+    "vCut": {
+      "_source": "gverbs.zil:391, 394-395, 397-398, 400",
+      "inTheBurnable": "Not a bright idea, especially since you're in it.",
+      "cutTheBurnable": "Your skillful %ssmanship slices the %s into innumerable slivers which blow away.",
+      "prsiNotAWeapon": "The \"cutting edge\" of a %s is hardly adequate.",
+      "strangeConcept": "Strange concept, cutting the %s...."
+    },
+    "vDeflate": {
+      "_source": "gverbs.zil:403",
+      "response": "Come on, now!"
+    },
+    "vDig": {
+      "_source": "gverbs.zil:410-411, 414, 416",
+      "shovel": "There's no reason to be digging here.",
+      "withTool": "Digging with the %s is slow and tedious.",
+      "withNonTool": "Digging with a %s is silly."
+    },
+    "vDisembark": {
+      "_source": "gverbs.zil:424, 427, 431",
+      "notInIt": "You're not in that!",
+      "onFeetAgain": "You are on your own feet again.",
+      "fatalExit": "You realize that getting out here would be fatal."
+    },
+    "vDrinkFrom": {
+      "_source": "gverbs.zil:472",
+      "response": "How peculiar!"
+    },
+    "vDrop": {
+      "_source": "gverbs.zil:481",
+      "dropped": "Dropped."
+    },
+    "vEat": {
+      "_source": "gverbs.zil:488-491, 503-504, 507-508, 510-511, 515-516",
+      "notHoldingFood": "You're not holding that.",
+      "cantDrinkSolid": "How can you drink that?",
+      "foodEaten": "Thank you very much. It really hit the spot.",
+      "noWater": "There isn't any water here.",
+      "mustHoldContainer": "You have to be holding the %s first.",
+      "containerNotOpen": "You'll have to open the %s first.",
+      "notEdible": "I don't think that the %s would agree with you."
+    },
+    "hitSpot": {
+      "_source": "gverbs.zil:522-524",
+      "waterDrunk": "Thank you very much. I was rather thirsty (from all this talking, probably)."
+    },
+    "vExamine": {
+      "_source": "gverbs.zil:630",
+      "nothingSpecial": "There's nothing special about the %s."
+    },
+    "vExorcise": {
+      "_source": "gverbs.zil:644",
+      "response": "What a bizarre concept!"
+    },
+    "vFill": {
+      "_source": "gverbs.zil:656, 673, 675",
+      "nothingToFillWith": "There's nothing to fill it with.",
+      "nothingToFillWithPre": "There is nothing to fill it with.",
+      "dontKnowHow": "You may know how to do that, but I don't."
+    },
+    "vFind": {
+      "_source": "gverbs.zil:680-681, 683, 685, 687, 691, 693, 695, 697, 699",
+      "handsLungs": "Within six feet of your head, assuming you haven't left that somewhere.",
+      "yourself": "You're around here somewhere...",
+      "inGlobalObjects": "You find it.",
+      "inInventory": "You have it.",
+      "rightHere": "It's right here.",
+      "actorHasIt": "The %s has it.",
+      "onSurface": "It's on the %s.",
+      "inContainer": "It's in the %s.",
+      "beatsMe": "Beats me."
+    },
+    "vFollow": {
+      "_source": "gverbs.zil:702",
+      "response": "You're nuts!"
+    },
+    "vFrobozz": {
+      "_source": "gverbs.zil:705-706",
+      "response": "The FROBOZZ Corporation created, owns, and operates this dungeon."
+    },
+    "preGive": {
+      "_source": "gverbs.zil:710-711",
+      "notHoldingIt": "That's easy for you to say since you don't even have the %s."
+    },
+    "vGive": {
+      "_source": "gverbs.zil:715, 717",
+      "prsiNotActor": "You can't give a %s to a %s!",
+      "refusesPolitely": "The %s refuses it politely."
+    },
+    "vHatch": {
+      "_source": "gverbs.zil:720",
+      "response": "Bizarre!"
+    },
+    "vHello": {
+      "_source": "gverbs.zil:728, 731-732",
+      "actorBows": "The %s bows his head to you in greeting.",
+      "nonActor": "It's a well known fact that only schizophrenics say \"Hello\" to a %s."
+    },
+    "vInflate": {
+      "_source": "gverbs.zil:758",
+      "response": "How can you inflate that?"
+    },
+    "vKiss": {
+      "_source": "gverbs.zil:763",
+      "response": "I'd sooner kiss a pig."
+    },
+    "vKnock": {
+      "_source": "gverbs.zil:767, 769",
+      "door": "Nobody's home.",
+      "nonDoor": "Why knock on a %s?"
+    },
+    "vLampOff": {
+      "_source": "gverbs.zil:774, 779, 781, 783",
+      "alreadyOff": "It is already off.",
+      "turnedOff": "The %s is now off.",
+      "pitchBlack": "It is now pitch black.",
+      "cantTurnOff": "You can't turn that off."
+    },
+    "vLampOn": {
+      "_source": "gverbs.zil:789, 792, 798-799, 801",
+      "alreadyOn": "It is already on.",
+      "turnedOn": "The %s is now on.",
+      "suggestBurn": "If you wish to burn the %s, you should say so.",
+      "cantTurnOn": "You can't turn that on."
+    },
+    "vLaunch": {
+      "_source": "gverbs.zil:806, 808",
+      "vehicle": "You can't launch that by saying \"launch\"!",
+      "nonVehicle": "That's pretty weird."
+    },
+    "vLeanOn": {
+      "_source": "gverbs.zil:811",
+      "response": "Getting tired?"
+    },
+    "vLeap": {
+      "_source": "gverbs.zil:818, 822, 828-829, 834-835",
+      "actorTooBig": "The %s is too big to jump over.",
+      "goodTrick": "That would be a good trick.",
+      "unsafeJump": "This was not a very safe place to try jumping.",
+      "upATreeDaring": "In a feat of unaccustomed daring, you manage to land on your feet without killing yourself."
+    },
+    "vListen": {
+      "_source": "gverbs.zil:853",
+      "response": "The %s makes no sound."
+    },
+    "vLock": {
+      "_source": "gverbs.zil:856",
+      "response": "It doesn't seem to work."
+    },
+    "vLookBehind": {
+      "_source": "gverbs.zil:863",
+      "response": "There is nothing behind the %s."
+    },
+    "vLookInside": {
+      "_source": "gverbs.zil:868-869, 871, 875, 886, 888, 890",
+      "doorOpen": "The %s is open, but I can't tell what's beyond it.",
+      "doorClosed": "The %s is closed.",
+      "nothingSpecialInside": "There is nothing special to be seen.",
+      "containerEmpty": "The %s is empty.",
+      "containerClosed": "The %s is closed.",
+      "cantLookInside": "You can't look inside a %s."
+    },
+    "vLookOn": {
+      "_source": "gverbs.zil:897",
+      "notASurface": "Look on a %s???"
+    },
+    "vLookUnder": {
+      "_source": "gverbs.zil:900",
+      "response": "There is nothing but dust there."
+    },
+    "vMake": {
+      "_source": "gverbs.zil:905",
+      "response": "You can't do that."
+    },
+    "vMelt": {
+      "_source": "gverbs.zil:908",
+      "response": "It's not clear that a %s can be melted."
+    },
+    "preMove": {
+      "_source": "gverbs.zil:912",
+      "holdingIt": "You aren't an accomplished enough juggler."
+    },
+    "vMove": {
+      "_source": "gverbs.zil:916, 918",
+      "nothingRevealed": "Moving the %s reveals nothing.",
+      "notMoveable": "You can't move the %s."
+    },
+    "vMumble": {
+      "_source": "gverbs.zil:921",
+      "response": "You'll have to speak up if you expect me to hear you!"
+    },
+    "preMung": {
+      "_source": "gverbs.zil:931-936",
+      "bareHands": "Trying to destroy the %s with your bare hands is futile.",
+      "withNonWeapon": "Trying to destroy the %s with a %s is futile."
+    },
+    "vMung": {
+      "_source": "gverbs.zil:943",
+      "nonActor": "Nice try."
+    },
+    "vOil": {
+      "_source": "gverbs.zil:964",
+      "response": "You probably put spinach in your gas tank, too."
+    },
+    "vOpen": {
+      "_source": "gverbs.zil:970, 975, 980, 983-985, 987, 990, 993-994",
+      "notOpenable": "You must tell me how to do that to a %s.",
+      "alreadyOpen": "It is already open.",
+      "opened": "Opened.",
+      "opens": "The %s opens.",
+      "opensRevealing": "Opening the %s reveals %s."
+    },
+    "vOverboard": {
+      "_source": "gverbs.zil:1001, 1003, 1009",
+      "overTheSide": "Ahoy -- %s overboard!",
+      "notInVehicle": "You're not in anything!",
+      "huh": "Huh?"
+    },
+    "vPick": {
+      "_source": "gverbs.zil:1011",
+      "response": "You can't pick that."
+    },
+    "vPlug": {
+      "_source": "gverbs.zil:1022",
+      "response": "This has no effect."
+    },
+    "vPourOn": {
+      "_source": "gverbs.zil:1028, 1036-1037, 1044",
+      "extinguished": "The %s is extinguished.",
+      "waterSpills": "The water spills over the %s, to the floor, and evaporates.",
+      "cantPour": "You can't pour that."
+    },
+    "vPray": {
+      "_source": "gverbs.zil:1053-1054",
+      "response": "If you pray enough, your prayers may be answered."
+    },
+    "vPump": {
+      "_source": "gverbs.zil:1059, 1068",
+      "wrongPumpTool": "Pump it up with a %s?",
+      "cantFigureHow": "It's really not clear how."
+    },
+    "vPushTo": {
+      "_source": "gverbs.zil:1073",
+      "response": "You can't push things to that."
+    },
+    "vPut": {
+      "_source": "gverbs.zil:1090, 1093, 1096, 1098, 1102, 1105, 1114",
+      "cantDoThat": "You can't do that.",
+      "notOpen": "The %s isn't open.",
+      "how": "How can you do that?",
+      "alreadyIn": "The %s is already in the %s.",
+      "noRoom": "There's no room.",
+      "dontHaveIt": "You don't have the %s.",
+      "done": "Done."
+    },
+    "vPutBehind": {
+      "_source": "gverbs.zil:1117",
+      "response": "That hiding place is too obvious."
+    },
+    "vPutOn": {
+      "_source": "gverbs.zil:1126",
+      "noSurface": "There's no good surface on the %s."
+    },
+    "vPutUnder": {
+      "_source": "gverbs.zil:1129",
+      "response": "You can't do that."
+    },
+    "vRape": {
+      "_source": "gverbs.zil:1135",
+      "response": "What a (ahem!) strange idea."
+    },
+    "preRead": {
+      "_source": "gverbs.zil:1139, 1141",
+      "dark": "It is impossible to read in the dark.",
+      "cantReadThroughOpaque": "How does one look through a %s?"
+    },
+    "vRead": {
+      "_source": "gverbs.zil:1145",
+      "notReadable": "How does one read a %s?"
+    },
+    "vRepent": {
+      "_source": "gverbs.zil:1154",
+      "response": "It could very well be too late!"
+    },
+    "vReply": {
+      "_source": "gverbs.zil:1157",
+      "response": "It is hardly likely that the %s is interested."
+    },
+    "vRing": {
+      "_source": "gverbs.zil:1163",
+      "response": "How, exactly, can you ring that?"
+    },
+    "vSay": {
+      "_source": "gverbs.zil:1185, 1189, 1193-1194",
+      "sayWhat": "Say what?",
+      "actorNearby": "You must address the %s directly.",
+      "talkingToSelf": "Talking to yourself is a sign of impending mental collapse."
+    },
+    "vSearch": {
+      "_source": "gverbs.zil:1198",
+      "response": "You find nothing unusual."
+    },
+    "vSend": {
+      "_source": "gverbs.zil:1202, 1204",
+      "actor": "Why would you send for the %s?",
+      "nonActor": "That doesn't make sends."
+    },
+    "vShake": {
+      "_source": "gverbs.zil:1215, 1217, 1222-1230, 1232, 1236, 1238, 1240",
+      "actor": "This seems to have no effect.",
+      "cantTakeIt": "You can't take it; thus, you can't shake it!",
+      "openContainerSpills": "The contents of the %s spill to the ground.",
+      "soundsLikeSomethingInside": "It sounds like there is something inside the %s.",
+      "soundsEmpty": "The %s sounds empty.",
+      "shaken": "Shaken."
+    },
+    "vSmell": {
+      "_source": "gverbs.zil:1279",
+      "response": "It smells like a %s."
+    },
+    "vSpin": {
+      "_source": "gverbs.zil:1282",
+      "response": "You can't spin that!"
+    },
+    "vSqueeze": {
+      "_source": "gverbs.zil:1289, 1291",
+      "actor": "The %s does not understand this.",
+      "nonActor": "How singularly useless."
+    },
+    "vStab": {
+      "_source": "gverbs.zil:1302-1303",
+      "noWeapon": "No doubt you propose to stab the %s with your pinky?"
+    },
+    "vStand": {
+      "_source": "gverbs.zil:1310",
+      "alreadyStanding": "You are already standing, I think."
+    },
+    "vStay": {
+      "_source": "gverbs.zil:1313",
+      "response": "You will be lost without me!"
+    },
+    "vStrike": {
+      "_source": "gverbs.zil:1318-1319",
+      "actorNoWeapon": "Since you aren't versed in hand-to-hand combat, you'd better attack the %s with a weapon."
+    },
+    "vSwim": {
+      "_source": "gverbs.zil:1331-1333, 1345",
+      "inDungeon": "Swimming isn't usually allowed in the dungeon.",
+      "generic": "Go jump in a lake!"
+    },
+    "vSwing": {
+      "_source": "gverbs.zil:1349",
+      "noIobj": "Whoosh!"
+    },
+    "preTake": {
+      "_source": "gverbs.zil:1356, 1358, 1362-1363, 1375, 1380",
+      "alreadyWearing": "You are already wearing it.",
+      "alreadyHaveIt": "You already have that!",
+      "inClosedContainer": "You can't reach something that's inside a closed container.",
+      "notInThat": "The %s isn't in the %s.",
+      "insideIt": "You're inside of it!"
+    },
+    "vTake": {
+      "_source": "gverbs.zil:1385, 1387",
+      "takenWearing": "You are now wearing the %s.",
+      "taken": "Taken."
+    },
+    "vTell": {
+      "_source": "gverbs.zil:1395-1397, 1399",
+      "actorNoContinuation": "The %s pauses for a moment, perhaps thinking that you should reread the manual.",
+      "nonActor": "You can't talk to the %s!"
+    },
+    "vThrow": {
+      "_source": "gverbs.zil:1448-1459",
+      "thrownAtSelf": "A terrific throw! The %s hits you squarely in the head. Normally, this wouldn't do much damage, but by incredible mischance, you fall over backwards trying to duck, and break your neck, justice being swift and merciful in the Great Underground Empire.",
+      "actorDucks": "The %s ducks as the %s flies by and crashes to the ground.",
+      "thrown": "Thrown.",
+      "notCarrying": "Huh?"
+    },
+    "vThrowOff": {
+      "_source": "gverbs.zil:1463",
+      "response": "You can't throw anything off of that!"
+    },
+    "vTie": {
+      "_source": "gverbs.zil:1467, 1469",
+      "toSelf": "You can't tie anything to yourself.",
+      "toOther": "You can't tie the %s to that."
+    },
+    "vTieUp": {
+      "_source": "gverbs.zil:1472",
+      "response": "You could certainly never tie it with that!"
+    },
+    "vTurn": {
+      "_source": "gverbs.zil:1501, 1503, 1506",
+      "noInstrument": "Your bare hands don't appear to be enough.",
+      "cantTurn": "You can't turn that!",
+      "noEffect": "This has no effect."
+    },
+    "vUntie": {
+      "_source": "gverbs.zil:1512",
+      "response": "This cannot be tied, so it cannot be untied!"
+    },
+    "vWait": {
+      "_source": "gverbs.zil:1515",
+      "timePasses": "Time passes..."
+    },
+    "vWalk": {
+      "_source": "gverbs.zil:1548, 1557, 1565-1567, 1577-1578, 1580",
+      "cantGoThatWay": "You can't go that way.",
+      "doorClosed": "The %s is closed.",
+      "movedIntoDark": "You have moved into a dark place.",
+      "grueNoSpray": "Oh, no! You have walked into the slavering fangs of a lurking grue!",
+      "grueSpray": "There are odd noises in the darkness, and there is no exit in that direction."
+    },
+    "vWalkAround": {
+      "_source": "gverbs.zil:1584",
+      "response": "Use compass directions for movement."
+    },
+    "vWalkTo": {
+      "_source": "gverbs.zil:1590, 1592",
+      "itsHere": "It's here!",
+      "supplyDirection": "You should supply a direction!"
+    },
+    "vWear": {
+      "_source": "gverbs.zil:1599",
+      "cantWear": "You can't wear the %s."
+    },
+    "vWin": {
+      "_source": "gverbs.zil:1605",
+      "response": "Naturally!"
+    },
+    "vWind": {
+      "_source": "gverbs.zil:1608",
+      "response": "You cannot wind up a %s."
+    },
+    "vWish": {
+      "_source": "gverbs.zil:1614",
+      "response": "With luck, your wish will come true."
+    },
+    "vYell": {
+      "_source": "gverbs.zil:1616",
+      "response": "Aaaarrrrgggghhhh!"
+    },
+    "vZork": {
+      "_source": "gverbs.zil:1618",
+      "response": "At your service!"
+    },
+    "describeRoom": {
+      "_source": "gverbs.zil:1638-1640, 1686",
+      "darkNoSpray": "It is pitch black. You are likely to be eaten by a grue.",
+      "darkSprayed": "It is pitch black.",
+      "objectsDark": "Only bats can see in the dark. And you're not one."
+    },
+    "goto": {
+      "_source": "gverbs.zil:2041, 2043, 2100-2115, 2119",
+      "cantGoInVehicle": "You can't go there in a %s.",
+      "cantGoWithoutVehicle": "You can't go there without a vehicle.",
+      "darkPlaceEntered": "You have moved into a dark place.",
+      "grueSlitherRoom": "Oh, no! A lurking grue slithered into the room and devoured you!",
+      "grueSlitherVehicle": "Oh, no! A lurking grue slithered into the %s and devoured you!",
+      "sinisterDark": "There are sinister gurgling noises in the darkness all around you!"
+    },
+    "itake": {
+      "_source": "gverbs.zil:1905-1906, 1934-1936, 1944-1945",
+      "deadHands": "Your hand passes through its object.",
+      "loadTooHeavyNormal": "Your load is too heavy.",
+      "loadTooHeavyInjured": "Your load is too heavy, especially in light of your condition.",
+      "tooManyThings": "You're holding too many things already!"
+    },
+    "idrop": {
+      "_source": "gverbs.zil:1969, 1973",
+      "notCarrying": "You're not carrying the %s.",
+      "closedContainer": "The %s is closed."
+    },
+    "hackHack": {
+      "_source": "gverbs.zil:2027",
+      "notHere": "The %s isn't here!"
+    },
+    "scoreUpd": {
+      "_source": "gverbs.zil:1861-1862",
+      "whisper": "An almost inaudible voice whispers in your ear, \"Look to your treasures for the final secret.\""
+    }
+  },
+
+  "randomTables": {
+    "yuks": {
+      "_source": "gverbs.zil:2204-2211 (ITAKE non-takeable pick, V-TAKE via PICK-ONE)",
+      "entries": [
+        "A valiant attempt.",
+        "You can't be serious.",
+        "An interesting idea...",
+        "What a concept!"
+      ]
+    },
+    "dummy": {
+      "_source": "gverbs.zil:2213-2216 (OPEN-CLOSE already-done case via PICK-ONE)",
+      "entries": [
+        "Look around.",
+        "Too late for that.",
+        "Have your eyes checked."
+      ]
+    },
+    "hoHum": {
+      "_source": "gverbs.zil:2031-2036 (HACK-HACK HO-HUM suffix via PICK-ONE)",
+      "entries": [
+        " doesn't seem to work.",
+        " isn't notably helpful.",
+        " has no effect."
+      ]
+    },
+    "hellos": {
+      "_source": "gverbs.zil:2199-2202 (V-HELLO random hellos via PICK-ONE)",
+      "entries": [
+        "Hello.",
+        "Good day.",
+        "Nice weather we've been having lately.",
+        "Goodbye."
+      ]
+    },
+    "jumploss": {
+      "_source": "gverbs.zil:844-848 (V-LEAP/V-SKIP fall-to-ground via PICK-ONE)",
+      "entries": [
+        "You should have looked before you leaped.",
+        "In the movies, your life would be passing before your eyes.",
+        "Geronimo..."
+      ]
+    },
+    "wheeeee": {
+      "_source": "gverbs.zil:1272-1276 (V-LEAP/V-SKIP safe jump via PICK-ONE)",
+      "entries": [
+        "Very good. Now you can go to the second grade.",
+        "Are you enjoying yourself?",
+        "Wheeeeeeeeee!!!!!",
+        "Do you expect me to applaud?"
+      ]
+    }
+  },
+
+  "parserMessages": {
+    "_source": "gparser.zil, gmain.zil",
+    "emptyInput": "I beg your pardon?",
+    "oopsClumsy": "I can't help your clumsiness.",
+    "oopsQuotedText": "Sorry, you can't correct mistakes in quoted text.",
+    "oopsFirstWord": "Warning: only the first word after OOPS is used.",
+    "oopsNoWord": "There was no word to replace!",
+    "againBegPardon": "Beg pardon?",
+    "againDifficult": "It's difficult to repeat fragments.",
+    "againRepeatMistake": "That would just repeat a mistake.",
+    "againCouldntUnderstand": "I couldn't understand that sentence.",
+    "tooManyNouns": "There were too many nouns in that sentence.",
+    "unknownWord": "I don't know the word \"%s\".",
+    "cantUseWord": "You used the word \"%s\" in a way that I don't understand.",
+    "noVerb": "There was no verb in that sentence!",
+    "unrecognizedSentence": "That sentence isn't one I recognize.",
+    "orphanPrompt": "What do you want to %s %s?",
+    "actorCantOrphan": "\"I don't understand! What are you referring to?\"",
+    "multipleDirectObjects": "You can't use multiple direct objects with \"%s\".",
+    "multipleIndirectObjects": "You can't use multiple indirect objects with \"%s\".",
+    "nounMissing": "There seems to be a noun missing in that sentence!",
+    "tooDarkToSeeParser": "It's too dark to see!",
+    "randomOnePick": "(How about the %s?)",
+    "disambiguation": "Which %s do you mean, the %s, or the %s?",
+    "prompt": ">",
+    "gwimAutoTake": "(taken from %s %s)",
+    "itakeCheckAutoTake": "(Taken)",
+    "dontSeeReferring": "I don't see what you're referring to.",
+    "dontHaveThat": "You don't have that!",
+    "dontHaveThe": "You don't have the %s.",
+    "pleaseConsultManual": "Please consult your manual for the correct way to talk to other people or creatures.",
+    "tooDarkToSeeVerb": "It's too dark to see.",
+    "notClearReferring": "It's not clear what you're referring to.",
+    "nothingHereToTake": "There's nothing here you can take.",
+    "objectNotHereSingular": "The object that you mentioned isn't here.",
+    "objectNotHerePlural": "The objects that you mentioned aren't here.",
+    "otherObjectNotHereSingular": "The other object that you mentioned isn't here.",
+    "otherObjectNotHerePlural": "The other objects that you mentioned aren't here.",
+    "itNotAccessible": "I don't see what you are referring to."
+  }
+}
