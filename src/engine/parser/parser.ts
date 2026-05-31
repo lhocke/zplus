@@ -78,7 +78,7 @@ import {
   normalizePrep,
 } from './vocabulary.js';
 import { gwim, ROOMS_SENTINEL } from './gwim.js';
-import { SMANY, STAKE, SHAVE, SOG, SIR, SH, SC } from './scope-bits.js';
+import { SMANY, STAKE, SHAVE, SOG, SIR, SH, SC, SRCTOP } from './scope-bits.js';
 
 // ---------------------------------------------------------------------------
 // C3 SYNTAX-CHECK replaces the Wave-B static preAction maps.
@@ -1381,8 +1381,87 @@ export class Parser {
     // For TAKE (dobjLocBits=52=SOG|SIR|SMANY):
     //   Room search finds room objects (SOG bit set); inventory search finds none
     //   (no SH/SC bit). Room results > 0 → GLOBAL-CHECK does not fire.
-    //   With ALL: collect all room objects, filtered by Flag.Takeable.
+    //   Stage-1 collection uses SRCTOP container descent (descend only into
+    //   Searchable/Surface children), so objects inside plain open/transparent
+    //   containers (e.g. water inside the bottle) are excluded (A2 fix).
+    //   Stage-2 gate: include objects with Takeable OR TryTake (not just
+    //   Takeable), so rug/trophy-case are reported with their refusal lines (A1).
     // ---------------------------------------------------------------------------
+
+    // ---------------------------------------------------------------------------
+    // A2: collectRoomTierSRCTOP — Stage-1 ALL collection with SRCTOP descent.
+    //
+    // ZIL room-level SEARCH-LIST for ALL uses P-SRCTOP (gparser.zil:1223-1228):
+    // descend into a child container only if it has SEARCHBIT or SURFACEBIT.
+    // Plain open/transparent containers (bottle, mailbox) are NOT descended.
+    //
+    // A4: Iterate in canonical ZIL FIRST?/NEXT? order = reverse of JS Set
+    // insertion order (most recently inserted child appears first in FIRST?).
+    //
+    // Returns ids in canonical order; excludes the player.
+    // ---------------------------------------------------------------------------
+    function collectRoomTierSRCTOP(): GameObject[] {
+      // A2: Stage-1 ALL collection with SRCTOP container descent.
+      // ZIL room-level SEARCH-LIST for ALL uses P-SRCTOP (gparser.zil:1223-1228):
+      // descend into a child container only if it has SEARCHBIT or SURFACEBIT.
+      // Plain open/transparent containers (bottle, mailbox) are NOT descended.
+      //
+      // A4: Walk room.children in reverse insertion order (ZIL FIRST?/NEXT? order).
+      // JS Set preserves insertion order; FIRST? returns the most-recently-added
+      // child first, so canonical ZIL order = reverse of JS insertion order.
+      const result: GameObject[] = [];
+      const seenIds = new Set<string>();
+
+      function walkSRCTOP(root: GameObject, level: number): void {
+        // Iterate in reverse insertion order at ALL levels — ZIL FIRST?/NEXT?
+        // returns the most-recently-added child first at every container level.
+        // JS Set insertion order is oldest-first, so reversing gives ZIL order.
+        const childArray = [...root.children].reverse();
+        for (const child of childArray) {
+          if (player !== null && child === player) continue;
+          // Collect this child if it has synonyms (the "any-noun" thisItQ path).
+          // Objects with no synonyms (pure containers, rooms) are not collected.
+          if (child.synonyms.length > 0 && !seenIds.has(child.id)) {
+            seenIds.add(child.id);
+            result.push(child);
+          }
+          // Recurse: at SRCTOP only into Searchable/Surface containers.
+          // (gparser.zil:1223-1228)
+          const canDescend =
+            (level !== SRCTOP || child.has(Flag.Searchable) || child.has(Flag.Surface)) &&
+            child.children.size > 0 &&
+            (child.has(Flag.Open) || child.has(Flag.Transparent));
+          if (canDescend) {
+            const childLevel = child.has(Flag.Surface) || child.has(Flag.Searchable)
+              ? 1 // SRCALL — surface/searchable containers use full descent
+              : SRCTOP;
+            walkSRCTOP(child, childLevel);
+          }
+        }
+      }
+
+      walkSRCTOP(room, SRCTOP);
+
+      // A2 post-collection filter: exclude objects whose parent container has
+      // neither Searchable nor Surface (equivalently: objects inside plain
+      // open/transparent containers should not be in the ALL set).
+      //
+      // ZIL SRCTOP only descends into SEARCHBIT/SURFACEBIT containers. In our
+      // data, BOTTLE is mapped to Transparent (not Searchable), so walkSRCTOP
+      // at SRCALL inside a Surface container (KITCHEN-TABLE) incorrectly
+      // descends into BOTTLE and collects WATER. The filter corrects this:
+      // WATER's parent is BOTTLE (no Searchable, no Surface) → excluded.
+      // Objects whose parent IS Searchable/Surface (e.g. items on the kitchen
+      // table itself, items in the trophy case) are kept.
+      // Objects whose parent is a Room or the player are also kept (top-level).
+      return result.filter(obj => {
+        const par = obj.parent;
+        if (par === null || par === undefined) return true;  // parentless: keep
+        if (par === room || par === player) return true;    // top-level room child: keep
+        // Parent is some container/object: keep only if Searchable or Surface.
+        return par.has(Flag.Searchable) || par.has(Flag.Surface);
+      });
+    }
 
     function collectByLocBits(bits: number): GameObject[] {
       if (snap === undefined) {
@@ -1399,8 +1478,10 @@ export class Parser {
       };
 
       // Tier 1: room contents (SOG or SIR bit set)
+      // A2+A4: use SRCTOP walk in canonical order for room tier (not snap.roomTier
+      // which uses SRCALL and insertion order).
       if (bits & SOG || bits & SIR) {
-        for (const c of snap.roomTier) add(c.obj);
+        for (const o of collectRoomTierSRCTOP()) add(o);
       }
       // Tier 2: inventory (SH or SC bit set)
       if (bits & SH || bits & SC) {
@@ -1478,9 +1559,13 @@ export class Parser {
     } else {
       // All other SMANY verbs (TAKE, EXAMINE, etc.): use locBits-faithful search.
       const pool = collectByLocBits(dobjLocBits).filter(o => !o.has(Flag.Invisible));
-      // For TAKE: additionally require Flag.Takeable.
+      // A1: For TAKE, gate by Takeable OR TryTake (gmain.zil:137-138).
+      // ZIL MAIN-LOOP-1 silently skips objects with NEITHER TAKEBIT NOR TRYTAKEBIT;
+      // objects with only TRYTAKEBIT (rug, trophy case) are reported with their
+      // refusal lines (their ACTION handler returns the message then RTRUE).
+      // The old filter (Takeable only) dropped TRYTAKEBIT-only objects — fixed here.
       candidates = canonical === 'take'
-        ? pool.filter(o => o.has(Flag.Takeable))
+        ? pool.filter(o => o.has(Flag.Takeable) || o.has(Flag.TryTake))
         : pool;
     }
 

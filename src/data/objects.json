@@ -2592,5 +2592,31 @@
     "fdesc": "There is a golden clockwork canary nestled in the egg. It seems to have recently had a bad experience. The mountings for its jewel-like eyes are empty, and its silver beak is crumpled. Through a cracked crystal window below its left wing you can see the remains of intricate machinery. It is not clear what result winding it would have, as the mainspring seems sprung.",
     "parent": "BROKEN-EGG",
     "actionRoutine": "CANARY-OBJECT"
+  },
+  {
+    "id": "STAIRS",
+    "kind": "thing",
+    "desc": "stairs",
+    "flags": [
+      "NonDescript",
+      "Climbable"
+    ],
+    "props": {},
+    "synonyms": [
+      "STAIRS",
+      "STEPS",
+      "STAIRCASE",
+      "STAIRWAY"
+    ],
+    "adjectives": [
+      "STONE",
+      "DARK",
+      "MARBLE",
+      "FORBIDDING",
+      "STEEP"
+    ],
+    "ldesc": "There's nothing special about the stairs.",
+    "parent": null,
+    "actionRoutine": "STAIRS-F"
   }
 ]

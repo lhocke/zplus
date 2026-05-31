@@ -552,3 +552,112 @@ describe('C6 integration via Game.turn', () => {
     expect(result.output).not.toContain('trophy case');
   });
 });
+
+// ---------------------------------------------------------------------------
+// C6-FIX oracle-backed tests — verified against dfrotz R119
+// Fixes: A1 (TryTake gate), A2 (SRCTOP descent), A3 (STAIRS object), A4 (order)
+// ---------------------------------------------------------------------------
+
+describe('C6-FIX oracle: "take all" in LIVING-ROOM', () => {
+  // dfrotz oracle (LIVING-ROOM, no prior commands):
+  //   sword: Taken.
+  //   brass lantern: Taken.
+  //   carpet: The rug is extremely heavy and cannot be carried.
+  //   trophy case: The trophy case is securely fastened to the wall.
+
+  it('A1+A4: TryTake objects (rug, trophy case) are reported with refusal lines', async () => {
+    // A1 fix: gate is Takeable||TryTake, not just Takeable.
+    // RUG and TROPHY-CASE have TryTake only → they must appear with refusal lines.
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    game.start();
+    const result = game.turn('take all');
+    // Verbatim refusal lines from ZIL action handlers
+    expect(result.output).toContain('carpet: The rug is extremely heavy and cannot be carried.');
+    expect(result.output).toContain('trophy case: The trophy case is securely fastened to the wall.');
+  });
+
+  it('A1+A4: Takeable objects (sword, lantern) are taken', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    game.start();
+    const result = game.turn('take all');
+    expect(result.output).toContain('sword: Taken.');
+    expect(result.output).toContain('brass lantern: Taken.');
+  });
+
+  it('A4: objects appear in canonical ZIL FIRST?/NEXT? order', async () => {
+    // dfrotz order: sword, brass lantern, carpet, trophy case.
+    // (sword added last in ZIL → appears first via FIRST?; lantern before sword in JSON → appears second)
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    game.start();
+    const result = game.turn('take all');
+    // Full verbatim output matches oracle order
+    const expected =
+      'sword: Taken.\n' +
+      'brass lantern: Taken.\n' +
+      'carpet: The rug is extremely heavy and cannot be carried.\n' +
+      'trophy case: The trophy case is securely fastened to the wall.';
+    expect(result.output).toBe(expected);
+  });
+});
+
+describe('C6-FIX oracle: "take all" in KITCHEN', () => {
+  // dfrotz oracle (KITCHEN, no prior commands):
+  //   glass bottle: Taken.
+  //   brown sack: Taken.
+  //
+  // Water (inside the bottle) is NOT in the set — SRCTOP descent does not
+  // recurse into a plain Container/Transparent container (no Searchable/Surface).
+
+  it('A2: water is excluded (SRCTOP does not descend into plain open/transparent container)', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const game = createGame({ startRoom: 'KITCHEN' });
+    game.start();
+    const result = game.turn('take all');
+    // Water must NOT appear in take all output
+    expect(result.output).not.toContain('quantity of water');
+    expect(result.output).not.toContain("You can't reach");
+  });
+
+  it('A4: bottle and sack taken in canonical order (bottle before sack)', async () => {
+    // dfrotz order: glass bottle, then brown sack.
+    // (BOTTLE was inserted after SANDWICH-BAG in JSON → appears first via FIRST?)
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const game = createGame({ startRoom: 'KITCHEN' });
+    game.start();
+    const result = game.turn('take all');
+    const expected = 'glass bottle: Taken.\nbrown sack: Taken.';
+    expect(result.output).toBe(expected);
+  });
+});
+
+describe('C6-FIX oracle: "examine all" in LIVING-ROOM (A3 STAIRS)', () => {
+  // dfrotz oracle (LIVING-ROOM):
+  //   stairs: There's nothing special about the stairs.
+  //
+  // Before fix: STAIRS was missing from objects.json, so localGlobals for
+  // LIVING-ROOM was empty and GLOBAL-OBJECTS (teeth/walls) fell through.
+  // After fix: STAIRS exists → localGlobals non-empty → GLOBAL-OBJECTS suppressed.
+
+  it('A3: STAIRS object is found by examine all (not global-objects)', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    game.start();
+    const result = game.turn('examine all');
+    // STAIRS must appear, global-objects must not
+    expect(result.output).toContain('stairs:');
+    expect(result.output).not.toContain('set of teeth');
+    expect(result.output).not.toContain('granite wall');
+    expect(result.output).not.toContain('surrounding wall');
+  });
+
+  it('A3: examine all LIVING-ROOM verbatim output matches oracle', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    game.start();
+    const result = game.turn('examine all');
+    expect(result.output).toBe("stairs: There's nothing special about the stairs.");
+  });
+});
