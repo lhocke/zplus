@@ -26,8 +26,6 @@ import { World } from '../../src/domain/world.js';
 import { Room } from '../../src/domain/room.js';
 import { Actor } from '../../src/domain/actor.js';
 import { Flag } from '../../src/domain/flags.js';
-import { Clock } from '../../src/engine/clock.js';
-import { SimpleEventEmitter } from '../../src/engine/events.js';
 
 // ---------------------------------------------------------------------------
 // Verbatim expected strings — copied from messages.json / gverbs.zil
