@@ -946,7 +946,7 @@ export class Parser {
   ): ParseResult {
     const orphan = this.orphan!;
 
-    // ---- Disambiguation branch ------------------------------------------------
+    // Disambiguation branch
     if (orphan.disambig !== undefined) {
       const { noun: orphanNoun, candidates } = orphan.disambig;
 
@@ -997,7 +997,7 @@ export class Parser {
       return this.parse(tokens.join(' '), room, player, world);
     }
 
-    // ---- Missing-object branch ------------------------------------------------
+    // Missing-object branch
     const firstToken = tokens[0] ?? '';
 
     if (lookupVerb(firstToken) !== undefined) {
