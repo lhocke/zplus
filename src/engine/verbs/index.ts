@@ -11,7 +11,7 @@
  */
 
 import type { GameObject } from '../../domain/game-object.js';
-import type { Room } from '../../domain/room.js';
+import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
 
@@ -60,9 +60,190 @@ function result(output: string, moved = false): VerbResult {
   return { output, moved };
 }
 
+// --------------------------------------------------------------------------
+// DESCRIBE-OBJECTS model (gverbs.zil:1681–1836)
+//
+// Replaces the non-authentic "You can see: X, Y." listing with the ZIL-
+// faithful PRINT-CONT / DESCRIBE-OBJECT / FIRSTER algorithm.
+//
+// The three functions below emit via a `tell` callback rather than returning
+// strings — matching the ZIL TELL model — so output ordering is preserved
+// when containers are recursed.
+// --------------------------------------------------------------------------
+
 /**
- * Produce the room description string: name, ldesc/M-LOOK, and a list of
- * visible items on the floor (non-player, non-invisible direct children).
+ * SEE-INSIDE? (gverbs.zil:1837) — a container's contents are visible only
+ * when the container is OPEN (OPENBIT) or TRANSPARENT (TRANSBIT).
+ */
+function seeInside(obj: GameObject): boolean {
+  return obj.has(Flag.Transparent) || obj.has(Flag.Open);
+}
+
+/**
+ * FIRSTER (gverbs.zil:1818) — print the header line before the first
+ * DESCRIBE-OBJECT item in a container's pass-2 listing.
+ *
+ * At room level (OBJ is a Room), FIRSTER is effectively a no-op — rooms
+ * do not get a "X contains:" header.  Only non-room containers get headers.
+ * The player inventory case ("You are carrying:") is handled by V-INVENTORY
+ * (verbInventory) directly; FIRSTER here covers the room-object case only.
+ */
+function firster(obj: GameObject, level: number, tell: (s: string) => void): void {
+  // Player carrying case is handled by verbInventory, not here.
+  // Room case: no header (rooms are not printed as containers).
+  if (obj instanceof Room) return;
+
+  // Non-room containers: indent if level > 0, then print container header.
+  const indent = level > 0 ? '  '.repeat(level) : '';
+
+  if (obj.has(Flag.Surface)) {
+    tell(`${indent}On the ${obj.desc} is:`);
+  } else if (obj.has(Flag.Actor)) {
+    tell(`${indent}The ${obj.desc} is holding:`);
+  } else {
+    tell(`${indent}The ${obj.desc} contains:`);
+  }
+}
+
+/**
+ * DESCRIBE-OBJECT (gverbs.zil:1693) — emit one object's description.
+ *
+ * At level 0 (direct room child): use FDESC if untouched, else LDESC, else
+ * the "There is a <desc> here." fallback.
+ *
+ * At level > 0 (nested inside a container): print the INDENTS[level] prefix
+ * followed by "A <desc>" (ZIL: INDENTS[1] = "  ", INDENTS[2] = "    ", …).
+ *
+ * After printing, if SEE-INSIDE?(obj) and obj has children, recurse via
+ * printCont.
+ */
+function describeObject(
+  obj: GameObject,
+  player: GameObject,
+  level: number,
+  tell: (s: string) => void,
+): void {
+  if (level === 0) {
+    // Try FDESC if not yet touched.
+    if (!obj.has(Flag.Touched) && obj.fdesc !== undefined) {
+      tell(obj.fdesc);
+    } else if (obj.ldesc !== undefined) {
+      tell(obj.ldesc);
+    } else {
+      tell(`There is a ${obj.desc} here.`);
+    }
+  } else {
+    // Nested inside a container: "  A <desc>" (INDENTS[level] + "A " + D OBJ).
+    const indent = '  '.repeat(level);
+    tell(`${indent}A ${obj.desc}`);
+  }
+
+  // Recurse into open/transparent containers.
+  if (seeInside(obj) && obj.children.size > 0) {
+    printCont(obj, player, level, tell);
+  }
+}
+
+/**
+ * PRINT-CONT (gverbs.zil:1750) — two-pass recursive container printer.
+ *
+ * Pass 1 (FDESC objects): children that are not TOUCHBIT and have an FDESC
+ * are printed via their FDESC.  This runs at the current level (−1 for
+ * the room container itself); the items' descriptions are emitted at the
+ * level they live in (no FIRSTER for pass-1 items).
+ *
+ * Pass 2 (TOUCHBIT/no-FDESC objects): children that are TOUCHBIT OR have
+ * no FDESC are printed via DESCRIBE-OBJECT at the incremented level.
+ * The first such item triggers FIRSTER(container) to print the header.
+ * NDESCBIT items are skipped in pass 2 for their own line, but if they are
+ * SEE-INSIDE? they are still recursed into.
+ *
+ * @param container   The object whose children we iterate (room or container).
+ * @param player      Excluded from all listings.
+ * @param level       Current nesting level (−1 for the room, 0 for first-level
+ *                    children, 1 for items inside containers on the floor, …).
+ * @param tell        Output callback.
+ */
+function printCont(
+  container: GameObject,
+  player: GameObject,
+  level: number,
+  tell: (s: string) => void,
+): void {
+  // ZIL's object children are stored as a singly-linked list with MOVE
+  // prepending each new child (FIRST child = last-defined object in ZIL
+  // source).  Our JS Set preserves insertion order (append), so to match
+  // ZIL's iteration order we traverse the children array in reverse.
+  const children = Array.from(container.children).reverse();
+
+  // ---- Pass 1: FDESC (untouched items with an FDESC) ----------------------
+  for (const child of children) {
+    if (child === player) continue;
+    if (child.has(Flag.Invisible)) continue;
+    // Pass 1 condition: not TOUCHBIT AND has FDESC.
+    if (!child.has(Flag.Touched) && child.fdesc !== undefined) {
+      if (!child.has(Flag.NonDescript)) {
+        tell(child.fdesc);
+      }
+      // Recurse into open/transparent containers even if NDESCBIT.
+      // Use level+1 so nested items get the correct indent depth:
+      // a room-level fdesc container's contents appear at level 1.
+      if (seeInside(child) && child.children.size > 0) {
+        printCont(child, player, level + 1, tell);
+      }
+    }
+  }
+
+  // ---- Pass 2: TOUCHBIT / no-FDESC objects --------------------------------
+  let firsterFired = false;
+  let currentLevel = level;
+
+  for (const child of children) {
+    if (child === player) continue;
+    if (child.has(Flag.Invisible)) continue;
+    // Pass 2 condition: TOUCHBIT OR no FDESC.
+    if (!child.has(Flag.Touched) && child.fdesc !== undefined) continue;
+
+    if (!child.has(Flag.NonDescript)) {
+      // First item: fire FIRSTER (prints the container header).
+      if (!firsterFired) {
+        firsterFired = true;
+        currentLevel = level + 1;
+        firster(container, level, tell);
+      }
+      describeObject(child, player, currentLevel, tell);
+    } else {
+      // NDESCBIT: skip printing this item, but still recurse if SEE-INSIDE?.
+      if (seeInside(child) && child.children.size > 0) {
+        printCont(child, player, level, tell);
+      }
+    }
+  }
+}
+
+/**
+ * DESCRIBE-OBJECTS (gverbs.zil:1681) — called after DESCRIBE-ROOM when the
+ * room is LIT.  Calls PRINT-CONT on HERE at level −1.
+ *
+ * Emits output through `tell` rather than returning a string, to match ZIL's
+ * TELL model and keep ordering consistent with room-handler output.
+ *
+ * Exported as `describeRoomObjects` so game.ts can call it from
+ * `describeCurrentRoom()` without routing through the full verb machinery.
+ */
+export function describeRoomObjects(
+  room: Room,
+  player: GameObject,
+  tell: (s: string) => void,
+): void {
+  if (Array.from(room.children).some(c => c !== player && !c.has(Flag.Invisible))) {
+    printCont(room, player, -1, tell);
+  }
+}
+
+/**
+ * Produce the room description string: name, ldesc/M-LOOK, and the authentic
+ * DESCRIBE-OBJECTS object listing (PRINT-CONT model from gverbs.zil:1681).
  *
  * `player` is excluded from the listing.  When `mlookRunner` is provided and
  * the room has no static ldesc but has a handler, the runner is called to
@@ -84,16 +265,9 @@ function describeRoom(
     if (dynamic.length > 0) lines.push(dynamic);
   }
 
-  const loose: string[] = [];
-  for (const child of room.children) {
-    if (child.has(Flag.Invisible)) continue;
-    // Never list the player actor itself as a room item.
-    if (child === player) continue;
-    loose.push(child.desc);
-  }
-  if (loose.length > 0) {
-    lines.push('You can see: ' + loose.join(', ') + '.');
-  }
+  // DESCRIBE-OBJECTS: authentic PRINT-CONT model replacing "You can see: X."
+  describeRoomObjects(room, player, (s) => lines.push(s));
+
   return lines.join('\n');
 }
 

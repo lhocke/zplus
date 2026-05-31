@@ -6,7 +6,7 @@ import type { Actor } from '../domain/actor.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
-import { executeVerb } from './verbs/index.js';
+import { executeVerb, describeRoomObjects } from './verbs/index.js';
 import { Scoring } from './scoring.js';
 import { lookupPer, lookupPreAction } from '../actions/registry.js';
 import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
@@ -613,12 +613,9 @@ export class Game {
       if (buf.length > 0) lines.push(buf.join('\n'));
     }
 
-    const loose = Array.from(this.here.children).filter(
-      o => !o.has(Flag.Invisible) && o !== this.player,
-    );
-    if (loose.length > 0) {
-      lines.push('You can see: ' + loose.map(o => o.desc).join(', ') + '.');
-    }
+    // DESCRIBE-OBJECTS: authentic PRINT-CONT model (D2).
+    // Replaces the non-authentic "You can see: X, Y." listing.
+    describeRoomObjects(this.here, this.player, (s) => lines.push(s));
 
     return lines.join('\n');
   }
