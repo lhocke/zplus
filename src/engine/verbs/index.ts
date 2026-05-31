@@ -1,10 +1,10 @@
 /**
  * Core verb implementations for the Zork engine.
  *
- * Each exported function handles one verb family.  They are pure in the sense
- * that they take an explicit context and return a VerbResult — no globals,
- * no DOM.  Side effects (containment changes, flag mutations) are applied to
- * the mutable domain objects inside the context.
+ * Each function handles one verb family. They are pure in the sense that they
+ * take an explicit context and return a VerbResult — no globals, no DOM.
+ * Side effects (containment changes, flag mutations) are applied to the
+ * mutable domain objects inside the context.
  *
  * VerbContext is the primary dependency-injection point: the engine's turn
  * loop fills it out; tests wire it directly from fixture objects.
@@ -17,18 +17,6 @@ import { Flag } from '../../domain/flags.js';
 import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vPut, preTake, preGive, yuks, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 
-// --------------------------------------------------------------------------
-// Public API types
-// --------------------------------------------------------------------------
-
-/**
- * Everything a verb handler needs to operate: the actor, the current room,
- * the world, and the resolved objects for this command.
- *
- * `perResolver` is an optional hook for `Exit.per` routines.  The engine
- * supplies it when per-routine handlers are registered (Phase 3); tests that
- * only care about core verbs may leave it undefined.
- */
 export interface VerbContext {
   readonly verb: string;
   readonly dobj?: GameObject;
@@ -37,129 +25,63 @@ export interface VerbContext {
   readonly player: GameObject;
   readonly here: Room;
   readonly world: World;
-  /** Optional resolver for Exit.per routine names → destination room id. */
+  /** Resolver for Exit.per routine names → destination room id. */
   readonly perResolver?: (routineName: string, here: Room) => string | undefined;
-  /**
-   * Optional: run the M-LOOK action on a room and return its output.  When
-   * supplied by the game engine, the "look" verb uses it to produce a
-   * handler-driven description for rooms that lack a static ldesc.
-   */
+  /** Run M-LOOK on a room and return its output (for rooms without a static ldesc). */
   readonly mlookRunner?: (room: Room) => string;
-  /**
-   * Seeded RNG for PICK-ONE operations (YUKS, DUMMY, etc.).
-   * Required for verbTake (YUKS) and other random-pick paths.
-   * Tests may omit it; a fallback to the first table entry is used.
-   * Accepts any object with a `next()` method (duck-typed).
-   */
+  /** Seeded RNG for PICK-ONE operations (YUKS, DUMMY, etc.). Falls back to first table entry when absent. */
   readonly rng?: PickRng;
-  /**
-   * Award the one-time VALUE of an object and zero it — ZIL SCORE-OBJ.
-   * Optional: only supplied by game.ts; test callers may omit it.
-   */
+  /** Award the one-time VALUE of an object and zero it — ZIL SCORE-OBJ. */
   readonly scoreObj?: (obj: GameObject) => void;
-
-  // ---- V-SCORE / V-DIAGNOSE fields (TD3-2) ----------------------------------
-
-  /**
-   * Current score (ZIL: SCORE global).
-   * Optional: supplied by game.ts for V-SCORE.
-   */
+  /** Current score (ZIL: SCORE global). */
   readonly score?: number;
-
-  /**
-   * Current move count (ZIL: MOVES global).
-   * Optional: supplied by game.ts for V-SCORE.
-   */
+  /** Current move count (ZIL: MOVES global). */
   readonly moves?: number;
-
-  /**
-   * Return the rank title for the current score (ZIL: V-SCORE rank table).
-   * Optional: supplied by game.ts for V-SCORE.
-   */
+  /** Return the rank title for the current score (ZIL: V-SCORE rank table). */
   readonly rank?: () => string;
-
-  /**
-   * Number of times the player has died (ZIL: DEATHS global).
-   * Optional: supplied by game.ts for V-DIAGNOSE.
-   */
+  /** Number of times the player has died (ZIL: DEATHS global). */
   readonly deaths?: number;
-
-  // ---- ZIL global flag store (F1) -------------------------------------------
-
   /**
    * Read a ZIL global boolean flag by name (e.g. 'WON-FLAG', 'MAGIC-FLAG').
-   * Optional: game.ts always supplies this; test contexts may omit it,
-   * in which case the resolver defaults to false (matching ZIL `<GLOBAL X <>>`).
-   *
-   * Distinct from `hasFlag(obj, flag)` which operates on object-level FSET bits.
+   * Defaults to false when absent, matching ZIL `<GLOBAL X <>>`.
    */
   readonly getGlobal?: (name: string) => boolean;
-
-  /**
-   * Write a ZIL global boolean flag by name.
-   * Optional: game.ts always supplies this; test contexts may omit it.
-   */
+  /** Write a ZIL global boolean flag by name. */
   readonly setGlobal?: (name: string, value?: boolean) => void;
-
-  // ---- F4 death-path fields --------------------------------------------------
-
   /**
-   * Inject the jigsUp death handler.  Called by verbGo when the grue kills the
-   * player.  Receives the death message string; game.ts wires it to
-   * `this.jigsUp(desc, tell)`.  Optional: test contexts omit it (grue gate
-   * is disabled when jigsUp is undefined).
+   * Death handler — called by verbGo when the grue kills the player.
+   * Grue gate is disabled when this is undefined (test contexts).
    */
   readonly jigsUp?: (deathMessage: string) => void;
-
-  /**
-   * ALWAYS-LIT global (ghost immunity).  When true the grue cannot kill.
-   * Never true in P0-3; wired into the grue gate as `ctx.alwaysLit || lit(...)`.
-   * Optional: defaults to false when absent.
-   */
+  /** ALWAYS-LIT global (ghost immunity). Defaults to false when absent. */
   readonly alwaysLit?: boolean;
-
   /**
    * PROB(pct) — roll a random integer-percent, return true if ≤ pct.
-   * ZIL PROB N = roll 1..100, true if the result ≤ N.
-   * Port semantics: rng.next()*100 < pct (equivalent for our float RNG).
-   * Optional: when absent, verbGo uses `() => false` so grue never triggers in
-   * test contexts that don't supply an rng.
+   * When absent, verbGo uses `() => false` so grue never triggers.
    */
   readonly prob?: (pct: number) => boolean;
-
   /**
-   * Clear the parser continuation queue (ZIL `<SETG P-CONT <>>`).
-   * Called by verbGo's moved-into-dark path to stop chained commands.
-   * Optional: game.ts supplies it; test contexts may omit it.
+   * Clear the parser continuation queue (ZIL `<SETG P-CONT <>>`) — called
+   * by verbGo's moved-into-dark path to stop chained commands.
    */
   readonly clearContinuation?: () => void;
 }
 
 export interface VerbResult {
-  /** Text to display to the player this turn. */
   readonly output: string;
-  /** True when the player's location changed as a result of this verb. */
   readonly moved: boolean;
   /**
    * True when the verb caused a fatal outcome (e.g. grue kill via jigsUp).
-   * game.ts checks this after executeVerb and mirrors the chainResult.fatal
-   * break: skips M-END and aborts remaining chained segments.
+   * game.ts checks this after executeVerb and skips M-END for the remaining chain.
    */
   readonly fatal?: boolean;
   /**
    * True when the player moved into a dark room (lit→dark or dark→dark without
-   * grue kill).  game.ts uses this to:
-   *   1. Append M-ENTER AFTER darkPlaceEntered (ZIL order: dark-notice then M-ENTER).
-   *   2. Append describeCurrentRoom() (pitch-black line) after M-ENTER — matching
-   *      ZIL V-FIRST-LOOK which runs after M-ENTER for all moves.
-   * For lit destinations this field is absent; M-ENTER is prepended as usual.
+   * grue kill). game.ts uses this to append M-ENTER after the dark-notice and
+   * then run V-FIRST-LOOK (the pitch-black line) — matching ZIL GOTO order.
    */
   readonly movedIntoDark?: boolean;
 }
-
-// --------------------------------------------------------------------------
-// Internal helpers
-// --------------------------------------------------------------------------
 
 function result(
   output: string,
@@ -170,37 +92,18 @@ function result(
   return { output, moved, fatal, movedIntoDark };
 }
 
-// --------------------------------------------------------------------------
-// DESCRIBE-OBJECTS model (gverbs.zil:1681–1836)
-//
-// Replaces the non-authentic "You can see: X, Y." listing with the ZIL-
-// faithful PRINT-CONT / DESCRIBE-OBJECT / FIRSTER algorithm.
-//
-// The three functions below emit via a `tell` callback rather than returning
-// strings — matching the ZIL TELL model — so output ordering is preserved
-// when containers are recursed.
-// --------------------------------------------------------------------------
+// DESCRIBE-OBJECTS model (gverbs.zil:1681–1836): ZIL-faithful PRINT-CONT /
+// DESCRIBE-OBJECT / FIRSTER algorithm. Functions emit via a `tell` callback
+// rather than returning strings, matching the ZIL TELL model.
 
-/**
- * SEE-INSIDE? (gverbs.zil:1837) — a container's contents are visible only
- * when the container is OPEN (OPENBIT) or TRANSPARENT (TRANSBIT).
- */
+// SEE-INSIDE? (gverbs.zil:1837)
 function seeInside(obj: GameObject): boolean {
   return obj.has(Flag.Transparent) || obj.has(Flag.Open);
 }
 
-/**
- * FIRSTER (gverbs.zil:1818) — print the header line before the first
- * DESCRIBE-OBJECT item in a container's pass-2 listing.
- *
- * At room level (OBJ is a Room), FIRSTER is effectively a no-op — rooms
- * do not get a "X contains:" header.  Only non-room containers get headers.
- * The player inventory case ("You are carrying:") is handled by V-INVENTORY
- * (verbInventory) directly; FIRSTER here covers the room-object case only.
- */
+// FIRSTER (gverbs.zil:1818) — print the header before the first pass-2 item.
+// Rooms are skipped (no "X contains:" header at room level).
 function firster(obj: GameObject, level: number, tell: (s: string) => void): void {
-  // Player carrying case is handled by verbInventory, not here.
-  // Room case: no header (rooms are not printed as containers).
   if (obj instanceof Room) return;
 
   // Non-room containers: indent if level > 0, then print container header.
@@ -215,18 +118,7 @@ function firster(obj: GameObject, level: number, tell: (s: string) => void): voi
   }
 }
 
-/**
- * DESCRIBE-OBJECT (gverbs.zil:1693) — emit one object's description.
- *
- * At level 0 (direct room child): use FDESC if untouched, else LDESC, else
- * the "There is a <desc> here." fallback.
- *
- * At level > 0 (nested inside a container): print the INDENTS[level] prefix
- * followed by "A <desc>" (ZIL: INDENTS[1] = "  ", INDENTS[2] = "    ", …).
- *
- * After printing, if SEE-INSIDE?(obj) and obj has children, recurse via
- * printCont.
- */
+// DESCRIBE-OBJECT (gverbs.zil:1693)
 function describeObject(
   obj: GameObject,
   player: GameObject,
@@ -234,7 +126,6 @@ function describeObject(
   tell: (s: string) => void,
 ): void {
   if (level === 0) {
-    // Try FDESC if not yet touched.
     if (!obj.has(Flag.Touched) && obj.fdesc !== undefined) {
       tell(obj.fdesc);
     } else if (obj.ldesc !== undefined) {
@@ -243,79 +134,54 @@ function describeObject(
       tell(`There is a ${obj.desc} here.`);
     }
   } else {
-    // Nested inside a container: "  A <desc>" (INDENTS[level] + "A " + D OBJ).
     const indent = '  '.repeat(level);
     tell(`${indent}A ${obj.desc}`);
   }
 
-  // Recurse into open/transparent containers.
   if (seeInside(obj) && obj.children.size > 0) {
     printCont(obj, player, level, tell);
   }
 }
 
-/**
- * PRINT-CONT (gverbs.zil:1750) — two-pass recursive container printer.
- *
- * Pass 1 (FDESC objects): children that are not TOUCHBIT and have an FDESC
- * are printed via their FDESC.  This runs at the current level (−1 for
- * the room container itself); the items' descriptions are emitted at the
- * level they live in (no FIRSTER for pass-1 items).
- *
- * Pass 2 (TOUCHBIT/no-FDESC objects): children that are TOUCHBIT OR have
- * no FDESC are printed via DESCRIBE-OBJECT at the incremented level.
- * The first such item triggers FIRSTER(container) to print the header.
- * NDESCBIT items are skipped in pass 2 for their own line, but if they are
- * SEE-INSIDE? they are still recursed into.
- *
- * @param container   The object whose children we iterate (room or container).
- * @param player      Excluded from all listings.
- * @param level       Current nesting level (−1 for the room, 0 for first-level
- *                    children, 1 for items inside containers on the floor, …).
- * @param tell        Output callback.
- */
+// PRINT-CONT (gverbs.zil:1750) — two-pass recursive container printer.
+// Pass 1: untouched children with FDESC printed via their FDESC (no header).
+// Pass 2: touched/no-FDESC children printed via DESCRIBE-OBJECT; first item
+// triggers FIRSTER to emit the container header. NDESCBIT items are skipped
+// in pass 2 but still recursed if SEE-INSIDE?.
 function printCont(
   container: GameObject,
   player: GameObject,
   level: number,
   tell: (s: string) => void,
 ): void {
-  // ZIL's object children are stored as a singly-linked list with MOVE
-  // prepending each new child (FIRST child = last-defined object in ZIL
-  // source).  Our JS Set preserves insertion order (append), so to match
-  // ZIL's iteration order we traverse the children array in reverse.
+  // ZIL's children are a prepend-list (FIRST = last-defined in ZIL source).
+  // JS Set is append-order, so we reverse to match ZIL iteration order.
   const children = Array.from(container.children).reverse();
 
-  // ---- Pass 1: FDESC (untouched items with an FDESC) ----------------------
+  // Pass 1: untouched items with an FDESC
   for (const child of children) {
     if (child === player) continue;
     if (child.has(Flag.Invisible)) continue;
-    // Pass 1 condition: not TOUCHBIT AND has FDESC.
     if (!child.has(Flag.Touched) && child.fdesc !== undefined) {
       if (!child.has(Flag.NonDescript)) {
         tell(child.fdesc);
       }
-      // Recurse into open/transparent containers even if NDESCBIT.
-      // Use level+1 so nested items get the correct indent depth:
-      // a room-level fdesc container's contents appear at level 1.
       if (seeInside(child) && child.children.size > 0) {
         printCont(child, player, level + 1, tell);
       }
     }
   }
 
-  // ---- Pass 2: TOUCHBIT / no-FDESC objects --------------------------------
+  // Pass 2: touched / no-FDESC objects
   let firsterFired = false;
   let currentLevel = level;
 
   for (const child of children) {
     if (child === player) continue;
     if (child.has(Flag.Invisible)) continue;
-    // Pass 2 condition: TOUCHBIT OR no FDESC.
     if (!child.has(Flag.Touched) && child.fdesc !== undefined) continue;
 
     if (!child.has(Flag.NonDescript)) {
-      // First item: fire FIRSTER (prints the container header).
       if (!firsterFired) {
         firsterFired = true;
         currentLevel = level + 1;
@@ -323,7 +189,6 @@ function printCont(
       }
       describeObject(child, player, currentLevel, tell);
     } else {
-      // NDESCBIT: skip printing this item, but still recurse if SEE-INSIDE?.
       if (seeInside(child) && child.children.size > 0) {
         printCont(child, player, level, tell);
       }
@@ -331,16 +196,8 @@ function printCont(
   }
 }
 
-/**
- * DESCRIBE-OBJECTS (gverbs.zil:1681) — called after DESCRIBE-ROOM when the
- * room is LIT.  Calls PRINT-CONT on HERE at level −1.
- *
- * Emits output through `tell` rather than returning a string, to match ZIL's
- * TELL model and keep ordering consistent with room-handler output.
- *
- * Exported as `describeRoomObjects` so game.ts can call it from
- * `describeCurrentRoom()` without routing through the full verb machinery.
- */
+// DESCRIBE-OBJECTS (gverbs.zil:1681) — calls PRINT-CONT on HERE at level −1.
+// Exported so game.ts can call it from describeCurrentRoom().
 export function describeRoomObjects(
   room: Room,
   player: GameObject,
@@ -351,20 +208,8 @@ export function describeRoomObjects(
   }
 }
 
-/**
- * Produce the room description string: name, ldesc/M-LOOK, and the authentic
- * DESCRIBE-OBJECTS object listing (PRINT-CONT model from gverbs.zil:1681).
- *
- * `player` is excluded from the listing.  When `mlookRunner` is provided and
- * the room has no static ldesc but has a handler, the runner is called to
- * produce a dynamic description via the M-LOOK action — matching the ZIL
- * `<DESCRIBE-ROOM>` / `GOTO` path.
- *
- * Darkness gate (P0-2): gated on lit(room, player, world) per ZIL
- * DESCRIBE-ROOM (gverbs.zil:1637-1649).  When dark, emits the verbatim
- * pitch-black / grue message and returns early — skipping the room name,
- * ldesc/M-LOOK, and DESCRIBE-OBJECTS (RFALSE path in ZIL).
- */
+// Produce the room description: name, ldesc/M-LOOK, and DESCRIBE-OBJECTS listing.
+// When dark (gverbs.zil:1637-1649), returns the pitch-black message and skips the rest.
 function describeRoom(
   room: Room,
   player: GameObject,
@@ -372,7 +217,6 @@ function describeRoom(
   world?: World,
   getGlobal?: (name: string) => boolean,
 ): string {
-  // Darkness gate: ZIL DESCRIBE-ROOM RFALSE path (gverbs.zil:1637-1649).
   if (world !== undefined && !lit(room, player, world)) {
     const sprayed = getGlobal?.('SPRAYED?') ?? false;
     return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
@@ -388,15 +232,10 @@ function describeRoom(
     if (dynamic.length > 0) lines.push(dynamic);
   }
 
-  // DESCRIBE-OBJECTS: authentic PRINT-CONT model replacing "You can see: X."
   describeRoomObjects(room, player, (s) => lines.push(s));
 
   return lines.join('\n');
 }
-
-// --------------------------------------------------------------------------
-// Verb handlers
-// --------------------------------------------------------------------------
 
 function verbLook(ctx: VerbContext): VerbResult {
   return result(describeRoom(ctx.here, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal));
@@ -414,64 +253,34 @@ function verbGo(ctx: VerbContext): VerbResult {
     return result("You can't go that way.", /*moved*/false, /*fatal*/true);
   }
 
-  // Safe fallback for test contexts that don't supply prob.
   const prob = ctx.prob ?? (() => false);
 
-  // -------------------------------------------------------------------------
-  // enterDest — single closure for both move paths.
-  //
-  // ZIL GOTO (gverbs.zil:2048-2120): capture OLIT against the OLD room
-  // BEFORE the move, then recompute LIT against the NEW dest AFTER the move.
-  //
-  // Grue gate (ZIL `<AND <NOT OLIT> <NOT LIT> <PROB 80>>`):
-  //   • Only fires when both old AND new room are dark (dark→dark).
-  //   • Does NOT fire on the first step into darkness (oldLit=true→newLit=false).
-  //   • NONLANDBIT rooms are exempt (void/nonland cells).
-  //   • alwaysLit overrides: ghost-mode immunity (always false in P0-3).
-  //
-  // TODO(F5): when ghost-mode (alwaysLit=true) lands, thread alwaysLit into
-  // lit() itself — it affects the darkness gate at game.ts:630, not only here.
-  // -------------------------------------------------------------------------
+  // ZIL GOTO (gverbs.zil:2048-2120): capture OLIT before the move, recompute
+  // LIT after. Grue gate fires only on dark→dark (both rooms unlit).
   const enterDest = (dest: Room): VerbResult => {
-    // Step 1: capture OLIT against the OLD room BEFORE the move.
     const oldLit = (ctx.alwaysLit ?? false) || lit(ctx.here, ctx.player, ctx.world);
-
-    // Step 2: move the player.
     ctx.player.moveTo(dest);
-
-    // Step 3: recompute LIT against the NEW dest AFTER the move.
     const newLit = (ctx.alwaysLit ?? false) || lit(dest, ctx.player, ctx.world);
 
-    // Step 4: grue gate (ZIL lines 2095-2116).
-    // Conditions: oldLit=false AND newLit=false AND NOT NonLand AND PROB 80.
+    // Grue gate (gverbs.zil:2095-2116): dark→dark, non-NonLand room, PROB 80.
     if (!oldLit && !newLit && !dest.has(Flag.NonLand) && prob(80)) {
-      // Sprayed sub-case: sinister noises, no kill.
       if (ctx.getGlobal?.('SPRAYED?')) {
         return result(goto.sinisterDark, true);
       }
-      // Kill sub-case: route through jigsUp, return fatal.
       ctx.jigsUp?.(goto.grueSlitherRoom);
       return result('', /*moved*/true, /*fatal*/true);
     }
 
-    // Step 5: moved-into-dark notice (ZIL lines 2117-2120).
-    // Fires when new room is dark (first step into darkness, or grue didn't fire).
-    //
-    // movedIntoDark=true signals game.ts to:
-    //   1. Append M-ENTER AFTER this notice (ZIL: dark-notice then M-ENTER action).
-    //   2. Append describeCurrentRoom() after M-ENTER — ZIL V-FIRST-LOOK runs after
-    //      M-ENTER and produces the pitch-black line for the now-dark room.
-    // Both darkPlaceEntered and the pitch-black line appear on the SAME turn.
+    // Moved into dark (gverbs.zil:2117-2120): signals game.ts to append
+    // M-ENTER after the notice then run V-FIRST-LOOK (pitch-black line).
     if (!newLit) {
       ctx.clearContinuation?.();
       return result(goto.darkPlaceEntered, true, false, /*movedIntoDark*/true);
     }
 
-    // Step 6: lit destination — normal room description.
     return result(describeRoom(dest, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal), true);
   };
 
-  // Exit with a `per` routine — try the resolver first.
   if (exit.per !== undefined) {
     const resolver = ctx.perResolver;
     if (resolver !== undefined) {
@@ -482,46 +291,31 @@ function verbGo(ctx: VerbContext): VerbResult {
           return enterDest(dest as Room);
         }
       }
-      // Resolver returned undefined: the routine decided movement is blocked.
-      // RFATAL: clears the continuation queue and skips M-END.
       return result("You can't go that way.", /*moved*/false, /*fatal*/true);
     }
-    // No resolver available and exit has no static destination.
     if (exit.to === undefined) {
-      // RFATAL: per-routine exit with no fallback destination.
       return result(exit.elseMessage ?? "You can't go that way.", /*moved*/false, /*fatal*/true);
     }
   }
 
-  // ifFlag exits: disambiguate object-backed gates from ZIL global flags.
-  //
-  // When world.get(name) returns an object → it is a game-object gate (e.g.
-  // TRAP-DOOR, GRATE, KITCHEN-WINDOW); open-state is the object's OPENBIT.
-  //
-  // When world.get(name) returns undefined → it is a ZIL global (e.g. WON-FLAG,
-  // MAGIC-FLAG, FALSE-FLAG); open-state is read from the FlagStore via getGlobal.
-  //
-  // ZIL sources: 1actions.zil ifFlag checks; gverbs.zil globals.
+  // ifFlag: object-backed gate (OPENBIT) or ZIL global (FlagStore).
+  // 1actions.zil ifFlag checks; gverbs.zil globals.
   if (exit.ifFlag !== undefined) {
     const gateObj = ctx.world.get(exit.ifFlag);
     const open = gateObj !== undefined
-      ? gateObj.has(Flag.Open)                      // object-backed gate (OPENBIT)
-      : (ctx.getGlobal?.(exit.ifFlag) ?? false);    // ZIL global → FlagStore
+      ? gateObj.has(Flag.Open)
+      : (ctx.getGlobal?.(exit.ifFlag) ?? false);
     if (!open) {
-      // RFATAL: CEXIT/DEXIT gate is closed — M-FATAL path per ZIL V-WALK spec.
       return result(exit.elseMessage ?? "You can't go that way.", /*moved*/false, /*fatal*/true);
     }
   }
 
-  // Plain blocked exit (no destination, static message).
-  // RFATAL: NEXIT equivalent — there is no valid destination.
   if (exit.to === undefined) {
     return result(exit.elseMessage ?? "You can't go that way.", /*moved*/false, /*fatal*/true);
   }
 
   const dest = ctx.world.get(exit.to);
   if (dest === undefined) {
-    // RFATAL: destination room id is not in the world (data error / missing room).
     return result("You can't go that way.", /*moved*/false, /*fatal*/true);
   }
 
@@ -532,8 +326,7 @@ function verbTake(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Take what?");
 
-  // PRE-TAKE guard 1 & 2: PRSO IN? WINNER
-  // (gverbs.zil:1356, 1358 — PRE-TAKE)
+  // PRE-TAKE: PRSO IN? WINNER (gverbs.zil:1356, 1358)
   if (item.parent === ctx.player) {
     if (item.has(Flag.Wearable)) {
       return result(preTake.alreadyWearing);
@@ -549,8 +342,7 @@ function verbTake(ctx: VerbContext): VerbResult {
 
   item.moveTo(ctx.player);
 
-  // SCORE-OBJ: award the one-time pickup VALUE, then zero it so re-taking
-  // does not re-award (gverbs.zil:1959–1963 ITAKE calls SCORE-OBJ(PRSO)).
+  // SCORE-OBJ: award one-time pickup VALUE and zero it (gverbs.zil:1959–1963).
   if (ctx.scoreObj !== undefined) {
     ctx.scoreObj(item);
   }
@@ -585,27 +377,20 @@ function verbOpen(ctx: VerbContext): VerbResult {
   }
 
   item.set(Flag.Open);
-  // ZIL gverbs.zil:973 — <FSET ,PRSO ,TOUCHBIT>: mark container as touched.
-  item.set(Flag.Touched);
+  item.set(Flag.Touched); // gverbs.zil:973
 
-  // DOORBIT path — gverbs.zil:980 "The [PRSO] opens."
   if (item.has(Flag.Door)) {
-    return result(fmt(vOpen.opens, item.desc));
+    return result(fmt(vOpen.opens, item.desc)); // gverbs.zil:980
   }
 
-  // CONTBIT path (gverbs.zil:974-985):
-  //   Branch 1 — empty container or TRANSBIT: "Opened."
-  //   Branch 2 — single untouched child with FDESC: "The X opens.\n<fdesc>"
-  //   Branch 3 — otherwise: "Opening the X reveals a Y[, and a Z]."
+  // CONTBIT path (gverbs.zil:974-985)
   const contents = Array.from(item.children).filter(c => !c.has(Flag.Invisible));
 
-  // Branch 1 — gverbs.zil:974-975: no children or transparent → "Opened."
   if (contents.length === 0 || item.has(Flag.Transparent)) {
     return result(vOpen.opened);
   }
 
-  // Branch 2 — gverbs.zil:976-981: single child, not yet touched, has FDESC.
-  // ZIL: <AND <SET F <FIRST? ,PRSO>> <NOT <NEXT? .F>> <NOT <FSET? .F ,TOUCHBIT>> <SET STR <GETP .F ,P?FDESC>>>
+  // Single untouched child with FDESC (gverbs.zil:976-981)
   if (contents.length === 1) {
     const child = contents[0]!;
     if (!child.has(Flag.Touched) && child.fdesc !== undefined) {
@@ -613,7 +398,6 @@ function verbOpen(ctx: VerbContext): VerbResult {
     }
   }
 
-  // Branch 3 — gverbs.zil:982-985: "Opening the X reveals a Y[, and a Z]."
   const articled = contents.map(c => `a ${c.desc}`);
   let contentStr: string;
   if (articled.length === 1) {
@@ -642,13 +426,11 @@ function verbClose(ctx: VerbContext): VerbResult {
 
   item.clear(Flag.Open);
 
-  // DOORBIT path — gverbs.zil:353 "The [PRSO] is now closed."
   if (item.has(Flag.Door)) {
-    return result(fmt(vClose.doorClosed, item.desc));
+    return result(fmt(vClose.doorClosed, item.desc)); // gverbs.zil:353
   }
 
-  // CONTBIT path — gverbs.zil:344 "Closed."
-  return result(vClose.closed);
+  return result(vClose.closed); // gverbs.zil:344
 }
 
 function verbRead(ctx: VerbContext): VerbResult {
@@ -660,14 +442,10 @@ function verbRead(ctx: VerbContext): VerbResult {
     return result(fmt(vRead.notReadable, item.desc));
   }
 
-  // READBIT is set — ZIL guarantees a TEXT property exists.
-  // The extractor stores the key as 'TEXT' (upper-case, matching ZIL
-  // convention); accept both casings so synthetic test fixtures using
-  // lowercase 'text' continue to work.
+  // Extractor stores 'TEXT' (upper-case per ZIL convention); also accept
+  // lowercase so test fixtures without a full extractor pass work.
   const text = item.props.get('TEXT') ?? item.props.get('text');
   if (typeof text === 'string') return result(text);
-  // Fallback: ldesc if no text prop (should not occur in authentic data
-  // but handles test fixtures that set Readable without a TEXT prop).
   if (item.ldesc) return result(item.ldesc);
   return result(fmt(vRead.notReadable, item.desc));
 }
@@ -687,38 +465,19 @@ function verbExamine(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Examine what?");
 
-  // V-EXAMINE priority (gverbs.zil:623–630):
-  //   1. TEXT property (P?TEXT) — same as V-READ but also fires for EXAMINE
-  //   2. CONTBIT or DOORBIT → V-LOOK-INSIDE (show contents/state)
-  //   3. Fallback: "There's nothing special about the [PRSO]."
-
-  // Priority 1: explicit text prop
+  // V-EXAMINE priority (gverbs.zil:623–630): TEXT prop, then ldesc, then fallback.
   const text = item.props.get('TEXT') ?? item.props.get('text');
   if (typeof text === 'string') return result(text);
-
-  // Priority 2: ldesc (we map this to "has a meaningful description")
-  // The ZIL V-LOOK-INSIDE is complex; for containers/doors, return ldesc if present.
   if (item.ldesc !== undefined) return result(item.ldesc);
-
-  // Priority 3: fallback — "There's nothing special about the [PRSO]."
   return result(fmt(vExamine.nothingSpecial, item.desc));
 }
 
-// --------------------------------------------------------------------------
 // V-ADVENT — xyzzy / plugh easter egg (gverbs.zil:153–154)
-// ZIL: <ROUTINE V-ADVENT () <TELL "A hollow voice says \"Fool.\"" CR>>
-// Syntax: PLUGH / XYZZY (gsyntax.zil:352–353; XYZZY is a synonym for PLUGH)
-// --------------------------------------------------------------------------
 function verbAdvent(_ctx: VerbContext): VerbResult {
   return result(vAdvent.response);
 }
 
-// --------------------------------------------------------------------------
 // V-FROBOZZ — frobozz easter egg (gverbs.zil:704–706)
-// ZIL: <ROUTINE V-FROBOZZ ()
-//        <TELL "The FROBOZZ Corporation created, owns, and operates this dungeon." CR>>
-// Syntax: FROBOZZ (gsyntax.zil:227)
-// --------------------------------------------------------------------------
 function verbFrobozz(_ctx: VerbContext): VerbResult {
   return result(vFrobozz.response);
 }
@@ -730,18 +489,17 @@ function verbPut(ctx: VerbContext): VerbResult {
   if (item === undefined) return result("Put what?");
   if (container === undefined) return result("Put it where?");
 
-  // PRE-PUT/PRE-GIVE: not HELD? — gverbs.zil:710–711
-  // "That's easy for you to say since you don't even have the [PRSO]."
+  // Not HELD? (gverbs.zil:710–711)
   if (item.parent !== ctx.player) {
     return result(fmt(preGive.notHoldingIt, item.desc));
   }
 
-  // V-PUT: PRSI not open and not openable — gverbs.zil:1090 "You can't do that."
+  // PRSI not a container/surface (gverbs.zil:1090)
   if (!container.has(Flag.Container) && !container.has(Flag.Surface)) {
     return result(vPut.cantDoThat);
   }
 
-  // V-PUT: PRSI not OPENBIT — gverbs.zil:1093 "The [PRSI] isn't open."
+  // PRSI not open (gverbs.zil:1093)
   if (!container.has(Flag.Open)) {
     return result(fmt(vPut.notOpen, container.desc));
   }
@@ -750,22 +508,8 @@ function verbPut(ctx: VerbContext): VerbResult {
   return result(vPut.done);
 }
 
-// --------------------------------------------------------------------------
 // V-SCORE (1actions.zil:4026–4044)
-// --------------------------------------------------------------------------
-
-/**
- * V-SCORE — print the player's score, move count, and rank.
- *
- * ZIL format (verbatim):
- *   "Your score is N (total of 350 points), in M move[s]."
- *   "This gives you the rank of RANK."
- *
- * Plural rule (1actions.zil:4032): <1? ,MOVES> → singular "move",
- * else plural "moves".  The singular case is MOVES==1 exactly.
- *
- * SCORE-MAX is fixed at 350 (1dungeon.zil:7 <GLOBAL SCORE-MAX 350>).
- */
+// Plural rule (1actions.zil:4032): MOVES==1 → "move", else "moves".
 function verbScore(ctx: VerbContext): VerbResult {
   const score  = ctx.score  ?? 0;
   const moves  = ctx.moves  ?? 0;
@@ -778,62 +522,23 @@ function verbScore(ctx: VerbContext): VerbResult {
   return result(`${line1}\n${line2}`);
 }
 
-// --------------------------------------------------------------------------
 // V-DIAGNOSE (1actions.zil:3993–4024)
-// --------------------------------------------------------------------------
-
-/**
- * V-DIAGNOSE — print the player's current health / combat status.
- *
- * ZIL: reads FIGHT-STRENGTH (score-scaled), wound depth from I-CURE interrupt,
- * and DEATHS counter.
- *
- * Without combat built (TD-2), the player is always unwounded (WD=0) and
- * I-CURE is not enabled.  The survivability line uses the unadjusted
- * fight-strength formula: FIGHT-STRENGTH = 2 + floor(SCORE/70), range 2..7
- * (1actions.zil:3322–3381).
- *
- * ZIL health line:
- *   WD=0 → "You are in perfect health."
- *   WD>0 → "You have [light/serious/several/serious] wound[s], which will be
- *            cured after N moves."
- *
- * ZIL survivability line (always printed):
- *   RS=0 → "You can expect death soon."
- *   RS=1 → "You can be killed by one more light wound"
- *   RS=2 → "You can be killed by a serious wound"
- *   RS=3 → "You can survive one serious wound"
- *   RS>3 → "You can survive several wounds"
- *
- * RS = FIGHT-STRENGTH (adjusted) — wound depth (WD).
- * With WD=0 and no active cure, RS = fightStrength (base, unadjusted).
- *
- * Deaths line (only when DEATHS > 0):
- *   DEATHS=1 → "You have been killed once."
- *   DEATHS=2 → "You have been killed twice."
- */
+// FIGHT-STRENGTH = 2 + floor(SCORE/70) (1actions.zil:3322–3381).
+// Without combat, WD=0 always; RS = fightStrength unadjusted.
 function verbDiagnose(ctx: VerbContext): VerbResult {
   const deaths = ctx.deaths ?? 0;
   const score  = ctx.score  ?? 0;
 
-  // WD (wound depth): without combat built, always 0.
-  // WINNER.P?STRENGTH is 0 at game start (no wounds).
-  const wd = 0;
-
-  // FIGHT-STRENGTH base formula: 2 + floor(SCORE / 70)
-  // (1actions.zil:3322–3381, TD-3 §8)
+  const wd = 0; // wound depth; always 0 until combat is built
   const ms = 2 + Math.floor(score / 70);
 
-  // RS = ms + wd_adjusted; with WD=0 and I-CURE not enabled, WD_adjusted = 0.
   const rs = ms;
 
   const lines: string[] = [];
 
-  // Health line
   if (wd === 0) {
     lines.push('You are in perfect health.');
   } else {
-    // Combat wounds — unreachable without TD-2 but structured per ZIL:
     const woundDesc =
       wd === 1 ? 'a light wound,' :
       wd === 2 ? 'a serious wound,' :
@@ -842,7 +547,6 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
     lines.push(`You have ${woundDesc} which will be cured after ${wd} moves.`);
   }
 
-  // Survivability line (always)
   const survDesc =
     rs <= 0 ? 'expect death soon' :
     rs === 1 ? 'be killed by one more light wound' :
@@ -851,7 +555,6 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
     /* rs>3 */ 'survive several wounds';
   lines.push(`You can ${survDesc}.`);
 
-  // Deaths line (conditional)
   if (deaths > 0) {
     const timesStr = deaths === 1 ? 'once' : 'twice';
     lines.push(`You have been killed ${timesStr}.`);
@@ -860,47 +563,9 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
   return result(lines.join('\n'));
 }
 
-// --------------------------------------------------------------------------
-// Dispatch table
-// --------------------------------------------------------------------------
-
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
-/**
- * Legacy verb-word keyed table — used as fallback when action is unknown or
- * when a handler was registered under the verb word rather than V-* action id.
- * Kept so existing callers that pass only a verb word continue to work.
- */
-const HANDLERS: Record<string, VerbHandler> = {
-  look:      verbLook,
-  walk:      verbGo,      // parser normalizes "go/run/proceed" → "walk"
-  take:      verbTake,
-  drop:      verbDrop,
-  open:      verbOpen,
-  close:     verbClose,
-  read:      verbRead,
-  inventory: verbInventory,
-  examine:   verbExamine,
-  put:       verbPut,
-  score:     verbScore,
-  diagnose:  verbDiagnose,
-  // Easter-egg verb-word fallback (for callers that bypass action dispatch).
-  plugh:     verbAdvent,  // also covers xyzzy (synonym for plugh)
-  xyzzy:     verbAdvent,
-  frobozz:   verbFrobozz,
-};
-
-/**
- * Primary dispatch table keyed on the resolved V-* action id (ParsedCommand.action).
- *
- * ZIL PERFORM dispatches on PRSA (the action number), not on the verb word
- * (gmain.zil:283–284).  This table is the port equivalent: the parser resolves
- * the syntax form → V-* action id, and executeVerb selects the handler here.
- *
- * Multi-action verbs (LOOK→{V-LOOK,V-EXAMINE,V-READ,…}, WALK→{V-WALK,…}, etc.)
- * are the motivating case: "look at mailbox" resolves to V-EXAMINE and must run
- * verbExamine, not verbLook.
- */
+// Primary dispatch on V-* action id (ZIL PERFORM dispatches on PRSA, gmain.zil:283–284).
 const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LOOK':      verbLook,
   'V-WALK':      verbGo,
@@ -914,24 +579,30 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-PUT':       verbPut,
   'V-SCORE':     verbScore,
   'V-DIAGNOSE':  verbDiagnose,
-  // Easter-egg actions from gsyntax.zil:227 and 352–353.
-  'V-ADVENT':    verbAdvent,  // PLUGH / XYZZY → gverbs.zil:153
-  'V-FROBOZZ':   verbFrobozz, // FROBOZZ → gverbs.zil:704
+  'V-ADVENT':    verbAdvent,  // PLUGH / XYZZY — gverbs.zil:153
+  'V-FROBOZZ':   verbFrobozz, // FROBOZZ — gverbs.zil:704
 };
 
-// ---------------------------------------------------------------------------
-// META_ACTIONS — verbs that do NOT advance time (clock.advance() + moveCount).
-//
-// Verbatim from gmain.zil:171-172: the VERB? guard around CLOCKER.
-// Key on cmd.action (resolved V-* id = ZIL PRSA), consistent with P2
-// dispatch-on-cmd.action convention.
-//
-// Pre-authored for correctness on arrival; only V-SCORE is live today.
-// Mixed-chain meta-LAST case (e.g. "take lamp. score") is an oracle-divergence
-// point to verify against dfrotz once SAVE/SCRIPT/etc. are implemented —
-// for standalone SCORE all readings agree.
-// ---------------------------------------------------------------------------
+// Fallback keyed on verb word — for callers that pass only a verb word.
+const HANDLERS: Record<string, VerbHandler> = {
+  look:      verbLook,
+  walk:      verbGo,
+  take:      verbTake,
+  drop:      verbDrop,
+  open:      verbOpen,
+  close:     verbClose,
+  read:      verbRead,
+  inventory: verbInventory,
+  examine:   verbExamine,
+  put:       verbPut,
+  score:     verbScore,
+  diagnose:  verbDiagnose,
+  plugh:     verbAdvent,
+  xyzzy:     verbAdvent,
+  frobozz:   verbFrobozz,
+};
 
+// META_ACTIONS — verbs that do NOT advance time (gmain.zil:171-172 CLOCKER guard).
 export const META_ACTIONS: ReadonlySet<string> = new Set([
   'V-TELL',
   'V-BRIEF',
@@ -947,27 +618,12 @@ export const META_ACTIONS: ReadonlySet<string> = new Set([
   'V-RESTORE',
 ]);
 
-/**
- * Execute a verb given a fully-populated VerbContext.
- *
- * Dispatches on `action` (the V-* action id from ParsedCommand.action) when
- * provided, falling back to `ctx.verb` (the verb word) for backward compat.
- * Unknown verbs get a generic "I don't understand" response — the turn loop
- * can pass those to object handlers before giving up.
- */
 export function executeVerb(ctx: VerbContext, action?: string): VerbResult {
-  // Primary: dispatch on resolved action id (ZIL PERFORM on PRSA).
   if (action !== undefined) {
     const actionHandler = ACTION_HANDLERS[action];
-    if (actionHandler !== undefined) {
-      return actionHandler(ctx);
-    }
+    if (actionHandler !== undefined) return actionHandler(ctx);
   }
-  // Fallback: dispatch on verb word (for callers that pre-date P2 fix,
-  // and for actions not yet in ACTION_HANDLERS).
   const handler = HANDLERS[ctx.verb];
-  if (handler === undefined) {
-    return result(`I don't know how to "${ctx.verb}".`);
-  }
+  if (handler === undefined) return result(`I don't know how to "${ctx.verb}".`);
   return handler(ctx);
 }
