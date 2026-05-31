@@ -317,12 +317,14 @@ export class Game {
           rng: this.rng,
           scoreObj: (obj) => this.scoring.scoreObj(obj),
           // V-SCORE / V-DIAGNOSE fields (TD3-2):
-          // `moveCount` is incremented at end-of-turn; pass moveCount+1 here
-          // so V-SCORE sees the count that will be committed (ZIL MOVES is
-          // incremented in CLOCKER before M-END; the score command executes
-          // after PARSER/PERFORM, which is after CLOCKER in ZIL's main loop).
+          // `moveCount` is incremented at the END of turn() after all execution.
+          // V-SCORE must report the count BEFORE this turn's increment — the
+          // dfrotz oracle confirms: "score" as the first command prints "0 moves"
+          // (not 1), and "look" then "score" prints "1 move" (not 2).  ZIL MOVES
+          // is also not incremented by the SCORE verb itself (it is a no-time verb
+          // in ZIL — CLOCKER does not run for it).  Pass this.moveCount directly.
           score:  this.scoring.score,
-          moves:  this.moveCount + 1,
+          moves:  this.moveCount,
           rank:   () => this.scoring.rank(),
           deaths: 0,  // DEATHS global (TD-3 §9.4); 0 until jigsUp is wired (Wave S3)
         }, cmd.action);

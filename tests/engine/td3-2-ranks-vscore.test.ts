@@ -36,30 +36,34 @@ function makeGame(startRoom: string = 'WEST-OF-HOUSE') {
 }
 
 // ---------------------------------------------------------------------------
-// A. V-SCORE at score=0, moves=1
+// A. V-SCORE at score=0, moves=0
 // (dfrotz oracle: first turn "score" command after game start)
 // ---------------------------------------------------------------------------
 
-describe('TD3-2-A: V-SCORE output — score 0, moves 1 (dfrotz oracle)', () => {
+describe('TD3-2-A: V-SCORE output — score 0, moves 0 (dfrotz oracle)', () => {
   it('output is byte-identical to the expected ZIL format', () => {
     // Start in WEST-OF-HOUSE (no room VALUE), issue "score" as the FIRST move.
-    // After start(), moveCount is 0.  "score" is the first turn → moveCount = 1.
+    // dfrotz R119 oracle: "score" as the very first command prints "0 moves"
+    // because SCORE is a no-time verb — it does NOT increment the MOVES counter.
+    // The port mirrors this: moveCount is read BEFORE increment (which happens
+    // at the end of turn()), so the first turn() call with "score" reports 0.
     // Expected (from 1actions.zil:4028–4043 / dfrotz R119):
-    //   "Your score is 0 (total of 350 points), in 1 move.\nThis gives you the rank of Beginner."
+    //   "Your score is 0 (total of 350 points), in 0 moves.\nThis gives you the rank of Beginner."
     const game = makeGame('WEST-OF-HOUSE');
-    // start() does NOT increment moveCount; the first turn() call does.
+    // start() does NOT increment moveCount; the first turn() call does so AFTER
+    // executing the verb — but V-SCORE reads moveCount before the increment.
     const result = game.turn('score');
     expect(result.output).toBe(
-      'Your score is 0 (total of 350 points), in 1 move.\n' +
+      'Your score is 0 (total of 350 points), in 0 moves.\n' +
       'This gives you the rank of Beginner.',
     );
   });
 
-  it('move counter is singular "move" at 1 move', () => {
+  it('move counter shows "0 moves" (plural) for the very first score command', () => {
+    // dfrotz oracle: "score" as first command → "in 0 moves." (plural, not "0 move.")
     const game = makeGame('WEST-OF-HOUSE');
     const result = game.turn('score');
-    expect(result.output).toContain(', in 1 move.');
-    expect(result.output).not.toContain('moves.');
+    expect(result.output).toContain(', in 0 moves.');
   });
 });
 
@@ -70,23 +74,25 @@ describe('TD3-2-A: V-SCORE output — score 0, moves 1 (dfrotz oracle)', () => {
 describe('TD3-2-B: V-SCORE after taking a scored object', () => {
   it('score reflects the VALUE of the taken object', () => {
     // SKULL has VALUE=10.  Start in LAND-OF-LIVING-DEAD (no room VALUE).
-    // turn 1: "take skull" → score = 10
-    // turn 2: "score" → reports 10 points
+    // turn 1: "take skull" → moveCount incremented to 1, score = 10
+    // turn 2: "score" → V-SCORE reads moveCount=1 (before increment to 2)
+    // dfrotz oracle: after one real move then "score" → "in 1 move."
     const game = makeGame('LAND-OF-LIVING-DEAD');
     game.turn('take skull'); // move 1, score = 10
-    const result = game.turn('score'); // move 2
+    const result = game.turn('score'); // reads moveCount=1, then increments to 2
     expect(result.output).toBe(
-      'Your score is 10 (total of 350 points), in 2 moves.\n' +
+      'Your score is 10 (total of 350 points), in 1 move.\n' +
       'This gives you the rank of Beginner.',
     );
   });
 
   it('score for PAINTING is 4 (spec §4.1)', () => {
     // PAINTING.VALUE = 4. Start in GALLERY (no room VALUE matching spec).
+    // After one real move (take painting), "score" reports moveCount=1.
     const game = makeGame('GALLERY');
     game.turn('take painting'); // move 1, score = 4
-    const result = game.turn('score'); // move 2
-    expect(result.output).toContain('Your score is 4 (total of 350 points), in 2 moves.');
+    const result = game.turn('score'); // reads moveCount=1
+    expect(result.output).toContain('Your score is 4 (total of 350 points), in 1 move.');
     expect(result.output).toContain('This gives you the rank of Beginner.');
   });
 });
@@ -186,31 +192,38 @@ describe('TD3-2-E: V-DIAGNOSE at game start', () => {
 // ---------------------------------------------------------------------------
 
 describe('TD3-2-F: V-SCORE move plurality', () => {
-  it('uses singular "move" when moveCount == 1', () => {
+  it('uses plural "moves" when moveCount == 0 (first score command)', () => {
+    // dfrotz oracle: "score" as the very first command → "in 0 moves."
+    // V-SCORE reads moveCount BEFORE the turn increments it: 0 → "0 moves."
     const game = makeGame('WEST-OF-HOUSE');
-    const r = game.turn('score'); // move 1
+    const r = game.turn('score'); // reads moveCount=0, then increments to 1
+    expect(r.output).toContain('in 0 moves.');
+  });
+
+  it('uses singular "move" when moveCount == 1', () => {
+    // dfrotz oracle: after one real move ("look"), "score" → "in 1 move."
+    // V-SCORE reads moveCount=1 (after look incremented it) before "score" increments.
+    const game = makeGame('WEST-OF-HOUSE');
+    game.turn('look');   // moveCount incremented to 1
+    const r = game.turn('score'); // reads moveCount=1, then increments to 2
     expect(r.output).toContain('in 1 move.');
   });
 
   it('uses plural "moves" when moveCount == 2', () => {
+    // dfrotz oracle: after two real moves, "score" → "in 2 moves."
     const game = makeGame('WEST-OF-HOUSE');
-    game.turn('look');   // move 1
-    const r = game.turn('score'); // move 2
+    game.turn('look');   // moveCount → 1
+    game.turn('look');   // moveCount → 2
+    const r = game.turn('score'); // reads moveCount=2, then increments to 3
     expect(r.output).toContain('in 2 moves.');
   });
 
-  it('uses plural "moves" when moveCount == 0 (edge case)', () => {
-    // Zero moves should not happen during normal play (game.start() does not
-    // increment the counter and score is always called after at least one turn).
-    // If it does, "0 moves" is grammatically correct (no singular exception).
-    // This tests the guard: <1? ,MOVES> in ZIL = "MOVES == 1 only".
-    // We cannot actually call score before any turn via the public API because
-    // start() does not count as a move.  Verify indirectly that it works for
-    // multi-move counts.
+  it('uses plural "moves" for larger counts', () => {
     const game = makeGame('WEST-OF-HOUSE');
     game.turn('look');
     game.turn('look');
-    const r = game.turn('score'); // move 3
+    game.turn('look'); // moveCount → 3
+    const r = game.turn('score'); // reads moveCount=3
     expect(r.output).toContain('in 3 moves.');
   });
 });
