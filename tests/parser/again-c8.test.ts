@@ -220,6 +220,135 @@ describe('C8 — AGAIN with trailing tokens', () => {
       expect(result.command.verb).toBe('take');
     }
   });
+
+  it('"again and" (separator-only trailing via parse()) → replays last command', () => {
+    const { room, player, world } = makeWorld();
+    const parser = new Parser();
+
+    // Establish lastInput and lastWon=true.
+    parser.parse('take lamp', room, player, world);
+    parser.setLastWon(true);
+
+    // "again and" — same as "again then": only separators after AGAIN → replay.
+    const result = parser.parse('again and', room, player, world);
+    expect(result.kind).toBe('ok');
+    if (result.kind === 'ok') {
+      expect(result.command.verb).toBe('take');
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// §4b. AGAIN AND <command>: replay-then-chain via parseChained
+//
+// gparser.zil:202-211: after AGAIN, if next token is PERIOD/COMMA/THEN/AND,
+// strip AGAIN+separator, stash remainder in RESERVE-LEXV, replay last command.
+// The port's equivalent is splitSegments() splitting on "and", which delivers
+// "again" and "look" as two separate segments to parseChained.
+// ---------------------------------------------------------------------------
+
+describe('C8 — AGAIN AND <command>: replay-then-chain (gparser.zil:202-211)', () => {
+  it('"look" then parseChained("again and look") → [replay look, look]', () => {
+    const { room, player, world } = makeWorld();
+    const parser = new Parser();
+
+    // Establish lastInput="look", lastWon=true.
+    parser.parse('look', room, player, world);
+    parser.setLastWon(true);
+
+    // "again and look" via parseChained → splitSegments splits on "and" →
+    // ["again"] replays "look", ["look"] parses fresh look.
+    const results = parser.parseChained('again and look', room, player, world);
+    expect(results).toHaveLength(2);
+    expect(results[0]!.kind).toBe('ok');
+    if (results[0]!.kind === 'ok') {
+      expect(results[0]!.command.verb).toBe('look');
+    }
+    expect(results[1]!.kind).toBe('ok');
+    if (results[1]!.kind === 'ok') {
+      expect(results[1]!.command.verb).toBe('look');
+    }
+  });
+
+  it('"look" then parseChained("again and take lamp") → [replay look, take lamp]', () => {
+    const { room, player, lamp, world } = makeWorld();
+    const parser = new Parser();
+
+    // Establish lastInput="look", lastWon=true.
+    parser.parse('look', room, player, world);
+    parser.setLastWon(true);
+
+    // "again and take lamp" → splitSegments splits on "and" →
+    // ["again"] replays "look", ["take", "lamp"] parses take.
+    const results = parser.parseChained('again and take lamp', room, player, world);
+    expect(results).toHaveLength(2);
+    expect(results[0]!.kind).toBe('ok');
+    if (results[0]!.kind === 'ok') {
+      expect(results[0]!.command.verb).toBe('look');
+    }
+    expect(results[1]!.kind).toBe('ok');
+    if (results[1]!.kind === 'ok') {
+      expect(results[1]!.command.verb).toBe('take');
+      expect(results[1]!.command.dobjIds).toEqual([lamp.id]);
+    }
+  });
+
+  it('"again and" separator-only via parseChained → [replay look] (one segment)', () => {
+    const { room, player, world } = makeWorld();
+    const parser = new Parser();
+
+    // Establish lastInput="look", lastWon=true.
+    parser.parse('look', room, player, world);
+    parser.setLastWon(true);
+
+    // "again and" — "and" is a separator, nothing follows → one segment ["again"].
+    const results = parser.parseChained('again and', room, player, world);
+    expect(results).toHaveLength(1);
+    expect(results[0]!.kind).toBe('ok');
+    if (results[0]!.kind === 'ok') {
+      expect(results[0]!.command.verb).toBe('look');
+    }
+  });
+
+  // Contrast: "again then X" already worked before the fix; verify it still works.
+  it('"again then look" (then-separator, pre-existing) → [replay, look]', () => {
+    const { room, player, world } = makeWorld();
+    const parser = new Parser();
+
+    parser.parse('look', room, player, world);
+    parser.setLastWon(true);
+
+    const results = parser.parseChained('again then look', room, player, world);
+    expect(results).toHaveLength(2);
+    expect(results[0]!.kind).toBe('ok');
+    if (results[0]!.kind === 'ok') {
+      expect(results[0]!.command.verb).toBe('look');
+    }
+    expect(results[1]!.kind).toBe('ok');
+    if (results[1]!.kind === 'ok') {
+      expect(results[1]!.command.verb).toBe('look');
+    }
+  });
+
+  // Contrast: "again, look" (comma separator) also works.
+  it('"again, look" (comma-separator) → [replay, look]', () => {
+    const { room, player, world } = makeWorld();
+    const parser = new Parser();
+
+    parser.parse('look', room, player, world);
+    parser.setLastWon(true);
+
+    const results = parser.parseChained('again, look', room, player, world);
+    expect(results).toHaveLength(2);
+    expect(results[0]!.kind).toBe('ok');
+    if (results[0]!.kind === 'ok') {
+      expect(results[0]!.command.verb).toBe('look');
+    }
+    expect(results[1]!.kind).toBe('ok');
+    if (results[1]!.kind === 'ok') {
+      expect(results[1]!.command.verb).toBe('look');
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

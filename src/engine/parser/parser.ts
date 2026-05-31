@@ -44,8 +44,19 @@ function tokenizeSegment(input: string): string[] {
 }
 
 /**
- * Split an input string into segments on SIBREAK tokens (period/comma)
- * and on the word "then", then tokenize each segment (articles stripped).
+ * Split an input string into segments on SIBREAK tokens (period/comma),
+ * on the word "then", and on the word "and" when it acts as a command-chain
+ * separator (gparser.zil:202-211 for AGAIN, lines 497-502 for verb/direction
+ * following AND in noun-scanning).
+ *
+ * "and" is treated as a segment separator here.  In ZIL, "and" after AGAIN
+ * (lines 202-206) is always a separator, and "and" before a verb or direction
+ * (lines 497-502) is converted to THEN (also a separator).  The port unifies
+ * both cases by splitting on "and" at this level.  The noun-list use of "and"
+ * (e.g. "take lamp and sword") is not supported by the port's SNARFEM path, so
+ * splitting there is harmless (each word becomes its own segment, the bare-noun
+ * segment fails gracefully).
+ *
  * This replaces the old splitChained() export from tokenizer.ts.
  * Kept private here — Wave C9 will delete it when the lazy drive lands.
  */
@@ -56,7 +67,7 @@ function splitSegments(input: string): string[][] {
   let current: string[] = [];
 
   for (const tok of allToks) {
-    if (SIBREAK_CHARS.has(tok) || tok === 'then') {
+    if (SIBREAK_CHARS.has(tok) || tok === 'then' || tok === 'and') {
       // Flush the current segment (articles stripped).
       const filtered = current.filter(t => !ARTICLES.has(t));
       if (filtered.length > 0) segments.push(filtered);
@@ -1900,8 +1911,13 @@ export class Parser {
     // Port: tokens after "again"/"g" (index 1+) that aren't structural separators.
     // The tokenizeSegment adapter already stripped articles and split at first SIBREAK,
     // so periods/commas won't appear as separate tokens in the `tokens` array here.
-    // "then" and "and" might still appear as word tokens.
-    // If ANY non-separator token appears after AGAIN → error.
+    //
+    // When called via parseChained, "again and north" is already split by splitSegments
+    // into ["again"] + ["north"] — so _handleAgain only ever sees ["again"] in that path.
+    // "again then north" likewise arrives as ["again"] because splitSegments splits on "then".
+    // "again and" (separator-only) arrives as ["again", "and"] only via parse() directly.
+    //
+    // If ANY non-separator token appears after AGAIN → error (e.g. "again lamp").
     // (Separators: ".", ",", "then", "and" — structural tokens in ZIL.)
     const separators = new Set<string>(['.', ',', 'then', 'and']);
     const trailing = tokens.slice(1);
