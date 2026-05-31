@@ -72,7 +72,7 @@ export class Game {
   private moveCount = 0;
 
   // Death-state fields (ZIL globals).
-  // deaths/gameOver are facade control-flow; dead/alwaysLit are for ghost-mode (F5).
+  // deaths/gameOver are facade control-flow; dead/alwaysLit gate ghost-mode resurrection.
   private deaths = 0;
   private dead = false;
   private alwaysLit = false;
@@ -407,19 +407,11 @@ export class Game {
   }
 
   /**
-   * Run the full 7-step PERFORM dispatch chain (gmain.zil:210–224).
-   * Each step invokes a handler; the first truthy return (ZIL RTRUE = M-HANDLED)
-   * short-circuits the rest. A handler may call `ctx.fatal()` (ZIL M-FATAL = 2)
-   * to signal a fatal outcome — the caller must skip M-END and clear continuation.
-   *
-   * Steps:
-   *   1. WINNER (actor) P?ACTION — gmain.zil:211
-   *   2. room P?ACTION rarg=M-BEG — gmain.zil:212
-   *   3. PREACTIONS[verb] — gmain.zil:213
-   *   4. PRSI P?ACTION — gmain.zil:214
-   *   5. LOC(PRSO) P?CONTFCN — gmain.zil:215–219 (inert until TD-7)
-   *   6. PRSO P?ACTION — gmain.zil:220–223
-   *   7. ACTIONS[verb] default — gmain.zil:224; caller-side (executeVerb)
+   * Run the 7-step PERFORM dispatch chain (gmain.zil:210–224).
+   * First truthy return short-circuits the rest (ZIL RTRUE = M-HANDLED).
+   * A handler may call `ctx.fatal()` (ZIL M-FATAL = 2) to abort; the caller
+   * must then skip M-END and clear continuation.
+   * Step 7 (ACTIONS[verb] default) is caller-side via executeVerb.
    */
   private runActionChain(
     verb: string,
@@ -436,21 +428,21 @@ export class Game {
     const ctx = (self: GameObject, rarg?: number): ActionContext =>
       this.makeContext(self, verb, dobj, iobj, prep, rarg, tell, onFatal);
 
-    // Step 1: WINNER (actor) P?ACTION
+    // WINNER (actor) P?ACTION — gmain.zil:211
     if (this.player.handler !== undefined) {
       if (this.player.handler(ctx(this.player))) {
         return { handled: true, fatal };
       }
     }
 
-    // Step 2: room P?ACTION with rarg = M-BEG
+    // room P?ACTION rarg=M-BEG — gmain.zil:212
     if (this.here.handler !== undefined) {
       if (this.here.handler(ctx(this.here, M_BEG))) {
         return { handled: true, fatal };
       }
     }
 
-    // Step 3: PREACTIONS[verb] — PRE-* guard
+    // PREACTIONS[verb] — PRE-* guard, gmain.zil:213
     if (preAction !== undefined) {
       const preHandler = lookupPreAction(preAction);
       if (preHandler !== undefined) {
@@ -460,15 +452,14 @@ export class Game {
       }
     }
 
-    // Step 4: PRSI P?ACTION
+    // PRSI P?ACTION — gmain.zil:214
     if (iobj?.handler !== undefined) {
       if (iobj.handler(ctx(iobj))) {
         return { handled: true, fatal };
       }
     }
 
-    // Step 5: LOC(PRSO) P?CONTFCN — guard: PRSO exists AND action != V-WALK AND container has contFcn.
-    // Inert until TD-7 supplies CONTFCN extraction data.
+    // LOC(PRSO) P?CONTFCN — gmain.zil:215–219
     if (action !== 'V-WALK' && dobj !== undefined && dobj.parent !== null && dobj.parent !== undefined) {
       const container = dobj.parent;
       if (container.contFcn !== undefined) {
@@ -478,7 +469,7 @@ export class Game {
       }
     }
 
-    // Step 6: PRSO P?ACTION — guard: PRSO exists AND action != V-WALK (gmain.zil:220–223).
+    // PRSO P?ACTION — gmain.zil:220–223
     if (action !== 'V-WALK' && dobj?.handler !== undefined) {
       if (dobj.handler(ctx(dobj))) {
         return { handled: true, fatal };
@@ -598,7 +589,7 @@ export class Game {
 
   // JIGS-UP — shared death entry point (1actions.zil:4046-4099).
   // Called by verbGo's grue path and future combat death handlers.
-  // Deferred (TODO F5): ghost-mode/Hades, RANDOMIZE-OBJECTS, KILL-INTERRUPTS,
+  // Not yet ported: ghost-mode/Hades, RANDOMIZE-OBJECTS, KILL-INTERRUPTS,
   // DEAD-FUNCTION, sprayed-grue variant, FINISH end-screen, "Bad luck" LUCKY branch.
   private jigsUp(deathMessage: string, tell: (s: string) => void): void {
     // Re-death guard (1actions.zil:4048-4053): fires when already in ghost mode.
