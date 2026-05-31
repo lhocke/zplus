@@ -1,55 +1,10 @@
-/**
- * extract-room-text.ts
- *
- * Extracts the EXACT, verbatim description text for every ROOM defined in
- * zil/1dungeon.zil and produces src/data/room-text.json.
- *
- * Two text sources exist in the ZIL source:
- *
- *   1. Static LDESC — a string literal in the ROOM form itself.
- *      These are trivially extracted by the s-expr reader.
- *
- *   2. Action-driven LDESC — rooms whose description is printed by a
- *      <ROUTINE …-FCN (RARG) <COND (<EQUAL? .RARG ,M-LOOK> <TELL "…"> …)>>
- *      pattern in 1actions.zil (or, rarely, 1dungeon.zil).
- *      The extractor finds the ROUTINE form whose name matches the room's
- *      actionRoutine, then gathers every TELL string literal that appears
- *      inside an <EQUAL? .RARG ,M-LOOK> branch.  When a branch is cleanly
- *      isolatable (no non-literal interpolations), mlook carries the joined
- *      text; otherwise the room is flagged for human review and mlook
- *      carries all TELL strings in the routine as candidates.
- *
- * Output shape (one entry per room id):
- *
- *   {
- *     id: string,                // ROOM id atom
- *     name: string,              // DESC string (normalized)
- *     source: { file: string, line: number },
- *     ldesc?: string,            // static LDESC, normalized
- *     mlook?: string[],          // M-LOOK TELL strings, normalized
- *     mlookSource?: { file: string, line: number },
- *     needsReview?: true,        // set when M-LOOK text could not be cleanly isolated
- *     reviewReason?: string,
- *   }
- *
- * The ZIL string normalizer from extract.ts is reused verbatim so that
- * pipe-separated lines (|) become real newlines and source-level newlines
- * within segments collapse to spaces — exactly as the game would render them.
- */
-
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseSexpr } from './parse-sexpr.js';
 import { normalizeZilString } from './extract.js';
 import type { SNode, SList, SAtom, SString } from './parse-sexpr.js';
 
-// ---------------------------------------------------------------------------
-// Source location tracking
-//
-// The s-expr reader does not emit line numbers; we compute them by counting
-// the newlines that precede a given character offset in the raw source.
-// ---------------------------------------------------------------------------
-
+// The s-expr reader is stateless w.r.t. position; count newlines to get line numbers
 function lineAt(src: string, offset: number): number {
   let line = 1;
   for (let i = 0; i < offset && i < src.length; i++) {
@@ -57,10 +12,6 @@ function lineAt(src: string, offset: number): number {
   }
   return line;
 }
-
-// ---------------------------------------------------------------------------
-// Node type guards
-// ---------------------------------------------------------------------------
 
 function isAtom(n: SNode): n is SAtom { return n.type === 'atom'; }
 function isString(n: SNode): n is SString { return n.type === 'string'; }
@@ -81,14 +32,6 @@ function secondString(list: SList): string | undefined {
   return item && isString(item) ? (item as SString).value : undefined;
 }
 
-// ---------------------------------------------------------------------------
-// Source-position-aware node scan
-//
-// We parse the raw source with a simple regex to map ROOM and ROUTINE
-// identifiers to approximate line numbers; the s-expr reader itself is
-// stateless with respect to position, so we do a secondary scan.
-// ---------------------------------------------------------------------------
-
 function buildLineIndex(src: string): Map<string, number> {
   const index = new Map<string, number>();
   // Match <ROOM ID and <ROUTINE ID patterns
@@ -103,18 +46,6 @@ function buildLineIndex(src: string): Map<string, number> {
   return index;
 }
 
-// ---------------------------------------------------------------------------
-// Collect TELL string literals from a TELL form or nested forms
-//
-// In ZIL a TELL looks like:
-//   <TELL "string1" CR "string2" CR>
-// or spans multiple nested <COND …> branches.
-//
-// collectTells gathers every string literal that is a direct argument to
-// a TELL form; it does NOT recurse into conditionals by default.  The
-// caller decides how deep to recurse.
-// ---------------------------------------------------------------------------
-
 function collectDirectTells(form: SList): string[] {
   const result: string[] = [];
   for (const item of form.items) {
@@ -125,12 +56,7 @@ function collectDirectTells(form: SList): string[] {
   return result;
 }
 
-// ---------------------------------------------------------------------------
-// hasOnlyStringTells — true when every argument to a TELL form is a
-// string literal or a named atom (CR / CRLF); i.e. there are no dynamic
-// expressions like D ,PRSO that would change the rendered text at runtime.
-// ---------------------------------------------------------------------------
-
+// True when every TELL argument is a string literal or CR/CRLF (no dynamic D ,PRSO etc.)
 function hasOnlyStringTells(form: SList): boolean {
   for (const item of form.items.slice(1)) { // skip 'TELL' head
     if (isString(item)) continue;
@@ -146,20 +72,6 @@ function hasOnlyStringTells(form: SList): boolean {
   }
   return true;
 }
-
-// ---------------------------------------------------------------------------
-// Extract M-LOOK TELL strings from a ROUTINE form body
-//
-// Strategy:
-//   Walk the items of the COND form in the routine body.
-//   When we find an <EQUAL? .RARG ,M-LOOK> branch, collect every <TELL …>
-//   form reachable from it (both direct and nested in further CONDs).
-//   If all TELLs in that branch are purely static, the text is clean.
-//   Otherwise the room is flagged for review.
-//
-// Returns:
-//   { tells: string[], clean: boolean }
-// ---------------------------------------------------------------------------
 
 interface TellResult {
   tells: string[];
@@ -230,10 +142,6 @@ function extractMLookTells(routineBody: SNode[]): TellResult {
   return { tells: [], clean: true };
 }
 
-// ---------------------------------------------------------------------------
-// Room-text record type (written to room-text.json)
-// ---------------------------------------------------------------------------
-
 export interface SourceLoc {
   file: string;
   line: number;
@@ -249,10 +157,6 @@ export interface RoomTextEntry {
   needsReview?: true;
   reviewReason?: string;
 }
-
-// ---------------------------------------------------------------------------
-// Main extraction logic
-// ---------------------------------------------------------------------------
 
 function extractRoomText(
   dungeonSrc: string,
@@ -378,10 +282,6 @@ function extractRoomText(
 
   return entries;
 }
-
-// ---------------------------------------------------------------------------
-// Main entry point — runs when invoked directly via tsx
-// ---------------------------------------------------------------------------
 
 const isMain =
   typeof process !== 'undefined' &&

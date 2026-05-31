@@ -1,27 +1,4 @@
-/**
- * ZIL → ObjectData / SyntaxEntry / VocabularyData extractor.
- *
- * Turns parsed ROOM and OBJECT s-expression forms into ObjectData records
- * suitable for writing to src/data/objects.json.
- *
- * Also extracts SYNTAX and SYNONYM/BUZZ forms into SyntaxEntry[] and
- * VocabularyData, suitable for src/data/syntax.json and vocabulary.json.
- *
- * Handles:
- *   - ROOM forms: exits (TO fixed destination or PER routine), flags, DESC/LDESC/FDESC
- *   - OBJECT forms: synonyms, adjectives, parent (from IN clause), flags, props, ACTION
- *   - Flag name mapping: ZIL *BIT atoms → Flag enum string names
- *   - kind inference: room vs thing vs container vs actor (from flags/properties)
- *   - SYNTAX forms: verb + optional particle, DO slot, prep2, IO slot → action handler
- *   - SYNONYM forms: canonical word → alias list
- *   - BUZZ forms: filler words the parser should discard
- */
-
 import type { SNode, SList, SAtom, SString } from './parse-sexpr.js';
-
-// ---------------------------------------------------------------------------
-// Re-exported types (frozen contracts from the implementation plan)
-// ---------------------------------------------------------------------------
 
 export type ObjectId = string;
 
@@ -69,10 +46,7 @@ export interface ObjectData {
   pseudo?: PseudoEntry[];
 }
 
-// ---------------------------------------------------------------------------
-// Direction name normalisation — ZIL uses upper-case atoms
-// ---------------------------------------------------------------------------
-
+// ZIL uses upper-case direction atoms
 const DIR_MAP: Record<string, Dir> = {
   NORTH: 'north',
   SOUTH: 'south',
@@ -89,13 +63,7 @@ const DIR_MAP: Record<string, Dir> = {
   LAND: 'out', // ZIL LAND direction — used for entering the dungeon
 };
 
-// ---------------------------------------------------------------------------
-// Flag name mapping — ZIL *BIT atoms → Flag enum string names
-//
-// Unrecognised atoms are passed through as-is; this keeps the extractor
-// forward-compatible with any flags added to the enum later.
-// ---------------------------------------------------------------------------
-
+// ZIL *BIT atoms → Flag enum string names; unknown atoms pass through as-is
 const FLAG_MAP: Record<string, string> = {
   LIGHTBIT: 'Light',
   ONBIT: 'On',           // ONBIT on rooms = always-lit (outdoor); on objects = currently on (Flag.OnFire handles the object case at runtime)
@@ -128,23 +96,14 @@ const FLAG_MAP: Record<string, string> = {
   TRYTAKEBIT: 'TryTake', // parser auto-takes before action (TAKE-CHECK)
 };
 
-/** Map a ZIL flag atom to a Flag enum name. Unknown atoms pass through. */
 function mapFlag(zilBit: string): string {
   return FLAG_MAP[zilBit] ?? zilBit;
 }
-
-// ---------------------------------------------------------------------------
-// Numeric property names — ZIL slots that carry integer values
-// ---------------------------------------------------------------------------
 
 const NUMERIC_PROPS = new Set([
   'SIZE', 'CAPACITY', 'VALUE', 'TVALUE', 'STRENGTH',
   'SCORE', 'STREN', 'STAGSTR',
 ]);
-
-// ---------------------------------------------------------------------------
-// Helpers for navigating the s-expression tree
-// ---------------------------------------------------------------------------
 
 function isAtom(n: SNode): n is SAtom {
   return n.type === 'atom';
@@ -158,42 +117,23 @@ function isList(n: SNode): n is SList {
   return n.type === 'list';
 }
 
-/** Return the head atom value of a list, or undefined. */
 function head(list: SList): string | undefined {
   const first = list.items[0];
   return first && isAtom(first) ? first.value : undefined;
 }
 
-/** Return the second item of a list as an atom value, or undefined. */
 function second(list: SList): string | undefined {
   const item = list.items[1];
   return item && isAtom(item) ? item.value : undefined;
 }
 
-/** Return the second item of a list as a string value, or undefined. */
 function secondString(list: SList): string | undefined {
   const item = list.items[1];
   return item && isString(item) ? item.value : undefined;
 }
 
-// ---------------------------------------------------------------------------
-// ZIL string normalization
-// ---------------------------------------------------------------------------
-
-/**
- * Normalize ZIL string semantics:
- *   - Replace each '|' with '\n' ('|' is ZIL's explicit line-break character).
- *   - Collapse runs of (optional-spaces newline optional-spaces) that appear
- *     in the raw source text into a single space.  In ZIL, a bare newline
- *     inside a string literal is a word separator, not a line break.
- *
- * Applied in order:
- *   1. Replace '|' with '\n' (explicit ZIL newlines become real newlines).
- *   2. Collapse source newlines to spaces — but only within the segments
- *      between the original '|' separators (so the '\n' replacements for
- *      '|' are preserved).  This is achieved by splitting on '|' first,
- *      normalising source newlines within each segment, then joining with '\n'.
- */
+// '|' is ZIL's explicit line-break; bare source newlines inside strings are
+// word separators (not breaks) — collapse them to spaces within each segment.
 export function normalizeZilString(s: string): string {
   // Split on '|'; each segment between pipes has its source-level newlines
   // collapsed.  Leading/trailing whitespace (which comes from source indentation
@@ -210,16 +150,8 @@ export function normalizeZilString(s: string): string {
   return normalised.join('\n');
 }
 
-// ---------------------------------------------------------------------------
-// Exit extraction from a direction sub-list
-//
-// ZIL exit forms:
-//   (NORTH TO DEST-ROOM)            — fixed destination
-//   (DOWN PER MAZE-DIODES)          — routine-based
-//   (EAST "Sorry, the door is locked.")  — blocked with message
-//   (EAST TO DEST IF FLAG ELSE "msg")   — conditional (rare)
-// ---------------------------------------------------------------------------
-
+// ZIL exit forms: (NORTH TO DEST), (DOWN PER ROUTINE), (EAST "blocked msg"),
+//   (EAST TO DEST IF FLAG ELSE "msg")
 function parseExit(list: SList): Exit | null {
   const dirAtom = head(list);
   if (!dirAtom) return null;
@@ -267,13 +199,7 @@ function parseExit(list: SList): Exit | null {
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Kind inference
-//
-// ZIL doesn't have a separate 'kind' field — we infer it from flags and
-// whether the top-level form is ROOM vs OBJECT.
-// ---------------------------------------------------------------------------
-
+// ZIL has no explicit kind — infer from flags and whether the form is ROOM vs OBJECT
 function inferKind(
   isRoom: boolean,
   rawFlags: string[],
@@ -284,10 +210,6 @@ function inferKind(
   if (flagSet.has('CONTBIT')) return 'container';
   return 'thing';
 }
-
-// ---------------------------------------------------------------------------
-// Single form extraction
-// ---------------------------------------------------------------------------
 
 function extractOne(form: SList): ObjectData | null {
   const formHead = head(form);
@@ -479,17 +401,6 @@ function extractOne(form: SList): ObjectData | null {
   return record;
 }
 
-// ---------------------------------------------------------------------------
-// Public API — object extraction
-// ---------------------------------------------------------------------------
-
-/**
- * Walk an array of top-level SNodes (output of parseSexpr) and extract every
- * ROOM and OBJECT form into an ObjectData record.
- *
- * Non-ROOM/OBJECT forms (GLOBAL, DIRECTIONS, strings, etc.) are silently
- * skipped — this mirrors the ZIL source, which mixes declarations freely.
- */
 export function extractObjects(nodes: SNode[]): ObjectData[] {
   const results: ObjectData[] = [];
   for (const node of nodes) {
@@ -500,11 +411,6 @@ export function extractObjects(nodes: SNode[]): ObjectData[] {
   return results;
 }
 
-// ---------------------------------------------------------------------------
-// Syntax types
-// ---------------------------------------------------------------------------
-
-/** One object slot in a SYNTAX declaration: (FIND FLAG?) (scope…). */
 export interface ObjectSlot {
   /** ZIL flag atom that must be set on the object (e.g. "TAKEBIT"). */
   readonly find?: string;
@@ -512,59 +418,20 @@ export interface ObjectSlot {
   readonly where: string[];
 }
 
-/**
- * Raw parsed SYNTAX declaration from gsyntax.zil — the extractor's intermediate format.
- *
- * Example ZIL:  <SYNTAX TAKE OBJECT (FIND TAKEBIT) (ON-GROUND IN-ROOM MANY)
- *                              = V-TAKE PRE-TAKE>
- * Result: { verb: 'TAKE', directObject: {find:'TAKEBIT', where:[...]},
- *           action: 'V-TAKE', preAction: 'PRE-TAKE' }
- *
- * This raw type is normalized to SyntaxEntryOut (the port-native schema) by
- * normalizeSyntaxEntry() in syntax-normalize.ts before being written to
- * src/data/syntax.json.
- */
+// Raw parsed SYNTAX declaration; normalized to SyntaxEntryOut by syntax-normalize.ts.
+// Example: <SYNTAX TAKE OBJECT (FIND TAKEBIT) (ON-GROUND IN-ROOM MANY) = V-TAKE PRE-TAKE>
 export interface SyntaxEntryRaw {
-  /** Main verb word, upper-case (e.g. "TAKE"). */
   readonly verb: string;
-  /** Preposition / particle before the direct-object slot, if any (e.g. "IN", "UP"). */
   readonly preposition?: string;
-  /** Direct-object slot, if present. */
   readonly directObject?: ObjectSlot;
-  /** Preposition between direct and indirect object slots, if any (e.g. "FROM", "WITH"). */
   readonly preposition2?: string;
-  /** Indirect-object slot, if present. */
   readonly indirectObject?: ObjectSlot;
-  /** Handler routine name (e.g. "V-TAKE"). */
   readonly action: string;
-  /** Optional pre-action routine name (e.g. "PRE-TAKE"). */
   readonly preAction?: string;
 }
 
-/**
- * Port-native SyntaxEntry — re-exported from syntax-normalize for callers that
- * import from this module. This is the schema written to src/data/syntax.json
- * and consumed by the data-driven parser.
- */
 export type { SyntaxEntryOut as SyntaxEntry } from './syntax-normalize.js';
 
-/**
- * Aggregated vocabulary data for the parser (C2 schema).
- *
- * The flat `synonyms` map is split into three typed tables so the parser can
- * distinguish verb synonyms (fold before SYNTAX matching) from direction
- * synonyms (short-circuit path) and prep synonyms (canonicalise before
- * matching P-SPREP1/P-SPREP2 in a SyntaxEntry).
- *
- * verbSynonyms   — canonical verb → alias list
- *                  e.g. "TAKE" → ["GET", "HOLD", "CARRY", "REMOVE", "GRAB", "CATCH"]
- * directionSynonyms — canonical direction → alias list
- *                  e.g. "NORTH" → ["N"]
- * prepSynonyms   — canonical prep → alias list
- *                  e.g. "WITH" → ["USING", "THROUGH", "THRU"]
- * buzzwords      — filler words the parser silently drops
- *                  e.g. "A", "AN", "THE", "IS"
- */
 export interface VocabularyData {
   readonly verbSynonyms: Record<string, string[]>;
   readonly directionSynonyms: Record<string, string[]>;
@@ -572,23 +439,6 @@ export interface VocabularyData {
   readonly buzzwords: string[];
 }
 
-// ---------------------------------------------------------------------------
-// Syntax extraction helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Parse one object slot from the items that follow the OBJECT keyword.
- *
- * An object slot is represented by zero, one, or two parenthesised lists:
- *   (FIND FLAGBIT)       — optional find constraint
- *   (scope1 scope2 …)   — access-scope list
- *
- * The two lists are optional and can appear in either order; the presence of
- * a FIND atom in the first position distinguishes them.
- *
- * Returns the slot and advances `pos` past both optional lists.
- * `pos` must point to the item immediately after the OBJECT atom.
- */
 function parseObjectSlot(items: SNode[], pos: number): { slot: ObjectSlot; next: number } {
   let find: string | undefined;
   const where: string[] = [];
@@ -629,16 +479,6 @@ function parseObjectSlot(items: SNode[], pos: number): { slot: ObjectSlot; next:
   return { slot: find !== undefined ? { find, where } : { where }, next: i };
 }
 
-/**
- * Parse a single <SYNTAX …> form into a SyntaxEntry.
- *
- * Grammar (simplified):
- *   <SYNTAX verb
- *     [particle]
- *     [OBJECT (FIND flag)? (scope…)]
- *     [prep2 [OBJECT (FIND flag)? (scope…)]]
- *     = ACTION [PRE-ACTION]>
- */
 function parseSyntaxForm(form: SList): SyntaxEntryRaw | null {
   // Must start with SYNTAX
   if (head(form) !== 'SYNTAX') return null;
@@ -714,14 +554,6 @@ function parseSyntaxForm(form: SList): SyntaxEntryRaw | null {
   return entry as unknown as SyntaxEntryRaw;
 }
 
-// ---------------------------------------------------------------------------
-// Public API — syntax + vocabulary extraction
-// ---------------------------------------------------------------------------
-
-/**
- * Walk an array of top-level SNodes and extract every <SYNTAX …> form into a
- * SyntaxEntryRaw.  All other forms are silently skipped.
- */
 export function extractSyntax(nodes: SNode[]): SyntaxEntryRaw[] {
   const results: SyntaxEntryRaw[] = [];
   for (const node of nodes) {
@@ -735,15 +567,7 @@ export function extractSyntax(nodes: SNode[]): SyntaxEntryRaw[] {
   return results;
 }
 
-// ---------------------------------------------------------------------------
-// Synonym classification sets — used to categorise each SYNONYM canonical
-// into one of the three typed tables.
-//
-// Direction canonicals: declared via <DIRECTIONS ...> in gglobals.zil:5.
-// Prep canonicals: the 4 words that have SYNONYM declarations in gsyntax.zil:20-23.
-// Everything else is a verb synonym.
-// ---------------------------------------------------------------------------
-
+// Direction canonicals from gglobals.zil:5; prep canonicals from gsyntax.zil:20-23
 const DIRECTION_CANONICALS = new Set([
   'NORTH', 'SOUTH', 'EAST', 'WEST',
   'NE', 'NW', 'SE', 'SW',
@@ -752,20 +576,6 @@ const DIRECTION_CANONICALS = new Set([
 
 const PREP_CANONICALS = new Set(['WITH', 'IN', 'ON', 'UNDER']);
 
-/**
- * Walk an array of top-level SNodes and aggregate all <SYNONYM …> and
- * <BUZZ …> forms into a VocabularyData record with three typed tables.
- *
- * <SYNONYM TAKE GET HOLD …>  → verbSynonyms['TAKE'] = ['GET', 'HOLD', …]
- * <SYNONYM NORTH N>          → directionSynonyms['NORTH'] = ['N']
- * <SYNONYM WITH USING …>     → prepSynonyms['WITH'] = ['USING', …]
- * <BUZZ A AN THE IS …>       → buzzwords = ['A', 'AN', 'THE', 'IS', …]
- *
- * Note: IN appears as both a direction canonical and a prep canonical.
- * It is classified as a prep synonym when it has synonym aliases (gsyntax.zil:21),
- * and as a direction canonical otherwise (gglobals.zil:5). In practice both
- * tables carry it so the parser can handle both roles.
- */
 export function extractVocabulary(nodes: SNode[]): VocabularyData {
   const verbSynonyms: Record<string, string[]> = {};
   const directionSynonyms: Record<string, string[]> = {};
@@ -821,10 +631,6 @@ export function extractVocabulary(nodes: SNode[]): VocabularyData {
 
   return { verbSynonyms, directionSynonyms, prepSynonyms, buzzwords: Array.from(buzzSet) };
 }
-
-// ---------------------------------------------------------------------------
-// Main entry — runs when the file is executed directly via `npm run extract`
-// ---------------------------------------------------------------------------
 
 // In ESM with tsx, detect direct execution via import.meta.url vs argv
 const isMain =
