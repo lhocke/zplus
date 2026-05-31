@@ -78,6 +78,7 @@ import {
   normalizePrep,
 } from './vocabulary.js';
 import { gwim, ROOMS_SENTINEL } from './gwim.js';
+import { SMANY, STAKE, SHAVE } from './scope-bits.js';
 
 // ---------------------------------------------------------------------------
 // C3 SYNTAX-CHECK replaces the Wave-B static preAction maps.
@@ -384,6 +385,204 @@ function disambigMessage(noun: string, objs: GameObject[]): string {
     candidateList = `${allButLast.join(', ')}, or ${last}`;
   }
   return `Which ${noun} do you mean, ${candidateList}?`;
+}
+
+// --------------------------------------------------------------------------
+// C6: MANY-CHECK (gparser.zil:1294-1313)
+// --------------------------------------------------------------------------
+
+/**
+ * Check whether multiple direct objects are permitted for the matched syntax.
+ *
+ * ZIL MANY-CHECK (gparser.zil:1294-1313):
+ *   If P-PRSO has > 1 entry AND P-SLOC1 lacks SMANY(4):
+ *     "You can't use multiple direct objects with \"<verb>\"."
+ *   Same for PRSI / P-SLOC2 / "indirect".
+ *
+ * Returns a fail ParseResult if the check fails, undefined if it passes.
+ *
+ * @param verb        The canonical (lowercase) verb word for the error message.
+ * @param dobjIds     The resolved direct objects (may be multiple with ALL/AND).
+ * @param iobjIds     The resolved indirect objects.
+ * @param dobjLocBits dobjLocBits from the matched syntax entry.
+ * @param iobjLocBits iobjLocBits from the matched syntax entry.
+ */
+function manyCheck(
+  verb: string,
+  dobjIds: ObjectId[] | undefined,
+  iobjIds: ObjectId[] | undefined,
+  dobjLocBits: number,
+  iobjLocBits: number,
+): { kind: 'fail'; message: string } | undefined {
+  // Direct objects: > 1 and SMANY not set
+  if (dobjIds !== undefined && dobjIds.length > 1 && !(dobjLocBits & SMANY)) {
+    return {
+      kind: 'fail',
+      message: `You can't use multiple direct objects with "${verb}".`,
+    };
+  }
+  // Indirect objects: > 1 and SMANY not set on iobjLocBits
+  if (iobjIds !== undefined && iobjIds.length > 1 && !(iobjLocBits & SMANY)) {
+    return {
+      kind: 'fail',
+      message: `You can't use multiple indirect objects with "${verb}".`,
+    };
+  }
+  return undefined;
+}
+
+// --------------------------------------------------------------------------
+// C6: TAKE-CHECK / ITAKE-CHECK (gparser.zil:1244-1292)
+// --------------------------------------------------------------------------
+
+/**
+ * Check STAKE (auto-take) and SHAVE (must-have) bits per resolved object.
+ *
+ * ZIL ITAKE-CHECK (gparser.zil:1248-1292):
+ *
+ * Per object in the table:
+ *   1. If not held AND STAKE or SHAVE bit is set:
+ *      a. If TRYTAKEBIT → TAKEN=true (can't take this)
+ *      b. If WINNER != ADVENTURER → TAKEN=false (only player can auto-take)
+ *      c. If STAKE and ITAKE() returns T → TAKEN=false (take succeeded)
+ *      d. Else → TAKEN=true (take failed)
+ *
+ *   2. If TAKEN and SHAVE and WINNER=ADVENTURER:
+ *      → "You don't have the <obj>." (or "that!" for NOT-HERE-OBJECT) → fail
+ *
+ *   3. If NOT TAKEN and WINNER=ADVENTURER:
+ *      → "(Taken)" echoed, mark autoTaken
+ *
+ * PORT MODEL:
+ *   We simplify ITAKE: if the object has Flag.Takeable, STAKE auto-take
+ *   "succeeds" (TAKEN=false). If not Takeable, it "fails" (TAKEN=true).
+ *   This is conservative but correct for standard Zork I objects.
+ *   The actual move (moveTo player) is NOT done here — that's the action handler's job.
+ *   We only mark autoTaken so Game.turn can print "(Taken)" and the handler knows.
+ *
+ * Returns:
+ *   - { kind: 'fail', message } if SHAVE fires
+ *   - { autoTaken: ObjectId[] } with objects that were successfully STAKE-auto-taken
+ *   - undefined if no STAKE/SHAVE bits set (normal path)
+ */
+function takeCheck(
+  dobjIds: ObjectId[],
+  dobjLocBits: number,
+  player: GameObject,
+  world: World,
+): { kind: 'fail'; message: string } | { autoTaken: ObjectId[] } | undefined {
+  // Quick exit: neither STAKE nor SHAVE set → nothing to check
+  if (!(dobjLocBits & STAKE) && !(dobjLocBits & SHAVE)) {
+    return undefined;
+  }
+
+  const autoTaken: ObjectId[] = [];
+
+  for (const id of dobjIds) {
+    const obj = world.get(id);
+    if (obj === undefined) continue;
+
+    // "HELD?" check: object is held if it's a direct or indirect descendant of the player.
+    // ZIL HELD? walks up the parent chain to WINNER.
+    // Port: check parent chain to player.
+    const isHeld = isHeldByPlayer(obj, player);
+
+    if (!isHeld) {
+      // Object not held — check STAKE/SHAVE
+      let taken = true; // assume take fails unless we prove otherwise
+
+      if (!obj.has(Flag.TryTake)) {
+        // No TRYTAKEBIT resistance
+        // Port: if STAKE set and object is Takeable → take succeeds
+        if ((dobjLocBits & STAKE) && obj.has(Flag.Takeable)) {
+          taken = false; // auto-take succeeded
+        }
+        // (No WINNER != ADVENTURER check needed in port — player is always ADVENTURER)
+      }
+
+      if (!taken) {
+        // Auto-take succeeded → mark autoTaken (Game.turn prints "(Taken)")
+        autoTaken.push(id);
+      } else if (dobjLocBits & SHAVE) {
+        // STAKE failed (or not set) AND SHAVE set → hard fail
+        // ZIL: "You don't have the <obj>." (gparser.zil:1285-1286)
+        return {
+          kind: 'fail',
+          message: `You don't have the ${obj.desc}.`,
+        };
+      }
+      // STAKE without SHAVE and take failed → silent (no error, no autoTaken)
+    }
+  }
+
+  if (autoTaken.length > 0) {
+    return { autoTaken };
+  }
+  return undefined;
+}
+
+/**
+ * Returns true if `obj` is held by `player` (direct child or in an open
+ * container in player's inventory). Implements ZIL HELD?.
+ *
+ * Port: walk up obj.parent chain; if any ancestor is `player`, it's held.
+ */
+function isHeldByPlayer(obj: GameObject, player: GameObject): boolean {
+  let current: GameObject | null = obj.parent as GameObject | null;
+  while (current !== null) {
+    if (current === player) return true;
+    current = current.parent as GameObject | null;
+  }
+  return false;
+}
+
+// --------------------------------------------------------------------------
+// C6: applyC6Checks — applies MANY-CHECK and TAKE-CHECK, then builds ok result
+// --------------------------------------------------------------------------
+
+/**
+ * C6 gate: apply MANY-CHECK and TAKE-CHECK before returning an ok ParseResult.
+ *
+ * Called from every code path in parse() that resolves dobjIds/iobjIds and
+ * is about to return an ok command.  Returns a fail ParseResult if either
+ * check fires, or the original ok command (with autoTaken populated) if clean.
+ *
+ * This centralizes MANY-CHECK + TAKE-CHECK so they apply to both the normal
+ * matched path AND all GWIM/drive paths that return early.
+ */
+function applyC6Checks(
+  verb: string,
+  dobjIds: ObjectId[] | undefined,
+  iobjIds: ObjectId[] | undefined,
+  dobjLocBits: number,
+  iobjLocBits: number,
+  player: GameObject,
+  world: World,
+): { kind: 'fail'; message: string } | { autoTaken?: ObjectId[] } {
+  // MANY-CHECK
+  const manyFail = manyCheck(verb, dobjIds, iobjIds, dobjLocBits, iobjLocBits);
+  if (manyFail !== undefined) return manyFail;
+
+  // TAKE-CHECK — dobj
+  let autoTaken: ObjectId[] | undefined;
+  if (dobjIds !== undefined && dobjIds.length > 0) {
+    const tcResult = takeCheck(dobjIds, dobjLocBits, player, world);
+    if (tcResult !== undefined && 'kind' in tcResult) return tcResult;
+    if (tcResult !== undefined && 'autoTaken' in tcResult && tcResult.autoTaken.length > 0) {
+      autoTaken = (autoTaken ?? []).concat(tcResult.autoTaken);
+    }
+  }
+
+  // TAKE-CHECK — iobj
+  if (iobjIds !== undefined && iobjIds.length > 0) {
+    const tcResult = takeCheck(iobjIds, iobjLocBits, player, world);
+    if (tcResult !== undefined && 'kind' in tcResult) return tcResult;
+    if (tcResult !== undefined && 'autoTaken' in tcResult && tcResult.autoTaken.length > 0) {
+      autoTaken = (autoTaken ?? []).concat(tcResult.autoTaken);
+    }
+  }
+
+  return { autoTaken };
 }
 
 // --------------------------------------------------------------------------
@@ -745,20 +944,30 @@ export class Parser {
             }
           }
 
-          return {
-            kind: 'ok',
-            command: {
-              verb: canonical,
-              action,
-              dobjIds: [gwimResult.id],
-              iobjIds: iobjIds2,
-              prep: prepOut2,
-              preAction,
-              syntax: matchedSyntax,
-              gwimText,
-              raw: tokens,
-            },
-          };
+          // C6: Apply TAKE-CHECK before returning.
+          {
+            const c6d1ok = applyC6Checks(
+              canonical, [gwimResult.id], iobjIds2,
+              d1.dobjLocBits, d1.iobjLocBits ?? 0,
+              effectivePlayer, world,
+            );
+            if ('kind' in c6d1ok) return c6d1ok;
+            return {
+              kind: 'ok',
+              command: {
+                verb: canonical,
+                action,
+                dobjIds: [gwimResult.id],
+                iobjIds: iobjIds2,
+                prep: prepOut2,
+                preAction,
+                syntax: matchedSyntax,
+                gwimText,
+                autoTaken: c6d1ok.autoTaken && c6d1ok.autoTaken.length > 0 ? c6d1ok.autoTaken : undefined,
+                raw: tokens,
+              },
+            };
+          }
         }
 
       } else if (syntaxResult.drive2 !== undefined) {
@@ -842,6 +1051,16 @@ export class Parser {
           // fire correctly without being blocked by a pre-action guard.
           //
           // ZIL would orphan here; C7 replaces this fallback with the orphan prompt.
+          //
+          // C6: Apply TAKE-CHECK on dobjIds2 before returning. This handles the
+          // case where the dobj was resolved but iobj wasn't (e.g. "throw lamp"
+          // with no actor in scope → GWIM fails for iobj, but SHAVE on dobj fires).
+          const c6d2fail = applyC6Checks(
+            canonical, dobjIds2, undefined,
+            d2.dobjLocBits, d2.iobjLocBits,
+            effectivePlayer, world,
+          );
+          if ('kind' in c6d2fail) return c6d2fail;
           return {
             kind: 'ok',
             command: {
@@ -852,26 +1071,37 @@ export class Parser {
               prep: d2.prep2 ?? prep1 ?? prep2,
               preAction: undefined,  // pre-C7 fallback: bypass preAction check
               syntax: matchedSyntax,
+              autoTaken: c6d2fail.autoTaken && c6d2fail.autoTaken.length > 0 ? c6d2fail.autoTaken : undefined,
               raw: tokens,
             },
           };
         }
 
         // gwimResult.kind === 'ok' and not self-reference
-        return {
-          kind: 'ok',
-          command: {
-            verb: canonical,
-            action,
-            dobjIds: dobjIds2,
-            iobjIds: [gwimResult.id],
-            prep: d2.prep2 ?? prep1 ?? prep2,
-            preAction,
-            syntax: matchedSyntax,
-            gwimText: gwimResult.text,
-            raw: tokens,
-          },
-        };
+        // C6: Apply TAKE-CHECK on dobjIds2 + iobjIds before returning.
+        {
+          const c6d2ok = applyC6Checks(
+            canonical, dobjIds2, [gwimResult.id],
+            d2.dobjLocBits, d2.iobjLocBits,
+            effectivePlayer, world,
+          );
+          if ('kind' in c6d2ok) return c6d2ok;
+          return {
+            kind: 'ok',
+            command: {
+              verb: canonical,
+              action,
+              dobjIds: dobjIds2,
+              iobjIds: [gwimResult.id],
+              prep: d2.prep2 ?? prep1 ?? prep2,
+              preAction,
+              syntax: matchedSyntax,
+              gwimText: gwimResult.text,
+              autoTaken: c6d2ok.autoTaken && c6d2ok.autoTaken.length > 0 ? c6d2ok.autoTaken : undefined,
+              raw: tokens,
+            },
+          };
+        }
 
       } else {
         // Neither drive1 nor drive2 set — should not reach here (syntaxCheck
@@ -953,20 +1183,33 @@ export class Parser {
       }
     }
 
-    return {
-      kind: 'ok',
-      command: {
-        verb: canonical,
-        action,
-        dobjIds,
-        iobjIds,
-        prep: prepOut,
-        preAction,
-        syntax: matchedSyntax,
-        gwimText,
-        raw: tokens,
-      },
-    };
+    // ---- C6: MANY-CHECK + TAKE-CHECK -----------------------------------------
+    {
+      const dobjLocBitsForCheck = matchedSyntax?.dobjLocBits ?? 0;
+      const iobjLocBitsForCheck = matchedSyntax?.iobjLocBits ?? 0;
+      const c6 = applyC6Checks(
+        canonical, dobjIds, iobjIds,
+        dobjLocBitsForCheck, iobjLocBitsForCheck,
+        effectivePlayer, world,
+      );
+      if ('kind' in c6) return c6;  // MANY-CHECK or SHAVE fail
+
+      return {
+        kind: 'ok',
+        command: {
+          verb: canonical,
+          action,
+          dobjIds,
+          iobjIds,
+          prep: prepOut,
+          preAction,
+          syntax: matchedSyntax,
+          gwimText,
+          autoTaken: c6.autoTaken && c6.autoTaken.length > 0 ? c6.autoTaken : undefined,
+          raw: tokens,
+        },
+      };
+    }
   }
 
   /**
@@ -1027,15 +1270,33 @@ export class Parser {
   }
 
   /**
-   * Try to interpret a token array as an "all" or "all except <noun>" form
-   * for take/drop/get.  Returns an array of ParseResults (one per matching
-   * object) when the pattern is recognised, or null when it isn't.
+   * C6: Try to interpret a token array as an "all" or "all except <noun>" form
+   * for any SMANY-enabled verb.  Returns an array of ParseResults (one per
+   * matching object) when the pattern is recognised.  Returns a single-element
+   * array with a MANY-CHECK fail when 'all' is present but the verb lacks SMANY.
+   * Returns null when the pattern is not applicable (no 'all' keyword).
    *
    * Recognised forms:
-   *   take all
-   *   get all
-   *   take all except <noun>
-   *   drop all
+   *   <verb> all
+   *   <verb> all except <noun>
+   *   <verb> all but <noun>
+   *
+   * SNARFEM (gparser.zil:978-1030) + MANY-CHECK (gparser.zil:1294-1313).
+   *
+   * The ZIL semantics for ALL:
+   *   - ALL forces P-SLOCBITS=-1 (all scopes) in GET-OBJECT.
+   *   - Objects in scope with TAKEBIT set (for TAKE) or all in scope (for DROP)
+   *     are collected.
+   *   - BUT/EXCEPT subtracts from the collected set.
+   *   - If the matched syntax lacks SMANY, MANY-CHECK fires immediately.
+   *
+   * Port simplification:
+   *   - For TAKE: collect all Flag.Takeable objects in scope.
+   *   - For DROP: collect all Flag.Takeable objects in player inventory.
+   *   - For other SMANY verbs: collect all objects in scope.
+   *   - BUT/EXCEPT: subtract the named object from the set.
+   *
+   * Returns null if there is no 'all' keyword in the tokens.
    */
   private tryExpandAll(
     tokens: string[],
@@ -1049,50 +1310,86 @@ export class Parser {
     const canonical = lookupVerb(rawVerb);
     if (canonical === undefined) return null;
 
-    // Only "take" (and synonym "get") and "drop" support "all" expansion.
-    if (canonical !== 'take' && canonical !== 'drop') return null;
-
     // Must contain the word "all".
     const allIdx = tokens.indexOf('all');
     if (allIdx === -1) return null;
 
-    // Determine excluded object id (for "all except <noun>").
+    // Look up the 1-obj syntax form for this verb to get action/preAction/syntax/locBits.
+    const syntaxResult1 = syntaxCheck(canonical.toUpperCase(), 1);
+    // Also check for ncn=0 (some verbs only have 0-obj forms)
+    const verbUpper = canonical.toUpperCase();
+
+    let expandAction: string;
+    let expandPreAction: string | undefined;
+    let expandSyntax: import('./types.js').SyntaxEntry | undefined;
+    let dobjLocBits: number;
+
+    if (syntaxResult1.kind === 'matched') {
+      expandAction = syntaxResult1.entry.action;
+      expandPreAction = syntaxResult1.entry.preAction;
+      expandSyntax = syntaxResult1.entry;
+      dobjLocBits = syntaxResult1.entry.dobjLocBits;
+    } else if (syntaxResult1.kind === 'needGwim') {
+      // Use drive1/drive2 as fallback
+      const drive = syntaxResult1.drive1 ?? syntaxResult1.drive2;
+      expandAction = drive?.action ?? ('V-' + verbUpper);
+      expandPreAction = drive?.preAction;
+      expandSyntax = drive;
+      dobjLocBits = drive?.dobjLocBits ?? 0;
+    } else {
+      // No syntax found — unknown verb or verb without 1-obj form
+      expandAction = 'V-' + verbUpper;
+      expandPreAction = undefined;
+      expandSyntax = undefined;
+      dobjLocBits = 0;
+    }
+
+    // C6 MANY-CHECK: if the verb lacks SMANY, "all" → MANY-CHECK error immediately.
+    // (gparser.zil:1294-1313: if P-PRSO.length > 1 and no SMANY → fail)
+    if (!(dobjLocBits & SMANY)) {
+      return [{
+        kind: 'fail',
+        message: `You can't use multiple direct objects with "${canonical}".`,
+      }];
+    }
+
+    // Determine excluded object id (for "all except/but <noun>").
     let excludeId: ObjectId | undefined;
-    const exceptIdx = tokens.indexOf('except');
+    const exceptIdx = Math.max(tokens.indexOf('except', allIdx), tokens.indexOf('but', allIdx));
     if (exceptIdx !== -1 && exceptIdx > allIdx) {
       const exceptTokens = tokens.slice(exceptIdx + 1);
       if (exceptTokens.length > 0) {
         const scope = collectScope(room, player, world);
         const phrase = splitNounPhrase(exceptTokens);
         if (phrase !== null) {
-          const matches = matchNoun(phrase.noun, phrase.adjectives, scope);
-          if (matches.length === 1) excludeId = matches[0]!.id;
-          // If ambiguous or not found, we simply don't exclude anything —
-          // the engine will handle it when executing.
+          const matchesEx = matchNoun(phrase.noun, phrase.adjectives, scope);
+          if (matchesEx.length === 1) excludeId = matchesEx[0]!.id;
+          // If ambiguous or not found, we simply don't exclude anything.
         }
       }
     }
 
     const scope = collectScope(room, player, world);
 
-    // For "take all": pick every takeable object in scope.
-    // For "drop all": pick every takeable object without a parent (inventory
-    //   shortcut) or carried by the player.
-    const candidates: GameObject[] =
-      canonical === 'take'
-        ? scope.filter(o => o.has(Flag.Takeable))
-        : scope.filter(o => o.has(Flag.Takeable) && (o.parent === null || o.parent === player));
+    // Collect candidates based on verb:
+    //   TAKE: Flag.Takeable objects in scope (room + inventory)
+    //   DROP: Flag.Takeable objects in player inventory only
+    //   other SMANY verbs: all non-player objects in scope
+    let candidates: GameObject[];
+    if (canonical === 'take') {
+      candidates = scope.filter(o => o.has(Flag.Takeable));
+    } else if (canonical === 'drop') {
+      candidates = scope.filter(o =>
+        o.has(Flag.Takeable) && (o.parent === null || o.parent === player),
+      );
+    } else {
+      // Generic SMANY: all objects in scope
+      candidates = scope.filter(o => !o.has(Flag.Invisible));
+    }
 
     const matches = candidates.filter(o => o.id !== excludeId);
 
     if (matches.length === 0) return [];
-
-    // Get preAction for the 1-obj form of this verb via syntaxCheck (C3).
-    // "take X" (ncn=1, no preps) → syntaxCheck should return matched V-TAKE with PRE-TAKE.
-    const takeResult = syntaxCheck(canonical.toUpperCase(), 1);
-    const expandAction = takeResult.kind === 'matched' ? takeResult.entry.action : 'V-' + canonical.toUpperCase();
-    const expandPreAction = takeResult.kind === 'matched' ? takeResult.entry.preAction : undefined;
-    const expandSyntax = takeResult.kind === 'matched' ? takeResult.entry : undefined;
 
     return matches.map(obj => ({
       kind: 'ok' as const,

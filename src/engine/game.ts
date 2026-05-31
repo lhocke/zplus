@@ -191,8 +191,22 @@ export class Game {
       // gwimText (C5): GWIM auto-supply parenthetical "(with the sword)" etc.
       // In ZIL, GWIM prints this during PARSER (before PERFORM).  We pre-seed
       // `handled` with it so it appears at the top of the turn output.
+      //
+      // autoTaken (C6): STAKE auto-take — parser marked objects that were
+      // auto-taken (not held but takeable). Print "(Taken)" per object
+      // (gparser.zil:1291) before the action result.
       const handled: string[] = [];
       if (cmd.gwimText !== undefined) handled.push(cmd.gwimText);
+      if (cmd.autoTaken !== undefined && cmd.autoTaken.length > 0) {
+        for (const takenId of cmd.autoTaken) {
+          const takenObj = this.world.get(takenId);
+          if (takenObj !== undefined) {
+            // Move the auto-taken object to player inventory (the actual ITAKE action).
+            takenObj.moveTo(this.player);
+          }
+          handled.push('(Taken)');
+        }
+      }
       const tell = (text: string): void => {
         handled.push(text);
       };
