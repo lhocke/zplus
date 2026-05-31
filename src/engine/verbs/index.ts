@@ -14,7 +14,8 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vPut, preTake, preGive, yuks, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vPut, preTake, preGive, yuks, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { lit } from '../parser/scope.js';
 
 // --------------------------------------------------------------------------
 // Public API types
@@ -305,12 +306,25 @@ export function describeRoomObjects(
  * the room has no static ldesc but has a handler, the runner is called to
  * produce a dynamic description via the M-LOOK action — matching the ZIL
  * `<DESCRIBE-ROOM>` / `GOTO` path.
+ *
+ * Darkness gate (P0-2): gated on lit(room, player, world) per ZIL
+ * DESCRIBE-ROOM (gverbs.zil:1637-1649).  When dark, emits the verbatim
+ * pitch-black / grue message and returns early — skipping the room name,
+ * ldesc/M-LOOK, and DESCRIBE-OBJECTS (RFALSE path in ZIL).
  */
 function describeRoom(
   room: Room,
   player: GameObject,
   mlookRunner?: (r: Room) => string,
+  world?: World,
+  getGlobal?: (name: string) => boolean,
 ): string {
+  // Darkness gate: ZIL DESCRIBE-ROOM RFALSE path (gverbs.zil:1637-1649).
+  if (world !== undefined && !lit(room, player, world)) {
+    const sprayed = getGlobal?.('SPRAYED?') ?? false;
+    return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
+  }
+
   const lines: string[] = [];
   lines.push(room.desc);
 
@@ -332,7 +346,7 @@ function describeRoom(
 // --------------------------------------------------------------------------
 
 function verbLook(ctx: VerbContext): VerbResult {
-  return result(describeRoom(ctx.here, ctx.player, ctx.mlookRunner));
+  return result(describeRoom(ctx.here, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal));
 }
 
 function verbGo(ctx: VerbContext): VerbResult {
@@ -354,7 +368,7 @@ function verbGo(ctx: VerbContext): VerbResult {
         const dest = ctx.world.get(destId);
         if (dest !== undefined) {
           ctx.player.moveTo(dest);
-          return result(describeRoom(dest as Room, ctx.player, ctx.mlookRunner), true);
+          return result(describeRoom(dest as Room, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal), true);
         }
       }
       // Resolver returned undefined: the routine decided movement is blocked.
@@ -396,7 +410,7 @@ function verbGo(ctx: VerbContext): VerbResult {
   }
 
   ctx.player.moveTo(dest);
-  return result(describeRoom(dest as Room, ctx.player, ctx.mlookRunner), true);
+  return result(describeRoom(dest as Room, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal), true);
 }
 
 function verbTake(ctx: VerbContext): VerbResult {

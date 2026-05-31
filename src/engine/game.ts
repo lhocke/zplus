@@ -7,6 +7,8 @@ import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
 import { executeVerb, describeRoomObjects } from './verbs/index.js';
+import { lit } from './parser/scope.js';
+import { describeRoom as describeRoomMsgs } from './game-messages.js';
 import { Scoring } from './scoring.js';
 import { FlagStore } from './flag-store.js';
 import { lookupPer, lookupPreAction } from '../actions/registry.js';
@@ -622,6 +624,14 @@ export class Game {
   // -------------------------------------------------------------------------
 
   private describeCurrentRoom(): string {
+    // Darkness gate (P0-2): gated on lit() per ZIL DESCRIBE-ROOM RFALSE path
+    // (gverbs.zil:1637-1649).  When dark, emit the verbatim pitch-black message
+    // and return early — skip room name, ldesc/M-LOOK, and DESCRIBE-OBJECTS.
+    if (!lit(this.here, this.player, this.world)) {
+      const sprayed = this.flags.get('SPRAYED?');
+      return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
+    }
+
     const lines: string[] = [this.here.desc];
 
     // Room description, faithful to GOTO/M-LOOK: a room with a static ldesc

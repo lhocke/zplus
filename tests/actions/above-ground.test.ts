@@ -220,9 +220,26 @@ describe('Attic: up from kitchen', () => {
     expect(g.view().here).toBe('ATTIC');
   });
 
-  it('attic has static ldesc', () => {
+  it('attic is dark — entering without a light source shows pitch-black message', () => {
+    // ATTIC has no Flag.Light; player has no lamp. ZIL DESCRIBE-ROOM RFALSE
+    // path: emit pitch-black message, skip ldesc (gverbs.zil:1637-1649).
     const g = newGameAt('KITCHEN');
     g.start();
+    const r = g.turn('up');
+    expect(r.output).toContain('It is pitch black.');
+    // ldesc NOT shown in the dark
+    expect(r.output).not.toContain('This is the attic');
+  });
+
+  it('attic shows ldesc when lit (lamp in hand)', () => {
+    const g = newGameAt('KITCHEN');
+    g.start();
+    // Move the lamp into player's inventory via world access, then go up.
+    const w = worldOf(g);
+    const lamp = w.get('LAMP')!;
+    const player = w.get('PLAYER')!;
+    lamp.moveTo(player);
+    lamp.set(Flag.OnFire); // turn on the lamp
     const r = g.turn('up');
     expect(r.output).toContain('This is the attic');
     expect(r.output).toContain('stairway leading down');
@@ -465,8 +482,15 @@ describe('TRAP-DOOR-EXIT per-routine: going down to CELLAR', () => {
 // ---------------------------------------------------------------------------
 
 describe('CELLAR-FCN: M-LOOK description', () => {
-  it('describes the dark damp cellar', () => {
+  it('describes the dark damp cellar when lit (lamp in hand)', () => {
+    // CELLAR has no Flag.Light; M-LOOK fires only when lit (gverbs.zil:1671).
+    // Give the player the lit lamp so the darkness gate is satisfied.
     const g = newGameAt('CELLAR');
+    const w = worldOf(g);
+    const lamp = w.get('LAMP')!;
+    const player = w.get('PLAYER')!;
+    lamp.moveTo(player);
+    lamp.set(Flag.OnFire); // turn on the lamp
     g.start();
     const r = g.turn('look');
     expect(r.output).toContain(
@@ -474,6 +498,14 @@ describe('CELLAR-FCN: M-LOOK description', () => {
         'north, and a crawlway to the south.',
     );
     expect(r.output).toContain('steep metal ramp which is unclimbable');
+  });
+
+  it('CELLAR is dark without a light source', () => {
+    const g = newGameAt('CELLAR');
+    g.start();
+    const r = g.turn('look');
+    expect(r.output).toContain('It is pitch black.');
+    expect(r.output).not.toContain('dark and damp cellar');
   });
 });
 

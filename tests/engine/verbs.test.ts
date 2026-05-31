@@ -39,11 +39,15 @@ function makeFixture(): Fixture {
     ],
     ldesc: 'You are in a sun-drenched clearing.',
   });
+  // Outdoor rooms are always lit (ZIL ONBIT = Flag.Light on rooms).
+  clearing.set(Flag.Light);
 
   const forest = new Room('FOREST', 'Forest', {
     exits: [{ dir: 'south', to: 'CLEARING' }],
     ldesc: 'Tall trees surround you.',
   });
+  // Outdoor rooms are always lit (ZIL ONBIT = Flag.Light on rooms).
+  forest.set(Flag.Light);
 
   // Exits with conditional blocking for the go-verb tests.
   const blockedExits: Exit[] = [
