@@ -1,15 +1,9 @@
 /**
- * scope-bits.ts — ZIL scope bitmask constants and level constants.
- *
- * Port of gparser.zil:1032-1038.
- *
- * These constants are used by DO-SL / SEARCH-LIST to determine how deeply
- * to search containers and which tiers (room / inventory / global) to include.
+ * ZIL scope bitmask constants and level constants (gparser.zil:1032-1038).
+ * Used by DO-SL / SEARCH-LIST.
  */
 
-// ---------------------------------------------------------------------------
-// Scope location bits (SLOCBITS field in syntax.json dobjLocBits/iobjLocBits)
-// ---------------------------------------------------------------------------
+// Scope location bits (syntax.json dobjLocBits/iobjLocBits)
 
 /** SHAVE (2) — object must be HELD: in player inventory; else print "You don't have the X." */
 export const SHAVE = 2;
@@ -26,9 +20,7 @@ export const SC = 64;
 /** SH (128) — search held (player inventory, top-level). */
 export const SH = 128;
 
-// ---------------------------------------------------------------------------
 // Search depth level constants (gparser.zil:1212-1214)
-// ---------------------------------------------------------------------------
 
 /** SRCTOP (0) — top-level only; only descend into Searchable/Surface containers. */
 export const SRCTOP = 0;
@@ -37,14 +29,7 @@ export const SRCALL = 1;
 /** SRCBOT (2) — bottom-level only; skip THIS-IT? check on the container node itself. */
 export const SRCBOT = 2;
 
-// ---------------------------------------------------------------------------
-// Helper
-// ---------------------------------------------------------------------------
-
-/**
- * Returns true if `bit` is set in `mask`.
- * Port of ZIL BTST.
- */
+/** Returns true if `bit` is set in `mask`. Port of ZIL BTST. */
 export function hasBit(mask: number, bit: number): boolean {
   return (mask & bit) !== 0;
 }

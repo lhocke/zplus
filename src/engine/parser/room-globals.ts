@@ -1,31 +1,17 @@
 /**
- * room-globals.ts — Compile-time ROOM → GLOBAL-IDS mapping from ZIL source.
+ * Compile-time ROOM → GLOBAL-IDS mapping from zil/1dungeon.zil.
  *
- * The rooms.json extractor captures only the FIRST element of each room's
- * P?GLOBAL property list (a known extraction limitation). This module provides
- * the complete multi-element GLOBAL lists from zil/1dungeon.zil for all rooms
- * that have them, enabling the LOCAL-GLOBALS tier to be fully populated.
- *
- * Source: zil/1dungeon.zil — all `(GLOBAL ...)` room property entries.
- *
- * USAGE: `globalsForRoom()` in scope.ts prefers this table over rooms.json
- * when the table has an entry for the current room, falling back to rooms.json
- * for any room not listed here (though all 60 rooms with GLOBAL props ARE
- * listed here from the authoritative ZIL source).
- *
- * This table lives in the parser layer only — NO src/data or src/domain change.
+ * rooms.json captures only the first element of each room's P?GLOBAL list
+ * (extractor limitation). This table provides the complete multi-element lists,
+ * enabling the LOCAL-GLOBALS tier to be fully populated. globalsForRoom() in
+ * scope.ts prefers this table and falls back to rooms.json only for unit-test
+ * rooms not listed here.
  */
 
 /**
- * Full ROOM-ID → [OBJECT-ID, ...] mapping for the LOCAL-GLOBALS tier.
- * Derived exhaustively from zil/1dungeon.zil GLOBAL property lists.
- *
- * Key: room id (matches rooms.json "id" field)
- * Value: array of object ids in the room's P?GLOBAL list (in ZIL declaration order)
- *
- * Objects not in objects.json (e.g. STAIRS) are simply not resolvable and are
- * silently skipped during world lookup — this is the data-completeness gap,
- * not a parser bug.
+ * ROOM-ID → [OBJECT-ID, ...] for the LOCAL-GLOBALS tier, exhaustively from
+ * zil/1dungeon.zil. Objects missing from objects.json (e.g. STAIRS) are silently
+ * skipped during world lookup.
  */
 export const ROOM_GLOBAL_IDS: ReadonlyMap<string, readonly string[]> = new Map([
   ['WEST-OF-HOUSE',        ['WHITE-HOUSE', 'BOARD', 'FOREST']],

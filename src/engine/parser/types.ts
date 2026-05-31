@@ -1,20 +1,9 @@
 import type { ObjectId } from '../../domain/game-object.js';
 
-// ---------------------------------------------------------------------------
-// SyntaxEntry — the port-native flat schema for one syntax.json record.
-//
-// DELIBERATELY FLAT (not the nested dobj?{findBit,whereBits}/iobj?{} shape
-// sketched in td1-grammar-spec.md §7). The actual JSON is flat, numObjects
-// already encodes slot presence, and the flat dobjFindBit/dobjLocBits/
-// iobjFindBit/iobjLocBits fields feed C4's GWIM signature directly. Re-nesting
-// would be lossy busywork. C4 must read the flat fields, not a phantom nested shape.
-// ---------------------------------------------------------------------------
+// SyntaxEntry is deliberately flat. The actual JSON is flat; numObjects encodes
+// slot presence; re-nesting to dobj?{findBit,whereBits}/iobj?{} would be lossy.
 
-/**
- * One syntax-table record, normalized from syntax.json.
- * null JSON fields → undefined here.
- * dobjLocBits / iobjLocBits are integer bitmasks (0 = unconstrained).
- */
+/** One syntax-table record normalized from syntax.json. null → undefined. */
 export interface SyntaxEntry {
   verb: string;
   numObjects: 0 | 1 | 2;
@@ -28,21 +17,7 @@ export interface SyntaxEntry {
   preAction?: string;       // PRE-* → ParsedCommand.preAction (null → undefined)
 }
 
-/**
- * A fully resolved command after parsing and scope resolution.
- *
- * Fields mirror the ZIL globals produced by the parser (gparser.zil §12):
- *   verb      — canonical UPPERCASE verb id (e.g. "TAKE", "WALK")
- *   dobjIds   — resolved direct-object ids (list for ALL/AND; usually length 1)
- *   iobjIds   — resolved indirect-object ids
- *   prep      — canonical prep id matching syntax.json strings ("WITH", "IN", …)
- *   action    — matched V-* action id → TD-4 dispatch (e.g. "V-TAKE")
- *   preAction — PRE-* id if the syntax form carries one → TD-4 step 3
- *   syntax    — the matched SyntaxEntry (authoritative source for action/preAction/locbits)
- *   numberValue — integer from NUMBER?/INTNUM (reserved; deferred)
- *   autoTaken — objects auto-taken by STAKE "(Taken)" already printed
- *   raw       — original token array for AGAIN/OOPS/error echo
- */
+/** A fully resolved command after parsing and scope resolution. */
 export interface ParsedCommand {
   readonly verb: string;
   readonly dobjIds?: ObjectId[];
@@ -54,38 +29,13 @@ export interface ParsedCommand {
   readonly numberValue?: number;
   readonly autoTaken?: ObjectId[];
   readonly raw: string[];
-  /**
-   * Parenthetical text auto-printed by GWIM (Get What I Mean).
-   * Set when GWIM auto-supplied a missing object and printed e.g. "(with the sword)".
-   * Game.turn prepends this to the command's output so the player sees it before the action result.
-   * gparser.zil:908-924 (C5).
-   */
+  /** Parenthetical text printed by GWIM, e.g. "(with the sword)". gparser.zil:908-924. */
   readonly gwimText?: string;
-  /**
-   * Set by tryExpandAll (C6 SNARFEM) when this command is one item in an ALL-iteration.
-   * Game.turn must print "<desc>: " before the action result for each such command
-   * (gmain.zil:121-144: ALL-iteration per-object prefix).
-   */
+  /** Set when this command is one item in an ALL-iteration (gmain.zil:121-144). */
   readonly allIter?: true;
 }
 
-/**
- * The result of one parse attempt.  Five structurally-distinct outcomes:
- *
- *   ok       — command fully resolved; engine executes it.
- *   fail     — any error (unknown word, not in scope, empty input, too many
- *              nouns, MANY-CHECK failure, SHAVE failure, …); the verbatim ZIL
- *              message string is the contract.
- *   orphan   — parser issued a "What do you want to <verb>?" prompt and
- *              saved state; caller must supply the next turn's input as the
- *              answer without re-prompting.
- *   disambig — parser issued a "Which X do you mean, …?" prompt; caller
- *              must supply the next turn's answer in the same way.
- *   not-here — object was recognized (known noun in vocabulary) but is not
- *              in scope; engine prints "You can't see any X here!" (gparser.zil:1124).
- *              Also used when the room is dark: message = "It's too dark to see!"
- *              Distinct from 'fail' so the engine can special-case the message.
- */
+/** The result of one parse attempt. */
 export type ParseResult =
   | { kind: 'ok'; command: ParsedCommand }
   | { kind: 'fail'; message: string }

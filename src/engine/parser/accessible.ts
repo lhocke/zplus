@@ -22,20 +22,12 @@ import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
 import { ROOM_GLOBAL_IDS } from './room-globals.js';
 
-/**
- * Returns true if the object `obj` is in the GLOBAL list for `here`.
- *
- * Prefers the compile-time ROOM_GLOBAL_IDS table (full multi-element lists
- * from ZIL) over rooms.json room.props.GLOBAL (which has only the first element).
- * Falls back to room.props.GLOBAL for unit-test rooms not in the table.
- */
+/** Returns true if obj is in the LOCAL-GLOBALS list for here. */
 function globalIn(obj: GameObject, here: Room): boolean {
-  // Prefer compile-time full list
   const tableIds = ROOM_GLOBAL_IDS.get(here.id);
   if (tableIds !== undefined) {
     return tableIds.includes(obj.id);
   }
-  // Fallback: rooms.json scalar or array
   const globalProp = here.props.get('GLOBAL');
   if (Array.isArray(globalProp)) {
     return (globalProp as string[]).includes(obj.id);
@@ -43,21 +35,14 @@ function globalIn(obj: GameObject, here: Room): boolean {
   return typeof globalProp === 'string' && globalProp === obj.id;
 }
 
-/**
- * Returns true if the object `obj` is a parentless non-room object
- * (i.e., a GLOBAL-OBJECTS member).
- */
+/** True if obj is a parentless non-room object (a GLOBAL-OBJECTS member). */
 function isGlobalObject(obj: GameObject): boolean {
   return obj.parent === null && !('exits' in obj);
 }
 
 /**
  * Port of META-LOC (gparser.zil:1398-1407).
- * Walk parents up until we hit a room or a global-object container.
- * Returns:
- *   - the immediate room ancestor, or
- *   - the object itself if it is in GLOBAL-OBJECTS (parentless non-room)
- * Depth-bounded to ~8 to prevent infinite loops on corrupt data.
+ * Walk parents up to the nearest room or GLOBAL-OBJECTS member.
  */
 function metaLoc(obj: GameObject): GameObject | null {
   let cur: GameObject | null = obj;
@@ -70,14 +55,7 @@ function metaLoc(obj: GameObject): GameObject | null {
   return null;
 }
 
-/**
- * Port of ACCESSIBLE? (gparser.zil:1372-1396).
- *
- * @param obj    The object to check (e.g. the current IT referent).
- * @param here   The current room (ZIL HERE).
- * @param player The player actor (ZIL WINNER/PLAYER).
- * @param world  The world.
- */
+/** Port of ACCESSIBLE? (gparser.zil:1372-1396). */
 export function accessible(
   obj: GameObject,
   here: Room,
@@ -90,11 +68,9 @@ export function accessible(
   // [PSEUDO-OBJECT: handled by parser — if obj is the lastPseudoLoc pseudo,
   //  caller returns true before calling us. We skip this check here.]
 
-  // (3) parent null → false
-  //     EXCEPTION: parentless non-room objects ARE global-objects → handled in step 4.
+  // (3) parent null → false (unless it's a global-object itself → step 4)
   const parent = obj.parent;
   if (parent === null) {
-    // A parentless non-room object is a global-object → accessible (step 4).
     if (isGlobalObject(obj)) return true;
     return false;
   }
@@ -102,10 +78,7 @@ export function accessible(
   // (4) parent is a global-object → true
   if (isGlobalObject(parent)) return true;
 
-  // (5) parent is local-global AND globalIn(obj, HERE) → true
-  //     Note: in the data, local-globals are the objects referenced by
-  //     room.props.GLOBAL. The object's parent isn't literally LOCAL-GLOBALS;
-  //     instead we check if obj's id matches room.props.GLOBAL.
+  // (5) parent is local-global AND in room's GLOBAL list → true
   if (globalIn(obj, here)) return true;
 
   // (6) metaLoc(obj) ∉ {HERE, loc(WINNER)} → false
