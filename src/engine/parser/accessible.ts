@@ -62,36 +62,28 @@ export function accessible(
   player: GameObject,
   _world: World,
 ): boolean {
-  // (1) Invisible → false
   if (obj.has(Flag.Invisible)) return false;
 
-  // [PSEUDO-OBJECT: handled by parser — if obj is the lastPseudoLoc pseudo,
-  //  caller returns true before calling us. We skip this check here.]
+  // PSEUDO-OBJECT: handled by parser — if obj is the lastPseudoLoc pseudo,
+  // caller returns true before calling us. We skip this check here.
 
-  // (3) parent null → false (unless it's a global-object itself → step 4)
   const parent = obj.parent;
   if (parent === null) {
     if (isGlobalObject(obj)) return true;
     return false;
   }
 
-  // (4) parent is a global-object → true
   if (isGlobalObject(parent)) return true;
 
-  // (5) parent is local-global AND in room's GLOBAL list → true
   if (globalIn(obj, here)) return true;
 
-  // (6) metaLoc(obj) ∉ {HERE, loc(WINNER)} → false
   const ml = metaLoc(obj);
   const playerLoc = player.parent;
   if (ml !== here && ml !== playerLoc) return false;
 
-  // (7) parent ∈ {WINNER, HERE, loc(WINNER)} → true
   if (parent === player || parent === here || parent === playerLoc) return true;
 
-  // (8) parent has Open AND accessible(parent) recursively → true
   if (parent.has(Flag.Open) && accessible(parent, here, player, _world)) return true;
 
-  // (9) else → false
   return false;
 }

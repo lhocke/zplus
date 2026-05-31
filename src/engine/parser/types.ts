@@ -9,9 +9,9 @@ export interface SyntaxEntry {
   numObjects: 0 | 1 | 2;
   prep1?: string;           // JSON null → undefined
   prep2?: string;           // JSON null → undefined
-  dobjFindBit?: string;     // for C4 GWIM — JSON null → undefined
+  dobjFindBit?: string;     // GWIM find-bit — JSON null → undefined
   dobjLocBits: number;      // integer bitmask (0 = unconstrained)
-  iobjFindBit?: string;     // for C4 GWIM — JSON null → undefined
+  iobjFindBit?: string;     // GWIM find-bit — JSON null → undefined
   iobjLocBits: number;      // integer bitmask (0 = unconstrained)
   action: string;           // V-* → ParsedCommand.action
   preAction?: string;       // PRE-* → ParsedCommand.preAction (null → undefined)

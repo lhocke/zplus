@@ -15,15 +15,15 @@ export function thisItQ(
   pAdj: string | undefined,
   pGwimFlag: Flag | undefined,
 ): boolean {
-  if (obj.has(Flag.Invisible)) return false;  // (1) gparser.zil:1358
+  if (obj.has(Flag.Invisible)) return false;  // gparser.zil:1358
 
-  // (2) gparser.zil:1359-1363
+  // gparser.zil:1359-1363
   if (pNam !== undefined) {
     const namUpper = pNam.toUpperCase();
     if (!obj.synonyms.some(s => s.toUpperCase() === namUpper)) return false;
   }
 
-  // (3) gparser.zil:1364-1367
+  // gparser.zil:1364-1367
   if (pAdj !== undefined) {
     const adjUpper = pAdj.toUpperCase();
     if (obj.adjectives.length === 0 || !obj.adjectives.some(a => a.toUpperCase() === adjUpper)) {
@@ -31,7 +31,7 @@ export function thisItQ(
     }
   }
 
-  // (4) gparser.zil:1368-1369
+  // gparser.zil:1368-1369
   if (pGwimFlag !== undefined && !obj.has(pGwimFlag)) return false;
 
   return true;
