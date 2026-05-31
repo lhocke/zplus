@@ -147,6 +147,11 @@ export class Game {
     for (const pr of results) {
       if (pr.kind !== 'ok') {
         outputs.push(pr.message);
+        // C8: parse failed (any non-ok kind) → lastWon = false.
+        // P-WON equivalent: PARSER() returned false (gparser.zil / gmain.zil:42).
+        // Note: 'orphan'/'disambig' also set lastWon=false; AGAIN guard #2 (orphan set)
+        // fires before #3 (!lastWon) so the guard ordering is correct regardless.
+        this.parser.setLastWon(false);
         continue;
       }
 
@@ -232,9 +237,15 @@ export class Game {
       if (chainResult.fatal) {
         // M-FATAL: skip M-END and abort any remaining chained commands
         // (mirrors SETG P-CONT <> at gmain.zil:161).
+        // C8: M-FATAL counts as a non-win; AGAIN should not replay a fatal command.
+        this.parser.setLastWon(false);
         outputs.push(handled.join('\n'));
         break;
       }
+
+      // C8: Successful (non-fatal) parse + execute → lastWon = true.
+      // P-WON equivalent for the AGAIN guard (gparser.zil:199 / gmain.zil:42).
+      this.parser.setLastWon(true);
 
       if (chainResult.handled) {
         // At least one step short-circuited: step 7 (executeVerb) is suppressed.

@@ -868,6 +868,33 @@ export class Parser {
    */
   private orphan: OrphanState | undefined = undefined;
 
+  // ---- C8: AGAIN/G state (gparser.zil:192-233) --------------------------------
+
+  /**
+   * The raw input string of the last non-AGAIN command that was parsed.
+   * Replays on AGAIN/G.  Port equivalent of AGAIN-LEXV (gparser.zil:36).
+   * Stored as a string because parse() accepts strings; re-parse from the top
+   * on AGAIN.
+   */
+  private lastInput: string | undefined = undefined;
+
+  /**
+   * Whether the last parse+execute succeeded (P-WON in gmain.zil).
+   * Set by the game harness via setLastWon() after each turn.
+   * AGAIN refuses with "That would just repeat a mistake." when false.
+   */
+  private lastWon: boolean = false;
+
+  /**
+   * Called by Game.turn() after each command executes (or fails to parse).
+   * Sets P-WON equivalent: true = last command succeeded, false = it failed.
+   *
+   * @param won  true if the command parsed AND executed without M-FATAL.
+   */
+  setLastWon(won: boolean): void {
+    this.lastWon = won;
+  }
+
   /**
    * Parse a single command string against the current room context.
    *
@@ -887,6 +914,22 @@ export class Parser {
     if (tokens.length === 0) {
       return { kind: 'fail', message: 'I beg your pardon?' };
     }
+
+    // ---- C8: AGAIN/G detection (gparser.zil:192-233) --------------------------
+    // Check BEFORE orphan-merge, BEFORE verb classification.
+    // The first token (lowercased) is AGAIN or G.
+    if (tokens[0] === 'again' || tokens[0] === 'g') {
+      return this._handleAgain(tokens, input, room, player, world);
+    }
+
+    // Save this non-AGAIN input so a future AGAIN/G can replay it.
+    // Store the raw string (parse() takes strings; re-parse from top).
+    // Do NOT overwrite lastInput here — wait until after a successful parse
+    // so "repeat a mistake" guard sees the ORIGINAL failing input, not AGAIN.
+    // We save it at the END of this method (successful or failed parse).
+    // Actually per ZIL: AGAIN-LEXV is always saved (good or bad parse); P-WON
+    // gates whether the replay is allowed.  So save EVERY non-AGAIN input.
+    this.lastInput = input;
 
     // C4: Build ScopeSnapshot once per parse.
     // When player is null (legacy test shortcut), fall back to old collectScope
@@ -1803,6 +1846,73 @@ export class Parser {
       kind: 'ok',
       command: { verb: canonical, action, dobjIds, iobjIds, prep: prepOut, preAction, syntax: matchedSyntax, raw: tokens },
     };
+  }
+
+  // ---- C8: AGAIN/G handler ---------------------------------------------------
+
+  /**
+   * Handle the AGAIN/G keyword at the start of input.
+   *
+   * gparser.zil:192-233:
+   *   1. No lastInput (OOPS-INBUF empty) → "Beg pardon?" → fail.
+   *   2. Orphan state pending → "It's difficult to repeat fragments." → fail.
+   *   3. !lastWon (P-WON false) → "That would just repeat a mistake." → fail.
+   *   4. Trailing tokens after AGAIN that are NOT period/comma/THEN/AND:
+   *        → "I couldn't understand that sentence." → fail.
+   *      (Port simplification: period/comma/THEN/AND are separators; strip them
+   *       and replay anyway — the RESERVE-LEXV tail-stashing for "AGAIN then X"
+   *       is deferred per the spec §1 deferred table.)
+   *   5. Otherwise: re-parse lastInput from the top (recursive parse call).
+   *
+   * AGAIN does NOT update lastInput (so back-to-back AGAIN/G replays the same
+   * original command, not "AGAIN" itself).
+   *
+   * @param tokens  Lowercased token array for this input (first token is "again" or "g").
+   */
+  private _handleAgain(
+    tokens: string[],
+    _rawInput: string,
+    room: Room,
+    player: GameObject | null,
+    world: World,
+  ): ParseResult {
+    // Guard 1: no saved input (P-INBUF empty equivalent).
+    // gparser.zil:193-195: <ZERO? <GETB ,OOPS-INBUF 1>> → "Beg pardon?"
+    if (this.lastInput === undefined) {
+      return { kind: 'fail', message: 'Beg pardon?' };
+    }
+
+    // Guard 2: orphan pending.
+    // gparser.zil:196-198: ,P-OFLAG → "It's difficult to repeat fragments."
+    if (this.orphan !== undefined) {
+      return { kind: 'fail', message: "It's difficult to repeat fragments." };
+    }
+
+    // Guard 3: last command failed (P-WON false).
+    // gparser.zil:199-201: <NOT ,P-WON> → "That would just repeat a mistake."
+    if (!this.lastWon) {
+      return { kind: 'fail', message: 'That would just repeat a mistake.' };
+    }
+
+    // Guard 4: trailing tokens after AGAIN.
+    // gparser.zil:202-218: if P-LEN > 1 and next token is NOT period/comma/THEN/AND
+    //   → "I couldn't understand that sentence."
+    // Port: tokens after "again"/"g" (index 1+) that aren't structural separators.
+    // The tokenizeSegment adapter already stripped articles and split at first SIBREAK,
+    // so periods/commas won't appear as separate tokens in the `tokens` array here.
+    // "then" and "and" might still appear as word tokens.
+    // If ANY non-separator token appears after AGAIN → error.
+    // (Separators: ".", ",", "then", "and" — structural tokens in ZIL.)
+    const separators = new Set<string>(['.', ',', 'then', 'and']);
+    const trailing = tokens.slice(1);
+    const hasNonSeparator = trailing.some(t => !separators.has(t));
+    if (hasNonSeparator) {
+      return { kind: 'fail', message: "I couldn't understand that sentence." };
+    }
+
+    // Replay: re-parse the saved lastInput from the top.
+    // Do NOT update lastInput (AGAIN replays the PREVIOUS command, not itself).
+    return this.parse(this.lastInput, room, player, world);
   }
 
   /**
