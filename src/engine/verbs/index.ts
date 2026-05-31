@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vOpen, vClose, vRead, vExamine, vPut, preTake, preGive, yuks, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vPut, preTake, preGive, yuks, type PickRng } from '../game-messages.js';
 
 // --------------------------------------------------------------------------
 // Public API types
@@ -495,6 +495,25 @@ function verbExamine(ctx: VerbContext): VerbResult {
   return result(fmt(vExamine.nothingSpecial, item.desc));
 }
 
+// --------------------------------------------------------------------------
+// V-ADVENT — xyzzy / plugh easter egg (gverbs.zil:153–154)
+// ZIL: <ROUTINE V-ADVENT () <TELL "A hollow voice says \"Fool.\"" CR>>
+// Syntax: PLUGH / XYZZY (gsyntax.zil:352–353; XYZZY is a synonym for PLUGH)
+// --------------------------------------------------------------------------
+function verbAdvent(_ctx: VerbContext): VerbResult {
+  return result(vAdvent.response);
+}
+
+// --------------------------------------------------------------------------
+// V-FROBOZZ — frobozz easter egg (gverbs.zil:704–706)
+// ZIL: <ROUTINE V-FROBOZZ ()
+//        <TELL "The FROBOZZ Corporation created, owns, and operates this dungeon." CR>>
+// Syntax: FROBOZZ (gsyntax.zil:227)
+// --------------------------------------------------------------------------
+function verbFrobozz(_ctx: VerbContext): VerbResult {
+  return result(vFrobozz.response);
+}
+
 function verbPut(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   const container = ctx.iobj;
@@ -544,6 +563,10 @@ const HANDLERS: Record<string, VerbHandler> = {
   inventory: verbInventory,
   examine:   verbExamine,
   put:       verbPut,
+  // Easter-egg verb-word fallback (for callers that bypass action dispatch).
+  plugh:     verbAdvent,  // also covers xyzzy (synonym for plugh)
+  xyzzy:     verbAdvent,
+  frobozz:   verbFrobozz,
 };
 
 /**
@@ -568,6 +591,9 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-INVENTORY': verbInventory,
   'V-EXAMINE':   verbExamine,
   'V-PUT':       verbPut,
+  // Easter-egg actions from gsyntax.zil:227 and 352–353.
+  'V-ADVENT':    verbAdvent,  // PLUGH / XYZZY → gverbs.zil:153
+  'V-FROBOZZ':   verbFrobozz, // FROBOZZ → gverbs.zil:704
 };
 
 /**
