@@ -90,8 +90,6 @@ function buildObject(data: ObjectData): GameObject {
     obj.props.set(key, value);
   }
 
-  // Preserve the ZIL ACTION-routine name so bootstrap can resolve it to a
-  // handler via the registry.  Object/room handlers are data-driven by this.
   if (data.actionRoutine !== undefined) {
     obj.actionRoutine = data.actionRoutine;
   }
@@ -106,12 +104,7 @@ export class World {
     this.registry = registry;
   }
 
-  /**
-   * Build a World from pre-constructed GameObject instances.  Useful for
-   * tests that want to hand-wire objects without going through the JSON
-   * extractor pipeline.  Containment must already be set on each object
-   * before calling this; the method only populates the id registry.
-   */
+  /** Build a World from pre-constructed objects (tests, hand-wired scenarios). */
   static fromObjects(objects: GameObject[]): World {
     const registry = new Map<ObjectId, GameObject>();
     for (const obj of objects) {
@@ -129,10 +122,7 @@ export class World {
       registry.set(data.id, buildObject(data));
     }
 
-    // Second pass: wire containment.  Any entry whose parent id is not in the
-    // registry (e.g. the ZIL pseudo-container "TO") is silently skipped — the
-    // object ends up parentless, which is the right default for rooms and
-    // floating items.
+    // Second pass: wire containment.  Unknown parent ids are silently skipped.
     for (const data of entries) {
       if (data.parent === undefined) continue;
       const child = registry.get(data.id);
@@ -144,13 +134,7 @@ export class World {
     return new World(registry);
   }
 
-  /**
-   * Register a pre-constructed object into the world after construction.
-   * Useful for bootstrap: synthesise a PLAYER actor, then register it before
-   * handing the world to the Game constructor.
-   *
-   * Throws if the id is already registered — prevents silent shadowing.
-   */
+  /** Register an object after construction.  Throws on duplicate id. */
   register(obj: GameObject): void {
     if (this.registry.has(obj.id)) {
       throw new Error(`World.register: duplicate id "${obj.id}"`);

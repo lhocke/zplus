@@ -21,23 +21,11 @@ export interface Exit {
 /** true = ZIL RTRUE (handled, suppress the rest); false = fall through. */
 export type HandlerResult = boolean;
 
-/**
- * Everything a translated ZIL action routine needs at dispatch time.
- *
- * The shape mirrors the globals a ZIL routine reaches for: the object whose
- * routine is running (`self` / the ZIL `OBJECT`), the acting creature
- * (`actor` / `WINNER`), the parsed verb and objects (`PRSA`/`PRSO`/`PRSI`),
- * the current room (`HERE`), and the world for id lookups.
- *
- * Room handlers branch on `rarg` (M-BEG/M-ENTER/M-LOOK); object handlers get
- * `rarg === undefined` and branch on `verb`.  The helpers (`hasFlag`/`setFlag`/
- * `clearFlag`/`moveTo`/`score`) cover the four ZIL primitives — `FSET?`,
- * `FSET`, `FCLEAR`, `MOVE`, and `SCORE` — that handlers reach for constantly.
- */
+/** Everything a translated ZIL action routine needs at dispatch time. */
 export interface ActionContext {
-  /** The object/room whose action routine is executing (ZIL implicit OBJECT). */
+  /** Object/room whose action routine is executing (ZIL OBJECT). */
   readonly self: GameObject;
-  /** The acting creature — normally the player (ZIL WINNER). */
+  /** Acting creature — normally the player (ZIL WINNER). */
   readonly actor: GameObject;
   /** Canonical parsed verb, e.g. 'take', 'read', 'walk' (ZIL PRSA). */
   readonly verb: string;
@@ -49,73 +37,32 @@ export interface ActionContext {
   readonly prep?: string;
   /** The world, for resolving object ids. */
   readonly world: World;
-  /** The current room (ZIL HERE / <LOC ,WINNER>). */
+  /** Current room (ZIL HERE). */
   readonly here: Room;
   /** Room-handler message: M-BEG/M-ENTER/M-LOOK.  undefined for object handlers. */
   readonly rarg?: number;
-  /**
-   * Seeded RNG for PICK-ONE operations (YUKS, DUMMY, HO-HUM tables).
-   * Optional — handlers should fall back to a deterministic pick when absent.
-   * Accepts any object with a `next()` method (duck-typed).
-   */
+  /** Seeded RNG for PICK-ONE operations (YUKS/DUMMY/HO-HUM tables). */
   readonly rng?: PickRng;
-  /** Print text to the player (ZIL TELL).  Newlines are preserved verbatim. */
   tell(text: string): void;
-  /** Read a flag on an object — ZIL `<FSET? obj flag>`. */
   hasFlag(obj: GameObject, flag: Flag): boolean;
-  /** Set a flag on an object — ZIL `<FSET obj flag>`. */
   setFlag(obj: GameObject, flag: Flag): void;
-  /** Clear a flag on an object — ZIL `<FCLEAR obj flag>`. */
   clearFlag(obj: GameObject, flag: Flag): void;
-  /** Move an object into a destination — ZIL `<MOVE obj dest>`. */
   moveTo(obj: GameObject, dest: GameObject): void;
-  /** Add to the score (may be negative) — ZIL `<SCORE n>` / `<SETG SCORE ...>`. */
   score(delta: number): void;
-  /**
-   * Award the one-time VALUE of an object to BASE-SCORE then zero its VALUE —
-   * ZIL SCORE-OBJ (gverbs.zil:1867–1870).  Idempotent: a zeroed VALUE awards
-   * nothing.  Used for ITAKE and first-visit room awards.
-   */
+  /** Award one-time VALUE to BASE-SCORE then zero it — ZIL SCORE-OBJ (gverbs.zil:1867–1870). */
   scoreObj(obj: GameObject): void;
-  /**
-   * Recompute the live trophy-case TVALUE component and update the total score.
-   * Equivalent to ZIL: SETG SCORE <+ ,BASE-SCORE <OTVAL-FROB>> then SCORE-UPD 0.
-   * Called by LIVING-ROOM-FCN M-END on TAKE / PUT-to-TROPHY-CASE.
-   */
+  /** Recompute trophy-case TVALUE and update total score — called by LIVING-ROOM-FCN M-END. */
   recomputeTrophy(trophyCase: GameObject): void;
-  /**
-   * Enable a clock interrupt by id — ZIL `<ENABLE <INT …>>` or
-   * `<ENABLE <QUEUE …>>`.  Used by action handlers to gate fuel drain.
-   */
   enableClock(id: string): void;
-  /**
-   * Disable a clock interrupt by id — ZIL `<DISABLE <INT …>>`.
-   * A disabled entry is frozen in place; its tick counter does not advance.
-   */
   disableClock(id: string): void;
-  /**
-   * Signal a fatal outcome for the current turn — ZIL M-FATAL.  Handlers call
-   * this when the player dies or the game ends; the PERFORM chain stops and
-   * the continuation slot is cleared.  (TD-4 Wave B wires the full body; this
-   * slot holds the position until then.)
-   */
+  /** Signal fatal outcome — ZIL M-FATAL; stops the PERFORM chain. */
   fatal(): void;
 
-  // ---- ZIL global flag store (F1) -------------------------------------------
+  // ZIL global flag store
 
-  /**
-   * Read a ZIL global boolean flag by name (e.g. 'WON-FLAG', 'MAGIC-FLAG').
-   * Optional: game.ts always supplies this; action test contexts may omit it,
-   * in which case the handler defaults to false (matching ZIL `<GLOBAL X <>>`).
-   *
-   * Distinct from `hasFlag(obj, flag)` which operates on object-level FSET bits.
-   */
+  /** Read a ZIL global boolean (e.g. 'WON-FLAG').  Optional; absent → false. */
   getGlobal?(name: string): boolean;
-
-  /**
-   * Write a ZIL global boolean flag by name.
-   * Optional: game.ts always supplies this; test contexts may omit it.
-   */
+  /** Write a ZIL global boolean.  Optional; test contexts may omit. */
   setGlobal?(name: string, value?: boolean): void;
 }
 
@@ -138,19 +85,11 @@ export class GameObject {
   parent: GameObject | null;
   readonly children: Set<GameObject>;
   handler?: ActionHandler;
-  /** ZIL ACTION-routine name (from the data); resolved to `handler` at bootstrap. */
+  /** ZIL ACTION-routine name; resolved to `handler` at bootstrap. */
   actionRoutine?: string;
-  /**
-   * ZIL P?CONTFCN — routine name string (from extracted data), resolved to
-   * `contFcn` (an ActionHandler) at bootstrap, mirroring actionRoutine→handler.
-   * Data supplied by TD-7; step 5 occupies its ordered position now and becomes
-   * live when extraction lands.  Intentionally inert until then.
-   */
+  /** ZIL P?CONTFCN routine name; resolved to `contFcn` at bootstrap. */
   contFcnRoutine?: string;
-  /**
-   * Resolved CONTFCN handler — called by PERFORM step 5 when dobj is inside a
-   * container and verb !== 'walk'.  Truthy return short-circuits the chain.
-   */
+  /** CONTFCN handler — called by PERFORM step 5 when dobj is inside a container. */
   contFcn?: ActionHandler;
   readonly synonyms: string[];
   readonly adjectives: string[];

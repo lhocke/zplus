@@ -16,7 +16,6 @@ export interface RoomOptions extends GameObjectOptions {
 
 export class Room extends GameObject {
   readonly exits: Exit[];
-  /** ZIL P?PSEUDO — pseudo-object table for this room. */
   readonly pseudo: PseudoEntry[];
 
   constructor(id: ObjectId, desc: string, opts: RoomOptions = {}) {
