@@ -409,7 +409,9 @@ function verbGo(ctx: VerbContext): VerbResult {
   const exit = ctx.here.exits.find(e => e.dir === dir);
 
   if (!exit) {
-    return result("You can't go that way.");
+    // No exit in this direction: RFATAL (ZIL V-WALK NEXIT/no-exit path).
+    // M-FATAL clears the continuation queue and skips M-END.
+    return result("You can't go that way.", /*moved*/false, /*fatal*/true);
   }
 
   // Safe fallback for test contexts that don't supply prob.
@@ -481,11 +483,13 @@ function verbGo(ctx: VerbContext): VerbResult {
         }
       }
       // Resolver returned undefined: the routine decided movement is blocked.
-      return result("You can't go that way.");
+      // RFATAL: clears the continuation queue and skips M-END.
+      return result("You can't go that way.", /*moved*/false, /*fatal*/true);
     }
     // No resolver available and exit has no static destination.
     if (exit.to === undefined) {
-      return result(exit.elseMessage ?? "You can't go that way.");
+      // RFATAL: per-routine exit with no fallback destination.
+      return result(exit.elseMessage ?? "You can't go that way.", /*moved*/false, /*fatal*/true);
     }
   }
 
@@ -504,18 +508,21 @@ function verbGo(ctx: VerbContext): VerbResult {
       ? gateObj.has(Flag.Open)                      // object-backed gate (OPENBIT)
       : (ctx.getGlobal?.(exit.ifFlag) ?? false);    // ZIL global → FlagStore
     if (!open) {
-      return result(exit.elseMessage ?? "You can't go that way.");
+      // RFATAL: CEXIT/DEXIT gate is closed — M-FATAL path per ZIL V-WALK spec.
+      return result(exit.elseMessage ?? "You can't go that way.", /*moved*/false, /*fatal*/true);
     }
   }
 
   // Plain blocked exit (no destination, static message).
+  // RFATAL: NEXIT equivalent — there is no valid destination.
   if (exit.to === undefined) {
-    return result(exit.elseMessage ?? "You can't go that way.");
+    return result(exit.elseMessage ?? "You can't go that way.", /*moved*/false, /*fatal*/true);
   }
 
   const dest = ctx.world.get(exit.to);
   if (dest === undefined) {
-    return result("You can't go that way.");
+    // RFATAL: destination room id is not in the world (data error / missing room).
+    return result("You can't go that way.", /*moved*/false, /*fatal*/true);
   }
 
   return enterDest(dest as Room);
