@@ -105,7 +105,7 @@ const FLAG_MAP: Record<string, string> = {
   DOORBIT: 'Door',
   TRANSBIT: 'Transparent',
   FLAMEBIT: 'OnFire',
-  BURNBIT: 'Burned',
+  BURNBIT: 'Flammable',
   WEAPONBIT: 'Weapon',
   FOODBIT: 'Food',
   DRINKBIT: 'Drink',

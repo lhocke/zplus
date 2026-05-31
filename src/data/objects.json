@@ -477,7 +477,7 @@
       "Readable",
       "Takeable",
       "Container",
-      "Burned",
+      "Flammable",
       "Turnable"
     ],
     "props": {
@@ -630,7 +630,7 @@
     "flags": [
       "Takeable",
       "Container",
-      "Burned"
+      "Flammable"
     ],
     "props": {
       "CAPACITY": 9,
@@ -1290,7 +1290,7 @@
     "flags": [
       "Readable",
       "Takeable",
-      "Burned"
+      "Flammable"
     ],
     "props": {
       "TEXT": "\"WELCOME TO ZORK!\n\nZORK is a game of adventure, danger, and low cunning. In it you will explore some of the most amazing territory ever seen by mortals. No computer should be without one!\"",
@@ -1354,7 +1354,7 @@
     "desc": "magic boat",
     "flags": [
       "Takeable",
-      "Burned",
+      "Flammable",
       "Vehicle",
       "Open",
       "Searchable"
@@ -1463,7 +1463,7 @@
     "desc": "painting",
     "flags": [
       "Takeable",
-      "Burned"
+      "Flammable"
     ],
     "props": {
       "SIZE": 15,
@@ -1556,7 +1556,7 @@
     "desc": "pile of leaves",
     "flags": [
       "Takeable",
-      "Burned",
+      "Flammable",
       "TryTake"
     ],
     "props": {
@@ -1578,7 +1578,7 @@
     "desc": "punctured boat",
     "flags": [
       "Takeable",
-      "Burned"
+      "Flammable"
     ],
     "props": {
       "SIZE": 20
@@ -1601,7 +1601,7 @@
     "desc": "pile of plastic",
     "flags": [
       "Takeable",
-      "Burned"
+      "Flammable"
     ],
     "props": {
       "SIZE": 20
@@ -1911,7 +1911,7 @@
     "desc": "small pile of coal",
     "flags": [
       "Takeable",
-      "Burned"
+      "Flammable"
     ],
     "props": {
       "SIZE": 20
@@ -2114,7 +2114,7 @@
     "flags": [
       "Readable",
       "Takeable",
-      "Burned"
+      "Flammable"
     ],
     "props": {
       "SIZE": 2,
@@ -2218,7 +2218,7 @@
     "flags": [
       "Readable",
       "Takeable",
-      "Burned"
+      "Flammable"
     ],
     "props": {
       "TEXT": "\"\tFlood Control Dam #3\n\nFCD#3 was constructed in year 783 of the Great Underground Empire to harness the mighty Frigid River. This work was supported by a grant of 37 million zorkmids from your omnipotent local tyrant Lord Dimwit Flathead the Excessive. This impressive structure is composed of 370,000 cubic feet of concrete, is 256 feet tall at the center, and 193 feet wide at the top. The lake created behind the dam has a volume of 1.7 billion cubic feet, an area of 12 million square feet, and a shore line of 36 thousand feet.\n\nThe construction of FCD#3 took 112 days from ground breaking to the dedication. It required a work force of 384 slaves, 34 slave drivers, 12 engineers, 2 turtle doves, and a partridge in a pear tree. The work was managed by a command team composed of 2345 bureaucrats, 2347 secretaries (at least two of whom could type), 12,256 paper shufflers, 52,469 rubber stampers, 245,193 red tape processors, and nearly one million dead trees.\n\nWe will now point out some of the more interesting features of FCD#3 as we conduct you on a guided tour of the facilities:\n\n1) You start your tour here in the Dam Lobby. You will notice on your right that...."
@@ -2457,7 +2457,7 @@
     "desc": "bird's nest",
     "flags": [
       "Takeable",
-      "Burned",
+      "Flammable",
       "Container",
       "Open",
       "Searchable"
@@ -2618,6 +2618,7 @@
       "STEEP"
     ],
     "ldesc": "There's nothing special about the stairs.",
+    "parent": null,
     "actionRoutine": "STAIRS-F"
   }
 ]

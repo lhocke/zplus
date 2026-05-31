@@ -585,30 +585,45 @@ function verbOpen(ctx: VerbContext): VerbResult {
   }
 
   item.set(Flag.Open);
+  // ZIL gverbs.zil:973 — <FSET ,PRSO ,TOUCHBIT>: mark container as touched.
+  item.set(Flag.Touched);
 
   // DOORBIT path — gverbs.zil:980 "The [PRSO] opens."
   if (item.has(Flag.Door)) {
     return result(fmt(vOpen.opens, item.desc));
   }
 
-  // CONTBIT path: check contents (gverbs.zil:983–985)
+  // CONTBIT path (gverbs.zil:974-985):
+  //   Branch 1 — empty container or TRANSBIT: "Opened."
+  //   Branch 2 — single untouched child with FDESC: "The X opens.\n<fdesc>"
+  //   Branch 3 — otherwise: "Opening the X reveals a Y[, and a Z]."
   const contents = Array.from(item.children).filter(c => !c.has(Flag.Invisible));
-  if (contents.length > 0) {
-    // Build "a X, a Y, and a Z" list (Oxford comma)
-    const articled = contents.map(c => `a ${c.desc}`);
-    let contentStr: string;
-    if (articled.length === 1) {
-      contentStr = articled[0]!;
-    } else {
-      const last = articled[articled.length - 1];
-      const rest = articled.slice(0, -1);
-      contentStr = rest.join(', ') + ', and ' + last;
-    }
-    return result(fmt(vOpen.opensRevealing, item.desc, contentStr));
+
+  // Branch 1 — gverbs.zil:974-975: no children or transparent → "Opened."
+  if (contents.length === 0 || item.has(Flag.Transparent)) {
+    return result(vOpen.opened);
   }
 
-  // Empty container — gverbs.zil:975 "Opened."
-  return result(vOpen.opened);
+  // Branch 2 — gverbs.zil:976-981: single child, not yet touched, has FDESC.
+  // ZIL: <AND <SET F <FIRST? ,PRSO>> <NOT <NEXT? .F>> <NOT <FSET? .F ,TOUCHBIT>> <SET STR <GETP .F ,P?FDESC>>>
+  if (contents.length === 1) {
+    const child = contents[0]!;
+    if (!child.has(Flag.Touched) && child.fdesc !== undefined) {
+      return result(`${fmt(vOpen.opens, item.desc)}\n${child.fdesc}`);
+    }
+  }
+
+  // Branch 3 — gverbs.zil:982-985: "Opening the X reveals a Y[, and a Z]."
+  const articled = contents.map(c => `a ${c.desc}`);
+  let contentStr: string;
+  if (articled.length === 1) {
+    contentStr = articled[0]!;
+  } else {
+    const last = articled[articled.length - 1];
+    const rest = articled.slice(0, -1);
+    contentStr = rest.join(', ') + ', and ' + last;
+  }
+  return result(fmt(vOpen.opensRevealing, item.desc, contentStr));
 }
 
 function verbClose(ctx: VerbContext): VerbResult {

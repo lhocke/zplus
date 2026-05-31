@@ -237,7 +237,7 @@ describe('flag name mapping', () => {
     ['<OBJECT O (FLAGS DOORBIT)>', 'Door'],
     ['<OBJECT O (FLAGS TRANSBIT)>', 'Transparent'],
     ['<OBJECT O (FLAGS FLAMEBIT)>', 'OnFire'],
-    ['<OBJECT O (FLAGS BURNBIT)>', 'Burned'],
+    ['<OBJECT O (FLAGS BURNBIT)>', 'Flammable'],
     ['<OBJECT O (FLAGS WEAPONBIT)>', 'Weapon'],
     ['<OBJECT O (FLAGS FOODBIT)>', 'Food'],
     ['<OBJECT O (FLAGS DRINKBIT)>', 'Drink'],
