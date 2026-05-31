@@ -6,6 +6,10 @@ import type { ParsedCommand, ParseResult } from './types.js';
 import { Flag } from '../../domain/flags.js';
 import { tokenize, SIBREAK_CHARS } from './tokenizer.js';
 import { syntaxCheck } from './syntax-check.js';
+import { buildScope, lit as litCheck } from './scope.js';
+import { getObject } from './get-object.js';
+import { accessible } from './accessible.js';
+import { FINDBIT_TO_FLAG } from './find-bits.js';
 
 // ---------------------------------------------------------------------------
 // Wave B–era compatibility adapter.
@@ -288,26 +292,25 @@ function splitNounPhrase(tokens: string[]): { noun: string; adjectives: string[]
 }
 
 // --------------------------------------------------------------------------
-// Resolve a noun-phrase against scope; return a ParseResult fragment.
-// A resolved pronoun id can be supplied to short-circuit normal lookup.
+// Legacy null-player noun resolver (used only when player=null is passed).
+// Uses old matchNoun + collectScope logic without lighting checks.
+// Removed when C9 rewrites the full scan-loop.
 // --------------------------------------------------------------------------
 
-type ResolveResult =
+type LegacyResolveResult =
   | { ok: true; id: ObjectId }
   | { ok: false; result: ParseResult };
 
-function resolveNounPhrase(
+function _legacyResolveNounPhrase(
   tokens: string[],
   scope: GameObject[],
   pronounRef?: ObjectId,
-): ResolveResult {
+): LegacyResolveResult {
   const phrase = splitNounPhrase(tokens);
   if (phrase === null) return { ok: true, id: undefined as unknown as ObjectId };
 
   const { noun, adjectives } = phrase;
 
-  // Pronoun short-circuit: "it" or "them" with no adjectives resolves to the
-  // caller-supplied referent (or fails if none was bound).
   const isPronoun = (noun === 'it' || noun === 'them') && adjectives.length === 0;
   if (isPronoun) {
     if (pronounRef !== undefined) {
@@ -338,7 +341,6 @@ function resolveNounPhrase(
     return { ok: true, id: matches[0]!.id };
   }
 
-  // Multiple matches — ambiguous; emit a disambiguation prompt.
   return {
     ok: false,
     result: {
@@ -346,6 +348,165 @@ function resolveNounPhrase(
       message: `Which ${noun} do you mean, ${matches.map(m => m.desc).join(' or ')}?`,
     },
   };
+}
+
+// --------------------------------------------------------------------------
+// Resolve a noun-phrase against scope using the C4 getObject pipeline.
+// --------------------------------------------------------------------------
+
+type ResolveResult =
+  | { ok: true; id: ObjectId }
+  | { ok: false; result: ParseResult }
+  | { ok: 'pseudo'; action: string };
+
+/**
+ * C4 noun-phrase resolver.  Replaces the old matchNoun+collectScope approach.
+ *
+ * @param tokens      Noun-phrase token array (articles already stripped).
+ * @param snap        ScopeSnapshot built once per parse turn.
+ * @param here        Current room.
+ * @param player      Player actor.
+ * @param world       The world.
+ * @param locBits     Syntax locBits for this slot (0 = unconstrained).
+ * @param findBitName Raw ZIL findBit name from syntax (e.g. "ACTORBIT"), or undefined.
+ * @param isLit       Whether the room is lit.
+ * @param itRef       Current IT pronoun referent id, or undefined.
+ */
+function resolveNounPhrase(
+  tokens: string[],
+  snap: import('./scope.js').ScopeSnapshot,
+  here: Room,
+  player: GameObject,
+  world: World,
+  locBits: number,
+  findBitName: string | undefined,
+  isLit: boolean,
+  itRef: ObjectId | undefined,
+): ResolveResult {
+  const phrase = splitNounPhrase(tokens);
+  if (phrase === null) return { ok: true, id: undefined as unknown as ObjectId };
+
+  const { noun, adjectives } = phrase;
+
+  // Pronoun short-circuit: "it" or "them" with no adjectives resolves to the
+  // caller-supplied referent (or fails if none was bound).
+  // C4: validate referent via accessible() before accepting it.
+  const isPronoun = (noun === 'it' || noun === 'them') && adjectives.length === 0;
+  if (isPronoun) {
+    if (itRef !== undefined) {
+      const itObj = world.get(itRef);
+      if (itObj !== undefined && accessible(itObj, here, player, world)) {
+        return { ok: true, id: itRef };
+      }
+      // Referent has left scope
+      return {
+        ok: false,
+        result: {
+          kind: 'fail',
+          message: "I don't see what you're referring to.",
+        },
+      };
+    }
+    return {
+      ok: false,
+      result: {
+        kind: 'fail',
+        message: `You haven't mentioned any ${noun === 'it' ? 'thing' : 'things'} recently.`,
+      },
+    };
+  }
+
+  // Resolve findBit name to a Flag (if provided and known).
+  const findFlag = findBitName !== undefined ? FINDBIT_TO_FLAG[findBitName] : undefined;
+
+  // P-NAM and P-ADJ: the noun is the last token; adjectives are everything before it.
+  // Tokens are lowercase from the tokenizer; UPPERCASE them for thisItQ (ZIL canonical).
+  const pNam = noun.toUpperCase();
+  const pAdj = adjectives.length > 0 ? adjectives[adjectives.length - 1]!.toUpperCase() : undefined;
+
+  const goResult = getObject(snap, here, player, world, pNam, pAdj, findFlag, locBits, isLit, true);
+
+  switch (goResult.kind) {
+    case 'ok': {
+      if (goResult.ids.length === 0) {
+        return {
+          ok: false,
+          result: { kind: 'fail', message: `I don't know the word "${noun}".` },
+        };
+      }
+      if (goResult.ids.length === 1) {
+        return { ok: true, id: goResult.ids[0]! };
+      }
+      // Multiple → disambig
+      const objs = goResult.ids.map(id => world.get(id)).filter(Boolean) as GameObject[];
+      return {
+        ok: false,
+        result: {
+          kind: 'disambig',
+          message: `Which ${noun} do you mean, ${objs.map(m => m.desc).join(' or ')}?`,
+        },
+      };
+    }
+    case 'disambig': {
+      const objs = goResult.ids.map(id => world.get(id)).filter(Boolean) as GameObject[];
+      return {
+        ok: false,
+        result: {
+          kind: 'disambig',
+          message: `Which ${noun} do you mean, ${objs.map(m => m.desc).join(' or ')}?`,
+        },
+      };
+    }
+    case 'not-here': {
+      // ZIL distinction: "I don't know the word X" (word not in lexicon) vs
+      // "You can't see any X here!" (word known but object not in scope).
+      // Since we don't have a separate noun vocabulary, check if the noun word
+      // appears in ANY object's synonyms/adjectives in the world.
+      const nounUpper = goResult.noun;
+      const isKnownNoun = world.all().some(
+        o => o.synonyms.some(s => s.toUpperCase() === nounUpper) ||
+             o.adjectives.some(a => a.toUpperCase() === nounUpper),
+      );
+      if (!isKnownNoun) {
+        return {
+          ok: false,
+          result: {
+            kind: 'fail',
+            message: `I don't know the word "${noun}".`,
+          },
+        };
+      }
+      return {
+        ok: false,
+        result: {
+          kind: 'not-here',
+          noun: goResult.noun,
+          message: `You can't see any ${goResult.noun.toLowerCase()} here!`,
+        },
+      };
+    }
+    case 'dark':
+      return {
+        ok: false,
+        result: {
+          kind: 'not-here',
+          noun,
+          message: "It's too dark to see!",
+        },
+      };
+    case 'pseudo':
+      // Pseudo sentinel — signals a pseudo-object match to the parse() caller.
+      // The parser returns an ok command with the pseudo action as the action name.
+      // Engine dispatch wiring for pseudo actions is a flagged seam (deferred).
+      return { ok: 'pseudo', action: goResult.action };
+    case 'missing-noun':
+      return {
+        ok: false,
+        result: { kind: 'fail', message: 'There seems to be a noun missing in that sentence!' },
+      };
+    case 'none':
+      return { ok: true, id: undefined as unknown as ObjectId };
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -386,7 +547,17 @@ export class Parser {
       return { kind: 'fail', message: 'I beg your pardon?' };
     }
 
-    const scope = collectScope(room, player, world);
+    // C4: Build ScopeSnapshot once per parse.
+    // When player is null (legacy test shortcut), fall back to old collectScope
+    // + matchNoun path for backward compat. Real gameplay always passes a player.
+    // (This bridge is removed when C9 rewrites the full scan-loop.)
+    if (player === null) {
+      return this._parseLegacyNullPlayer(input, tokens, room, world);
+    }
+
+    const effectivePlayer: GameObject = player;
+    const snap = buildScope(room, effectivePlayer, world);
+    const isLit = litCheck(room, effectivePlayer, world);
 
     // Compass shorthand: bare direction token → walk <dir>
     if (tokens.length === 1 && DIRECTIONS.has(tokens[0]!)) {
@@ -425,9 +596,6 @@ export class Parser {
     const syntaxResult = syntaxCheck(verbUpper, ncn, prep1, prep2);
 
     // Determine action and preAction from the syntax check result.
-    // On 'needGwim': C4 owns GWIM/orphan prompting; for now fall back to
-    // a best-effort action name so existing engine tests stay green.
-    // The fallback is clearly marked — C4 will handle this properly.
     let action: string;
     let preAction: string | undefined;
     let matchedSyntax: import('./types.js').SyntaxEntry | undefined;
@@ -443,21 +611,54 @@ export class Parser {
       preAction = syntaxResult.entry.preAction;
       matchedSyntax = syntaxResult.entry;
     } else {
-      // syntaxResult.kind === 'needGwim': at least one drive is set.
-      // C4 BRIDGE: synthesize a fallback action string so the old engine
-      // dispatch path continues to work until C4 lands.
-      // This preserves backward compatibility per §6 risk note.
-      action = 'V-' + canonical.toUpperCase();
-      preAction = undefined;
-      matchedSyntax = undefined;
+      // syntaxResult.kind === 'needGwim': thin GWIM entry point (C4).
+      // Full DRIVE1/DRIVE2 GWIM elaboration (orphan prompts, auto-supply) is deferred.
+      // For now: use the drive's action name and locBits for scope resolution,
+      // but do NOT propagate preAction (it may check for iobj that GWIM would supply).
+      const drive = syntaxResult.drive1 ?? syntaxResult.drive2;
+      action = drive?.action ?? ('V-' + canonical.toUpperCase());
+      preAction = undefined;  // GWIM preAction deferred — full GWIM not yet wired
+      matchedSyntax = drive;  // Use drive for locBits during dobj scope resolution
     }
+
+    // The canonical prep for the ParsedCommand.prep field is prep1 if present,
+    // else prep2 (the C3 grammar uses prep1 as the structurally primary prep).
+    const prepOut = prep1 ?? prep2;
 
     let dobjIds: ObjectId[] | undefined;
     let iobjIds: ObjectId[] | undefined;
 
+    // Extract locBits from matched syntax (if available).
+    // findBit is the GWIM find-bit, not used during normal noun resolution.
+    const dobjLocBits = matchedSyntax?.dobjLocBits ?? 0;
+    const iobjLocBits = matchedSyntax?.iobjLocBits ?? 0;
+
     // Resolve direct object if any tokens remain.
+    // NOTE: dobjFindBit is the GWIM findBit — only used during GWIM calls,
+    // NOT during normal noun resolution (P-GWIMBIT is 0 during THIS-IT? in SEARCH-LIST).
+    // Pass undefined for findBitName during normal resolution.
     if (dobjTokens.length > 0) {
-      const r = resolveNounPhrase(dobjTokens, scope, this.itRef);
+      const r = resolveNounPhrase(
+        dobjTokens, snap, room, effectivePlayer, world,
+        dobjLocBits, undefined /* GWIM only */, isLit, this.itRef,
+      );
+      if (r.ok === 'pseudo') {
+        // Pseudo sentinel: return ok command with the pseudo action.
+        // The pseudo action IS the dispatch target (engine seam flagged).
+        return {
+          kind: 'ok',
+          command: {
+            verb: canonical,
+            action: r.action,
+            dobjIds: undefined,
+            iobjIds: undefined,
+            prep: prepOut,
+            preAction: undefined,
+            syntax: matchedSyntax,
+            raw: tokens,
+          },
+        };
+      }
       if (!r.ok) return r.result;
       if (r.id !== (undefined as unknown as ObjectId)) {
         dobjIds = [r.id];
@@ -465,18 +666,33 @@ export class Parser {
     }
 
     // Resolve indirect object if iobj tokens follow (after prep2).
+    // Same as dobj: findBit is GWIM-only, not used during normal resolution.
     if (iobjTokens.length > 0) {
-      const r = resolveNounPhrase(iobjTokens, scope, this.itRef);
+      const r = resolveNounPhrase(
+        iobjTokens, snap, room, effectivePlayer, world,
+        iobjLocBits, undefined /* GWIM only */, isLit, this.itRef,
+      );
+      if (r.ok === 'pseudo') {
+        // Iobj pseudo sentinel (rare but possible).
+        return {
+          kind: 'ok',
+          command: {
+            verb: canonical,
+            action: r.action,
+            dobjIds,
+            iobjIds: undefined,
+            prep: prepOut,
+            preAction: undefined,
+            syntax: matchedSyntax,
+            raw: tokens,
+          },
+        };
+      }
       if (!r.ok) return r.result;
       if (r.id !== (undefined as unknown as ObjectId)) {
         iobjIds = [r.id];
       }
     }
-
-    // The canonical prep for the ParsedCommand.prep field is prep1 if present,
-    // else prep2 (the C3 grammar uses prep1 as the structurally primary prep).
-    // C4 will use matchedSyntax.prep1/prep2 for precise slot routing.
-    const prepOut = prep1 ?? prep2;
 
     return {
       kind: 'ok',
@@ -631,6 +847,83 @@ export class Parser {
         raw: tokens,
       },
     }));
+  }
+
+  /**
+   * LEGACY backward-compat path for tests that pass player=null.
+   * Uses the old collectScope + matchNoun approach (no lighting check).
+   * Removed when C9 rewrites the full scan-loop.
+   */
+  private _parseLegacyNullPlayer(
+    _input: string,
+    tokens: string[],
+    room: Room,
+    world: World,
+  ): ParseResult {
+    const scope = collectScope(room, null, world);
+
+    if (tokens.length === 1 && DIRECTIONS.has(tokens[0]!)) {
+      return {
+        kind: 'ok',
+        command: {
+          verb: 'walk',
+          action: 'V-WALK',
+          dobjIds: undefined,
+          iobjIds: undefined,
+          prep: normalizeDir(tokens[0]!),
+          raw: tokens,
+        },
+      };
+    }
+
+    const rawVerb = tokens[0]!;
+    const canonical = lookupVerb(rawVerb);
+    if (canonical === undefined) {
+      return { kind: 'fail', message: `I don't know the word "${rawVerb}".` };
+    }
+
+    const rest = tokens.slice(1);
+    const { ncn, prep1, prep2, dobjTokens, iobjTokens } = splitOnPreps(rest);
+    const verbUpper = canonical.toUpperCase();
+    const syntaxResult = syntaxCheck(verbUpper, ncn, prep1, prep2);
+
+    let action: string;
+    let preAction: string | undefined;
+    let matchedSyntax: import('./types.js').SyntaxEntry | undefined;
+
+    if (syntaxResult.kind === 'fail') {
+      return { kind: 'fail', message: syntaxResult.message };
+    }
+    if (syntaxResult.kind === 'matched') {
+      action = syntaxResult.entry.action;
+      preAction = syntaxResult.entry.preAction;
+      matchedSyntax = syntaxResult.entry;
+    } else {
+      const drive = syntaxResult.drive1 ?? syntaxResult.drive2;
+      action = drive?.action ?? ('V-' + canonical.toUpperCase());
+      preAction = drive?.preAction;
+      matchedSyntax = drive;
+    }
+
+    const prepOut = prep1 ?? prep2;
+    let dobjIds: ObjectId[] | undefined;
+    let iobjIds: ObjectId[] | undefined;
+
+    if (dobjTokens.length > 0) {
+      const r = _legacyResolveNounPhrase(dobjTokens, scope, this.itRef);
+      if (!r.ok) return r.result;
+      if (r.id !== (undefined as unknown as ObjectId)) dobjIds = [r.id];
+    }
+    if (iobjTokens.length > 0) {
+      const r = _legacyResolveNounPhrase(iobjTokens, scope, this.itRef);
+      if (!r.ok) return r.result;
+      if (r.id !== (undefined as unknown as ObjectId)) iobjIds = [r.id];
+    }
+
+    return {
+      kind: 'ok',
+      command: { verb: canonical, action, dobjIds, iobjIds, prep: prepOut, preAction, syntax: matchedSyntax, raw: tokens },
+    };
   }
 
   /**

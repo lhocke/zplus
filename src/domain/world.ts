@@ -1,6 +1,6 @@
 import { GameObject, type ObjectId, type Exit } from './game-object.js';
 import { Flag } from './flags.js';
-import { Room } from './room.js';
+import { Room, type PseudoEntry } from './room.js';
 import { Thing } from './thing.js';
 import { Container } from './container.js';
 import { Actor } from './actor.js';
@@ -20,6 +20,8 @@ interface ObjectData {
   adjectives: string[];
   exits?: Exit[];
   actionRoutine?: string;
+  /** ZIL P?PSEUDO — rooms only; list of {word, action} pseudo-object entries. */
+  pseudo?: PseudoEntry[];
 }
 
 const FLAG_NAME_MAP: Record<string, Flag> = {
@@ -64,7 +66,7 @@ function buildObject(data: ObjectData): GameObject {
   let obj: GameObject;
   switch (data.kind) {
     case 'room':
-      obj = new Room(data.id, data.desc, { ...opts, exits: data.exits ?? [] });
+      obj = new Room(data.id, data.desc, { ...opts, exits: data.exits ?? [], pseudo: data.pseudo });
       break;
     case 'container':
       obj = new Container(data.id, data.desc, opts);

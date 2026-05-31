@@ -57,7 +57,7 @@ export interface ParsedCommand {
 }
 
 /**
- * The result of one parse attempt.  Four structurally-distinct outcomes:
+ * The result of one parse attempt.  Five structurally-distinct outcomes:
  *
  *   ok       — command fully resolved; engine executes it.
  *   fail     — any error (unknown word, not in scope, empty input, too many
@@ -68,9 +68,14 @@ export interface ParsedCommand {
  *              answer without re-prompting.
  *   disambig — parser issued a "Which X do you mean, …?" prompt; caller
  *              must supply the next turn's answer in the same way.
+ *   not-here — object was recognized (known noun in vocabulary) but is not
+ *              in scope; engine prints "You can't see any X here!" (gparser.zil:1124).
+ *              Also used when the room is dark: message = "It's too dark to see!"
+ *              Distinct from 'fail' so the engine can special-case the message.
  */
 export type ParseResult =
   | { kind: 'ok'; command: ParsedCommand }
   | { kind: 'fail'; message: string }
   | { kind: 'orphan'; message: string }
-  | { kind: 'disambig'; message: string };
+  | { kind: 'disambig'; message: string }
+  | { kind: 'not-here'; noun: string; message: string };
