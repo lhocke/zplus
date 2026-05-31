@@ -100,6 +100,23 @@ export interface ActionContext {
    * slot holds the position until then.)
    */
   fatal(): void;
+
+  // ---- ZIL global flag store (F1) -------------------------------------------
+
+  /**
+   * Read a ZIL global boolean flag by name (e.g. 'WON-FLAG', 'MAGIC-FLAG').
+   * Optional: game.ts always supplies this; action test contexts may omit it,
+   * in which case the handler defaults to false (matching ZIL `<GLOBAL X <>>`).
+   *
+   * Distinct from `hasFlag(obj, flag)` which operates on object-level FSET bits.
+   */
+  getGlobal?(name: string): boolean;
+
+  /**
+   * Write a ZIL global boolean flag by name.
+   * Optional: game.ts always supplies this; test contexts may omit it.
+   */
+  setGlobal?(name: string, value?: boolean): void;
 }
 
 export type ActionHandler = (ctx: ActionContext) => HandlerResult;

@@ -82,6 +82,23 @@ export interface VerbContext {
    * Optional: supplied by game.ts for V-DIAGNOSE.
    */
   readonly deaths?: number;
+
+  // ---- ZIL global flag store (F1) -------------------------------------------
+
+  /**
+   * Read a ZIL global boolean flag by name (e.g. 'WON-FLAG', 'MAGIC-FLAG').
+   * Optional: game.ts always supplies this; test contexts may omit it,
+   * in which case the resolver defaults to false (matching ZIL `<GLOBAL X <>>`).
+   *
+   * Distinct from `hasFlag(obj, flag)` which operates on object-level FSET bits.
+   */
+  readonly getGlobal?: (name: string) => boolean;
+
+  /**
+   * Write a ZIL global boolean flag by name.
+   * Optional: game.ts always supplies this; test contexts may omit it.
+   */
+  readonly setGlobal?: (name: string, value?: boolean) => void;
 }
 
 export interface VerbResult {
@@ -349,11 +366,21 @@ function verbGo(ctx: VerbContext): VerbResult {
     }
   }
 
-  // ifFlag exits: the named object must have Flag.Open set, otherwise the
-  // exit is blocked (ZIL COND checks the object's OPENBIT).
+  // ifFlag exits: disambiguate object-backed gates from ZIL global flags.
+  //
+  // When world.get(name) returns an object → it is a game-object gate (e.g.
+  // TRAP-DOOR, GRATE, KITCHEN-WINDOW); open-state is the object's OPENBIT.
+  //
+  // When world.get(name) returns undefined → it is a ZIL global (e.g. WON-FLAG,
+  // MAGIC-FLAG, FALSE-FLAG); open-state is read from the FlagStore via getGlobal.
+  //
+  // ZIL sources: 1actions.zil ifFlag checks; gverbs.zil globals.
   if (exit.ifFlag !== undefined) {
     const gateObj = ctx.world.get(exit.ifFlag);
-    if (gateObj === undefined || !gateObj.has(Flag.Open)) {
+    const open = gateObj !== undefined
+      ? gateObj.has(Flag.Open)                      // object-backed gate (OPENBIT)
+      : (ctx.getGlobal?.(exit.ifFlag) ?? false);    // ZIL global → FlagStore
+    if (!open) {
       return result(exit.elseMessage ?? "You can't go that way.");
     }
   }

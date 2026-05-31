@@ -8,6 +8,7 @@ import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
 import { executeVerb, describeRoomObjects } from './verbs/index.js';
 import { Scoring } from './scoring.js';
+import { FlagStore } from './flag-store.js';
 import { lookupPer, lookupPreAction } from '../actions/registry.js';
 import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
 
@@ -82,6 +83,7 @@ export class Game {
   private player: Actor;
   private here: Room;
 
+  private readonly flags: FlagStore;
   private readonly scoring: Scoring;
   private moveCount = 0;
 
@@ -108,7 +110,8 @@ export class Game {
     this.rng = opts.rng;
     this.events = opts.events;
     this.parser = new Parser();
-    this.scoring = new Scoring(this.events);
+    this.flags = new FlagStore();
+    this.scoring = new Scoring(this.events, this.flags);
 
     // Resolve the player actor — the Actor whose id is 'PLAYER', or the first
     // Actor found in the world when no canonical id exists (test scenarios).
@@ -327,6 +330,8 @@ export class Game {
           moves:  this.moveCount,
           rank:   () => this.scoring.rank(),
           deaths: 0,  // DEATHS global (TD-3 §9.4); 0 until jigsUp is wired (Wave S3)
+          getGlobal: (n) => this.flags.get(n),
+          setGlobal: (n, v = true) => this.flags.set(n, v),
         }, cmd.action);
 
         // A handler may have printed something even while falling through
@@ -461,6 +466,8 @@ export class Game {
       recomputeTrophy: (trophyCase) => this.scoring.recomputeTrophy(trophyCase),
       enableClock: (id) => this.clock.enable(id),
       disableClock: (id) => this.clock.disable(id),
+      getGlobal: (n) => this.flags.get(n),
+      setGlobal: (n, v = true) => this.flags.set(n, v),
       /**
        * Signal M-FATAL — stops the PERFORM chain and skips M-END.
        * The handler still returns true (RTRUE) so the chain short-circuits;

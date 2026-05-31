@@ -105,8 +105,7 @@ export const westHouse: ActionHandler = (ctx) => {
     let text =
       'You are standing in an open field west of a white house, with a boarded\n' +
       'front door.';
-    const wonFlag = ctx.world.get('WON-FLAG');
-    if (wonFlag !== undefined && ctx.hasFlag(wonFlag, Flag.Touched)) {
+    if (ctx.getGlobal?.('WON-FLAG')) {
       text += ' A secret path leads southwest into the forest.';
     }
     ctx.tell(text);
@@ -170,8 +169,7 @@ export const kitchenFcn: ActionHandler = (ctx) => {
  */
 export const livingRoomFcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
-    const magicFlag = ctx.world.get('MAGIC-FLAG');
-    const hasMagic = magicFlag !== undefined && ctx.hasFlag(magicFlag, Flag.Touched);
+    const hasMagic = ctx.getGlobal?.('MAGIC-FLAG') ?? false;
     const trapDoor = ctx.world.get('TRAP-DOOR');
     const trapOpen = trapDoor !== undefined && ctx.hasFlag(trapDoor, Flag.Open);
 

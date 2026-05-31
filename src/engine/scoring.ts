@@ -1,5 +1,6 @@
 import type { EventEmitter } from './events.js';
 import type { GameObject } from '../domain/game-object.js';
+import type { FlagStore } from './flag-store.js';
 
 // ---------------------------------------------------------------------------
 // Rank thresholds — mirrors the 8-rank Zork I scoring table.
@@ -69,9 +70,11 @@ export class Scoring {
   private _wonFlag = false;
 
   private readonly emitter: EventEmitter;
+  private readonly flagStore?: FlagStore;
 
-  constructor(emitter: EventEmitter) {
+  constructor(emitter: EventEmitter, flagStore?: FlagStore) {
     this.emitter = emitter;
+    this.flagStore = flagStore;
   }
 
   // ---- Accessors -----------------------------------------------------------
@@ -221,6 +224,8 @@ export class Scoring {
   private checkWonFlag(): void {
     if (!this._wonFlag && this._score === 350) {
       this._wonFlag = true;
+      // Write through to the FlagStore so getGlobal('WON-FLAG') reads true.
+      this.flagStore?.set('WON-FLAG', true);
     }
   }
 }
