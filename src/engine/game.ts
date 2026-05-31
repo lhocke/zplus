@@ -316,6 +316,15 @@ export class Game {
           mlookRunner: (room) => this.runMLook(room),
           rng: this.rng,
           scoreObj: (obj) => this.scoring.scoreObj(obj),
+          // V-SCORE / V-DIAGNOSE fields (TD3-2):
+          // `moveCount` is incremented at end-of-turn; pass moveCount+1 here
+          // so V-SCORE sees the count that will be committed (ZIL MOVES is
+          // incremented in CLOCKER before M-END; the score command executes
+          // after PARSER/PERFORM, which is after CLOCKER in ZIL's main loop).
+          score:  this.scoring.score,
+          moves:  this.moveCount + 1,
+          rank:   () => this.scoring.rank(),
+          deaths: 0,  // DEATHS global (TD-3 §9.4); 0 until jigsUp is wired (Wave S3)
         }, cmd.action);
 
         // A handler may have printed something even while falling through

@@ -56,6 +56,32 @@ export interface VerbContext {
    * Optional: only supplied by game.ts; test callers may omit it.
    */
   readonly scoreObj?: (obj: GameObject) => void;
+
+  // ---- V-SCORE / V-DIAGNOSE fields (TD3-2) ----------------------------------
+
+  /**
+   * Current score (ZIL: SCORE global).
+   * Optional: supplied by game.ts for V-SCORE.
+   */
+  readonly score?: number;
+
+  /**
+   * Current move count (ZIL: MOVES global).
+   * Optional: supplied by game.ts for V-SCORE.
+   */
+  readonly moves?: number;
+
+  /**
+   * Return the rank title for the current score (ZIL: V-SCORE rank table).
+   * Optional: supplied by game.ts for V-SCORE.
+   */
+  readonly rank?: () => string;
+
+  /**
+   * Number of times the player has died (ZIL: DEATHS global).
+   * Optional: supplied by game.ts for V-DIAGNOSE.
+   */
+  readonly deaths?: number;
 }
 
 export interface VerbResult {
@@ -554,6 +580,116 @@ function verbPut(ctx: VerbContext): VerbResult {
 }
 
 // --------------------------------------------------------------------------
+// V-SCORE (1actions.zil:4026–4044)
+// --------------------------------------------------------------------------
+
+/**
+ * V-SCORE — print the player's score, move count, and rank.
+ *
+ * ZIL format (verbatim):
+ *   "Your score is N (total of 350 points), in M move[s]."
+ *   "This gives you the rank of RANK."
+ *
+ * Plural rule (1actions.zil:4032): <1? ,MOVES> → singular "move",
+ * else plural "moves".  The singular case is MOVES==1 exactly.
+ *
+ * SCORE-MAX is fixed at 350 (1dungeon.zil:7 <GLOBAL SCORE-MAX 350>).
+ */
+function verbScore(ctx: VerbContext): VerbResult {
+  const score  = ctx.score  ?? 0;
+  const moves  = ctx.moves  ?? 0;
+  const rank   = ctx.rank  !== undefined ? ctx.rank() : 'Beginner';
+
+  const movePart = moves === 1 ? '1 move.' : `${moves} moves.`;
+  const line1 = `Your score is ${score} (total of 350 points), in ${movePart}`;
+  const line2 = `This gives you the rank of ${rank}.`;
+
+  return result(`${line1}\n${line2}`);
+}
+
+// --------------------------------------------------------------------------
+// V-DIAGNOSE (1actions.zil:3993–4024)
+// --------------------------------------------------------------------------
+
+/**
+ * V-DIAGNOSE — print the player's current health / combat status.
+ *
+ * ZIL: reads FIGHT-STRENGTH (score-scaled), wound depth from I-CURE interrupt,
+ * and DEATHS counter.
+ *
+ * Without combat built (TD-2), the player is always unwounded (WD=0) and
+ * I-CURE is not enabled.  The survivability line uses the unadjusted
+ * fight-strength formula: FIGHT-STRENGTH = 2 + floor(SCORE/70), range 2..7
+ * (1actions.zil:3322–3381).
+ *
+ * ZIL health line:
+ *   WD=0 → "You are in perfect health."
+ *   WD>0 → "You have [light/serious/several/serious] wound[s], which will be
+ *            cured after N moves."
+ *
+ * ZIL survivability line (always printed):
+ *   RS=0 → "You can expect death soon."
+ *   RS=1 → "You can be killed by one more light wound"
+ *   RS=2 → "You can be killed by a serious wound"
+ *   RS=3 → "You can survive one serious wound"
+ *   RS>3 → "You can survive several wounds"
+ *
+ * RS = FIGHT-STRENGTH (adjusted) — wound depth (WD).
+ * With WD=0 and no active cure, RS = fightStrength (base, unadjusted).
+ *
+ * Deaths line (only when DEATHS > 0):
+ *   DEATHS=1 → "You have been killed once."
+ *   DEATHS=2 → "You have been killed twice."
+ */
+function verbDiagnose(ctx: VerbContext): VerbResult {
+  const deaths = ctx.deaths ?? 0;
+  const score  = ctx.score  ?? 0;
+
+  // WD (wound depth): without combat built, always 0.
+  // WINNER.P?STRENGTH is 0 at game start (no wounds).
+  const wd = 0;
+
+  // FIGHT-STRENGTH base formula: 2 + floor(SCORE / 70)
+  // (1actions.zil:3322–3381, TD-3 §8)
+  const ms = 2 + Math.floor(score / 70);
+
+  // RS = ms + wd_adjusted; with WD=0 and I-CURE not enabled, WD_adjusted = 0.
+  const rs = ms;
+
+  const lines: string[] = [];
+
+  // Health line
+  if (wd === 0) {
+    lines.push('You are in perfect health.');
+  } else {
+    // Combat wounds — unreachable without TD-2 but structured per ZIL:
+    const woundDesc =
+      wd === 1 ? 'a light wound,' :
+      wd === 2 ? 'a serious wound,' :
+      wd === 3 ? 'several wounds,' :
+      /* wd>3 */ 'serious wounds,';
+    lines.push(`You have ${woundDesc} which will be cured after ${wd} moves.`);
+  }
+
+  // Survivability line (always)
+  const survDesc =
+    rs <= 0 ? 'expect death soon' :
+    rs === 1 ? 'be killed by one more light wound' :
+    rs === 2 ? 'be killed by a serious wound' :
+    rs === 3 ? 'survive one serious wound' :
+    /* rs>3 */ 'survive several wounds';
+  lines.push(`You can ${survDesc}.`);
+
+  // Deaths line (conditional)
+  if (deaths > 0) {
+    const timesStr = deaths === 1 ? 'once' : 'twice';
+    lines.push(`You have been killed ${timesStr}.`);
+  }
+
+  return result(lines.join('\n'));
+}
+
+// --------------------------------------------------------------------------
 // Dispatch table
 // --------------------------------------------------------------------------
 
@@ -575,6 +711,8 @@ const HANDLERS: Record<string, VerbHandler> = {
   inventory: verbInventory,
   examine:   verbExamine,
   put:       verbPut,
+  score:     verbScore,
+  diagnose:  verbDiagnose,
   // Easter-egg verb-word fallback (for callers that bypass action dispatch).
   plugh:     verbAdvent,  // also covers xyzzy (synonym for plugh)
   xyzzy:     verbAdvent,
@@ -603,6 +741,8 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-INVENTORY': verbInventory,
   'V-EXAMINE':   verbExamine,
   'V-PUT':       verbPut,
+  'V-SCORE':     verbScore,
+  'V-DIAGNOSE':  verbDiagnose,
   // Easter-egg actions from gsyntax.zil:227 and 352–353.
   'V-ADVENT':    verbAdvent,  // PLUGH / XYZZY → gverbs.zil:153
   'V-FROBOZZ':   verbFrobozz, // FROBOZZ → gverbs.zil:704
