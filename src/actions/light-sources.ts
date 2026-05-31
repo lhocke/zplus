@@ -1,22 +1,16 @@
 /**
  * Light-source region action routines.
  *
- * Hand-translation of every routine under the
- * "SUBTITLE LET THERE BE LIGHT SOURCES" section of zil/1actions.zil.
- * Covers the brass LANTERN, the ivory TORCH, the pair of CANDLES, and the
- * MATCH (matchbook).
+ * Hand-translations of ZIL routines from the "SUBTITLE LET THERE BE LIGHT
+ * SOURCES" section of zil/1actions.zil: the brass lantern, ivory torch,
+ * candles, and matchbook.
  *
- * The LANTERN fuel interrupt (I-LANTERN) is gated here: turning the lamp on
- * calls ctx.enableClock('I-LANTERN'); turning it off calls
- * ctx.disableClock('I-LANTERN').  Bootstrap registers the entry disabled so
- * drain only runs while the lamp is actively burning.
- *
- * Flag conventions (see src/domain/flags.ts and tools/extract-zil/extract.ts):
- *   Flag.OnFire   — object is currently lit/burning (ZIL ONBIT)
- *   Flag.Light    — object provides light (ZIL LIGHTBIT)
- *   Flag.Burned   — lamp has burned out beyond recovery (ZIL RMUNGBIT)
- *   Flag.Touched  — candles have been touched / extinguished at least once (ZIL TOUCHBIT)
- *   Flag.Flammable — object is flammable / can be ignited (ZIL BURNBIT)
+ * Flag conventions (src/domain/flags.ts):
+ *   Flag.OnFire    — currently lit/burning (ZIL ONBIT)
+ *   Flag.Light     — provides light (ZIL LIGHTBIT)
+ *   Flag.Burned    — lamp burned out beyond recovery (ZIL RMUNGBIT)
+ *   Flag.Touched   — candles extinguished at least once (ZIL TOUCHBIT)
+ *   Flag.Flammable — can be ignited (ZIL BURNBIT)
  */
 
 import type { ActionHandler } from '../domain/game-object.js';
@@ -24,22 +18,7 @@ import { fmt, vLampOn, vLampOff } from '../engine/game-messages.js';
 import type { World } from '../domain/world.js';
 import { Flag } from '../domain/flags.js';
 
-// ---------------------------------------------------------------------------
-// LANTERN — the brass battery-powered lantern (zil/1actions.zil:2230).
-//
-// ZIL routine LANTERN() branches on PRSA:
-//   THROW    — smashes the lamp, disables I-LANTERN, moves BROKEN-LAMP here.
-//   LAMP-ON  — if burned out, refuse; otherwise enable I-LANTERN and set lit.
-//   LAMP-OFF — if burned out, refuse; otherwise disable I-LANTERN and clear lit.
-//   EXAMINE  — describe current state.
-//
-// In ZIL, LAMP-ON and LAMP-OFF return RFALSE so the default verb handler can
-// set or clear the ONBIT/LIGHTBIT.  In the TS engine the default verb layer
-// has no concept of lamp-state flags, so we manage Flag.OnFire (ONBIT) and
-// Flag.Light (LIGHTBIT) directly and return true (RTRUE) to suppress the
-// fallthrough.
-// ---------------------------------------------------------------------------
-
+/** LANTERN — zil/1actions.zil:2230 */
 export const lantern: ActionHandler = (ctx) => {
   const lamp = ctx.self;
 
@@ -57,8 +36,6 @@ export const lantern: ActionHandler = (ctx) => {
     return true;
   }
 
-  // ZIL verb LAMP-ON → player typed "turn on <lamp>" or "light <lamp>".
-  // ctx.prep is UPPERCASE after C2 normalizePrep() change (matches syntax.json).
   if (ctx.verb === 'turn' && ctx.prep === 'ON') {
     if (ctx.hasFlag(lamp, Flag.Burned)) {
       ctx.tell("A burned-out lamp won't light.");
@@ -67,12 +44,10 @@ export const lantern: ActionHandler = (ctx) => {
     ctx.enableClock('I-LANTERN');
     ctx.setFlag(lamp, Flag.OnFire);
     ctx.setFlag(lamp, Flag.Light);
-    // ZIL: V-LAMP-ON falls through to default "The [PRSO] is now on." (gverbs.zil:792)
     ctx.tell(fmt(vLampOn.turnedOn, lamp.desc));
     return true;
   }
 
-  // ZIL verb LAMP-OFF → player typed "turn off <lamp>" or "extinguish <lamp>".
   if (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'OFF')) {
     if (ctx.hasFlag(lamp, Flag.Burned)) {
       ctx.tell('The lamp has already burned out.');
@@ -80,7 +55,6 @@ export const lantern: ActionHandler = (ctx) => {
     }
     ctx.disableClock('I-LANTERN');
     ctx.clearFlag(lamp, Flag.OnFire);
-    // ZIL: V-LAMP-OFF "The [PRSO] is now off." (gverbs.zil:779)
     ctx.tell(fmt(vLampOff.turnedOff, lamp.desc));
     return true;
   }
@@ -99,53 +73,28 @@ export const lantern: ActionHandler = (ctx) => {
   return false;
 };
 
-// ---------------------------------------------------------------------------
-// MATCH-FUNCTION — the matchbook (zil/1actions.zil:2265).
-//
-// ZIL <GLOBAL MATCH-COUNT 6> — decrements with each lighting attempt.
-// Branches on PRSA:
-//   LAMP-ON / BURN  — attempt to light; check drafty rooms and count.
-//   LAMP-OFF        — extinguish a burning match.
-//   COUNT / OPEN    — report remaining matches.
-//   EXAMINE         — describe the matchbook.
-//
-// The I-MATCH interrupt is queued for 2 turns on lighting; it extinguishes
-// the match automatically.  We gate it through enableClock/disableClock on
-// the clock entry registered by bootstrap.
-// ---------------------------------------------------------------------------
-
-// Mirrors ZIL's <GLOBAL MATCH-COUNT 6>.  Module-level so state persists
-// within a game session; resetMatchCount() is provided for test isolation.
+// Mirrors ZIL's <GLOBAL MATCH-COUNT 6>. Module-level so state persists
+// across turns; resetMatchCount() is provided for test isolation.
 let matchCount = 6;
 
-/** Reset to the ZIL default (6).  Call from test setup. */
+/** Reset to the ZIL default (6). Call from test setup. */
 export function resetMatchCount(): void {
   matchCount = 6;
 }
 
+/** MATCH-FUNCTION — zil/1actions.zil:2265 */
 export const matchFunction: ActionHandler = (ctx) => {
   const match = ctx.self;
 
-  // ZIL MATCH-FUNCTION condition: <AND <VERB? LAMP-ON BURN> <EQUAL? ,PRSO ,MATCH>>
-  // The match must be the DIRECT OBJECT (PRSO) for this branch to fire.
-  // When the match is the INDIRECT OBJECT (PRSI = iobj, e.g. "burn candles with match"),
-  // this branch does NOT fire — the match is a flame source, not the target.
-  // Port: ctx.dobj is PRSO; ctx.self is the object whose handler fires.
-  // In step 6 (PRSO action), ctx.dobj === ctx.self (match is dobj).
-  // In step 4 (PRSI action), ctx.dobj === candles (≠ match), so we skip.
+  // Only the dobj branch handles lighting — when match is iobj (e.g. "burn
+  // candles with match"), skip and let the candles handler take it.
   const matchIsDobj = ctx.dobj === match;
 
-  // ZIL MATCH-FUNCTION checks <VERB? LAMP-ON BURN>:
-  //   LAMP-ON action = 'turn on' (TURN verb + ON prep) OR 'activate'/'light' verb
-  //   BURN action    = 'burn' verb
-  // Port: ctx.verb is the canonical input verb word; 'light' → V-LAMP-ON,
-  // 'activate' → V-LAMP-ON, 'turn on' → V-LAMP-ON (verb='turn', prep='ON').
   const isLampOn =
     ctx.verb === 'turn' && ctx.prep === 'ON' ||
     ctx.verb === 'activate' ||
     ctx.verb === 'light';
   if (matchIsDobj && (ctx.verb === 'burn' || isLampOn)) {
-    // ZIL decrements MATCH-COUNT before testing whether it hit zero.
     if (matchCount > 0) matchCount--;
 
     if (matchCount <= 0) {
@@ -201,14 +150,12 @@ export const matchFunction: ActionHandler = (ctx) => {
   return false;
 };
 
-// ---------------------------------------------------------------------------
-// iMatchTick — runtime callback for the I-MATCH clock entry.
-//
-// Mirrors <ROUTINE I-MATCH> from zil/1actions.zil:2308.  Called by the clock
-// entry registered in bootstrap; receives the world directly (not an
-// ActionContext) because the clock fires outside the per-turn dispatch chain.
-// ---------------------------------------------------------------------------
-
+/**
+ * iMatchTick — I-MATCH clock callback (zil/1actions.zil:2308).
+ *
+ * Receives world directly rather than an ActionContext because clock entries
+ * fire outside the per-turn dispatch chain.
+ */
 export function iMatchTick(world: World, tell: (text: string) => void): void {
   const match = world.get('MATCH');
   if (match === undefined) return;
@@ -217,30 +164,11 @@ export function iMatchTick(world: World, tell: (text: string) => void): void {
   match.clear(Flag.Light);
 }
 
-// ---------------------------------------------------------------------------
-// CANDLES-FCN — the pair of candles (zil/1actions.zil:2343).
-//
-// ZIL branches:
-//   If PRSI is the candles → RFALSE (we are the iobj, not the dobj).
-//   LAMP-ON / BURN  — light with an ignition source (match or torch).
-//   COUNT           — a comedic non-answer.
-//   LAMP-OFF        — extinguish.
-//   PUT with flammable PRSI → warn.
-//   EXAMINE         — describe.
-//
-// Candle-lighting sub-cases from the ZIL:
-//   RMUNGBIT set    — spent; refuse.
-//   No PRSI + match burning → light automatically (with the match).
-//   No PRSI otherwise → "You should say what to light them with."
-//   PRSI=MATCH lit  → light or "already lit."
-//   PRSI=TORCH      → vaporize or "already lighted."
-//   Any other PRSI  → "You have to light them with something that's burning."
-// ---------------------------------------------------------------------------
-
+/** CANDLES-FCN — zil/1actions.zil:2343 */
 export const candlesFcn: ActionHandler = (ctx) => {
   const candles = ctx.self;
 
-  // If the candles are the indirect object for this command, fall through.
+  // When candles are the indirect object, fall through to the other handler.
   if (ctx.iobj === candles) return false;
 
   if (ctx.verb === 'burn' || (ctx.verb === 'turn' && ctx.prep === 'ON')) {
@@ -254,7 +182,7 @@ export const candlesFcn: ActionHandler = (ctx) => {
     const iobj = ctx.iobj;
 
     if (iobj === undefined) {
-      // Check whether the match is already burning — auto-light from it.
+      // Auto-light from a burning match if one is in scope.
       const match = ctx.world.get('MATCH');
       if (match !== undefined && ctx.hasFlag(match, Flag.OnFire)) {
         ctx.tell('(with the match)');
@@ -272,7 +200,6 @@ export const candlesFcn: ActionHandler = (ctx) => {
       return true;
     }
 
-    // Ignition source is the burning match.
     const match = ctx.world.get('MATCH');
     if (iobj === match) {
       if (!ctx.hasFlag(match, Flag.OnFire)) {
@@ -292,7 +219,6 @@ export const candlesFcn: ActionHandler = (ctx) => {
       return true;
     }
 
-    // Ignition source is the torch.
     const torch = ctx.world.get('TORCH');
     if (iobj === torch) {
       if (ctx.hasFlag(candles, Flag.OnFire)) {
@@ -308,7 +234,6 @@ export const candlesFcn: ActionHandler = (ctx) => {
       return true;
     }
 
-    // Unrecognised ignition source.
     ctx.tell(
       "You have to light them with something that's burning, you know.",
     );
@@ -335,7 +260,6 @@ export const candlesFcn: ActionHandler = (ctx) => {
   }
 
   // ZIL: <AND <VERB? PUT> <FSET? ,PRSI ,BURNBIT>> → "That wouldn't be smart."
-  // BURNBIT maps to Flag.Flammable in the TS data.
   if (ctx.verb === 'put' && ctx.iobj !== undefined &&
       ctx.hasFlag(ctx.iobj, Flag.Flammable)) {
     ctx.tell("That wouldn't be smart.");
@@ -354,15 +278,7 @@ export const candlesFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-// ---------------------------------------------------------------------------
-// TORCH-OBJECT — the ivory torch (zil/1actions.zil:944).
-//
-// The torch is permanently lit; it cannot be extinguished.
-//   EXAMINE               — "The torch is burning."
-//   POUR (with torch PRSI) — "The water evaporates before it gets close."
-//   LAMP-OFF              — "You nearly burn your hand trying to extinguish…"
-// ---------------------------------------------------------------------------
-
+/** TORCH-OBJECT — zil/1actions.zil:944 */
 export const torchObject: ActionHandler = (ctx) => {
   const torch = ctx.self;
 
@@ -387,14 +303,10 @@ export const torchObject: ActionHandler = (ctx) => {
   return false;
 };
 
-// ---------------------------------------------------------------------------
-// Exported region map — keyed by ZIL routine name.
-// ---------------------------------------------------------------------------
-
 /** ACTION routines for the light-source objects. */
 export const lightSourcesActions: Record<string, ActionHandler> = {
-  'LANTERN':        lantern,
+  'LANTERN': lantern,
   'MATCH-FUNCTION': matchFunction,
-  'CANDLES-FCN':    candlesFcn,
-  'TORCH-OBJECT':   torchObject,
+  'CANDLES-FCN': candlesFcn,
+  'TORCH-OBJECT': torchObject,
 };

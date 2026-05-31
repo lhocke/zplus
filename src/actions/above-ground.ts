@@ -1,17 +1,9 @@
 /**
  * Above-ground region action routines.
  *
- * Each entry is a hand-translation of a ZIL ACTION/PER routine from
- * 1actions.zil under "SUBTITLE THE WHITE HOUSE" and the surrounding forest
- * sections.  Handlers follow the dispatch contract in src/domain/game-object.ts:
- *
- *   - Object/room ACTION routines are `ActionHandler`s returning HandlerResult
- *     (true = ZIL RTRUE → suppress the remaining dispatch steps).
- *   - PER routines (exit-resolution functions) are `PerRoutine`s returning the
- *     destination room id, mirroring a ZIL routine that returns a room object.
- *
- * This file is the seed of the per-region pattern: registry.ts imports the
- * exported maps below and merges them into one lookup keyed by ZIL routine name.
+ * Hand-translations of ZIL ACTION/PER routines from 1actions.zil, covering
+ * the white house and surrounding forest. See src/domain/game-object.ts for
+ * the dispatch contract (ActionHandler / HandlerResult / PerRoutine).
  */
 
 import type { ActionHandler } from '../domain/game-object.js';
@@ -20,25 +12,14 @@ import { M_LOOK, M_ENTER, M_END } from '../engine/messages.js';
 import type { PerRoutine } from './registry.js';
 import { pick, dummy, type PickRng } from '../engine/game-messages.js';
 
-// ---------------------------------------------------------------------------
-// Local helper: pick from a PICK-ONE table with optional RNG.
-// When no RNG is available (test contexts), falls back to the first entry.
-// ---------------------------------------------------------------------------
-
 function pickDummy(rng: PickRng | undefined): string {
   if (rng !== undefined) return pick(dummy, rng);
   return dummy.entries[0] ?? 'Look around.';
 }
 
-// ---------------------------------------------------------------------------
 // Module-level state — mirrors ZIL GLOBAL variables for this region.
-// ---------------------------------------------------------------------------
 
-/**
- * KITCHEN-WINDOW-FLAG — ZIL <GLOBAL KITCHEN-WINDOW-FLAG <>> (1actions.zil:239).
- * Set the first time the player opens or closes the kitchen window, enabling
- * normal EXAMINE text instead of the "slightly ajar" description.
- */
+/** KITCHEN-WINDOW-FLAG — ZIL <GLOBAL KITCHEN-WINDOW-FLAG <>> (1actions.zil:239). */
 let kitchenWindowFlag = false;
 
 /** Reset for test isolation. */
@@ -46,10 +27,7 @@ export function resetKitchenWindowFlag(): void {
   kitchenWindowFlag = false;
 }
 
-/**
- * RUG-MOVED — ZIL <GLOBAL RUG-MOVED <>> (1actions.zil:447).
- * True after the player has moved the oriental rug, revealing the trap door.
- */
+/** RUG-MOVED — ZIL <GLOBAL RUG-MOVED <>> (1actions.zil:447). */
 let rugMoved = false;
 
 /** Reset for test isolation. */
@@ -57,10 +35,7 @@ export function resetRugMoved(): void {
   rugMoved = false;
 }
 
-/**
- * GRATE-REVEALED — ZIL <GLOBAL GRATE-REVEALED <>> (1actions.zil:771).
- * True after the pile of leaves has been disturbed and the grate revealed.
- */
+/** GRATE-REVEALED — ZIL <GLOBAL GRATE-REVEALED <>> (1actions.zil:771). */
 let grateRevealed = false;
 
 /** Reset for test isolation. */
@@ -68,10 +43,7 @@ export function resetGrateRevealed(): void {
   grateRevealed = false;
 }
 
-/**
- * GRUNLOCK — ZIL <GLOBAL GRUNLOCK <>> (1actions.zil:772).
- * True when the grating has been unlocked with the keys.
- */
+/** GRUNLOCK — ZIL <GLOBAL GRUNLOCK <>> (1actions.zil:772). */
 let grunlock = false;
 
 /** Reset for test isolation. */
@@ -79,10 +51,7 @@ export function resetGrunlock(): void {
   grunlock = false;
 }
 
-/**
- * SING-SONG — ZIL <GLOBAL SING-SONG <>> (1actions.zil:2968).
- * True after the canary has been wound and summoned the songbird (once only).
- */
+/** SING-SONG — ZIL <GLOBAL SING-SONG <>> (1actions.zil:2968). */
 let singSong = false;
 
 /** Reset for test isolation. */
@@ -90,16 +59,9 @@ export function resetSingSong(): void {
   singSong = false;
 }
 
-// ---------------------------------------------------------------------------
-// Room ACTION routines (branch on ctx.rarg).
-// ---------------------------------------------------------------------------
+// Room ACTION routines
 
-/**
- * WEST-HOUSE — the WEST-OF-HOUSE room action (zil/1actions.zil:7).
- *
- * M-LOOK prints the field description and appends the secret-path note when
- * WON-FLAG has been touched (post-endgame).
- */
+/** WEST-HOUSE — zil/1actions.zil:7 */
 export const westHouse: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
     let text =
@@ -114,11 +76,7 @@ export const westHouse: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * EAST-HOUSE — the EAST-OF-HOUSE (Behind House) room action (zil/1actions.zil:17).
- *
- * M-LOOK prints the rear-of-house description, noting the window state.
- */
+/** EAST-HOUSE — zil/1actions.zil:17 */
 export const eastHouse: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
     const window = ctx.world.get('KITCHEN-WINDOW');
@@ -134,12 +92,7 @@ export const eastHouse: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * KITCHEN-FCN — the KITCHEN room action (zil/1actions.zil:385).
- *
- * M-LOOK prints the kitchen description with current window state.
- * M-BEG intercepts "climb stairs" to redirect upward.
- */
+/** KITCHEN-FCN — zil/1actions.zil:385 */
 export const kitchenFcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
     const window = ctx.world.get('KITCHEN-WINDOW');
@@ -158,14 +111,10 @@ export const kitchenFcn: ActionHandler = (ctx) => {
 };
 
 /**
- * LIVING-ROOM-FCN — the LIVING-ROOM room action (zil/1actions.zil:449).
+ * LIVING-ROOM-FCN — zil/1actions.zil:449
  *
- * M-LOOK produces the dynamic description that reflects the rug/trap-door state
- * and whether the cyclops has smashed the west door (MAGIC-FLAG).
- *
- * M-END (1actions.zil:477–485): on TAKE or PUT-to-TROPHY-CASE, recompute the
- * live trophy-case TVALUE component and update the total score.  This is the
- * load-bearing hook that makes SCORE = BASE-SCORE + OTVAL-FROB(TROPHY-CASE).
+ * M-END (1actions.zil:477–485): recompute the trophy-case TVALUE component on
+ * TAKE or PUT-to-TROPHY-CASE so the total score stays live.
  */
 export const livingRoomFcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
@@ -199,8 +148,6 @@ export const livingRoomFcn: ActionHandler = (ctx) => {
   }
 
   if (ctx.rarg === M_END) {
-    // 1actions.zil:478–482: recompute trophy-case score on TAKE or
-    // PUT-to-TROPHY-CASE only.
     const isTake = ctx.verb === 'take';
     const isPutToCase =
       ctx.verb === 'put' &&
@@ -213,19 +160,13 @@ export const livingRoomFcn: ActionHandler = (ctx) => {
         ctx.recomputeTrophy(trophyCase);
       }
     }
-    return false; // RFALSE — never short-circuits subsequent chain steps
+    return false;
   }
 
   return false;
 };
 
-/**
- * CELLAR-FCN — the CELLAR room action (zil/1actions.zil:531).
- *
- * M-LOOK prints the cellar description.
- * M-ENTER: if the trap door is open and hasn't been touched (first descent),
- * crash it shut and bar it.
- */
+/** CELLAR-FCN — zil/1actions.zil:531 */
 export const cellarFcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
     ctx.tell(
@@ -253,12 +194,7 @@ export const cellarFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * CLEARING-FCN — the GRATING-CLEARING room action (zil/1actions.zil:815).
- *
- * M-ENTER: hide the grate if it hasn't been revealed yet.
- * M-LOOK: print the clearing description with grate state.
- */
+/** CLEARING-FCN — zil/1actions.zil:815 */
 export const clearingFcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_ENTER) {
     if (!grateRevealed) {
@@ -283,12 +219,7 @@ export const clearingFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * MAZE-11-FCN — the room near the grating maze exit (zil/1actions.zil:833).
- *
- * M-ENTER: make the grate visible.
- * M-LOOK: describe with grate lock state.
- */
+/** MAZE-11-FCN — zil/1actions.zil:833 */
 export const maze11Fcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_ENTER) {
     const grate = ctx.world.get('GRATE');
@@ -313,13 +244,7 @@ export const maze11Fcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * TREE-ROOM — the UP-A-TREE room action (zil/1actions.zil:2880).
- *
- * M-LOOK: print the branch description and list anything on the ground below.
- * M-BEG: intercept climb-down/climb-up; handle drop of nest/egg from the tree.
- * M-ENTER: enable the I-FOREST-ROOM songbird ambient clock entry.
- */
+/** TREE-ROOM — zil/1actions.zil:2880 */
 export const treeRoom: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
     ctx.tell(
@@ -347,36 +272,21 @@ export const treeRoom: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * FOREST-ROOM — shared action for all above-ground forest rooms and PATH
- * (zil/1actions.zil:3004).
- *
- * M-BEG: intercept "climb tree" commands and redirect upward.
- * M-ENTER: enable the I-FOREST-ROOM songbird ambient clock entry.
- */
+/** FOREST-ROOM — zil/1actions.zil:3004 */
 export const forestRoom: ActionHandler = (ctx) => {
   if (ctx.rarg === M_ENTER) {
     ctx.enableClock('I-FOREST-ROOM');
     return false;
   }
   if (ctx.rarg === M_LOOK) {
-    // Rooms using FOREST-ROOM that have a static ldesc use the ldesc path;
-    // rooms without (PATH, some clearings) need dynamic text. GRATING-CLEARING
-    // has its own CLEARING-FCN; PATH's static ldesc is set in rooms.json.
     return false;
   }
   return false;
 };
 
-// ---------------------------------------------------------------------------
-// Object ACTION routines (branch on ctx.verb).
-// ---------------------------------------------------------------------------
+// Object ACTION routines
 
-/**
- * MAILBOX-F — the small mailbox's action (zil/1actions.zil:2259).
- *
- * The mailbox carries TAKEBIT; this intercepts TAKE on itself to refuse.
- */
+/** MAILBOX-F — zil/1actions.zil:2259 */
 export const mailboxF: ActionHandler = (ctx) => {
   if (ctx.verb === 'take' && ctx.dobj === ctx.self) {
     ctx.tell('It is securely anchored.');
@@ -385,11 +295,7 @@ export const mailboxF: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * BOARD-F — the boarded front door's boards (zil/1actions.zil:44).
- *
- * TAKE or EXAMINE prints "The boards are securely fastened."
- */
+/** BOARD-F — zil/1actions.zil:44 */
 export const boardF: ActionHandler = (ctx) => {
   if (ctx.verb === 'take' || ctx.verb === 'examine') {
     ctx.tell('The boards are securely fastened.');
@@ -398,11 +304,7 @@ export const boardF: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * FRONT-DOOR-FCN — the front door of the white house (zil/1actions.zil:2163).
- *
- * OPEN, BURN, and MUNG all refuse.  LOOK-BEHIND also refuses.
- */
+/** FRONT-DOOR-FCN — zil/1actions.zil:2163 */
 export const frontDoorFcn: ActionHandler = (ctx) => {
   if (ctx.verb === 'open') {
     ctx.tell('The door cannot be opened.');
@@ -419,12 +321,7 @@ export const frontDoorFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * BOARDED-WINDOW-FCN — the boarded windows (zil/1actions.zil:370).
- *
- * OPEN: "The windows are boarded and can't be opened."
- * DESTROY: "You can't break the windows open."
- */
+/** BOARDED-WINDOW-FCN — zil/1actions.zil:370 */
 export const boardedWindowFcn: ActionHandler = (ctx) => {
   if (ctx.verb === 'open') {
     ctx.tell("The windows are boarded and can't be opened.");
@@ -437,14 +334,7 @@ export const boardedWindowFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * KITCHEN-WINDOW-F — the kitchen window (zil/1actions.zil:241).
- *
- * OPEN/CLOSE: delegate to OPEN-CLOSE logic with ZIL strings; set the flag.
- * EXAMINE (before flag): "slightly ajar, but not enough to allow entry."
- * WALK/BOARD/THROUGH/ENTER: move east (outside) or west (inside).
- * LOOK-INSIDE: describe what can be seen.
- */
+/** KITCHEN-WINDOW-F — zil/1actions.zil:241 */
 export const kitchenWindowF: ActionHandler = (ctx) => {
   const win = ctx.self;
 
@@ -452,8 +342,6 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
     kitchenWindowFlag = true;
     if (ctx.verb === 'open') {
       if (ctx.hasFlag(win, Flag.Open)) {
-        // ZIL: <TELL <PICK-ONE ,DUMMY>> — generic "already done" response.
-        // (OPEN-CLOSE uses DUMMY table: "Look around." / "Too late for that." / "Have your eyes checked.")
         ctx.tell(pickDummy(ctx.rng));
       } else {
         ctx.tell(
@@ -463,7 +351,6 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
       }
     } else {
       if (!ctx.hasFlag(win, Flag.Open)) {
-        // ZIL: <TELL <PICK-ONE ,DUMMY>>
         ctx.tell(pickDummy(ctx.rng));
       } else {
         ctx.tell('The window closes (more easily than it opened).');
@@ -485,13 +372,6 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
     ctx.verb === 'enter' ||
     ctx.verb === 'climb'
   ) {
-    // ZIL: <DO-WALK ,P?EAST> from kitchen, else <DO-WALK ,P?WEST>.
-    // We model this by emitting a walk command in the appropriate direction.
-    // The actual movement is handled by the exit system; here we just signal
-    // which direction to walk by returning false so the default walk verb runs,
-    // which will use the direction the player already parsed (in or west/east).
-    // However, when the verb is "enter" or "through" with the window as dobj,
-    // we need to push the player through the window.
     const dir = ctx.here.id === 'KITCHEN' ? 'east' : 'west';
     const exit = ctx.here.exits.find((e) => e.dir === dir);
     if (exit !== undefined) {
@@ -523,11 +403,7 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * CHIMNEY-F — the dark chimney in the kitchen (zil/1actions.zil:545).
- *
- * EXAMINE: prints whether the chimney goes up or down (based on current room).
- */
+/** CHIMNEY-F — zil/1actions.zil:545 */
 export const chimneyF: ActionHandler = (ctx) => {
   if (ctx.verb === 'examine') {
     const dir = ctx.here.id === 'KITCHEN' ? 'down' : 'up';
@@ -537,13 +413,7 @@ export const chimneyF: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * TROPHY-CASE-FCN — the trophy case (zil/1actions.zil:442).
- *
- * TAKE on the case itself is refused (fastened to the wall).
- * Scoring happens via M-END in the ZIL original; we handle it here when
- * the player puts a treasure in the case.
- */
+/** TROPHY-CASE-FCN — zil/1actions.zil:442 */
 export const trophyCaseFcn: ActionHandler = (ctx) => {
   if (ctx.verb === 'take' && ctx.dobj === ctx.self) {
     ctx.tell('The trophy case is securely fastened to the wall.');
@@ -552,15 +422,7 @@ export const trophyCaseFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * RUG-FCN — the oriental rug in the living room (zil/1actions.zil:579).
- *
- * RAISE: "too heavy to lift" — first time also mentions the irregularity.
- * MOVE/PUSH: first time reveals the trap door; subsequent attempts refuse.
- * TAKE: "extremely heavy and cannot be carried."
- * LOOK-UNDER (before moved, not open): describe concealed trap door.
- * CLIMB-ON: mentions irregularity if rug still over door.
- */
+/** RUG-FCN — zil/1actions.zil:579 */
 export const rugFcn: ActionHandler = (ctx) => {
   if (ctx.verb === 'raise') {
     if (rugMoved) {
@@ -629,25 +491,11 @@ export const rugFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * TRAP-DOOR-FCN — the trap door in the living room / cellar (zil/1actions.zil:504).
- *
- * From LIVING-ROOM:
- *   RAISE → delegate to OPEN.
- *   OPEN/CLOSE: OPEN-CLOSE with appropriate ZIL strings.
- *   LOOK-UNDER: describe what's below.
- * From CELLAR:
- *   OPEN/UNLOCK: "locked from above."
- *   CLOSE (when already closed): set Touched, clear Open, "The door closes and locks."
- */
+/** TRAP-DOOR-FCN — zil/1actions.zil:504 */
 export const trapDoorFcn: ActionHandler = (ctx) => {
   const door = ctx.self;
 
-  // Fallback RNG for contexts where no rng is supplied (e.g. tests).
-  // (rng is used indirectly via pickDummy below)
-
   if (ctx.verb === 'raise') {
-    // Delegate to open.
     if (ctx.here.id === 'LIVING-ROOM') {
       if (!ctx.hasFlag(door, Flag.Open)) {
         ctx.tell(
@@ -655,7 +503,6 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
         );
         ctx.setFlag(door, Flag.Open);
       } else {
-        // ZIL: <TELL <PICK-ONE ,DUMMY>>
         ctx.tell(pickDummy(ctx.rng));
       }
       return true;
@@ -666,7 +513,6 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
     if (ctx.verb === 'open' || ctx.verb === 'close') {
       if (ctx.verb === 'open') {
         if (ctx.hasFlag(door, Flag.Open)) {
-          // ZIL: <TELL <PICK-ONE ,DUMMY>>
           ctx.tell(pickDummy(ctx.rng));
         } else {
           ctx.tell(
@@ -676,7 +522,6 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
         }
       } else {
         if (!ctx.hasFlag(door, Flag.Open)) {
-          // ZIL: <TELL <PICK-ONE ,DUMMY>>
           ctx.tell(pickDummy(ctx.rng));
         } else {
           ctx.tell('The door swings shut and closes.');
@@ -712,15 +557,7 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * GRATE-FUNCTION — the grating in/above MAZE-11 / GRATING-CLEARING
- * (zil/1actions.zil:850).
- *
- * OPEN with KEYS: redirect to UNLOCK.
- * LOCK: lock the grate (sets GRUNLOCK false).
- * UNLOCK with KEYS from below: set GRUNLOCK true.
- * OPEN/CLOSE: open or close if unlocked; also reveal leaves if opening from below.
- */
+/** GRATE-FUNCTION — zil/1actions.zil:850 */
 export const grateFunction: ActionHandler = (ctx) => {
   const grate = ctx.self;
   const keys = ctx.world.get('KEYS');
@@ -759,7 +596,6 @@ export const grateFunction: ActionHandler = (ctx) => {
     }
     if (ctx.verb === 'open') {
       if (ctx.hasFlag(grate, Flag.Open)) {
-        // ZIL: <TELL <PICK-ONE ,DUMMY>>
         ctx.tell(pickDummy(ctx.rng));
       } else {
         const msg =
@@ -768,20 +604,18 @@ export const grateFunction: ActionHandler = (ctx) => {
             : 'The grating opens to reveal trees above you.';
         ctx.tell(msg);
         ctx.setFlag(grate, Flag.Open);
-        // When opened from below and leaves haven't been revealed yet, drop leaves.
+        // When opened from below, drop the pile of leaves (once only).
         if (ctx.here.id !== 'GRATING-CLEARING' && !grateRevealed) {
           ctx.tell('A pile of leaves falls onto your head and to the ground.');
           grateRevealed = true;
           const leaves = ctx.world.get('LEAVES');
           if (leaves !== undefined) ctx.moveTo(leaves, ctx.here);
         }
-        // Light the grating room.
         const gratingRoom = ctx.world.get('GRATING-ROOM');
         if (gratingRoom !== undefined) ctx.setFlag(gratingRoom, Flag.Light);
       }
     } else {
       if (!ctx.hasFlag(grate, Flag.Open)) {
-        // ZIL: <TELL <PICK-ONE ,DUMMY>>
         ctx.tell(pickDummy(ctx.rng));
       } else {
         ctx.tell('The grating is closed.');
@@ -811,14 +645,7 @@ export const grateFunction: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * LEAF-PILE — the pile of leaves covering the grating (zil/1actions.zil:786).
- *
- * COUNT: 69,105 leaves.
- * BURN: reveal grate, remove burning object.
- * CUT/MOVE/TAKE: reveal grate.
- * LOOK-UNDER (before revealed): describe hidden grate.
- */
+/** LEAF-PILE — zil/1actions.zil:786 */
 export const leafPile: ActionHandler = (ctx) => {
   if (ctx.verb === 'count') {
     ctx.tell('There are 69,105 leaves here.');
@@ -829,7 +656,6 @@ export const leafPile: ActionHandler = (ctx) => {
     leavesAppear(ctx);
     const item = ctx.dobj;
     if (item !== undefined) {
-      // In ZIL this checks if the burner is in HERE; simplified here.
       item.moveTo(null);
       ctx.tell('The leaves burn.');
     }
@@ -875,11 +701,7 @@ function leavesAppear(ctx: Parameters<ActionHandler>[0]): void {
   }
 }
 
-/**
- * PAINTING-FCN — the painting in the gallery (zil/1actions.zil:2207).
- *
- * MUNG: destroy the painting's value, print the vandalism message.
- */
+/** PAINTING-FCN — zil/1actions.zil:2207 */
 export const paintingFcn: ActionHandler = (ctx) => {
   if (ctx.verb === 'destroy') {
     ctx.self.props.set('TVALUE', 0);
@@ -893,12 +715,7 @@ export const paintingFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * SWORD-FCN — the elvish sword (zil/1actions.zil:2432).
- *
- * TAKE: enable the I-SWORD glow interrupt.
- * EXAMINE: report glow level (stored as TVALUE 1 = faint, 2 = very bright).
- */
+/** SWORD-FCN — zil/1actions.zil:2432 */
 export const swordFcn: ActionHandler = (ctx) => {
   if (ctx.verb === 'take') {
     ctx.enableClock('I-SWORD');
@@ -918,11 +735,7 @@ export const swordFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * GUNK-FUNCTION — the small piece of vitreous slag (zil/1actions.zil:2553).
- *
- * Any interaction crumbles it to dust.
- */
+/** GUNK-FUNCTION — zil/1actions.zil:2553 */
 export const gunkFunction: ActionHandler = (ctx) => {
   ctx.self.moveTo(null);
   ctx.tell(
@@ -931,18 +744,7 @@ export const gunkFunction: ActionHandler = (ctx) => {
   return true;
 };
 
-/**
- * EGG-OBJECT — the jewel-encrusted egg (zil/1actions.zil:2919).
- *
- * OPEN/MUNG on the egg (as PRSO):
- *   Already open → "already open."
- *   No iobj → "You have neither the tools nor the expertise."
- *   Hands → "I doubt you could do that without damaging it."
- *   Weapon or tool → open but damaged (BAD-EGG).
- *   Other → "The concept of using a X is certainly original."
- * CLIMB-ON/HATCH: crack open.
- * OPEN/MUNG/THROW (as fallback): damage while opening.
- */
+/** EGG-OBJECT — zil/1actions.zil:2919 */
 export const eggObject: ActionHandler = (ctx) => {
   const egg = ctx.self;
 
@@ -1031,13 +833,7 @@ function badEgg(ctx: Parameters<ActionHandler>[0]): void {
   }
 }
 
-/**
- * CANARY-OBJECT — the golden clockwork canary (zil/1actions.zil:2970).
- *
- * WIND with canary as dobj: if in a forest room and not sung yet, summon the
- * songbird and drop the brass bauble; otherwise chirp blithely.
- * WIND with something else as dobj: "unpleasant grinding noise."
- */
+/** CANARY-OBJECT — zil/1actions.zil:2970 */
 export const canaryObject: ActionHandler = (ctx) => {
   if (ctx.verb === 'wind' || ctx.verb === 'turn') {
     const canary = ctx.self;
@@ -1083,14 +879,7 @@ function isForestRoom(id: string): boolean {
   );
 }
 
-/**
- * SONGBIRD-F — the invisible songbird pseudo-object (zil/1actions.zil:82).
- *
- * FIND/TAKE: "not here but probably nearby."
- * LISTEN: "You can't hear the songbird now."
- * FOLLOW: "It can't be followed."
- * Anything else: "You can't see any songbird here."
- */
+/** SONGBIRD-F — zil/1actions.zil:82 */
 export const songbirdF: ActionHandler = (ctx) => {
   if (ctx.verb === 'examine' || ctx.verb === 'take') {
     ctx.tell('The songbird is not here but is probably nearby.');
@@ -1108,11 +897,7 @@ export const songbirdF: ActionHandler = (ctx) => {
   return true;
 };
 
-/**
- * BARROW-DOOR-FCN — the stone door of the barrow (zil/1actions.zil:432).
- *
- * OPEN/CLOSE: "The door is too heavy."
- */
+/** BARROW-DOOR-FCN — zil/1actions.zil:432 */
 export const barrowDoorFcn: ActionHandler = (ctx) => {
   if (ctx.verb === 'open' || ctx.verb === 'close') {
     ctx.tell('The door is too heavy.');
@@ -1121,11 +906,7 @@ export const barrowDoorFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * BARROW-FCN — the stone barrow object (zil/1actions.zil:436).
- *
- * THROUGH: walk west into the barrow.
- */
+/** BARROW-FCN — zil/1actions.zil:436 */
 export const barrowFcn: ActionHandler = (ctx) => {
   if (ctx.verb === 'enter') {
     const exit = ctx.here.exits.find((e) => e.dir === 'west');
@@ -1140,11 +921,7 @@ export const barrowFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-/**
- * CRACK-FCN — the narrow crack (zil/1actions.zil:381).
- *
- * THROUGH: "You can't fit through the crack."
- */
+/** CRACK-FCN — zil/1actions.zil:381 */
 export const crackFcn: ActionHandler = (ctx) => {
   if (ctx.verb === 'enter') {
     ctx.tell("You can't fit through the crack.");
@@ -1153,15 +930,9 @@ export const crackFcn: ActionHandler = (ctx) => {
   return false;
 };
 
-// ---------------------------------------------------------------------------
 // PER routines (exit resolution; return a destination room id).
-// ---------------------------------------------------------------------------
 
-/**
- * MAZE-DIODES — one-way maze passage (zil/1actions.zil:898).
- *
- * Prints the no-return warning, then maps the current room to its destination.
- */
+/** MAZE-DIODES — zil/1actions.zil:898 */
 export const mazeDiodes: PerRoutine = (ctx) => {
   ctx.tell(
     "You won't be able to get back up to the tunnel you are going through\n" +
@@ -1181,11 +952,7 @@ export const mazeDiodes: PerRoutine = (ctx) => {
   }
 };
 
-/**
- * TRAP-DOOR-EXIT — per-routine for the LIVING-ROOM's down exit (1actions.zil:567).
- *
- * Succeeds only when the rug has been moved AND the trap door is open.
- */
+/** TRAP-DOOR-EXIT — 1actions.zil:567 */
 export const trapDoorExit: PerRoutine = (ctx) => {
   if (rugMoved) {
     const trapDoor = ctx.world.get('TRAP-DOOR');
@@ -1199,14 +966,7 @@ export const trapDoorExit: PerRoutine = (ctx) => {
   return undefined;
 };
 
-/**
- * UP-CHIMNEY-FUNCTION — per-routine for going up the chimney from the kitchen
- * (zil/1actions.zil:553).
- *
- * The player must be carrying only the lamp (or nothing) to ascend.
- * On success, clears the trap-door's Touched flag if it isn't open (so the
- * door can crash shut again on the next descent).
- */
+/** UP-CHIMNEY-FUNCTION — zil/1actions.zil:553 */
 export const upChimneyFunction: PerRoutine = (ctx) => {
   const player = ctx.actor;
   const items = Array.from(player.children);
@@ -1230,12 +990,7 @@ export const upChimneyFunction: PerRoutine = (ctx) => {
   return undefined;
 };
 
-/**
- * GRATING-EXIT — per-routine for going down through the grating from the
- * GRATING-CLEARING (zil/1actions.zil: referenced in rooms.json).
- *
- * Grate must be open (unlocked + opened) to descend.
- */
+/** GRATING-EXIT — zil/1actions.zil (referenced in rooms.json) */
 export const gratingExit: PerRoutine = (ctx) => {
   const grate = ctx.world.get('GRATE');
   if (grate !== undefined && ctx.hasFlag(grate, Flag.Open)) {
@@ -1249,47 +1004,43 @@ export const gratingExit: PerRoutine = (ctx) => {
   return undefined;
 };
 
-// ---------------------------------------------------------------------------
-// Exported region maps — keyed by ZIL routine name.
-// ---------------------------------------------------------------------------
-
 /** ACTION routines (rooms + objects) for the above-ground region. */
 export const aboveGroundActions: Record<string, ActionHandler> = {
-  'WEST-HOUSE':         westHouse,
-  'EAST-HOUSE':         eastHouse,
-  'KITCHEN-FCN':        kitchenFcn,
-  'LIVING-ROOM-FCN':    livingRoomFcn,
-  'CELLAR-FCN':         cellarFcn,
-  'CLEARING-FCN':       clearingFcn,
-  'MAZE-11-FCN':        maze11Fcn,
-  'TREE-ROOM':          treeRoom,
-  'FOREST-ROOM':        forestRoom,
-  'MAILBOX-F':          mailboxF,
-  'BOARD-F':            boardF,
-  'FRONT-DOOR-FCN':     frontDoorFcn,
+  'WEST-HOUSE': westHouse,
+  'EAST-HOUSE': eastHouse,
+  'KITCHEN-FCN': kitchenFcn,
+  'LIVING-ROOM-FCN': livingRoomFcn,
+  'CELLAR-FCN': cellarFcn,
+  'CLEARING-FCN': clearingFcn,
+  'MAZE-11-FCN': maze11Fcn,
+  'TREE-ROOM': treeRoom,
+  'FOREST-ROOM': forestRoom,
+  'MAILBOX-F': mailboxF,
+  'BOARD-F': boardF,
+  'FRONT-DOOR-FCN': frontDoorFcn,
   'BOARDED-WINDOW-FCN': boardedWindowFcn,
-  'KITCHEN-WINDOW-F':   kitchenWindowF,
-  'CHIMNEY-F':          chimneyF,
-  'TROPHY-CASE-FCN':    trophyCaseFcn,
-  'RUG-FCN':            rugFcn,
-  'TRAP-DOOR-FCN':      trapDoorFcn,
-  'GRATE-FUNCTION':     grateFunction,
-  'LEAF-PILE':          leafPile,
-  'PAINTING-FCN':       paintingFcn,
-  'SWORD-FCN':          swordFcn,
-  'GUNK-FUNCTION':      gunkFunction,
-  'EGG-OBJECT':         eggObject,
-  'CANARY-OBJECT':      canaryObject,
-  'SONGBIRD-F':         songbirdF,
-  'BARROW-DOOR-FCN':    barrowDoorFcn,
-  'BARROW-FCN':         barrowFcn,
-  'CRACK-FCN':          crackFcn,
+  'KITCHEN-WINDOW-F': kitchenWindowF,
+  'CHIMNEY-F': chimneyF,
+  'TROPHY-CASE-FCN': trophyCaseFcn,
+  'RUG-FCN': rugFcn,
+  'TRAP-DOOR-FCN': trapDoorFcn,
+  'GRATE-FUNCTION': grateFunction,
+  'LEAF-PILE': leafPile,
+  'PAINTING-FCN': paintingFcn,
+  'SWORD-FCN': swordFcn,
+  'GUNK-FUNCTION': gunkFunction,
+  'EGG-OBJECT': eggObject,
+  'CANARY-OBJECT': canaryObject,
+  'SONGBIRD-F': songbirdF,
+  'BARROW-DOOR-FCN': barrowDoorFcn,
+  'BARROW-FCN': barrowFcn,
+  'CRACK-FCN': crackFcn,
 };
 
 /** PER (exit-resolution) routines for the above-ground region. */
 export const aboveGroundPer: Record<string, PerRoutine> = {
-  'MAZE-DIODES':         mazeDiodes,
-  'TRAP-DOOR-EXIT':      trapDoorExit,
+  'MAZE-DIODES': mazeDiodes,
+  'TRAP-DOOR-EXIT': trapDoorExit,
   'UP-CHIMNEY-FUNCTION': upChimneyFunction,
-  'GRATING-EXIT':        gratingExit,
+  'GRATING-EXIT': gratingExit,
 };
