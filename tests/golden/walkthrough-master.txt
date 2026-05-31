@@ -1,0 +1,959 @@
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+West of House
+You are standing in an open field west of a white house, with a boarded
+front door.
+There is a small mailbox here.
+
+> look
+West of House
+You are standing in an open field west of a white house, with a boarded
+front door.
+There is a small mailbox here.
+
+> examine mailbox
+There's nothing special about the small mailbox.
+
+> open mailbox
+Opening the small mailbox reveals a leaflet.
+
+> take leaflet
+Taken.
+
+> read leaflet
+"WELCOME TO ZORK!
+
+ZORK is a game of adventure, danger, and low cunning. In it you will explore some of the most amazing territory ever seen by mortals. No computer should be without one!"
+
+> close mailbox
+Closed.
+
+> examine mailbox
+There's nothing special about the small mailbox.
+
+> inventory
+You are carrying:
+  leaflet
+
+> score
+Your score is 0 (total of 350 points), in 8 moves.
+This gives you the rank of Beginner.
+
+> diagnose
+You are in perfect health.
+You can be killed by a serious wound.
+
+> north
+North of House
+You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
+
+> look
+North of House
+You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
+
+> examine house
+There's nothing special about the white house.
+
+> south
+The windows are all boarded.
+
+> west
+West of House
+You are standing in an open field west of a white house, with a boarded
+front door.
+There is a small mailbox here.
+
+> north
+North of House
+You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
+
+> east
+Behind House
+You are behind the white house. A path leads into the forest
+to the east. In one corner of the house there is a small window
+which is slightly ajar.
+
+> look
+Behind House
+You are behind the white house. A path leads into the forest
+to the east. In one corner of the house there is a small window
+which is slightly ajar.
+
+> examine window
+The window is slightly ajar, but not enough to allow entry.
+
+> open window
+With great effort, you open the window far enough to allow entry.
+
+> examine window
+There's nothing special about the kitchen window.
+
+> south
+South of House
+You are facing the south side of a white house. There is no door here, and all the windows are boarded.
+
+> look
+South of House
+You are facing the south side of a white house. There is no door here, and all the windows are boarded.
+
+> examine house
+There's nothing special about the white house.
+
+> north
+The windows are all boarded.
+
+> east
+Behind House
+You are behind the white house. A path leads into the forest
+to the east. In one corner of the house there is a small window
+which is open.
+
+> west
+Kitchen
+You are in the kitchen of the white house. A table seems to
+have been used recently for the preparation of food. A passage
+leads to the west and a dark staircase can be seen leading
+upward. A dark chimney leads down and to the east is a small
+window which is open.
+A bottle is sitting on the table.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> look
+Kitchen
+You are in the kitchen of the white house. A table seems to
+have been used recently for the preparation of food. A passage
+leads to the west and a dark staircase can be seen leading
+upward. A dark chimney leads down and to the east is a small
+window which is open.
+A bottle is sitting on the table.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> examine table
+There's nothing special about the kitchen table.
+
+> examine bottle
+There's nothing special about the glass bottle.
+
+> take bottle
+Taken.
+
+> examine sandwich bag
+You can't see any bag here!
+
+> take sandwich bag
+You can't see any bag here!
+
+> examine chimney
+The chimney leads downward, and looks climbable.
+
+> inventory
+You are carrying:
+  leaflet
+  glass bottle
+
+> drop bottle
+Dropped.
+
+> drop sandwich bag
+You can't see any bag here!
+
+> up
+You have moved into a dark place.
+It is pitch black. You are likely to be eaten by a grue.
+
+> look
+It is pitch black. You are likely to be eaten by a grue.
+
+> down
+Kitchen
+You are in the kitchen of the white house. A table seems to
+have been used recently for the preparation of food. A passage
+leads to the west and a dark staircase can be seen leading
+upward. A dark chimney leads down and to the east is a small
+window which is open.
+A bottle is sitting on the table.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> west
+Living Room
+You are in the living room. There is a doorway to the east, a wooden
+door with strange gothic lettering to the west, which appears to be
+nailed shut, a trophy case, and a large oriental rug in the center of the room.
+Above the trophy case hangs an elvish sword of great antiquity.
+A battery-powered brass lantern is on the trophy case.
+
+> look
+Living Room
+You are in the living room. There is a doorway to the east, a wooden
+door with strange gothic lettering to the west, which appears to be
+nailed shut, a trophy case, and a large oriental rug in the center of the room.
+Above the trophy case hangs an elvish sword of great antiquity.
+A battery-powered brass lantern is on the trophy case.
+
+> examine trophy case
+There's nothing special about the trophy case.
+
+> examine rug
+There's nothing special about the carpet.
+
+> examine trap door
+You can't see any door here!
+
+> examine sword
+There's nothing special about the sword.
+
+> examine door
+The engravings translate to "This space intentionally left blank."
+The candles grow shorter.
+
+> take sword
+Taken.
+
+> west
+The door is nailed shut.
+
+> take lamp
+Taken.
+
+> inventory
+You are carrying:
+  leaflet
+  sword
+  brass lantern
+
+> score
+Your score is 10 (total of 350 points), in 43 moves.
+This gives you the rank of Beginner.
+
+> verbose
+I don't know how to "verbose".
+
+> brief
+I don't know how to "brief".
+
+> xyzzy
+A hollow voice says "Fool."
+
+> plugh
+A hollow voice says "Fool."
+
+> frobozz
+The FROBOZZ Corporation created, owns, and operates this dungeon.
+
+> zorkify
+I don't know the word "zorkify".
+
+> take
+What do you want to take?
+
+> frotz lamp
+You can't see any lamp here!
+
+> examine
+What do you want to examine?
+
+> look. score
+Living Room
+You are in the living room. There is a doorway to the east, a wooden
+door with strange gothic lettering to the west, which appears to be
+nailed shut, a trophy case, and a large oriental rug in the center of the room.
+
+> inventory. diagnose
+You are carrying:
+  leaflet
+  sword
+  brass lantern
+You are in perfect health.
+You can be killed by a serious wound.
+
+> move rug
+With a great effort, the rug is moved to one side of the room, revealing
+the dusty cover of a closed trap door.
+The candles are becoming quite short.
+
+> open trap door
+The door reluctantly opens to reveal a rickety staircase descending into
+darkness.
+
+> turn on lamp
+The brass lantern is now on.
+
+> look
+Living Room
+You are in the living room. There is a doorway to the east, a wooden
+door with strange gothic lettering to the west, which appears to be
+nailed shut, a trophy case, and a rug lying beside an open trap door.
+
+> down
+The trap door crashes shut, and you hear someone barring it.
+Cellar
+You are in a dark and damp cellar with a narrow passageway leading
+north, and a crawlway to the south. On the west is the bottom of a
+steep metal ramp which is unclimbable.
+
+> look
+Cellar
+You are in a dark and damp cellar with a narrow passageway leading
+north, and a crawlway to the south. On the west is the bottom of a
+steep metal ramp which is unclimbable.
+The candles won't last long now.
+
+> score
+Your score is 35 (total of 350 points), in 55 moves.
+This gives you the rank of Amateur Adventurer.
+
+> examine ramp
+There's nothing special about the chute.
+
+> north
+The Troll Room
+This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
+
+> look
+The Troll Room
+This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
+
+> examine troll
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
+
+> east
+The troll fends you off with a menacing gesture.
+
+> west
+The troll fends you off with a menacing gesture.
+
+> south
+Cellar
+You are in a dark and damp cellar with a narrow passageway leading
+north, and a crawlway to the south. On the west is the bottom of a
+steep metal ramp which is unclimbable.
+
+> south
+East of Chasm
+You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east.
+
+> look
+East of Chasm
+You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east.
+
+> examine chasm
+Examine what?
+
+> east
+Gallery
+This is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits.
+Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
+
+> look
+Gallery
+This is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits.
+Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
+
+> examine painting
+A painting by a neglected genius is here.
+
+> take painting
+Taken.
+
+> score
+Your score is 39 (total of 350 points), in 67 moves.
+This gives you the rank of Amateur Adventurer.
+
+> inventory
+You are carrying:
+  leaflet
+  sword
+  brass lantern
+  painting
+
+> drop painting
+Dropped.
+
+> take painting
+Taken.
+
+> north
+Studio
+This appears to have been an artist's studio. The walls and floors are splattered with paints of 69 different colors. Strangely enough, nothing of value is hanging here. At the south end of the room is an open door (also covered with paint). A dark and narrow chimney leads up from a fireplace; although you might be able to get up it, it seems unlikely you could get back down.
+Loosely attached to a wall is a small piece of paper.
+
+> look
+Studio
+This appears to have been an artist's studio. The walls and floors are splattered with paints of 69 different colors. Strangely enough, nothing of value is hanging here. At the south end of the room is an open door (also covered with paint). A dark and narrow chimney leads up from a fireplace; although you might be able to get up it, it seems unlikely you could get back down.
+Loosely attached to a wall is a small piece of paper.
+
+> examine studio
+I don't know the word "studio".
+
+> south
+Gallery
+This is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits.
+
+> west
+East of Chasm
+You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east.
+
+> examine east of chasm
+Examine what?
+
+> north
+Cellar
+You are in a dark and damp cellar with a narrow passageway leading
+north, and a crawlway to the south. On the west is the bottom of a
+steep metal ramp which is unclimbable.
+
+> look
+Cellar
+You are in a dark and damp cellar with a narrow passageway leading
+north, and a crawlway to the south. On the west is the bottom of a
+steep metal ramp which is unclimbable.
+
+> inventory
+You are carrying:
+  leaflet
+  sword
+  brass lantern
+  painting
+
+> north
+The Troll Room
+This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
+
+> look
+The Troll Room
+This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
+
+> south
+Cellar
+You are in a dark and damp cellar with a narrow passageway leading
+north, and a crawlway to the south. On the west is the bottom of a
+steep metal ramp which is unclimbable.
+
+> turn off lamp
+The brass lantern is now off.
+
+> look
+It is pitch black. You are likely to be eaten by a grue.
+
+> south
+Oh, no! A lurking grue slithered into the room and devoured you!
+****  You have died  ****
+Now, let's take a look here...
+Well, you probably deserve another chance.  I can't quite fix you
+up completely, but you can't have everything.
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+
+> look
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+
+> inventory
+You are carrying:
+  leaflet
+  sword
+  brass lantern
+  painting
+
+> diagnose
+You are in perfect health.
+You can be killed by a serious wound.
+You have been killed once.
+
+> score
+Your score is 29 (total of 350 points), in 86 moves.
+This gives you the rank of Amateur Adventurer.
+
+> examine forest
+There's nothing special about the forest.
+
+> east
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> look
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> examine tree
+There's nothing special about the tree.
+
+> examine path
+I don't know the word "path".
+
+> up
+Up a Tree
+You are about 10 feet above the ground nestled among some large
+branches. The nearest branch above you is above your reach.
+Beside you on the branch is a small bird's nest.
+In the bird's nest is a large egg encrusted with precious jewels, apparently scavenged by a childless songbird. The egg is covered with fine gold inlay, and ornamented in lapis lazuli and mother-of-pearl. Unlike most eggs, this one is hinged and closed with a delicate looking clasp. The egg appears extremely fragile.
+
+> look
+Up a Tree
+You are about 10 feet above the ground nestled among some large
+branches. The nearest branch above you is above your reach.
+Beside you on the branch is a small bird's nest.
+In the bird's nest is a large egg encrusted with precious jewels, apparently scavenged by a childless songbird. The egg is covered with fine gold inlay, and ornamented in lapis lazuli and mother-of-pearl. Unlike most eggs, this one is hinged and closed with a delicate looking clasp. The egg appears extremely fragile.
+
+> examine view
+I don't know the word "view".
+
+> examine birds
+You can't see any birds here!
+
+> down
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> north
+Clearing
+You are in a clearing, with a forest surrounding you on all sides. A
+path leads south.
+On the ground is a pile of leaves.
+
+> look
+Clearing
+You are in a clearing, with a forest surrounding you on all sides. A
+path leads south.
+On the ground is a pile of leaves.
+
+> examine grate
+You can't see any grate here!
+
+> open grate
+You can't see any grate here!
+
+> south
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> west
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+
+> look
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+
+> north
+Clearing
+You are in a clearing, with a forest surrounding you on all sides. A
+path leads south.
+On the ground is a pile of leaves.
+
+> south
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> south
+North of House
+You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
+
+> look
+North of House
+You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
+
+> examine forest
+There's nothing special about the forest.
+
+> examine trees
+There's nothing special about the forest.
+
+> north
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> look
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> south
+North of House
+You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
+
+> nw
+You can't go that way.
+
+> look
+North of House
+You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
+
+> examine house
+There's nothing special about the white house.
+
+> east
+Behind House
+You are behind the white house. A path leads into the forest
+to the east. In one corner of the house there is a small window
+which is open.
+
+> east
+Clearing
+You are in a small clearing in a well marked forest path that extends to the east and west.
+
+> look
+Clearing
+You are in a small clearing in a well marked forest path that extends to the east and west.
+
+> examine clearing
+I don't know the word "clearing".
+
+> north
+Forest
+This is a dimly lit forest, with large trees all around.
+
+> look
+Forest
+This is a dimly lit forest, with large trees all around.
+
+> east
+Forest
+The forest thins out, revealing impassable mountains.
+
+> look
+Forest
+The forest thins out, revealing impassable mountains.
+
+> examine mountain
+You can't see any mountain here!
+
+> up
+The mountains are impassable.
+
+> west
+Forest
+This is a dimly lit forest, with large trees all around.
+
+> west
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> north
+Clearing
+You are in a clearing, with a forest surrounding you on all sides. A
+path leads south.
+On the ground is a pile of leaves.
+
+> west
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+
+> east
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> east
+Forest
+This is a dimly lit forest, with large trees all around.
+
+> south
+Clearing
+You are in a small clearing in a well marked forest path that extends to the east and west.
+
+> east
+Canyon View
+You are at the top of the Great Canyon on its west wall. From here there is a marvelous view of the canyon and parts of the Frigid River upstream. Across the canyon, the walls of the White Cliffs join the mighty ramparts of the Flathead Mountains to the east. Following the Canyon upstream to the north, Aragain Falls may be seen, complete with rainbow. The mighty Frigid River flows out from a great dark cavern. To the west and south can be seen an immense forest, stretching for miles around. A path leads northwest. It is possible to climb down into the canyon from here.
+
+> look
+Canyon View
+You are at the top of the Great Canyon on its west wall. From here there is a marvelous view of the canyon and parts of the Frigid River upstream. Across the canyon, the walls of the White Cliffs join the mighty ramparts of the Flathead Mountains to the east. Following the Canyon upstream to the north, Aragain Falls may be seen, complete with rainbow. The mighty Frigid River flows out from a great dark cavern. To the west and south can be seen an immense forest, stretching for miles around. A path leads northwest. It is possible to climb down into the canyon from here.
+
+> examine canyon
+I don't know the word "canyon".
+
+> examine river
+There's nothing special about the river.
+
+> examine view
+I don't know the word "view".
+
+> south
+Storm-tossed trees block your way.
+
+> down
+Rocky Ledge
+You are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable.
+
+> look
+Rocky Ledge
+You are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable.
+
+> examine cliff
+There's nothing special about the cliff.
+
+> examine falls
+I don't know the word "falls".
+
+> down
+Canyon Bottom
+You are beneath the walls of the river canyon which may be climbable here. The lesser part of the runoff of Aragain Falls flows by below. To the north is a narrow path.
+
+> look
+Canyon Bottom
+You are beneath the walls of the river canyon which may be climbable here. The lesser part of the runoff of Aragain Falls flows by below. To the north is a narrow path.
+
+> up
+Rocky Ledge
+You are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable.
+
+> down
+Canyon Bottom
+You are beneath the walls of the river canyon which may be climbable here. The lesser part of the runoff of Aragain Falls flows by below. To the north is a narrow path.
+
+> north
+End of Rainbow
+You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest.
+
+> look
+End of Rainbow
+You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest.
+
+> examine rainbow
+There's nothing special about the rainbow.
+
+> examine beach
+I don't know the word "beach".
+
+> examine falls
+I don't know the word "falls".
+
+> ne
+You can't go that way.
+
+> look
+End of Rainbow
+You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest.
+
+> east
+You can't go that way.
+
+> look
+End of Rainbow
+You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest.
+
+> west
+You can't go that way.
+
+> west
+You can't go that way.
+
+> sw
+Canyon Bottom
+You are beneath the walls of the river canyon which may be climbable here. The lesser part of the runoff of Aragain Falls flows by below. To the north is a narrow path.
+
+> up
+Rocky Ledge
+You are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable.
+
+> up
+Canyon View
+You are at the top of the Great Canyon on its west wall. From here there is a marvelous view of the canyon and parts of the Frigid River upstream. Across the canyon, the walls of the White Cliffs join the mighty ramparts of the Flathead Mountains to the east. Following the Canyon upstream to the north, Aragain Falls may be seen, complete with rainbow. The mighty Frigid River flows out from a great dark cavern. To the west and south can be seen an immense forest, stretching for miles around. A path leads northwest. It is possible to climb down into the canyon from here.
+
+> nw
+Clearing
+You are in a small clearing in a well marked forest path that extends to the east and west.
+
+> west
+Behind House
+You are behind the white house. A path leads into the forest
+to the east. In one corner of the house there is a small window
+which is open.
+
+> south
+South of House
+You are facing the south side of a white house. There is no door here, and all the windows are boarded.
+
+> look
+South of House
+You are facing the south side of a white house. There is no door here, and all the windows are boarded.
+
+> west
+West of House
+You are standing in an open field west of a white house, with a boarded
+front door.
+There is a small mailbox here.
+
+> look
+West of House
+You are standing in an open field west of a white house, with a boarded
+front door.
+There is a small mailbox here.
+
+> east
+The door is boarded and you can't remove the boards.
+
+> north
+North of House
+You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
+
+> east
+Behind House
+You are behind the white house. A path leads into the forest
+to the east. In one corner of the house there is a small window
+which is open.
+
+> look
+Behind House
+You are behind the white house. A path leads into the forest
+to the east. In one corner of the house there is a small window
+which is open.
+
+> west
+Kitchen
+You are in the kitchen of the white house. A table seems to
+have been used recently for the preparation of food. A passage
+leads to the west and a dark staircase can be seen leading
+upward. A dark chimney leads down and to the east is a small
+window which is open.
+A bottle is sitting on the table.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> look
+Kitchen
+You are in the kitchen of the white house. A table seems to
+have been used recently for the preparation of food. A passage
+leads to the west and a dark staircase can be seen leading
+upward. A dark chimney leads down and to the east is a small
+window which is open.
+A bottle is sitting on the table.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> examine sandwich bag
+You can't see any bag here!
+
+> east
+Behind House
+You are behind the white house. A path leads into the forest
+to the east. In one corner of the house there is a small window
+which is open.
+
+> west
+Kitchen
+You are in the kitchen of the white house. A table seems to
+have been used recently for the preparation of food. A passage
+leads to the west and a dark staircase can be seen leading
+upward. A dark chimney leads down and to the east is a small
+window which is open.
+A bottle is sitting on the table.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> west
+Living Room
+You are in the living room. There is a doorway to the east, a wooden
+door with strange gothic lettering to the west, which appears to be
+nailed shut, a trophy case, and a closed trap door at your feet.
+
+> open trap door
+The door reluctantly opens to reveal a rickety staircase descending into
+darkness.
+
+> open trophy case
+Opened.
+
+> put painting in trophy case
+Done.
+
+> score
+Your score is 35 (total of 350 points), in 158 moves.
+This gives you the rank of Amateur Adventurer.
+
+> examine trophy case
+There's nothing special about the trophy case.
+
+> diagnose
+You are in perfect health.
+You can be killed by a serious wound.
+You have been killed once.
+
+> look
+Living Room
+You are in the living room. There is a doorway to the east, a wooden
+door with strange gothic lettering to the west, which appears to be
+nailed shut, a trophy case, and a rug lying beside an open trap door.
+Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
+
+> close trophy case
+Closed.
+
+> open trophy case
+Opened.
+
+> take painting
+Taken.
+
+> drop painting
+Dropped.
+
+> put painting in trophy case
+You don't have the painting.
+
+> score
+Your score is 29 (total of 350 points), in 165 moves.
+This gives you the rank of Amateur Adventurer.
+
+> turn off lamp
+The brass lantern is now off.
+
+> look
+Living Room
+You are in the living room. There is a doorway to the east, a wooden
+door with strange gothic lettering to the west, which appears to be
+nailed shut, a trophy case, and a rug lying beside an open trap door.
+Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
+
+> turn on lamp
+The brass lantern is now on.
+
+> look
+Living Room
+You are in the living room. There is a doorway to the east, a wooden
+door with strange gothic lettering to the west, which appears to be
+nailed shut, a trophy case, and a rug lying beside an open trap door.
+Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
+
+> look. score. inventory
+Living Room
+You are in the living room. There is a doorway to the east, a wooden
+door with strange gothic lettering to the west, which appears to be
+nailed shut, a trophy case, and a rug lying beside an open trap door.
+Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
+Your score is 29 (total of 350 points), in 170 moves.
+This gives you the rank of Amateur Adventurer.
+You are carrying:
+  leaflet
+  sword
+  brass lantern
+
+> score
+Your score is 29 (total of 350 points), in 171 moves.
+This gives you the rank of Amateur Adventurer.
+
+> diagnose
+You are in perfect health.
+You can be killed by a serious wound.
+You have been killed once.
+
+> inventory
+You are carrying:
+  leaflet
+  sword
+  brass lantern
