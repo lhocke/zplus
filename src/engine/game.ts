@@ -15,10 +15,6 @@ import { lookupPer, lookupPreAction } from '../actions/registry.js';
 import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
 import { jigsUp as jigsUpMsgs } from './game-messages.js';
 
-// ---------------------------------------------------------------------------
-// Public types — frozen contracts from the implementation plan.
-// ---------------------------------------------------------------------------
-
 export interface TurnResult {
   readonly output: string;
   readonly moved: boolean;
@@ -28,19 +24,13 @@ export interface TurnResult {
  * Result of the PERFORM chain (runActionChain).  Mirrors the ZIL tri-state:
  *   handled  — at least one step returned truthy (ZIL RTRUE / M-HANDLED = 1)
  *   fatal    — a handler called ctx.fatal() (ZIL M-FATAL = 2)
- *
- * The caller uses `fatal` to gate M-END and continuation (P-CONT clear).
  */
 export interface ChainResult {
   readonly handled: boolean;
   readonly fatal: boolean;
 }
 
-/**
- * Read-only snapshot of game state for the UI and assist layers.
- * Shape is frozen — any additions require amending the contract section
- * of the implementation plan first.
- */
+/** Read-only snapshot of game state for the UI and assist layers. */
 export interface GameView {
   readonly here: ObjectId;
   readonly hereName: string;
@@ -55,26 +45,17 @@ export interface GameView {
 /**
  * Minimal RNG interface.  A concrete seeded implementation lives in rng.ts.
  * Tests can supply a simple stub: `{ next: () => someFloat }`.
- * This is the same shape as PickRng (both require only `next(): number`).
  */
 export interface Rng {
   /** Returns a pseudo-random float in [0, 1). */
   next(): number;
 }
 
-// ---------------------------------------------------------------------------
-// Game intro — mirrors the text printed on startup in the original.
-// ---------------------------------------------------------------------------
-
 const INTRO =
   'ZORK I: The Great Underground Empire\n' +
   'Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.\n' +
   'ZORK is a registered trademark of Infocom, Inc.\n' +
   'Revision 88 / Serial number 840726\n';
-
-// ---------------------------------------------------------------------------
-// Game — the facade the UI and assist layers talk to.
-// ---------------------------------------------------------------------------
 
 export class Game {
   private readonly world: World;
@@ -90,32 +71,21 @@ export class Game {
   private readonly scoring: Scoring;
   private moveCount = 0;
 
-  // ---- F4 death-state fields (ZIL globals) ----------------------------------
-  // Placed here (Game facade) rather than FlagStore: deaths is a counter and
-  // gameOver gates turn() re-entry — both are facade control-flow state.
-  // Promote dead/alwaysLit to FlagStore when ghost-mode (F5) needs them.
-
-  /** DEATHS global — number of times the player has died. */
+  // Death-state fields (ZIL globals).
+  // deaths/gameOver are facade control-flow; dead/alwaysLit are for ghost-mode (F5).
   private deaths = 0;
-  /** DEAD global — ghost mode; set/read only by the re-death guard. Inert in P0-3. */
   private dead = false;
-  /** ALWAYS-LIT global — ghost immunity. Never true in P0-3. */
   private alwaysLit = false;
-  /** FINISH/RFATAL latch — halts turn() re-entry once set. */
   private gameOver = false;
 
-  /**
-   * Stashed command context for M-END (gmain.zil:151–161).
-   * LIVING-ROOM-FCN's M-END branch reads VERB?, PRSO, PRSI to determine whether
-   * a treasure was deposited (1actions.zil:478–482), so M-END's ActionContext
-   * must carry the JUST-EXECUTED command's verb/dobj/iobj, not the room defaults.
-   */
+  // Stashed command context for M-END (gmain.zil:151–161).
+  // LIVING-ROOM-FCN's M-END branch reads VERB?/PRSO/PRSI (1actions.zil:478–482)
+  // to detect a treasure deposit, so M-END needs the just-executed command's values.
   private lastVerb: string = 'look';
   private lastDobj: GameObject | undefined = undefined;
   private lastIobj: GameObject | undefined = undefined;
   private lastPrep: string | undefined = undefined;
 
-  /** Room ids the player has visited at least once. */
   private readonly visited = new Set<ObjectId>();
 
   constructor(
@@ -130,8 +100,6 @@ export class Game {
     this.flags = new FlagStore();
     this.scoring = new Scoring(this.events, this.flags);
 
-    // Resolve the player actor — the Actor whose id is 'PLAYER', or the first
-    // Actor found in the world when no canonical id exists (test scenarios).
     const playerObj = this.world.get('PLAYER');
     if (playerObj === undefined) {
       throw new Error('World must contain an object with id "PLAYER".');
@@ -144,10 +112,6 @@ export class Game {
     this.here = this.player.parent as Room;
   }
 
-  // -------------------------------------------------------------------------
-  // Public API
-  // -------------------------------------------------------------------------
-
   /** Print the intro banner and describe the initial room. */
   start(): string {
     const roomDesc = this.describeCurrentRoom();
@@ -157,160 +121,91 @@ export class Game {
 
   /** Execute one command line (may contain chained commands via "then" / "."). */
   turn(input: string): TurnResult {
-    // F4: gameOver guard — once a 3rd death or re-death sets gameOver, halt.
-    // No restart machine yet (deferred F5/endgame).
     if (this.gameOver) return { output: '', moved: false };
-
-    // -------------------------------------------------------------------------
-    // C9: Interleaved per-segment drive (replaces eager parseChained).
-    //
-    // Algorithm (td1-parser-algorithm.md §15):
-    //   1. Call parser.parseSegment(input) — which internally handles:
-    //        a. Continuation queue → pops next queued segment (ignores `input`).
-    //        b. Orphan pending → treats `input` as the orphan answer.
-    //        c. Fresh input → splits on THEN/period, queues remainder,
-    //           parses first segment.
-    //   2. Switch on ParseResult.kind:
-    //        'ok'         → execute (PERFORM); bind IT in prologue; if
-    //                       parser.hasContinuation() loop back to step 1.
-    //        'fail'       → print message; parser.clearContinuation(); done.
-    //        'orphan'/'disambig' → print message; done without counting a move.
-    //   3. Move counter increments once per non-meta executed command (inside
-    //      the loop).  Orphan/disambig/failed-parse do NOT count as moves.
-    //
-    // The interleaved prologue (IT-binding after each segment) is what enables
-    // "open mailbox. read it" to work within a single turn() call.
-    // -------------------------------------------------------------------------
 
     const outputs: string[] = [];
     let moved = false;
 
-    // Loop: parse and execute segments until the continuation queue is empty
-    // or an orphan/disambig/fatal halts us.
     let isFirstCall = true;
     while (true) {
-      // On the first iteration use the real `input`; subsequent iterations pass
-      // '' because parseSegment pulls from the continuation queue.
       const rawLine = isFirstCall ? input : '';
       isFirstCall = false;
 
       const pr = this.parser.parseSegment(rawLine, this.here, this.player, this.world);
 
       if (pr.kind === 'orphan' || pr.kind === 'disambig') {
-        // Awaiting answer on the NEXT turn — no execution, no move.
         outputs.push(pr.message);
         this.parser.setLastWon(false);
-        // Do NOT loop — leave orphan state for next turn.
         break;
       }
 
       if (pr.kind !== 'ok') {
-        // Parse failure: print message, clear continuation, stop.
         outputs.push(pr.message);
         this.parser.setLastWon(false);
         this.parser.clearContinuation();
         break;
       }
 
-      // ---- ok: execute the segment ----------------------------------------
       const cmd = pr.command;
-      // Meta-verb suppression: commands in META_ACTIONS do not consume time
-      // (ZIL gmain.zil:171-172 VERB? guard around CLOCKER).
+      // Meta-verbs don't consume time (ZIL gmain.zil:171-172 VERB? guard around CLOCKER).
       const segmentConsumesTime = !META_ACTIONS.has(cmd.action);
 
-      // Resolve objects from ids (single-object callers use dobjIds?.[0]).
       const dobj = cmd.dobjIds?.[0] !== undefined ? this.world.get(cmd.dobjIds[0]!) : undefined;
       const iobj = cmd.iobjIds?.[0] !== undefined ? this.world.get(cmd.iobjIds[0]!) : undefined;
 
-      // Stash the just-resolved command for M-END (gmain.zil:151–161).
-      // LIVING-ROOM-FCN's M-END branch reads VERB?/PRSO/PRSI (1actions.zil:478–482)
-      // to determine if a treasure was deposited; the stash lets runMEnd carry
-      // these values in its ActionContext.
+      // Stash for M-END (gmain.zil:151–161) — LIVING-ROOM-FCN reads these.
       this.lastVerb = cmd.verb;
       this.lastDobj = dobj;
       this.lastIobj = iobj;
       this.lastPrep = cmd.prep;
 
-      // ---- PERFORM prologue: IT-binding (gmain.zil:202–203) ----------------
-      // "if PRSO and PRSI!=IT and verb!=WALK: SETG P-IT-OBJECT PRSO"
-      // Bind the IT pronoun referent HERE — in the PERFORM prologue, BEFORE the
-      // 7-step chain — so the parser can read it on the NEXT SEGMENT (or turn).
-      //
-      // CRITICAL for C9: this binding fires between segments within a single
-      // turn() call, enabling "open mailbox. read it" to resolve "it" to the
-      // mailbox after the first segment executes.
-      //
-      // The PRSI!=IT condition cannot be checked here (the iobj is already
-      // resolved by the time we reach dispatch); we simplify to the two
-      // checkable guards: dobj present AND action ≠ V-WALK.
-      // P2: guard on resolved action (ZIL PRSA), not verb word.
+      // IT-binding prologue (gmain.zil:202–203): bind pronoun referent before the
+      // chain so the next segment in a chained command ("open mailbox. read it") can
+      // resolve "it". Guard: dobj present AND action != V-WALK.
       if (dobj !== undefined && cmd.action !== 'V-WALK') {
         this.parser.bindPronouns(cmd);
       }
 
-      // --- Action-dispatch chain (faithful to PERFORM in gmain.zil) ----------
-      // Each step may RTRUE (return true) to short-circuit the remainder.  The
-      // handlers print via ctx.tell into `handled`; only if no handler claims
-      // the command do we fall through to the default verb routine.
-      //
-      // gwimText (C5): GWIM auto-supply parenthetical "(with the sword)" etc.
-      // In ZIL, GWIM prints this during PARSER (before PERFORM).  We pre-seed
-      // `handled` with it so it appears at the top of the turn output.
-      //
-      // allIter (C6): ALL-iteration prefix — when the parser returned this
-      // command as one item in a SNARFEM ALL expansion (e.g. "examine all"),
-      // Game.turn must print "<desc>: " before the action result to match the
-      // ZIL per-object prefix (gmain.zil:121-144).
+      // gwimText: GWIM auto-supply parenthetical "(with the sword)" (gparser.zil:1294).
+      // allIter: ALL-iteration prefix "<desc>: " for "examine all" expansions (gmain.zil:121-144).
       const allIterPrefix = cmd.allIter === true && dobj !== undefined
         ? `${dobj.desc}: `
         : '';
 
-      // autoTaken (C6): STAKE auto-take — parser marked objects that were
-      // auto-taken (not held but takeable). Print "(Taken)" per object
-      // (gparser.zil:1291) before the action result.
+      // autoTaken: STAKE auto-take — print "(Taken)" and move object (gparser.zil:1291).
       const handled: string[] = [];
       if (cmd.gwimText !== undefined) handled.push(cmd.gwimText);
       if (cmd.autoTaken !== undefined && cmd.autoTaken.length > 0) {
         for (const takenId of cmd.autoTaken) {
           const takenObj = this.world.get(takenId);
           if (takenObj !== undefined) {
-            // Move the auto-taken object to player inventory (the actual ITAKE action).
             takenObj.moveTo(this.player);
           }
           handled.push('(Taken)');
         }
       }
-      const tell = (text: string): void => {
-        handled.push(text);
-      };
 
       const prevRoom = this.here;
 
-      // ---- 7-step PERFORM chain (gmain.zil:210–224) -------------------------
-      // runActionChain covers steps 1–6.  Step 7 (executeVerb) is caller-side,
-      // gated on !handled && !fatal, which is behaviourally identical to being
-      // the chain's last clause (td4-perform-chain.md §4.1 row 7).
+      // 7-step PERFORM chain (gmain.zil:210–224).
+      // runActionChain covers steps 1–6; step 7 (executeVerb) is caller-side,
+      // gated on !handled && !fatal.
       const chainResult = this.runActionChain(
-        cmd.verb, cmd.action, dobj, iobj, cmd.prep, cmd.preAction, tell,
+        cmd.verb, cmd.action, dobj, iobj, cmd.prep, cmd.preAction,
+        (text) => handled.push(text),
       );
 
       if (chainResult.fatal) {
-        // M-FATAL: skip M-END and abort any remaining chained commands
-        // (mirrors SETG P-CONT <> at gmain.zil:161).
-        // C8: M-FATAL counts as a non-win; AGAIN should not replay a fatal command.
+        // M-FATAL: skip M-END and abort remaining chained commands (gmain.zil:161).
         this.parser.setLastWon(false);
         this.parser.clearContinuation();
         outputs.push(handled.join('\n'));
         break;
       }
 
-      // C8: Successful (non-fatal) parse + execute → lastWon = true.
-      // P-WON equivalent for the AGAIN guard (gparser.zil:199 / gmain.zil:42).
       this.parser.setLastWon(true);
 
       if (chainResult.handled) {
-        // At least one step short-circuited: step 7 (executeVerb) is suppressed.
-        // Check whether a handler moved the player via ctx.moveTo(actor, dest).
         const newRoomAfterHandler = this.player.parent as Room;
         if (newRoomAfterHandler !== undefined && newRoomAfterHandler !== prevRoom) {
           moved = true;
@@ -325,8 +220,7 @@ export class Game {
         }
       } else {
         // No handler claimed the command — run step 7: default verb routine.
-        // P2: dispatch on cmd.action (resolved V-* id), not cmd.verb (verb word).
-        // Faithful to ZIL PERFORM dispatching on PRSA (gmain.zil:283–284).
+        // Dispatch on cmd.action (ZIL PRSA), not cmd.verb (verb word) — gmain.zil:283–284.
         const verbResult = executeVerb({
           verb: cmd.verb,
           dobj,
@@ -335,38 +229,25 @@ export class Game {
           player: this.player,
           here: this.here,
           world: this.world,
-          perResolver: (routineName, here) => this.resolvePer(routineName, here, tell),
+          perResolver: (routineName, here) => this.resolvePer(routineName, here, (text) => handled.push(text)),
           mlookRunner: (room) => this.runMLook(room),
           rng: this.rng,
           scoreObj: (obj) => this.scoring.scoreObj(obj),
-          // V-SCORE / V-DIAGNOSE fields (TD3-2):
-          // moveCount is incremented per-segment (inside the loop) immediately
-          // after each non-meta command executes, so SCORE reads the post-tick
-          // count of preceding commands in the same chain.  A standalone "score"
-          // on turn 1 reads 0 (no preceding real command ticked yet); "open mailbox.
-          // score" reads 1 (the mailbox segment ticked before SCORE dispatches).
           score:  this.scoring.score,
           moves:  this.moveCount,
           rank:   () => this.scoring.rank(),
           deaths: this.deaths,
           getGlobal: (n) => this.flags.get(n),
           setGlobal: (n, v = true) => this.flags.set(n, v),
-          // F4: death-path fields wired into VerbContext.
-          jigsUp: (desc) => this.jigsUp(desc, tell),
+          jigsUp: (desc) => this.jigsUp(desc, (text) => handled.push(text)),
           alwaysLit: this.alwaysLit,
           prob: (pct) => this.rng.next() * 100 < pct,
           clearContinuation: () => this.parser.clearContinuation(),
         }, cmd.action);
 
-        // F4: fatal from step 7 (verbResult.fatal) — mirrors chainResult.fatal break.
-        // jigsUp already emitted death text via `tell` (into `handled`).
-        // moved=true lets us update this.here to FOREST-1 for the resurrection render,
-        // but the fatal flag skips M-END and aborts remaining chained segments.
         if (verbResult.fatal) {
           this.parser.setLastWon(false);
           this.parser.clearContinuation();
-          // Update here to the player's current room (FOREST-1 after resurrection,
-          // or the room where they died if gameOver was set before moveTo).
           if (verbResult.moved) {
             moved = true;
             const newRoom = this.player.parent as Room;
@@ -378,24 +259,17 @@ export class Game {
           break;
         }
 
-        // A handler may have printed something even while falling through
-        // (ZIL routines can TELL then RFALSE); prepend that output.
         const parts = [...handled, verbResult.output].filter(s => s.length > 0);
         const cmdOut = parts.join('\n');
         outputs.push(allIterPrefix ? allIterPrefix + cmdOut : cmdOut);
 
         if (verbResult.moved) {
           moved = true;
-          // Player moved — update here reference and fire room entry.
           const newRoom = this.player.parent as Room;
 
           if (verbResult.movedIntoDark) {
-            // Dark destination path (ZIL GOTO order):
-            //   1. darkPlaceEntered notice (already in verbResult.output)
-            //   2. M-ENTER action — appended AFTER the dark notice
-            //   3. describeCurrentRoom() — V-FIRST-LOOK → pitch-black message
-            // Both lines appear on the SAME turn, in this order.
-            // Note: onRoomEntered + M-ENTER only fire when the room changed.
+            // Dark destination (ZIL GOTO order): darkPlaceEntered notice, then M-ENTER,
+            // then describeCurrentRoom() → pitch-black message.
             let enterOut = '';
             if (newRoom !== undefined && newRoom !== this.here) {
               enterOut = this.onRoomEntered(newRoom);
@@ -413,9 +287,7 @@ export class Game {
               outputs.push(mergedParts.join('\n'));
             }
           } else if (newRoom !== undefined && newRoom !== this.here) {
-            // Lit destination path: fire M-ENTER and prepend its output.
-            // ZIL order: M-ENTER fires, then V-FIRST-LOOK/DESCRIBE-ROOM.
-            // verbResult.output already contains the room description from enterDest.
+            // Lit destination: fire M-ENTER and prepend its output before room description.
             const enterOut = this.onRoomEntered(newRoom);
             if (enterOut.length > 0) {
               const idx = outputs.length - 1;
@@ -429,14 +301,11 @@ export class Game {
         }
       }
 
-      // ---- M-END (gmain.zil:151–161) ----------------------------------------
-      // Fires on EVERY non-fatal turn — unconditional post-turn room callback on
-      // the CURRENT room (post-GOTO).  M-FATAL is already handled above (break).
-      // The stashed lastVerb/lastDobj/lastIobj/lastPrep carry the just-executed
-      // command so M-END handlers (e.g. LIVING-ROOM-FCN) can read VERB?/PRSO/PRSI.
+      // M-END (gmain.zil:151–161): unconditional post-turn room callback on the
+      // current room (post-GOTO). Passes stashed verb/dobj/iobj/prep so handlers
+      // like LIVING-ROOM-FCN can read VERB?/PRSO/PRSI.
       const mEndOut = this.runMEnd(this.here);
       if (mEndOut.length > 0) {
-        // Append M-END output to the most recent segment's output (same turn).
         const idx = outputs.length - 1;
         if (idx >= 0) {
           outputs[idx] = [outputs[idx], mEndOut].filter(s => s.length > 0).join('\n');
@@ -445,10 +314,7 @@ export class Game {
         }
       }
 
-      // ---- Per-segment MOVES + CLOCKER tick -----------------------------------
-      // ZIL CLOCKER runs once per executed command (gclock.zil) — fire here,
-      // after M-END, for each non-meta segment.  A failed parse / orphan /
-      // disambig never reaches this path, so C9 no-tick behaviour is intact.
+      // CLOCKER tick — once per non-meta executed command (gclock.zil).
       if (segmentConsumesTime) {
         this.moveCount += 1;
         const clockLines = this.clock.advance();
@@ -464,11 +330,9 @@ export class Game {
         this.events.emit({ type: 'turn-complete', moves: this.moveCount });
       }
 
-      // ---- Loop control: continue if more segments pending ------------------
       if (!this.parser.hasContinuation()) {
-        break; // No more continuation segments — done for this turn.
+        break;
       }
-      // Otherwise loop back to parseSegment() to consume the next segment.
     }
 
     return { output: outputs.join('\n'), moved };
@@ -498,18 +362,12 @@ export class Game {
     };
   }
 
-  // -------------------------------------------------------------------------
-  // Action dispatch (PERFORM model)
-  // -------------------------------------------------------------------------
-
   /**
    * Build the ActionContext handed to a translated ZIL routine.  `self` is the
    * object/room whose routine is running; `rarg` is the room-handler message
    * (undefined for object handlers).
    *
-   * `onFatal` is an out-of-band callback called when the handler invokes
-   * `ctx.fatal()` (ZIL RFATAL / M-FATAL=2).  The dispatcher reads the flag
-   * after each step and propagates it via ChainResult.fatal.
+   * `onFatal` is called when the handler invokes `ctx.fatal()` (ZIL RFATAL / M-FATAL=2).
    */
   private makeContext(
     self: GameObject,
@@ -544,40 +402,24 @@ export class Game {
       disableClock: (id) => this.clock.disable(id),
       getGlobal: (n) => this.flags.get(n),
       setGlobal: (n, v = true) => this.flags.set(n, v),
-      /**
-       * Signal M-FATAL — stops the PERFORM chain and skips M-END.
-       * The handler still returns true (RTRUE) so the chain short-circuits;
-       * the out-of-band `onFatal` callback lets the dispatcher know to also
-       * set ChainResult.fatal = true.
-       */
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
     };
   }
 
   /**
-   * Run the full 7-step PERFORM dispatch chain (gmain.zil:210–224, PREDGEN
-   * variant).  Each step invokes a handler; the first truthy return (ZIL RTRUE
-   * = M-HANDLED) short-circuits the remaining steps.  A handler may also call
-   * `ctx.fatal()` (ZIL M-FATAL = 2) to signal a fatal outcome — the dispatcher
-   * sets ChainResult.fatal and the caller must skip M-END and clear any
-   * continuation.
+   * Run the full 7-step PERFORM dispatch chain (gmain.zil:210–224).
+   * Each step invokes a handler; the first truthy return (ZIL RTRUE = M-HANDLED)
+   * short-circuits the rest. A handler may call `ctx.fatal()` (ZIL M-FATAL = 2)
+   * to signal a fatal outcome — the caller must skip M-END and clear continuation.
    *
-   * Steps (in ZIL order):
-   *   1. WINNER (actor) P?ACTION — actor-intercept (step 1: gmain.zil:211)
-   *   2. room P?ACTION  rarg=M-BEG — room first-intercept (step 2: gmain.zil:212)
-   *   3. PREACTIONS[verb] — verb pre-action guard (step 3: gmain.zil:213)
-   *   4. PRSI P?ACTION — indirect-object handler (step 4: gmain.zil:214)
-   *   5. LOC(PRSO) P?CONTFCN — container CONTFCN (step 5: gmain.zil:215–219)
-   *      GUARD: PRSO exists AND verb ≠ 'walk' AND LOC(PRSO) exists
-   *      [INTENTIONALLY INERT until TD-7 supplies CONTFCN extraction data;
-   *      the step occupies its ordered position so TD-7 data is a drop-in.]
-   *   6. PRSO P?ACTION — direct-object handler (step 6: gmain.zil:220–223)
-   *      GUARD: PRSO exists AND verb ≠ 'walk'
-   *   7. ACTIONS[verb] default — executeVerb (step 7: gmain.zil:224; caller-side)
-   *
-   * Returns ChainResult{handled, fatal}.  Step 7 is kept caller-side and gated
-   * on !handled && !fatal, which is behaviourally identical to being the chain's
-   * last clause (PERFORM spec §4.1 row 7).
+   * Steps:
+   *   1. WINNER (actor) P?ACTION — gmain.zil:211
+   *   2. room P?ACTION rarg=M-BEG — gmain.zil:212
+   *   3. PREACTIONS[verb] — gmain.zil:213
+   *   4. PRSI P?ACTION — gmain.zil:214
+   *   5. LOC(PRSO) P?CONTFCN — gmain.zil:215–219 (inert until TD-7)
+   *   6. PRSO P?ACTION — gmain.zil:220–223
+   *   7. ACTIONS[verb] default — gmain.zil:224; caller-side (executeVerb)
    */
   private runActionChain(
     verb: string,
@@ -591,27 +433,24 @@ export class Game {
     let fatal = false;
     const onFatal = (): void => { fatal = true; };
 
-    // Helper: make a context with the shared fatal signal.
     const ctx = (self: GameObject, rarg?: number): ActionContext =>
       this.makeContext(self, verb, dobj, iobj, prep, rarg, tell, onFatal);
 
-    // ---- Step 1: WINNER (actor) P?ACTION (no rarg) -------------------------
+    // Step 1: WINNER (actor) P?ACTION
     if (this.player.handler !== undefined) {
       if (this.player.handler(ctx(this.player))) {
         return { handled: true, fatal };
       }
     }
 
-    // ---- Step 2: room P?ACTION with rarg = M-BEG ---------------------------
+    // Step 2: room P?ACTION with rarg = M-BEG
     if (this.here.handler !== undefined) {
       if (this.here.handler(ctx(this.here, M_BEG))) {
         return { handled: true, fatal };
       }
     }
 
-    // ---- Step 3: PREACTIONS[verb] — PRE-* guard ----------------------------
-    // The resolved command carries `preAction` (the ZIL PRE-* routine name).
-    // lookupPreAction returns the registered handler, or undefined if none yet.
+    // Step 3: PREACTIONS[verb] — PRE-* guard
     if (preAction !== undefined) {
       const preHandler = lookupPreAction(preAction);
       if (preHandler !== undefined) {
@@ -621,18 +460,15 @@ export class Game {
       }
     }
 
-    // ---- Step 4: PRSI P?ACTION (no rarg) -----------------------------------
+    // Step 4: PRSI P?ACTION
     if (iobj?.handler !== undefined) {
       if (iobj.handler(ctx(iobj))) {
         return { handled: true, fatal };
       }
     }
 
-    // ---- Step 5: LOC(PRSO) P?CONTFCN (no rarg) ----------------------------
-    // Guard: PRSO exists AND action ≠ V-WALK AND LOC(PRSO) exists AND has contFcn.
-    // P2: guard on resolved action (ZIL PRSA), not verb word.
-    // INTENTIONALLY INERT: contFcn handlers are not yet extracted (TD-7 data).
-    // The step occupies its ordered position so TD-7 extraction is a drop-in.
+    // Step 5: LOC(PRSO) P?CONTFCN — guard: PRSO exists AND action != V-WALK AND container has contFcn.
+    // Inert until TD-7 supplies CONTFCN extraction data.
     if (action !== 'V-WALK' && dobj !== undefined && dobj.parent !== null && dobj.parent !== undefined) {
       const container = dobj.parent;
       if (container.contFcn !== undefined) {
@@ -642,24 +478,20 @@ export class Game {
       }
     }
 
-    // ---- Step 6: PRSO P?ACTION (no rarg) -----------------------------------
-    // Guard: PRSO exists AND action ≠ V-WALK (gmain.zil:220–223).
-    // P2: guard on resolved action (ZIL PRSA), not verb word.
+    // Step 6: PRSO P?ACTION — guard: PRSO exists AND action != V-WALK (gmain.zil:220–223).
     if (action !== 'V-WALK' && dobj?.handler !== undefined) {
       if (dobj.handler(ctx(dobj))) {
         return { handled: true, fatal };
       }
     }
 
-    // ---- Steps 1–6 all fell through: step 7 is caller-side (executeVerb). --
     return { handled: false, fatal };
   }
 
   /**
-   * Resolve an `Exit.per` routine name to a destination room id, running the
-   * registered PER routine.  The routine's output is written through `tell`
-   * (the current command's buffer), so it prints before the destination's
-   * description.  Returns undefined to block the move.
+   * Resolve an `Exit.per` routine name to a destination room id.
+   * The routine's output goes through `tell` and prints before the destination description.
+   * Returns undefined to block the move.
    */
   private resolvePer(
     routineName: string,
@@ -673,11 +505,9 @@ export class Game {
   }
 
   /**
-   * Fire room entry: run the room's M-ENTER action, update `here`, and emit
-   * the room-entered event.  Returns any M-ENTER output (e.g. trap door
-   * crashing shut) so the caller can prepend it to the turn transcript.
-   * Mirrors GOTO in 1dungeon.zil (M-ENTER then the description produced by
-   * M-LOOK).
+   * Fire room entry: run the room's M-ENTER action, update `here`, emit the
+   * room-entered event. Returns any M-ENTER output so the caller can prepend it.
+   * Mirrors GOTO in 1dungeon.zil (M-ENTER then M-LOOK description).
    */
   private onRoomEntered(room: Room): string {
     this.here = room;
@@ -693,14 +523,8 @@ export class Game {
     return enterBuf.join('\n');
   }
 
-  // -------------------------------------------------------------------------
-  // Internal helpers
-  // -------------------------------------------------------------------------
-
   private describeCurrentRoom(): string {
-    // Darkness gate (P0-2): gated on lit() per ZIL DESCRIBE-ROOM RFALSE path
-    // (gverbs.zil:1637-1649).  When dark, emit the verbatim pitch-black message
-    // and return early — skip room name, ldesc/M-LOOK, and DESCRIBE-OBJECTS.
+    // Darkness gate — gverbs.zil:1637-1649.
     if (!lit(this.here, this.player, this.world)) {
       const sprayed = this.flags.get('SPRAYED?');
       return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
@@ -708,9 +532,6 @@ export class Game {
 
     const lines: string[] = [this.here.desc];
 
-    // Room description, faithful to GOTO/M-LOOK: a room with a static ldesc
-    // prints it; an action-driven room (no ldesc) emits its body via the
-    // room handler with rarg = M-LOOK.
     if (this.here.ldesc) {
       lines.push(this.here.ldesc);
     } else if (this.here.handler !== undefined) {
@@ -723,19 +544,12 @@ export class Game {
       if (buf.length > 0) lines.push(buf.join('\n'));
     }
 
-    // DESCRIBE-OBJECTS: authentic PRINT-CONT model (D2).
-    // Replaces the non-authentic "You can see: X, Y." listing.
     describeRoomObjects(this.here, this.player, (s) => lines.push(s));
 
     return lines.join('\n');
   }
 
-  /**
-   * Run a room's M-LOOK handler and return the output.  Used as the
-   * `mlookRunner` supplied to the verb layer so that "look" and movement
-   * destinations both produce handler-driven descriptions for rooms that lack
-   * a static ldesc.
-   */
+  /** Run a room's M-LOOK handler and return the output — used by the verb layer. */
   private runMLook(room: Room): string {
     if (room.handler === undefined) return '';
     const buf: string[] = [];
@@ -749,22 +563,9 @@ export class Game {
 
   /**
    * Run the room's M-END callback after each non-fatal turn (gmain.zil:151–161).
-   *
-   * Called on the CURRENT room (this.here) AFTER any GOTO that fired during the
-   * chain — so "go north" fires M-END on the NEW room, not the starting room.
-   * Passes the just-executed command's verb/dobj/iobj/prep so that M-END
-   * handlers (e.g. LIVING-ROOM-FCN) can read VERB?/PRSO/PRSI exactly as ZIL
-   * does (1actions.zil:478–482).
-   *
-   * Key differences from onRoomEntered (M-ENTER) and runMLook (M-LOOK):
-   *   - rarg = M_END (6) instead of M_ENTER (2) or M_LOOK (3)
-   *   - verb/dobj/iobj carry the just-executed command (NOT 'walk'/'look')
-   *   - this.here is NOT reassigned (room entry already happened)
-   *
-   * The return value of the handler is currently ignored (the chain result was
-   * already checked for M-FATAL before reaching here).  LIVING-ROOM-FCN returns
-   * RFALSE; per spec §2 open question #4, no Zork I M-END handler is believed
-   * to RFATAL, so the return value is not re-checked for M-FATAL here.
+   * Called on the current room (after any GOTO), passing the just-executed
+   * command so M-END handlers like LIVING-ROOM-FCN can read VERB?/PRSO/PRSI
+   * (1actions.zil:478–482).
    */
   private runMEnd(room: Room): string {
     if (room.handler === undefined) return '';
@@ -785,10 +586,7 @@ export class Game {
   private emitRoomEntered(roomId: ObjectId): void {
     const firstVisit = !this.visited.has(roomId);
     this.visited.add(roomId);
-    // First-visit room VALUE award (SCORE-OBJ applied to the room object).
-    // ZIL: room M-BEG / first-visit logic calls SCORE-OBJ(HERE) on first entry.
-    // We apply it here — after the room is confirmed as first-visit — using the
-    // same SCORE-OBJ mechanism as object pickups (VALUE zeroed after award).
+    // First-visit room VALUE award — same SCORE-OBJ mechanism as object pickups.
     if (firstVisit) {
       const room = this.world.get(roomId);
       if (room !== undefined) {
@@ -798,59 +596,39 @@ export class Game {
     this.events.emit({ type: 'room-entered', room: roomId, firstVisit });
   }
 
-  // -------------------------------------------------------------------------
-  // jigsUp — shared death entry point (ZIL JIGS-UP, 1actions.zil:4046-4099)
-  //
-  // Called by verbGo's grue path and (future) combat death handlers.
-  // Emits via the injected `tell` so both callers share one sequencer.
-  // Mutates this.dead/deaths/gameOver and moves the player.
-  //
-  // Deferred (TODO(F5)):
-  //   - Ghost-mode / Hades branch (ENTRANCE-TO-HADES, SOUTH-TEMPLE TOUCHBIT)
-  //   - RANDOMIZE-OBJECTS scatter
-  //   - KILL-INTERRUPTS
-  //   - DEAD-FUNCTION install
-  //   - Sprayed-grue kill variant (grueSlitherVehicle)
-  //   - FINISH end-screen / restart UI
-  //   - "Bad luck, huh?" LUCKY branch
-  // -------------------------------------------------------------------------
+  // JIGS-UP — shared death entry point (1actions.zil:4046-4099).
+  // Called by verbGo's grue path and future combat death handlers.
+  // Deferred (TODO F5): ghost-mode/Hades, RANDOMIZE-OBJECTS, KILL-INTERRUPTS,
+  // DEAD-FUNCTION, sprayed-grue variant, FINISH end-screen, "Bad luck" LUCKY branch.
   private jigsUp(deathMessage: string, tell: (s: string) => void): void {
-    // Re-death guard (ZIL: ,DEAD check 1actions.zil:4048-4053).
-    // Fires when the player is already in ghost mode (DEAD=T).
-    // In P0-3 this is never true, but the guard is required for combat-death
-    // reuse correctness (F5 ghost mode will set dead=true).
+    // Re-death guard (1actions.zil:4048-4053): fires when already in ghost mode.
     if (this.dead) {
       tell(jigsUpMsgs.talented);
       this.gameOver = true;
       return;
     }
 
-    // Death message then banner.
     tell(deathMessage);
     tell(jigsUpMsgs.youHaveDied);
 
-    // SCORE-UPD -10 death penalty (1actions.zil:4058).
+    // SCORE-UPD -10 death penalty — 1actions.zil:4058.
     this.scoring.scoreUpd(-10);
 
     // 3-strike check: ZIL `<NOT <L? ,DEATHS 2>>` = deaths >= 2.
-    // Increment ONLY on the resurrection branch (below), matching 1actions.zil:4074.
+    // Increment only on the resurrection branch, matching 1actions.zil:4074.
     if (this.deaths >= 2) {
       tell(jigsUpMsgs.suicidalManiac);
       this.gameOver = true;
       return;
     }
 
-    // Resurrection branch.
     this.deaths += 1;
     tell(jigsUpMsgs.deserveAnotherChance);
 
-    // Move player to FOREST-1.
     const forest1 = this.world.get('FOREST-1') as Room;
     this.player.moveTo(forest1);
     this.here = forest1;
 
-    // Fire room entry so the resurrection room renders and stays consistent
-    // with the UI/score-by-room layer.
     const enterOut = this.onRoomEntered(forest1);
     if (enterOut) tell(enterOut);
     tell(this.describeCurrentRoom());

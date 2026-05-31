@@ -1,27 +1,3 @@
-/**
- * Typed accessor for the verbatim player-facing string catalog.
- *
- * Strings are imported from src/data/messages.json, which is the single
- * source of truth for all ZIL-sourced text.  Every string here was extracted
- * verbatim from the ZIL source (zil/gverbs.zil, zil/1actions.zil) per the
- * copy-not-author principle (Wave-D L16).
- *
- * Normalization applied: | → \n (explicit ZIL newline), bare newline +
- * indentation whitespace → single space (word separator in ZIL strings).
- *
- * Usage:
- *   import { MSG } from '../engine/game-messages.js';
- *
- *   // Static string:
- *   MSG.vTake.taken                    // "Taken."
- *
- *   // String with placeholder (%s) — fill with fmt():
- *   MSG.fmt(MSG.vOpen.opens, item.desc)  // "The brass lantern opens."
- *
- *   // Random pick from a PICK-ONE table:
- *   MSG.pick(MSG.yuks, rng)              // e.g. "A valiant attempt."
- */
-
 import rawMessages from '../../src/data/messages.json' with { type: 'json' };
 
 /** Minimal RNG interface required by pick() — duck-typed for test flexibility. */
@@ -30,33 +6,18 @@ export interface PickRng {
   next(): number;
 }
 
-// ---------------------------------------------------------------------------
-// Internal type helpers
-// ---------------------------------------------------------------------------
-
 /** A PICK-ONE table corresponding to a ZIL LTABLE of strings. */
 export interface PickTable {
   readonly entries: readonly string[];
 }
 
-// ---------------------------------------------------------------------------
-// Re-exported typed views
-// ---------------------------------------------------------------------------
-
 export type RoomObjectListing = typeof rawMessages.roomObjectListing;
-export type ParserMessages    = typeof rawMessages.parserMessages;
-
-// ---------------------------------------------------------------------------
-// Public API
-// ---------------------------------------------------------------------------
+export type ParserMessages = typeof rawMessages.parserMessages;
 
 /**
  * Replace each `%s` placeholder in `template` with the corresponding
  * positional argument.  Modelled on the ZIL `TELL D ,PRSO` / `TELL D ,PRSI`
  * substitution pattern.
- *
- * If there are fewer args than placeholders the surplus placeholders are left
- * as-is (to aid debugging).
  */
 export function fmt(template: string, ...args: string[]): string {
   let idx = 0;
@@ -68,171 +29,154 @@ export function fmt(template: string, ...args: string[]): string {
 }
 
 /**
- * Pick one entry at random from a PICK-ONE table, using the seeded RNG.
+ * Pick one entry at random from a PICK-ONE table.
  * Mirrors ZIL `<PICK-ONE ,TABLE>`.
- *
- * Accepts any object with a `next()` method (duck-typed) so test stubs like
- * `{ next: () => 0.5 }` work without importing the full Rng class.
  */
 export function pick(table: PickTable, rng: PickRng): string {
   const idx = Math.floor(rng.next() * table.entries.length);
   return table.entries[idx] ?? table.entries[0] ?? '';
 }
 
-// ---------------------------------------------------------------------------
-// Shorthand accessors — flat references into the JSON tree
-// ---------------------------------------------------------------------------
-
 const dv = rawMessages.defaultVerbs;
 const rt = rawMessages.randomTables;
 const pm = rawMessages.parserMessages;
 const ro = rawMessages.roomObjectListing;
 
-/** Room-object listing templates (DESCRIBE-OBJECT / FIRSTER / PRINT-CONT). */
 export const roomObject = ro;
-
-/** Parser and engine messages (gparser.zil / gmain.zil). */
 export const parser = pm;
 
-// Default verb message groups (alphabetical by ZIL routine name)
-export const describeRoom   = dv.describeRoom;
-export const finish         = dv.finish;
-export const goto           = dv.goto;
-export const hackHack       = dv.hackHack;
-export const hellos: PickTable  = rt.hellos;
-export const hitSpot        = dv.hitSpot;
-export const hoHum: PickTable   = rt.hoHum;
-export const idrop          = dv.idrop;
-export const itake          = dv.itake;
+export const describeRoom = dv.describeRoom;
+export const finish = dv.finish;
+export const goto = dv.goto;
+export const hackHack = dv.hackHack;
+export const hellos: PickTable = rt.hellos;
+export const hitSpot = dv.hitSpot;
+export const hoHum: PickTable = rt.hoHum;
+export const idrop = dv.idrop;
+export const itake = dv.itake;
 export const jumploss: PickTable = rt.jumploss;
-export const preBoard       = dv.preBoard;
-export const preBurn        = dv.preBurn;
-export const preGive        = dv.preGive;
-export const preMung        = dv.preMung;
-export const preMove        = dv.preMove;
-export const preRead        = dv.preRead;
-export const preTake        = dv.preTake;
-export const jigsUp         = dv.jigsUp;
-export const scoreUpd       = dv.scoreUpd;
-export const tellNoPrsi     = dv.tellNoPrsi;
-export const vAdvent        = dv.vAdvent;
-export const vAlarm         = dv.vAlarm;
-export const vAnswer        = dv.vAnswer;
-export const vAttack        = dv.vAttack;
-export const vBack          = dv.vBack;
-export const vBlast         = dv.vBlast;
-export const vBoard         = dv.vBoard;
-export const vBrief         = dv.vBrief;
-export const vBrush         = dv.vBrush;
-export const vBug           = dv.vBug;
-export const vBurn          = dv.vBurn;
-export const vChomp         = dv.vChomp;
-export const vClimbUp       = dv.vClimbUp;
-export const vClose         = dv.vClose;
-export const vCommand       = dv.vCommand;
-export const vCount         = dv.vCount;
-export const vCross         = dv.vCross;
-export const vCurses        = dv.vCurses;
-export const vCut           = dv.vCut;
-export const vDeflate       = dv.vDeflate;
-export const vDig           = dv.vDig;
-export const vDisembark     = dv.vDisembark;
-export const vDrinkFrom     = dv.vDrinkFrom;
-export const vDrop          = dv.vDrop;
-export const vEat           = dv.vEat;
-export const vExamine       = dv.vExamine;
-export const vExorcise      = dv.vExorcise;
-export const vFill          = dv.vFill;
-export const vFind          = dv.vFind;
-export const vFollow        = dv.vFollow;
-export const vFrobozz       = dv.vFrobozz;
-export const vGive          = dv.vGive;
-export const vHatch         = dv.vHatch;
-export const vHello         = dv.vHello;
-export const vInflate       = dv.vInflate;
-export const vInventory     = dv.vInventory;
-export const vKiss          = dv.vKiss;
-export const vKnock         = dv.vKnock;
-export const vLampOff       = dv.vLampOff;
-export const vLampOn        = dv.vLampOn;
-export const vLaunch        = dv.vLaunch;
-export const vLeanOn        = dv.vLeanOn;
-export const vLeap          = dv.vLeap;
-export const vListen        = dv.vListen;
-export const vLock          = dv.vLock;
-export const vLookBehind    = dv.vLookBehind;
-export const vLookInside    = dv.vLookInside;
-export const vLookOn        = dv.vLookOn;
-export const vLookUnder     = dv.vLookUnder;
-export const vMake          = dv.vMake;
-export const vMelt          = dv.vMelt;
-export const vMove          = dv.vMove;
-export const vMumble        = dv.vMumble;
-export const vMung          = dv.vMung;
-export const vOil           = dv.vOil;
-export const vOpen          = dv.vOpen;
-export const vOverboard     = dv.vOverboard;
-export const vPick          = dv.vPick;
-export const vPlug          = dv.vPlug;
-export const vPourOn        = dv.vPourOn;
-export const vPray          = dv.vPray;
-export const vPump          = dv.vPump;
-export const vPushTo        = dv.vPushTo;
-export const vPut           = dv.vPut;
-export const vPutBehind     = dv.vPutBehind;
-export const vPutOn         = dv.vPutOn;
-export const vPutUnder      = dv.vPutUnder;
-export const vQuit          = dv.vQuit;
-export const vRape          = dv.vRape;
-export const vRead          = dv.vRead;
-export const vRepent        = dv.vRepent;
-export const vReply         = dv.vReply;
-export const vRestart       = dv.vRestart;
-export const vRing          = dv.vRing;
-export const vSay           = dv.vSay;
-export const vSearch        = dv.vSearch;
-export const vSend          = dv.vSend;
-export const vShake         = dv.vShake;
-export const vSmell         = dv.vSmell;
-export const vSpin          = dv.vSpin;
-export const vSqueeze       = dv.vSqueeze;
-export const vStab          = dv.vStab;
-export const vStand         = dv.vStand;
-export const vStay          = dv.vStay;
-export const vStrike        = dv.vStrike;
-export const vSuperBrief    = dv.vSuperBrief;
-export const vSwim          = dv.vSwim;
-export const vSwing         = dv.vSwing;
-export const vTake          = dv.vTake;
-export const vTell          = dv.vTell;
-export const vThrow         = dv.vThrow;
-export const vThrowOff      = dv.vThrowOff;
-export const vTie           = dv.vTie;
-export const vTieUp         = dv.vTieUp;
-export const vTurn          = dv.vTurn;
-export const vUntie         = dv.vUntie;
-export const vVerbose       = dv.vVerbose;
-export const vWait          = dv.vWait;
-export const vWalk          = dv.vWalk;
-export const vWalkAround    = dv.vWalkAround;
-export const vWalkTo        = dv.vWalkTo;
-export const vWear          = dv.vWear;
-export const vWin           = dv.vWin;
-export const vWind          = dv.vWind;
-export const vWish          = dv.vWish;
-export const vYell          = dv.vYell;
-export const vZork          = dv.vZork;
+export const preBoard = dv.preBoard;
+export const preBurn = dv.preBurn;
+export const preGive = dv.preGive;
+export const preMung = dv.preMung;
+export const preMove = dv.preMove;
+export const preRead = dv.preRead;
+export const preTake = dv.preTake;
+export const jigsUp = dv.jigsUp;
+export const scoreUpd = dv.scoreUpd;
+export const tellNoPrsi = dv.tellNoPrsi;
+export const vAdvent = dv.vAdvent;
+export const vAlarm = dv.vAlarm;
+export const vAnswer = dv.vAnswer;
+export const vAttack = dv.vAttack;
+export const vBack = dv.vBack;
+export const vBlast = dv.vBlast;
+export const vBoard = dv.vBoard;
+export const vBrief = dv.vBrief;
+export const vBrush = dv.vBrush;
+export const vBug = dv.vBug;
+export const vBurn = dv.vBurn;
+export const vChomp = dv.vChomp;
+export const vClimbUp = dv.vClimbUp;
+export const vClose = dv.vClose;
+export const vCommand = dv.vCommand;
+export const vCount = dv.vCount;
+export const vCross = dv.vCross;
+export const vCurses = dv.vCurses;
+export const vCut = dv.vCut;
+export const vDeflate = dv.vDeflate;
+export const vDig = dv.vDig;
+export const vDisembark = dv.vDisembark;
+export const vDrinkFrom = dv.vDrinkFrom;
+export const vDrop = dv.vDrop;
+export const vEat = dv.vEat;
+export const vExamine = dv.vExamine;
+export const vExorcise = dv.vExorcise;
+export const vFill = dv.vFill;
+export const vFind = dv.vFind;
+export const vFollow = dv.vFollow;
+export const vFrobozz = dv.vFrobozz;
+export const vGive = dv.vGive;
+export const vHatch = dv.vHatch;
+export const vHello = dv.vHello;
+export const vInflate = dv.vInflate;
+export const vInventory = dv.vInventory;
+export const vKiss = dv.vKiss;
+export const vKnock = dv.vKnock;
+export const vLampOff = dv.vLampOff;
+export const vLampOn = dv.vLampOn;
+export const vLaunch = dv.vLaunch;
+export const vLeanOn = dv.vLeanOn;
+export const vLeap = dv.vLeap;
+export const vListen = dv.vListen;
+export const vLock = dv.vLock;
+export const vLookBehind = dv.vLookBehind;
+export const vLookInside = dv.vLookInside;
+export const vLookOn = dv.vLookOn;
+export const vLookUnder = dv.vLookUnder;
+export const vMake = dv.vMake;
+export const vMelt = dv.vMelt;
+export const vMove = dv.vMove;
+export const vMumble = dv.vMumble;
+export const vMung = dv.vMung;
+export const vOil = dv.vOil;
+export const vOpen = dv.vOpen;
+export const vOverboard = dv.vOverboard;
+export const vPick = dv.vPick;
+export const vPlug = dv.vPlug;
+export const vPourOn = dv.vPourOn;
+export const vPray = dv.vPray;
+export const vPump = dv.vPump;
+export const vPushTo = dv.vPushTo;
+export const vPut = dv.vPut;
+export const vPutBehind = dv.vPutBehind;
+export const vPutOn = dv.vPutOn;
+export const vPutUnder = dv.vPutUnder;
+export const vQuit = dv.vQuit;
+export const vRape = dv.vRape;
+export const vRead = dv.vRead;
+export const vRepent = dv.vRepent;
+export const vReply = dv.vReply;
+export const vRestart = dv.vRestart;
+export const vRing = dv.vRing;
+export const vSay = dv.vSay;
+export const vSearch = dv.vSearch;
+export const vSend = dv.vSend;
+export const vShake = dv.vShake;
+export const vSmell = dv.vSmell;
+export const vSpin = dv.vSpin;
+export const vSqueeze = dv.vSqueeze;
+export const vStab = dv.vStab;
+export const vStand = dv.vStand;
+export const vStay = dv.vStay;
+export const vStrike = dv.vStrike;
+export const vSuperBrief = dv.vSuperBrief;
+export const vSwim = dv.vSwim;
+export const vSwing = dv.vSwing;
+export const vTake = dv.vTake;
+export const vTell = dv.vTell;
+export const vThrow = dv.vThrow;
+export const vThrowOff = dv.vThrowOff;
+export const vTie = dv.vTie;
+export const vTieUp = dv.vTieUp;
+export const vTurn = dv.vTurn;
+export const vUntie = dv.vUntie;
+export const vVerbose = dv.vVerbose;
+export const vWait = dv.vWait;
+export const vWalk = dv.vWalk;
+export const vWalkAround = dv.vWalkAround;
+export const vWalkTo = dv.vWalkTo;
+export const vWear = dv.vWear;
+export const vWin = dv.vWin;
+export const vWind = dv.vWind;
+export const vWish = dv.vWish;
+export const vYell = dv.vYell;
+export const vZork = dv.vZork;
 export const wheeeee: PickTable = rt.wheeeee;
-export const yuks: PickTable    = rt.yuks;
-export const dummy: PickTable   = rt.dummy;
+export const yuks: PickTable = rt.yuks;
+export const dummy: PickTable = rt.dummy;
 
-/**
- * Convenience bundle — single import point used by the engine.
- *
- * Named `MSG` to keep call sites concise:
- *   MSG.fmt(MSG.vOpen.opens, 'trapdoor')
- *   MSG.pick(MSG.yuks, rng)
- */
+/** Convenience bundle — single import point used by the engine. */
 export const MSG = {
   fmt,
   pick,

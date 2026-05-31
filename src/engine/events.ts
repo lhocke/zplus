@@ -1,26 +1,17 @@
 import type { ObjectId } from '../domain/game-object.js';
 import type { Flag } from '../domain/flags.js';
 
-// ---------------------------------------------------------------------------
-// Event union — all signals the engine can emit.
-// Shape is frozen; new event types require amending the plan contract first.
-// ---------------------------------------------------------------------------
-
 export type EngineEvent =
-  | { type: 'room-entered';    room: ObjectId;                firstVisit: boolean  }
-  | { type: 'item-taken';      item: ObjectId                                       }
-  | { type: 'item-dropped';    item: ObjectId;                room: ObjectId       }
-  | { type: 'flag-changed';    obj: ObjectId; flag: Flag;     value: boolean       }
-  | { type: 'turn-complete';   moves: number                                       }
-  | { type: 'score-changed';   score: number;                 delta: number        }
-  | { type: 'lantern-fuel';    remaining: number; message?: string; dark: boolean  }
-  | { type: 'candle-fuel';     remaining: number; message?: string; dark: boolean  }
-  | { type: 'game-over';       won: boolean                                        }
-  | { type: 'invocation';      name: 'frotz' | 'rezrov'                            };
-
-// ---------------------------------------------------------------------------
-// EventEmitter interface — typed, minimal, unsubscribe-via-returned-function.
-// ---------------------------------------------------------------------------
+  | { type: 'room-entered'; room: ObjectId; firstVisit: boolean }
+  | { type: 'item-taken'; item: ObjectId }
+  | { type: 'item-dropped'; item: ObjectId; room: ObjectId }
+  | { type: 'flag-changed'; obj: ObjectId; flag: Flag; value: boolean }
+  | { type: 'turn-complete'; moves: number }
+  | { type: 'score-changed'; score: number; delta: number }
+  | { type: 'lantern-fuel'; remaining: number; message?: string; dark: boolean }
+  | { type: 'candle-fuel'; remaining: number; message?: string; dark: boolean }
+  | { type: 'game-over'; won: boolean }
+  | { type: 'invocation'; name: 'frotz' | 'rezrov' };
 
 export interface EventEmitter {
   on<T extends EngineEvent['type']>(
@@ -29,10 +20,6 @@ export interface EventEmitter {
   ): () => void;
   emit(e: EngineEvent): void;
 }
-
-// ---------------------------------------------------------------------------
-// SimpleEventEmitter — concrete implementation used by the engine and tests.
-// ---------------------------------------------------------------------------
 
 type AnyHandler = (e: EngineEvent) => void;
 
