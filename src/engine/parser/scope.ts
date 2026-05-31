@@ -38,8 +38,31 @@ import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
 import { searchList } from './search-list.js';
 import { SRCALL } from './scope-bits.js';
-import { LOCAL_GLOBAL_IDS } from './local-global-ids.js';
 import { ROOM_GLOBAL_IDS } from './room-globals.js';
+
+// ---------------------------------------------------------------------------
+// Compile-time allow-list of true GLOBAL-OBJECTS members
+// ---------------------------------------------------------------------------
+
+/**
+ * Explicit allow-list of object IDs that are declared `(IN GLOBAL-OBJECTS)` in
+ * the ZIL source (zil/1dungeon.zil).  Only these three objects are children of
+ * the GLOBAL-OBJECTS pseudo-root and are therefore universally in scope from
+ * any room without needing a room GLOBAL list entry.
+ *
+ * TEETH, WALL, GRANITE-WALL — the only objects in objects.json that carry this
+ * ZIL declaration.  All other parentless objects in the data have parent===null
+ * due to extraction gaps; they are NOT GLOBAL-OBJECTS and must not be resolved
+ * from a room that does not contain them.
+ *
+ * Mirrors LOCAL_GLOBAL_IDS and ROOM_GLOBAL_IDS — a data-table fix, not an
+ * algorithm change.
+ */
+export const GLOBAL_OBJECT_IDS: ReadonlySet<string> = new Set<string>([
+  'TEETH',
+  'WALL',
+  'GRANITE-WALL',
+]);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -122,50 +145,29 @@ export function globalsForRoom(room: Room, world: World): GameObject[] {
 }
 
 /**
- * Collect true GLOBAL-OBJECTS — parentless non-room world objects that are NOT
- * LOCAL-GLOBALS (i.e., not room-gated via any room's GLOBAL list).
+ * Collect true GLOBAL-OBJECTS — the objects listed in GLOBAL_OBJECT_IDS.
  *
- * In ZIL: objects `(IN GLOBAL-OBJECTS)` are universally accessible. The ZIL
- * universals that actually exist in objects.json are: TEETH, WALL, GRANITE-WALL.
- * (GROUND, GRUE, IT, SAILOR, STAIRS, BLESSINGS, INTNUM, ME etc. are missing from
- * the data — a known data-completeness gap, NOT a scope-model bug.)
+ * In ZIL, objects declared `(IN GLOBAL-OBJECTS)` are children of the
+ * GLOBAL-OBJECTS pseudo-root and are universally accessible from any room.
+ * Only three such objects exist in objects.json: TEETH, WALL, GRANITE-WALL.
  *
- * Objects like FOREST, WHITE-HOUSE, TREE, BOARD etc. are `(IN LOCAL-GLOBALS)` in
- * ZIL and must NOT appear here. They are classified by LOCAL_GLOBAL_IDS.
+ * All other parentless objects in the data (BROKEN-LAMP, DIAMOND, INFLATED-BOAT,
+ * HOT-BELL, GUNK, PUNCTURED-BOAT, BROKEN-EGG, BAUBLE, MOUNTAIN-RANGE …) have
+ * parent===null only because of extraction gaps — they should be in specific
+ * rooms or under LOCAL-GLOBALS, and they must NOT be resolved from a room that
+ * does not contain them.
  *
- * Objects like BROKEN-LAMP, DIAMOND, INFLATED-BOAT etc. have parent===null due
- * to extraction bugs (they should be in specific rooms). They must NOT appear in
- * the GLOBAL-OBJECTS tier either. We exclude them because their IDs are NOT in
- * LOCAL_GLOBAL_IDS but they are also NOT the true ZIL GLOBAL-OBJECTS. Rather
- * than whitelisting, we combine two criteria:
- *   1. parent === null AND not a Room
- *   2. NOT in LOCAL_GLOBAL_IDS (not room-gated)
- *   3. Has synonyms (true GLOBAL-OBJECTS always have synonyms; stray objects
- *      with extraction bugs often don't — but this is not a reliable filter)
- *
- * Actually the most correct approach: any parentless non-room object NOT in
- * LOCAL_GLOBAL_IDS IS a candidate for the GLOBAL-OBJECTS tier. The broken-
- * extraction objects (BROKEN-LAMP, DIAMOND etc.) will still resolve if the
- * player types their names — but this is acceptable since they shouldn't be
- * accessible from nowhere anyway. The real fix is the data extraction.
- *
- * For now: include ALL parentless non-room non-LOCAL-GLOBAL objects.
- * This is technically over-inclusive for broken-extraction objects, but
- * it is CORRECT for the true GLOBAL-OBJECTS (TEETH, WALL, GRANITE-WALL).
+ * Fix: use the explicit GLOBAL_OBJECT_IDS allow-list instead of the old
+ * heuristic (parent===null ∧ !isRoom ∧ !LOCAL_GLOBAL_IDS).  This is a
+ * data-table fix, not an algorithm change.
  */
 function collectGlobalObjects(world: World): GameObject[] {
   const result: GameObject[] = [];
-  for (const obj of world.all()) {
-    if (obj.parent === null && !isRoom(obj) && !LOCAL_GLOBAL_IDS.has(obj.id)) {
-      result.push(obj);
-    }
+  for (const id of GLOBAL_OBJECT_IDS) {
+    const obj = world.get(id);
+    if (obj !== undefined) result.push(obj);
   }
   return result;
-}
-
-/** Returns true if the object is a Room (has an exits array). */
-function isRoom(obj: GameObject): boolean {
-  return 'exits' in obj;
 }
 
 // ---------------------------------------------------------------------------

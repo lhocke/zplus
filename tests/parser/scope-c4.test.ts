@@ -844,3 +844,127 @@ describe('IT-pronoun staleness', () => {
     expect(examineResult.kind).not.toBe('ok');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 13. Oracle-backed: nowhere-objects NOT visible at WEST-OF-HOUSE (A1 fix)
+//
+// Fixes the over-inclusive collectGlobalObjects() heuristic.  These objects
+// have parent===null in our data only because of extraction gaps; they are NOT
+// declared (IN GLOBAL-OBJECTS) in the ZIL source and must NOT be resolved from
+// a room that does not contain them.
+//
+// dfrotz oracle at WEST-OF-HOUSE: "examine bell/boat/lantern/diamond/bauble/
+// egg/gunk/mountain" → "You can't see any X here!"
+//
+// We test via turn() output since Game.parse() is not a public method.
+// The "You can't see any X here!" message is emitted by the 'not-here' branch
+// in parser.ts; "Which X do you mean" is emitted by the 'disambig' branch.
+// ---------------------------------------------------------------------------
+
+describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
+  // Uses the real bootstrapped world so the full objects.json + GLOBAL_OBJECT_IDS
+  // allow-list is exercised end-to-end through buildScope → collectGlobalObjects.
+
+  it('HOT-BELL (synonym BELL) is not visible — output says "can\'t see"', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const g = createGame();
+    g.start();
+    const result = g.turn('examine bell');
+    expect(result.output.toLowerCase()).toMatch(/can't see/);
+    expect(result.output.toLowerCase()).not.toContain('which');
+  });
+
+  it('INFLATED-BOAT (synonym BOAT) is not visible', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const g = createGame();
+    g.start();
+    const result = g.turn('examine boat');
+    expect(result.output.toLowerCase()).toMatch(/can't see/);
+  });
+
+  it('BROKEN-LAMP (synonym LANTERN) is not visible — the most dangerous regression', async () => {
+    // Before fix: "examine lantern" at WEST-OF-HOUSE silently resolved to BROKEN-LAMP
+    // instead of reporting "You can't see any lantern here!".
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const g = createGame();
+    g.start();
+    const result = g.turn('examine lantern');
+    expect(result.output.toLowerCase()).toMatch(/can't see/);
+  });
+
+  it('DIAMOND (synonym DIAMOND) is not visible', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const g = createGame();
+    g.start();
+    const result = g.turn('examine diamond');
+    expect(result.output.toLowerCase()).toMatch(/can't see/);
+  });
+
+  it('BAUBLE (synonym BAUBLE) is not visible', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const g = createGame();
+    g.start();
+    const result = g.turn('examine bauble');
+    expect(result.output.toLowerCase()).toMatch(/can't see/);
+  });
+
+  it('BROKEN-EGG (synonym EGG) is not visible', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const g = createGame();
+    g.start();
+    const result = g.turn('examine egg');
+    expect(result.output.toLowerCase()).toMatch(/can't see/);
+  });
+
+  it('GUNK (synonym GUNK) is not visible', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const g = createGame();
+    g.start();
+    const result = g.turn('examine gunk');
+    expect(result.output.toLowerCase()).toMatch(/can't see/);
+  });
+
+  it('MOUNTAIN-RANGE (synonym MOUNTAIN) is not visible', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const g = createGame();
+    g.start();
+    const result = g.turn('examine mountain');
+    expect(result.output.toLowerCase()).toMatch(/can't see/);
+  });
+
+  it('TEETH (true GLOBAL-OBJECT) still resolves — does NOT say "can\'t see"', async () => {
+    // TEETH is declared (IN GLOBAL-OBJECTS) in ZIL and must remain universally in scope.
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const g = createGame();
+    g.start();
+    const result = g.turn('examine teeth');
+    // Not-here would mean we broke the real global; we expect a handler response
+    // (any message that is NOT "You can't see any teeth here!").
+    expect(result.output.toLowerCase()).not.toMatch(/can't see any teeth/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 14. Oracle-backed: "examine wall" disambiguates at WEST-OF-HOUSE (A2 fix)
+//
+// WALL and GRANITE-WALL both carry synonym "WALL".  ZIL GLOBAL-CHECK must
+// accumulate ALL matching GLOBAL-OBJECTS children and hand them back to
+// GET-OBJECT's LEN>1 disambiguation branch.
+//
+// dfrotz oracle: "Which wall do you mean, the granite wall or the surrounding wall?"
+// We check that the output contains "which" to confirm disambiguation fired.
+// ---------------------------------------------------------------------------
+
+describe('"examine wall" disambiguates when two global walls match (oracle A2)', () => {
+  it('output contains "which" — disambiguation fired for WALL vs GRANITE-WALL', async () => {
+    const { createGame } = await import('../../src/engine/bootstrap.js');
+    const g = createGame();
+    g.start();
+    const result = g.turn('examine wall');
+    // Both WALL and GRANITE-WALL share synonym "WALL" and are in GLOBAL_OBJECT_IDS.
+    // After A2 fix, GLOBAL-CHECK accumulates both → disambig → WHICH-PRINT fires.
+    expect(result.output.toLowerCase()).toContain('which');
+    // Must NOT silently resolve to just one wall (no "can't see" either)
+    expect(result.output.toLowerCase()).not.toMatch(/can't see/);
+  });
+});

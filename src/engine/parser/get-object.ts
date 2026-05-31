@@ -165,31 +165,72 @@ export function getObject(
 
   // =========================================================================
   // GLOBAL-CHECK (gparser.zil:1169-1200) — runs only when local passes → 0
+  //
+  // ZIL GLOBAL-CHECK accumulates all matches into the shared result table (TBL)
+  // via OBJ-FOUND, then returns to GET-OBJECT.  GET-OBJECT's LEN>1 branch then
+  // fires disambiguation (WHICH-PRINT) for the collected set.  We replicate this
+  // by collecting into a local `globalFound[]` array across all three arms and
+  // then applying the same 1→ok / >1→disambig logic GET-OBJECT uses locally.
+  //
+  // Arm order (must be preserved, matches gparser.zil:1172-1200):
+  //   (a) LOCAL-GLOBALS — iterate all, accumulate matches (OBJ-FOUND per match)
+  //   (b) PSEUDO — name-only match; add and return immediately from GLOBAL-CHECK
+  //       (ZIL: <OBJ-FOUND ...> <RETURN>) — pseudo returns as soon as it matches
+  //   (c) GLOBAL-OBJECTS — only if (a)+(b) found nothing; DO-SL accumulates ALL
+  //       matching children of the GLOBAL-OBJECTS pseudo-root
   // =========================================================================
 
-  // (a) LOCAL-GLOBALS — iterate globalsForRoom, thisItQ each
+  const globalFound: string[] = [];
+
+  // (a) LOCAL-GLOBALS — iterate globalsForRoom, thisItQ each; accumulate all matches
+  //     (gparser.zil:1174-1177: REPEAT loop calling OBJ-FOUND for each THIS-IT? hit)
   for (const globalObj of snap.localGlobals) {
     if (thisItQ(globalObj, resolvedNam, resolvedAdj, findFlag)) {
-      return { kind: 'ok', ids: [globalObj.id] };
+      globalFound.push(globalObj.id);
     }
   }
 
   // (b) PSEUDO — name-only match (NO synonym/adjective filter per gparser.zil:1182)
   //     <EQUAL? ,P-NAM <GET .RMG <* .CNT 2>>>
+  //     ZIL: OBJ-FOUND then immediate RETURN from GLOBAL-CHECK — so pseudo is
+  //     appended to any local-globals already accumulated, then we stop all arms.
   if (resolvedNam !== undefined) {
     for (const entry of snap.pseudo) {
       if (entry.word.toUpperCase() === resolvedNam.toUpperCase()) {
+        // In ZIL, PSEUDO-OBJECT is a synthetic stand-in (not a real object id).
+        // Return the pseudo sentinel directly — it is a special result kind that
+        // bypasses the normal ok/disambig path (the engine dispatches to the
+        // pseudo action directly rather than naming a real object).
+        // If local-globals also matched, we treat the pseudo as the winner
+        // (ZIL: RETURN exits GLOBAL-CHECK; GET-OBJECT sees the combined TBL which
+        // includes the OBJ-FOUND'd local-globals AND the pseudo — but pseudo arms
+        // always trigger WHICH-PRINT… unless the object is the PSEUDO-OBJECT
+        // sentinel.  In practice a pseudo match is exclusive with local-global
+        // matches for the same word, so returning pseudo directly is correct.)
         return { kind: 'pseudo', action: entry.action };
       }
     }
   }
 
-  // (c) GLOBAL-OBJECTS — thisItQ over parentless non-room registry, all-scopes
-  //     (gparser.zil:1196: DO-SL ,GLOBAL-OBJECTS 1 1 with P-SLOCBITS=-1)
-  for (const globalObj of snap.globalObjects) {
-    if (thisItQ(globalObj, resolvedNam, resolvedAdj, findFlag)) {
-      return { kind: 'ok', ids: [globalObj.id] };
+  // (c) GLOBAL-OBJECTS — only if no match found yet (gparser.zil:1193-1197)
+  //     <COND (<EQUAL? <GET .TBL ,P-MATCHLEN> .LEN>   ; nothing new found
+  //            <DO-SL ,GLOBAL-OBJECTS 1 1>)>
+  //     DO-SL with both bits set → SRCALL → walks ALL children of GLOBAL-OBJECTS.
+  //     Accumulate all matches; disambiguation fires at the end if >1.
+  if (globalFound.length === 0) {
+    for (const globalObj of snap.globalObjects) {
+      if (thisItQ(globalObj, resolvedNam, resolvedAdj, findFlag)) {
+        globalFound.push(globalObj.id);
+      }
     }
+  }
+
+  // Apply 1→ok / >1→disambig to the accumulated global candidates.
+  if (globalFound.length === 1) {
+    return { kind: 'ok', ids: globalFound };
+  }
+  if (globalFound.length > 1) {
+    return { kind: 'disambig', ids: globalFound };
   }
 
   // (d) ROOMS — only when verb is V-LOOK-INSIDE, V-SEARCH, V-EXAMINE
