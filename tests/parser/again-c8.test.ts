@@ -508,29 +508,28 @@ describe('C8-FIX — game.turn() integration (no manual setLastWon)', () => {
     expect(result.output).not.toContain('That would just repeat a mistake.');
   });
 
-  it('"take sword and lantern" — ANDFLG object-list: both sword and lantern are taken', async () => {
+  it('"take sword and lantern" — ANDFLG object-list: both sword and lantern are taken with per-object prefix', async () => {
     // dfrotz oracle (LIVING-ROOM, fresh game, both objects present):
     //   > take sword and lantern
     //   sword: Taken.
     //   brass lantern: Taken.
     //
-    // The fix: "and" no longer splits the command into two segments; instead
-    // resolveNounPhraseList handles the AND as an object-list connector, returning
-    // both SWORD and LAMP as dobjIds; parseChained expands them into two ParseResults.
+    // The fix (ANDFLG + allIter): parseChained expands multiple dobjIds from an
+    // AND-connected noun list into one ParseResult per object, each with
+    // allIter:true so game.turn() prints "<desc>: Taken." per object — matching
+    // the ZIL per-object prefix loop (gmain.zil:121-144), same as "take all".
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
 
     const result = game.turn('take sword and lantern');
 
-    // Both objects should be taken — two "Taken." messages in the output.
-    const takenCount = (result.output.match(/Taken\./g) ?? []).length;
-    expect(takenCount).toBeGreaterThanOrEqual(2);
+    // Both objects should be taken with per-object descriptive prefix.
+    // dfrotz oracle: "sword: Taken.\nbrass lantern: Taken."
+    expect(result.output).toContain('sword: Taken.');
+    expect(result.output).toContain('brass lantern: Taken.');
     // No "I don't know the word" or "I don't see any" error.
     expect(result.output).not.toContain("I don't know the word");
     expect(result.output).not.toContain("I don't see any");
-    // The pre-fix behavior was only sword taken (lantern became a bare-noun
-    // segment with no verb → failed with "I don't know the word 'lamp'").
-    expect(result.output).not.toContain("I don't know the word \"lamp\"");
   });
 });

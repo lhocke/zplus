@@ -1539,13 +1539,15 @@ export class Parser {
       // C8-FIX (ANDFLG expansion): when the parser resolved multiple dobjIds
       // from an AND-connected noun list (e.g. "take sword and lantern"), expand
       // into one ParseResult per object — matching ZIL's PERFORM iteration over
-      // the AND-list.  Each entry is a copy of the base command with a single
-      // dobjId.  Same terminal behaviour as tryExpandAll: break after expansion.
+      // the AND-list (gmain.zil:121-144).  Each entry is a copy of the base
+      // command with a single dobjId AND allIter:true so game.turn() prints
+      // "<desc>: " before each action result — same as tryExpandAll (C6/take all).
+      // Same terminal behaviour as tryExpandAll: break after expansion.
       if (result.kind === 'ok' && result.command.dobjIds !== undefined && result.command.dobjIds.length > 1) {
         for (const id of result.command.dobjIds) {
           results.push({
             kind: 'ok',
-            command: { ...result.command, dobjIds: [id] },
+            command: { ...result.command, dobjIds: [id], allIter: true },
           });
         }
         this.lastWon = true;
