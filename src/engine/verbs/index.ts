@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vPut, preTake, preGive, yuks, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vPut, preTake, preGive, yuks, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 
 export interface VerbContext {
@@ -465,9 +465,27 @@ function verbExamine(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Examine what?");
 
-  // V-EXAMINE priority (gverbs.zil:623–630): TEXT prop, then ldesc, then fallback.
+  // V-EXAMINE priority (gverbs.zil:623–630): TEXT prop, then container/door state, then ldesc, then fallback.
   const text = item.props.get('TEXT') ?? item.props.get('text');
   if (typeof text === 'string') return result(text);
+
+  // Containers and doors report open/closed state (gverbs.zil:626-628, 865-890).
+  if (item.has(Flag.Container) || item.has(Flag.Door)) {
+    if (item.has(Flag.Door)) {
+      return item.has(Flag.Open)
+        ? result(fmt(vLookInside.doorOpen, item.desc))
+        : result(fmt(vLookInside.doorClosed, item.desc));
+    }
+    if (item.has(Flag.Actor)) return result(vLookInside.nothingSpecialInside);
+    if (seeInside(item)) {
+      const lines: string[] = [];
+      printCont(item, ctx.player, 0, (s) => lines.push(s));
+      if (lines.length === 0) return result(fmt(vLookInside.containerEmpty, item.desc));
+      return result(lines.join('\n'));
+    }
+    return result(fmt(vLookInside.containerClosed, item.desc));
+  }
+
   if (item.ldesc !== undefined) return result(item.ldesc);
   return result(fmt(vExamine.nothingSpecial, item.desc));
 }
