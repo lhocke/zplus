@@ -5,6 +5,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import type { ParsedCommand, ParseResult } from './types.js';
 import { Flag } from '../../domain/flags.js';
 import { syntaxCheck } from './syntax-check.js';
+import { tokenize, SIBREAK_CHARS } from './tokenizer.js';
 import { buildScope, lit as litCheck } from './scope.js';
 import type { ScopeSnapshot } from './scope.js';
 import { gwim, ROOMS_SENTINEL } from './gwim.js';
@@ -144,6 +145,12 @@ export class Parser {
     } else {
       const allSegments = splitSegments(rawLine);
       if (allSegments.length === 0) {
+        // ZIL: empty input → "I beg your pardon?"; article/buzzword-only (no verb)
+        // → "There was no verb in that sentence!" (gparser.zil:155, 709-711).
+        const rawTokens = tokenize(rawLine).filter(t => !SIBREAK_CHARS.has(t));
+        if (rawTokens.length > 0) {
+          return { kind: 'fail', message: 'There was no verb in that sentence!' };
+        }
         return { kind: 'fail', message: 'I beg your pardon?' };
       }
       if (allSegments.length > 1) {
@@ -191,6 +198,10 @@ export class Parser {
   ): ParseResult {
     const tokens = tokenizeSegment(input);
     if (tokens.length === 0) {
+      const rawTokens = tokenize(input).filter(t => !SIBREAK_CHARS.has(t));
+      if (rawTokens.length > 0) {
+        return { kind: 'fail', message: 'There was no verb in that sentence!' };
+      }
       return { kind: 'fail', message: 'I beg your pardon?' };
     }
 
@@ -661,7 +672,13 @@ export class Parser {
     world: World,
   ): ParseResult[] {
     const segments = splitSegments(input);
-    if (segments.length === 0) return [{ kind: 'fail', message: 'I beg your pardon?' }];
+    if (segments.length === 0) {
+      const rawTokens = tokenize(input).filter(t => !SIBREAK_CHARS.has(t));
+      if (rawTokens.length > 0) {
+        return [{ kind: 'fail', message: 'There was no verb in that sentence!' }];
+      }
+      return [{ kind: 'fail', message: 'I beg your pardon?' }];
+    }
 
     const results: ParseResult[] = [];
 
