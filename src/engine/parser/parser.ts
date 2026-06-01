@@ -13,6 +13,8 @@ import {
   lookupVerb,
   DIRECTIONS,
   normalizeDir,
+  isPreposition,
+  isBuzzword,
 } from './vocabulary.js';
 import {
   tokenizeSegment,
@@ -29,6 +31,7 @@ import {
   _extractDisambigCandidates,
   collectByLocBits,
   allScopeForExcept,
+  ARTICLES,
 } from './parser-helpers.js';
 
 // OrphanSlot and OrphanState stay class-side: consumed by this.orphan and all
@@ -269,7 +272,24 @@ export class Parser {
     let matchedSyntax: import('./types.js').SyntaxEntry | undefined;
 
     if (syntaxResult.kind === 'fail') {
-      // gparser.zil:734 — "That sentence isn't one I recognize."
+      // gparser.zil:734 — "That sentence isn't one I recognize." (or no-verb).
+      // ZIL's CLAUSE fires UNKNOWN-WORD during noun scanning before SYNTAX-CHECK,
+      // so when syntax fails, check noun tokens for unknown words first (gparser.zil:504-507).
+      if (syntaxResult.message !== 'There was no verb in that sentence!') {
+        for (const tok of [...dobjTokens, ...iobjTokens]) {
+          const known =
+            lookupVerb(tok) !== undefined ||
+            DIRECTIONS.has(tok) ||
+            isPreposition(tok) ||
+            isBuzzword(tok) ||
+            ARTICLES.has(tok) ||
+            world.all().some(o =>
+              o.synonyms.some(s => s.toLowerCase() === tok) ||
+              o.adjectives.some(a => a.toLowerCase() === tok),
+            );
+          if (!known) return { kind: 'fail', message: `I don't know the word "${tok}".` };
+        }
+      }
       return { kind: 'fail', message: syntaxResult.message };
     }
 
