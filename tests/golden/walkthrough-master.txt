@@ -15,7 +15,7 @@ front door.
 There is a small mailbox here.
 
 > examine mailbox
-There's nothing special about the small mailbox.
+The small mailbox is closed.
 
 > open mailbox
 Opening the small mailbox reveals a leaflet.
@@ -32,7 +32,7 @@ ZORK is a game of adventure, danger, and low cunning. In it you will explore som
 Closed.
 
 > examine mailbox
-There's nothing special about the small mailbox.
+The small mailbox is closed.
 
 > inventory
 You are carrying:
@@ -89,7 +89,7 @@ The window is slightly ajar, but not enough to allow entry.
 With great effort, you open the window far enough to allow entry.
 
 > examine window
-There's nothing special about the kitchen window.
+The kitchen window is open, but I can't tell what's beyond it.
 
 > south
 South of House
@@ -136,10 +136,14 @@ The glass bottle contains:
 On the table is an elongated brown sack, smelling of hot peppers.
 
 > examine table
-There's nothing special about the kitchen table.
+A bottle is sitting on the table.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
 
 > examine bottle
-There's nothing special about the glass bottle.
+The glass bottle contains:
+  A quantity of water
 
 > take bottle
 Taken.
@@ -200,7 +204,7 @@ Above the trophy case hangs an elvish sword of great antiquity.
 A battery-powered brass lantern is on the trophy case.
 
 > examine trophy case
-There's nothing special about the trophy case.
+The trophy case is empty.
 
 > examine rug
 There's nothing special about the carpet.
@@ -877,7 +881,7 @@ Your score is 35 (total of 350 points), in 158 moves.
 This gives you the rank of Amateur Adventurer.
 
 > examine trophy case
-There's nothing special about the trophy case.
+Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
 
 > diagnose
 You are in perfect health.

@@ -465,9 +465,10 @@ function verbExamine(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Examine what?");
 
-  // V-EXAMINE priority (gverbs.zil:623–630): TEXT prop, then container/door state, then ldesc, then fallback.
+  // V-EXAMINE priority (gverbs.zil:623–630): TEXT prop, then ldesc, then container/door state, then fallback.
   const text = item.props.get('TEXT') ?? item.props.get('text');
   if (typeof text === 'string') return result(text);
+  if (item.ldesc !== undefined) return result(item.ldesc);
 
   // Containers and doors report open/closed state (gverbs.zil:626-628, 865-890).
   if (item.has(Flag.Container) || item.has(Flag.Door)) {
@@ -479,14 +480,17 @@ function verbExamine(ctx: VerbContext): VerbResult {
     if (item.has(Flag.Actor)) return result(vLookInside.nothingSpecialInside);
     if (seeInside(item)) {
       const lines: string[] = [];
-      printCont(item, ctx.player, 0, (s) => lines.push(s));
+      // Surfaces (SURFACEBIT) sit at room depth, so their contents are listed
+      // at level -1 — identical to DESCRIBE-OBJECTS — keeping the same indentation
+      // as the room look. Regular containers use level 0 (gverbs.zil:876-886).
+      const level = item.has(Flag.Surface) ? -1 : 0;
+      printCont(item, ctx.player, level, (s) => lines.push(s));
       if (lines.length === 0) return result(fmt(vLookInside.containerEmpty, item.desc));
       return result(lines.join('\n'));
     }
     return result(fmt(vLookInside.containerClosed, item.desc));
   }
 
-  if (item.ldesc !== undefined) return result(item.ldesc);
   return result(fmt(vExamine.nothingSpecial, item.desc));
 }
 
