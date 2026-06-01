@@ -570,15 +570,37 @@ export function resolveNounPhraseList(
     return { kind: 'ids', ids: id !== undefined ? [id] : [] };
   }
 
+  // Track not-here failures across the group; emit a single batched message when
+  // all members are absent (gmain.zil:98-109).
   const ids: ObjectId[] = [];
+  let notHereCount = 0;
+  let hardFail: ResolveResult | undefined;
+
   for (const group of groups) {
     const r = resolveNounPhrase(group, snap, here, player, world, locBits, undefined, isLit, itRef);
-    if (r.ok === false) return { kind: 'fail', result: r };
+    if (r.ok === false) {
+      if (r.result.kind === 'not-here') {
+        notHereCount++;
+        continue;
+      }
+      hardFail = r;
+      break;
+    }
     if (r.ok === 'pseudo') {
-      return { kind: 'fail', result: { ok: false, result: { kind: 'fail', message: "I don't understand that." } } };
+      hardFail = { ok: false, result: { kind: 'fail', message: "I don't understand that." } };
+      break;
     }
     const id = r.id as ObjectId;
     if (id !== undefined) ids.push(id);
+  }
+
+  if (hardFail !== undefined) return { kind: 'fail', result: hardFail };
+
+  if (notHereCount > 0 && ids.length === 0) {
+    const msg = notHereCount === 1
+      ? "The object that you mentioned isn't here."
+      : "The objects that you mentioned aren't here.";
+    return { kind: 'fail', result: { ok: false, result: { kind: 'fail', message: msg } } };
   }
 
   return { kind: 'ids', ids };
