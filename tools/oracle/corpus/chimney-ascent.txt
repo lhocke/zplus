@@ -1,0 +1,52 @@
+# Chimney-ascent corpus — Zork I oracle harness
+#
+# MECHANIC: Studio chimney ascent (UP-CHIMNEY-FUNCTION).
+#
+# Path uses NO sword (to dodge the unimplemented I-SWORD glow demon, which
+# diverges at the first underground turn). Route to the Studio avoids the
+# Troll Room entirely (Cellar -> south -> East of Chasm -> east -> Gallery ->
+# north -> Studio), so no RNG combat is involved — fully deterministic.
+#
+# Chimney rules exercised, all anchored against dfrotz R119:
+#   1. THREE items (lantern + painting + paper) -> ONE-line denial:
+#        "You can't get up there with what you're carrying."
+#   2. EMPTY-HANDED (lit lamp dropped on floor keeps the room lit) ->
+#        "Going up empty-handed is a bad idea."
+#   3. SUCCESS (lantern + painting, <=2 items, lamp present) -> ascend to
+#      Kitchen; landing shows abbreviated Kitchen view, then full LOOK.
+#
+# Expected: dfrotz R119 output matches our engine's output for every turn.
+
+# --- Into the house, down to the Cellar (no sword taken) ---
+north
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+
+# --- Troll-free route to the Studio via the Gallery ---
+south
+east
+take painting
+north
+
+# --- Chimney case 1: three items -> single-line denial ---
+take paper
+up
+
+# --- Chimney case 2: empty-handed (lit lamp on floor) -> denial ---
+drop paper
+drop painting
+drop lantern
+up
+
+# --- Chimney case 3: lantern + painting -> ascend to Kitchen ---
+take lantern
+take painting
+up
+look

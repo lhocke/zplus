@@ -1,0 +1,30 @@
+# sword-glow corpus — pins the I-SWORD demon divergence (keystone underground blocker)
+#
+# Real Zork: entering a "fearful" location (the Cellar, which is near the troll)
+# with the elvish sword in inventory makes the I-SWORD demon fire and print
+#   "Your sword is glowing with a faint blue glow."
+# appended to the room description on the descent turn.
+#
+# The engine does NOT yet emit this (the I-SWORD demon is unimplemented), so the
+# "down" turn diverges: the engine's Cellar description omits the glow line.
+#
+# This corpus DELIBERATELY takes the sword so the glow triggers — it is the
+# whole point of this net. It is EXPECTED to diverge until I-SWORD is implemented;
+# fixing it unblocks deep underground corpora that otherwise can't carry the sword.
+#
+# Path (driven through dfrotz first, then saved verbatim):
+#   West of House -> North of House -> Behind House -> open window -> Kitchen ->
+#   Living Room -> take sword + lantern -> light lantern -> move rug ->
+#   open trap door -> down into the Cellar (glow fires here).
+
+north
+east
+open window
+west
+west
+take sword
+take lantern
+turn on lantern
+move rug
+open trap door
+down

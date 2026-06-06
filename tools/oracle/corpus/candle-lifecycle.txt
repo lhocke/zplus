@@ -1,0 +1,49 @@
+# candle-lifecycle — candles in the South Temple (Altar).
+#
+# GOAL: examine/take/relight the burning candles and observe whether the
+# I-CANDLES burn-down countdown starts. ZIL CANDLES-FCN (1actions.zil:2343-2345)
+# enables I-CANDLES on the FIRST interaction with the candles via
+# <NOT <FSET? ,CANDLES ,TOUCHBIT>>; the engine's candlesFcn
+# (src/actions/light-sources.ts) only enables I-CANDLES inside the lighting
+# branches, never on first touch — so the candles should NOT begin burning down
+# until extinguished + relit.
+#
+# BLOCKER (see report): the candles live ONLY in SOUTH-TEMPLE, reachable only
+# through the Troll Room, whose E/W exits are gated by killing the troll
+# (1dungeon.zil:1487-1490, "IF TROLL-FLAG"). The engine cannot kill the troll:
+# COMBAT IS UNIMPLEMENTED. KILL/ATTACK exist in vocabulary.json/syntax.json and
+# both map to action "V-ATTACK", but V-ATTACK has NO handler in
+# src/engine/verbs/index.ts, so "attack troll with knife" returns
+# "I don't know how to \"attack\".". (Even were combat built, it is RNG-driven
+# and the engine's seed-42 RNG cannot align with dfrotz's, so the fight would
+# diverge anyway.) The temple is therefore unreachable and the candle mechanic
+# cannot be exercised through gameplay. This corpus drives to the Troll Room and
+# attempts the fight to document precisely where/why the path breaks.
+#
+# Path: West of House -> N -> Behind House -> in -> Living Room (no sword!) ->
+# attic for knife+rope -> down trap door -> Troll Room -> attempt fight.
+
+# --- Surface: enter the house, take the lamp (NOT the sword) ---
+N
+E
+open window
+enter window
+W
+take lamp
+turn on lamp
+# --- Attic: weapon (knife) + rope, both needed deeper underground ---
+E
+up
+take knife
+take rope
+down
+# --- Down the trap door into the dark underground ---
+W
+move rug
+open trap door
+down
+# --- Troll Room: combat is required to proceed toward the temple ---
+N
+kill troll with knife
+kill troll with knife
+kill troll with knife
