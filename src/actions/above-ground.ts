@@ -974,12 +974,9 @@ export const upChimneyFunction: PerRoutine = (ctx) => {
     ctx.tell('Going up empty-handed is a bad idea.');
     return undefined;
   }
+  // At most two things, the lamp among them — no light-source test (1actions.zil:553-565).
   const lamp = ctx.world.get('LAMP');
-  const onlyLamp =
-    (items.length === 1 && items[0] === lamp) ||
-    (items.length === 2 && items.some((i) => i === lamp) && items.every((i) => i === lamp || i.has(Flag.Light)));
-
-  if (onlyLamp || (items.length === 1 && items[0] === lamp)) {
+  if (lamp !== undefined && items.includes(lamp) && items.length <= 2) {
     const trapDoor = ctx.world.get('TRAP-DOOR');
     if (trapDoor !== undefined && !ctx.hasFlag(trapDoor, Flag.Open)) {
       ctx.clearFlag(trapDoor, Flag.Touched);
