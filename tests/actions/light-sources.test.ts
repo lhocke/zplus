@@ -487,19 +487,19 @@ describe('TORCH: burning ivory torch', () => {
 // ---------------------------------------------------------------------------
 
 describe('CANDLES: fuel interrupt events', () => {
-  it('candle-fuel warning fires after the initial 40 turns of burn time', () => {
+  it('candles do not burn down until lit, even sitting in the temple', () => {
     const events = new SimpleEventEmitter();
     const candleEvents: Array<Extract<EngineEvent, { type: 'candle-fuel' }>> = [];
     events.on('candle-fuel', (e) => candleEvents.push(e));
 
-    // Candles start lit in SOUTH-TEMPLE; the interrupt is already running.
+    // I-CANDLES is QUEUE'd at GO() but left disabled (1dungeon.zil:2641 has no
+    // <ENABLE>); merely standing in the temple must not consume the candles.
     const g = createGame({ startRoom: 'SOUTH-TEMPLE', events });
     g.start();
 
-    wait(g, 40); // first stage fires
+    wait(g, 75); // past every candle-table threshold
 
-    expect(candleEvents.length).toBeGreaterThanOrEqual(1);
-    expect(candleEvents[0]!.message).toBe('The candles grow shorter.');
+    expect(candleEvents).toHaveLength(0);
   });
 
   it('extinguishing candles stops the candle-fuel countdown', () => {

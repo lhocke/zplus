@@ -72,8 +72,11 @@ export function createGame(opts: {
     clock.disable('I-LANTERN');
   });
 
-  // I-CANDLES: starts enabled with GO() initial countdown of 40 turns.
-  new CandleInterrupt(clock, events, 40);
+  // I-CANDLES: queued with a 40-turn countdown at GO() but left dormant —
+  // 1dungeon.zil:2641 is <QUEUE> without <ENABLE>. CANDLES-FCN arms it
+  // (enableClock in light-sources.ts) only once the candles are actually lit.
+  const candleInterrupt = new CandleInterrupt(clock, events, 40);
+  candleInterrupt.disable();
 
   events.on('candle-fuel', (e) => {
     if (!e.dark) return;

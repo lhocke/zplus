@@ -217,7 +217,6 @@ There's nothing special about the sword.
 
 > examine door
 The engravings translate to "This space intentionally left blank."
-The candles grow shorter.
 
 > take sword
 Taken.
@@ -282,7 +281,6 @@ You can be killed by a serious wound.
 > move rug
 With a great effort, the rug is moved to one side of the room, revealing
 the dusty cover of a closed trap door.
-The candles are becoming quite short.
 
 > open trap door
 The door reluctantly opens to reveal a rickety staircase descending into
@@ -309,7 +307,6 @@ Cellar
 You are in a dark and damp cellar with a narrow passageway leading
 north, and a crawlway to the south. On the west is the bottom of a
 steep metal ramp which is unclimbable.
-The candles won't last long now.
 
 > score
 Your score is 35 (total of 350 points), in 55 moves.
