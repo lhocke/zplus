@@ -290,8 +290,11 @@ function verbGo(ctx: VerbContext): VerbResult {
         if (dest !== undefined) {
           return enterDest(dest as Room);
         }
+        return result("You can't go that way.", /*moved*/false, /*fatal*/true);
       }
-      return result("You can't go that way.", /*moved*/false, /*fatal*/true);
+      // A resolver that declines the move has already said why (RFALSE in ZIL);
+      // don't pile a generic refusal on top of its own message.
+      return result('', /*moved*/false, /*fatal*/true);
     }
     if (exit.to === undefined) {
       return result(exit.elseMessage ?? "You can't go that way.", /*moved*/false, /*fatal*/true);
