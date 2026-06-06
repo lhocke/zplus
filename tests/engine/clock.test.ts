@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Clock, LanternInterrupt, type ClockEntry } from '../../src/engine/clock';
+import { Clock, LanternInterrupt, CandleInterrupt, type ClockEntry } from '../../src/engine/clock';
 import { SimpleEventEmitter } from '../../src/engine/events';
 import type { EngineEvent } from '../../src/engine/events';
 
@@ -103,122 +103,150 @@ describe('Clock: basic timer', () => {
 // LanternInterrupt — faithfully mirrors I-LANTERN / LAMP-TABLE from
 // 1actions.zil and the initial QUEUE from 1dungeon.zil GO().
 //
-// Fuel timeline (turns from lamp activation):
+// Fuel timeline (turns from lamp activation), as verified against dfrotz:
 //   200  — "The lamp appears a bit dimmer."
 //   300  — "The lamp is definitely dimmer now."
-//   370  — "The lamp is nearly out."  (+ immediate burnout in same turn)
-//   370  — burnout (dark: true)
+//   370  — "The lamp is nearly out."
+//   385  — burnout (dark: true)
 //
-// Test uses a shortened initial tick to keep the test fast.
+// These are the real ZIL/dfrotz turn counts; assert against the oracle, never
+// against whatever the engine happens to do.
 // ---------------------------------------------------------------------------
 
 describe('LanternInterrupt: fuel stages', () => {
-  // Use a short initial tick (10) and override so tests run in <385 advances.
-  // The LAMP_TABLE entries (100/70/15) are fixed, so test against those.
-
-  function makeSetup(initialTicks = 5) {
+  function makeSetup(initialTicks?: number) {
     const emitter = new SimpleEventEmitter();
     const fuelEvents: Array<Extract<EngineEvent, { type: 'lantern-fuel' }>> = [];
     emitter.on('lantern-fuel', (e) => fuelEvents.push(e));
     const clock = new Clock();
-    const lantern = new LanternInterrupt(clock, emitter, initialTicks);
+    const lantern =
+      initialTicks === undefined
+        ? new LanternInterrupt(clock, emitter)
+        : new LanternInterrupt(clock, emitter, initialTicks);
     return { clock, emitter, fuelEvents, lantern };
   }
 
-  it('emits lantern-fuel with remaining counts at each LAMP-TABLE stage', () => {
-    // initialTicks=5 → first fire at turn 5 (dimmer msg, remaining=85)
-    const { clock, fuelEvents } = makeSetup(5);
+  it('warns at the dfrotz turn counts (200 / 300 / 370) and goes dark at 385', () => {
+    const { clock, fuelEvents } = makeSetup();
 
-    for (let i = 0; i < 5; i++) clock.advance();
-    expect(fuelEvents[0]?.message).toContain('a bit dimmer');
-    expect(fuelEvents[0]?.remaining).toBe(85);  // 70 + 15 remain
+    for (let i = 0; i < 199; i++) clock.advance();
+    expect(fuelEvents).toHaveLength(0); // nothing before turn 200
 
-    for (let i = 0; i < 70; i++) clock.advance();
-    expect(fuelEvents[1]?.message).toContain('definitely dimmer');
-    expect(fuelEvents[1]?.remaining).toBe(15);
-
-    // "nearly out" + burnout fire on the same turn (ZIL I-LANTERN behaviour)
-    for (let i = 0; i < 15; i++) clock.advance();
-    expect(fuelEvents[2]?.message).toContain('nearly out');
-    expect(fuelEvents[3]?.dark).toBe(true);
-    expect(fuelEvents[3]?.remaining).toBe(0);
-  });
-
-  it('warning messages match ZIL source strings exactly', () => {
-    const { clock, fuelEvents } = makeSetup(5);
-
-    for (let i = 0; i < 5 + 70 + 15; i++) clock.advance();
-
+    clock.advance(); // turn 200
     expect(fuelEvents[0]!.message).toBe('The lamp appears a bit dimmer.');
+
+    for (let i = 0; i < 100; i++) clock.advance(); // turn 300
     expect(fuelEvents[1]!.message).toBe('The lamp is definitely dimmer now.');
+
+    for (let i = 0; i < 70; i++) clock.advance(); // turn 370
     expect(fuelEvents[2]!.message).toBe('The lamp is nearly out.');
-  });
+    expect(fuelEvents.some((e) => e.dark)).toBe(false); // not dark yet — 15 turns to go
 
-  it('burnout event has dark:true and remaining:0', () => {
-    const { clock, fuelEvents } = makeSetup(5);
-
-    for (let i = 0; i < 5 + 70 + 15; i++) clock.advance();
-
+    for (let i = 0; i < 15; i++) clock.advance(); // turn 385
     const burnout = fuelEvents.find((e) => e.dark);
-    expect(burnout).toBeDefined();
-    expect(burnout?.remaining).toBe(0);
     expect(burnout?.dark).toBe(true);
+    expect(burnout?.remaining).toBe(0);
   });
 
-  it('does not emit any more events after burnout', () => {
-    const { clock, fuelEvents } = makeSetup(5);
+  it('remaining reports the turns of light left at each warning', () => {
+    const { clock, fuelEvents } = makeSetup();
+    for (let i = 0; i < 385; i++) clock.advance();
 
-    // Run well past all stages.
+    expect(fuelEvents[0]!.remaining).toBe(185); // 100 + 70 + 15 still to burn
+    expect(fuelEvents[1]!.remaining).toBe(85); // 70 + 15
+    expect(fuelEvents[2]!.remaining).toBe(15); // 15
+  });
+
+  it('emits exactly four events: three warnings then one burnout', () => {
+    const { clock, fuelEvents } = makeSetup();
     for (let i = 0; i < 500; i++) clock.advance();
 
-    // Exactly 4 events: dimmer, dimmer now, nearly out, burnout.
-    expect(fuelEvents.length).toBe(4);
+    expect(fuelEvents).toHaveLength(4);
+    expect(fuelEvents.filter((e) => e.dark)).toHaveLength(1);
   });
 
   it('can be disabled to freeze fuel drain (frotz invocation support)', () => {
-    const { clock, fuelEvents, lantern } = makeSetup(10);
+    const { clock, fuelEvents, lantern } = makeSetup();
 
-    // Advance 5 turns, then disable.
-    for (let i = 0; i < 5; i++) clock.advance();
+    for (let i = 0; i < 100; i++) clock.advance();
     lantern.disable();
-
-    // Advance many more turns — nothing should fire.
     for (let i = 0; i < 500; i++) clock.advance();
 
     expect(fuelEvents).toHaveLength(0);
   });
 
-  it('re-enabling after freeze continues drain from remaining position', () => {
-    const { clock, fuelEvents, lantern } = makeSetup(10);
+  it('re-enabling after a freeze resumes from the same position', () => {
+    const { clock, fuelEvents, lantern } = makeSetup();
 
-    // Advance 5 of the initial 10 turns, freeze, then thaw and complete.
-    for (let i = 0; i < 5; i++) clock.advance();
+    for (let i = 0; i < 100; i++) clock.advance(); // 100 of the initial 200
     lantern.disable();
-    for (let i = 0; i < 100; i++) clock.advance(); // frozen — no events
+    for (let i = 0; i < 500; i++) clock.advance(); // frozen — no events
     lantern.enable();
-    for (let i = 0; i < 5; i++) clock.advance(); // completes the initial 10
+    for (let i = 0; i < 100; i++) clock.advance(); // completes the initial 200
 
-    // First warning fires only now.
-    expect(fuelEvents.length).toBe(1);
-    expect(fuelEvents[0]!.remaining).toBe(85);
+    expect(fuelEvents).toHaveLength(1);
+    expect(fuelEvents[0]!.remaining).toBe(185);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CandleInterrupt — mirrors I-CANDLES / CANDLE-TABLE from 1actions.zil.
+// The candles are QUEUE'd disabled at GO() and only burn once lit, so these
+// tests drive the interrupt directly (enabled by construction) to cover the
+// firing schedule.
+//
+// Fuel timeline (turns of active burning):
+//   40  — "The candles grow shorter."
+//   60  — "The candles are becoming quite short."
+//   70  — "The candles won't last long now."
+//   75  — burnout (dark: true)
+// ---------------------------------------------------------------------------
+
+describe('CandleInterrupt: fuel stages', () => {
+  function makeSetup() {
+    const emitter = new SimpleEventEmitter();
+    const candleEvents: Array<Extract<EngineEvent, { type: 'candle-fuel' }>> = [];
+    emitter.on('candle-fuel', (e) => candleEvents.push(e));
+    const clock = new Clock();
+    const candles = new CandleInterrupt(clock, emitter);
+    return { clock, candleEvents, candles };
+  }
+
+  it('warns at the ZIL turn counts (40 / 60 / 70) and goes dark at 75', () => {
+    const { clock, candleEvents } = makeSetup();
+
+    for (let i = 0; i < 39; i++) clock.advance();
+    expect(candleEvents).toHaveLength(0);
+
+    clock.advance(); // turn 40
+    expect(candleEvents[0]!.message).toBe('The candles grow shorter.');
+
+    for (let i = 0; i < 20; i++) clock.advance(); // turn 60
+    expect(candleEvents[1]!.message).toBe('The candles are becoming quite short.');
+
+    for (let i = 0; i < 10; i++) clock.advance(); // turn 70
+    expect(candleEvents[2]!.message).toBe("The candles won't last long now.");
+
+    for (let i = 0; i < 5; i++) clock.advance(); // turn 75
+    const burnout = candleEvents.find((e) => e.dark);
+    expect(burnout?.dark).toBe(true);
+    expect(burnout?.remaining).toBe(0);
   });
 
-  it('default initial tick matches GO() in 1dungeon.zil (200 turns)', () => {
-    const emitter = new SimpleEventEmitter();
-    const fuelEvents: Array<Extract<EngineEvent, { type: 'lantern-fuel' }>> = [];
-    emitter.on('lantern-fuel', (e) => fuelEvents.push(e));
-    const clock = new Clock();
-    new LanternInterrupt(clock, emitter); // no override → 200
+  it('remaining reports the turns of light left at each warning', () => {
+    const { clock, candleEvents } = makeSetup();
+    for (let i = 0; i < 75; i++) clock.advance();
 
-    // No warning before 200 turns.
-    for (let i = 0; i < 199; i++) clock.advance();
-    expect(fuelEvents).toHaveLength(0);
+    expect(candleEvents[0]!.remaining).toBe(35); // 20 + 10 + 5
+    expect(candleEvents[1]!.remaining).toBe(15); // 10 + 5
+    expect(candleEvents[2]!.remaining).toBe(5); // 5
+  });
 
-    // First warning fires at exactly 200.
-    clock.advance();
-    expect(fuelEvents).toHaveLength(1);
-    expect(fuelEvents[0]!.message).toContain('a bit dimmer');
-    expect(fuelEvents[0]!.remaining).toBe(85);
+  it('stays dormant while disabled (queued at GO but not yet lit)', () => {
+    const { clock, candleEvents, candles } = makeSetup();
+    candles.disable();
+    for (let i = 0; i < 200; i++) clock.advance();
+    expect(candleEvents).toHaveLength(0);
   });
 });
 

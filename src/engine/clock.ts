@@ -191,11 +191,16 @@ class FuelInterrupt {
   private onFire(ctx: ClockTickContext): boolean {
     const stage = this.table[this.tableIndex]!;
 
-    // EVENT CHANNEL: state mutation (flags / HUD) — preserve this as-is.
-    const remaining = this.remainingTurns() - stage.ticks;
+    // The trailing zero-tick row is the burnout sentinel — the source is spent.
+    if (stage.ticks === 0) {
+      this.emitter.emit({ type: this.eventType, remaining: 0, dark: true });
+      return false;
+    }
+
+    // EVENT CHANNEL: state mutation (flags / HUD). remaining = turns of light left.
     this.emitter.emit({
       type: this.eventType,
-      remaining,
+      remaining: this.remainingTurns(),
       message: stage.message || undefined,
       dark: false,
     });
@@ -205,17 +210,10 @@ class FuelInterrupt {
       ctx.tell(stage.message);
     }
 
+    // Re-queue with THIS stage's own gap before the next warning — ZIL re-queues
+    // <GET .TBL 0> (the current row), not the following one (1actions.zil:2323).
+    this.entry.turnsLeft = stage.ticks;
     this.tableIndex++;
-    const next = this.table[this.tableIndex];
-
-    if (!next || next.ticks === 0) {
-      // ZIL: I-LANTERN re-queues with 0, then calls LIGHT-INT with tick=0,
-      // which fires the burnout message immediately in the same invocation.
-      this.emitter.emit({ type: this.eventType, remaining: 0, dark: true });
-      return false;
-    }
-
-    this.entry.turnsLeft = next.ticks;
     return true;
   }
 }
@@ -260,7 +258,8 @@ const CANDLE_TABLE: ReadonlyArray<FuelStage> = [
 const CANDLE_INITIAL_TICKS = 40;
 
 // CandleInterrupt — faithful TypeScript translation of I-CANDLES from
-// 1actions.zil.  Starts enabled; CANDLES-FCN handler disables on extinguish.
+// 1actions.zil.  Queued dormant at GO() (1dungeon.zil:2641 is <QUEUE> without
+// <ENABLE>); CANDLES-FCN arms it on lighting and disables it on extinguish.
 export class CandleInterrupt extends FuelInterrupt {
   constructor(clock: Clock, emitter: EventEmitter, initialTicks = CANDLE_INITIAL_TICKS) {
     super(clock, emitter, CANDLE_TABLE, 'candle-fuel', 'I-CANDLES', initialTicks);
