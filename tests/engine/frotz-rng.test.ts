@@ -14,3 +14,11 @@ describe('FrotzRng: standard seeded LCG (seed >= 1000)', () => {
     expect(got).toEqual([2, 97, 22, 78, 17, 87]);
   });
 });
+
+describe('FrotzRng: special sequential mode (seed < 1000)', () => {
+  it('emits a rising sequence for a small seed', () => {
+    const r = new FrotzRng(42);
+    const got = Array.from({ length: 6 }, () => r.random(100));
+    expect(got).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+});

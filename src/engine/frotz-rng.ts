@@ -7,15 +7,35 @@ const MASK64 = (1n << 64n) - 1n;
 
 export class FrotzRng {
   private A = 1n;
+  private interval = 0; // > 0 => special sequential mode
+  private counter = 0;
 
   constructor(seed: number) {
-    this.A = BigInt(seed) & MASK64;
+    this.seedRandom(seed);
+  }
+
+  // Mirrors Frotz seed_random(): entropy / sequential / standard branches.
+  seedRandom(value: number): void {
+    if (value === 0) {            // entropy mode — unpredictable in Frotz; parity not needed
+      this.A = 1n; this.interval = 0;
+    } else if (value < 1000) {    // special sequential mode (rising test sequence)
+      this.counter = 0; this.interval = value;
+    } else {                       // standard seeded LCG
+      this.A = BigInt(value) & MASK64; this.interval = 0;
+    }
   }
 
   /** @random N -> integer in [1, N]. */
   random(range: number): number {
-    this.A = (MULT * this.A + 1n) & MASK64;
-    const result = Number((this.A >> 16n) & 0x7fffn);
+    let result: number;
+    if (this.interval !== 0) {
+      result = this.counter;
+      this.counter += 1;
+      if (this.counter === this.interval) this.counter = 0;
+    } else {
+      this.A = (MULT * this.A + 1n) & MASK64;
+      result = Number((this.A >> 16n) & 0x7fffn);
+    }
     return (result % range) + 1;
   }
 }
