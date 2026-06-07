@@ -31,6 +31,12 @@ export interface DfrotzRunOptions {
    * Timeout for the dfrotz process in milliseconds.  Defaults to 15000.
    */
   timeoutMs?: number;
+  /**
+   * RNG seed to pass via dfrotz -s.  When provided, dfrotz uses a seeded LCG
+   * so runs are reproducible.  Omit (or pass undefined) for the default
+   * entropy-seeded behaviour.
+   */
+  seed?: number;
 }
 
 /**
@@ -63,9 +69,13 @@ export function runDfrotz(
 
   // spawnSync with an explicit argument array — no shell involved, so no
   // command-injection surface even if command strings contain shell chars.
+  const args = ['-p', '-w', String(width)];
+  if (opts.seed !== undefined) args.push('-s', String(opts.seed));
+  args.push(storyPath);
+
   const result = spawnSync(
     'dfrotz',
-    ['-p', '-w', String(width), storyPath],
+    args,
     {
       input: stdinPayload,
       encoding: 'utf8',
