@@ -28,7 +28,7 @@ import { Clock } from '../../src/engine/clock';
 import { SimpleEventEmitter } from '../../src/engine/events';
 import type { Rng } from '../../src/engine/game';
 
-const rng: Rng = { next: () => 0 };
+const rng: Rng = { next: () => 0, prob: (base) => base > 0 };
 
 // ---------------------------------------------------------------------------
 // World builder: a lit room with a lamp (the takeable item for IT-binding)

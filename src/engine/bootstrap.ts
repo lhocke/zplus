@@ -8,6 +8,7 @@ import { Clock, LanternInterrupt, CandleInterrupt } from './clock.js';
 import type { ClockEntry } from './clock.js';
 import { SimpleEventEmitter } from './events.js';
 import { Game } from './game.js';
+import type { Rng as RngInterface } from './game.js';
 import { lookupAction } from '../actions/registry.js';
 import { iMatchTick } from '../actions/light-sources.js';
 
@@ -24,6 +25,7 @@ export function createGame(opts: {
   startRoom?: ObjectId;
   seed?: number;
   events?: EventEmitter;
+  rng?: RngInterface;
 } = {}): Game {
   const startRoomId = opts.startRoom ?? DEFAULT_START_ROOM;
   const seed = opts.seed ?? DEFAULT_SEED;
@@ -100,6 +102,6 @@ export function createGame(opts: {
   };
   clock.schedule(iMatchEntry);
 
-  const rng = new Rng(seed);
+  const rng = opts.rng ?? new Rng(seed);
   return new Game(world, { rng, clock, events });
 }

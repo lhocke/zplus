@@ -28,7 +28,7 @@ import { M_END, M_BEG } from '../../src/engine/messages';
 import type { ActionContext } from '../../src/domain/game-object';
 import type { Rng } from '../../src/engine/game';
 
-const rng: Rng = { next: () => 0 };
+const rng: Rng = { next: () => 0, prob: (base) => base > 0 };
 
 // ---------------------------------------------------------------------------
 // Probe room builder

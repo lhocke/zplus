@@ -17,7 +17,8 @@ import type { Rng } from '../../src/engine/game';
 
 function makeRng(): Rng {
   let n = 0;
-  return { next: () => (n++ % 100) / 100 };
+  let nextVal = () => (n++ % 100) / 100;
+  return { next: nextVal, prob: (base) => nextVal() * 100 < base };
 }
 
 // ---------------------------------------------------------------------------

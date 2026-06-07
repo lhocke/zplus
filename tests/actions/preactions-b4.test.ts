@@ -37,7 +37,7 @@ import type { ActionContext } from '../../src/domain/game-object';
 import type { Rng } from '../../src/engine/game';
 import { lookupPreAction } from '../../src/actions/registry';
 
-const rng: Rng = { next: () => 0 };
+const rng: Rng = { next: () => 0, prob: (base) => base > 0 };
 
 // ---------------------------------------------------------------------------
 // Helpers

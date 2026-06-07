@@ -23,7 +23,7 @@ import { SimpleEventEmitter } from '../../src/engine/events';
 import { createGame } from '../../src/engine/bootstrap';
 import type { Rng } from '../../src/engine/game';
 
-const rng: Rng = { next: () => 0 };
+const rng: Rng = { next: () => 0, prob: (base) => base > 0 };
 
 function buildMailboxWorld(): Game {
   const room = new Room('WEST', 'West of House', { ldesc: 'You are west of a white house.' });

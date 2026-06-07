@@ -23,4 +23,9 @@ export class Rng {
   nextInt(n: number): number {
     return Math.floor(this.next() * n);
   }
+
+  /** Matches the previous inline engine logic exactly (golden-preserving). */
+  prob(base: number): boolean {
+    return this.next() * 100 < base;
+  }
 }

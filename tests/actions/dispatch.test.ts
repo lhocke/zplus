@@ -23,7 +23,7 @@ import { SimpleEventEmitter } from '../../src/engine/events';
 import { M_BEG } from '../../src/engine/messages';
 import type { Rng } from '../../src/engine/game';
 
-const rng: Rng = { next: () => 0 };
+const rng: Rng = { next: () => 0, prob: (base) => base > 0 };
 
 describe('action dispatch — MAZE-DIODES (PER routine)', () => {
   it('is a one-way passage that warns and lands deterministically in MAZE-4', () => {
@@ -31,7 +31,7 @@ describe('action dispatch — MAZE-DIODES (PER routine)', () => {
     // MAZE-DIODES routing can be verified without interference from the grue gate.
     const g = createGame({ startRoom: 'MAZE-2', seed: 999999 });
     // Override rng to never trigger grue (rng.next()=0.99 → 99 ≥ 80 → no grue).
-    (g as unknown as { rng: Rng }).rng = { next: () => 0.99 };
+    (g as unknown as { rng: Rng }).rng = { next: () => 0.99, prob: (base) => 0.99 * 100 < base };
     const r = g.turn('down');
 
     // The no-return warning from <ROUTINE MAZE-DIODES> (1actions.zil:898).

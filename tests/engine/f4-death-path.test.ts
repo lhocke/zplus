@@ -38,12 +38,12 @@ import { Rng } from '../../src/engine/rng.js';
  * PROB 80: true when rng.next()*100 < 80, i.e. rng.next() < 0.8.
  * This stub always returns 0.5 → 50 < 80 → grue triggers.
  */
-const grueRng = (): Rng => ({ next: () => 0.5 } as unknown as Rng);
+const grueRng = (): Rng => ({ next: () => 0.5, prob: (base: number) => 0.5 * 100 < base } as unknown as Rng);
 
 /**
  * Seeded RNG that always avoids the grue (next() = 0.99 → 99 ≥ 80 → no grue).
  */
-const safeRng = (): Rng => ({ next: () => 0.99 } as unknown as Rng);
+const safeRng = (): Rng => ({ next: () => 0.99, prob: (base: number) => 0.99 * 100 < base } as unknown as Rng);
 
 // ---------------------------------------------------------------------------
 // B. jigsUp via game.ts + bootstrap

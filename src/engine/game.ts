@@ -49,6 +49,8 @@ export interface GameView {
 export interface Rng {
   /** Returns a pseudo-random float in [0, 1). */
   next(): number;
+  /** ZIL <PROB base>: true with probability ~base/100. */
+  prob(base: number): boolean;
 }
 
 const INTRO =
@@ -241,7 +243,7 @@ export class Game {
           setGlobal: (n, v = true) => this.flags.set(n, v),
           jigsUp: (desc) => this.jigsUp(desc, (text) => handled.push(text)),
           alwaysLit: this.alwaysLit,
-          prob: (pct) => this.rng.next() * 100 < pct,
+          prob: (pct) => this.rng.prob(pct),
           clearContinuation: () => this.parser.clearContinuation(),
         }, cmd.action);
 

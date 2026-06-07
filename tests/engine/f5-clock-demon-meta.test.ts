@@ -369,7 +369,7 @@ describe('F5(b+c) integration: clock interrupt text appears in turn output', () 
     player.moveTo(room);
 
     const world = World.fromObjects([room, player]);
-    const game = new Game(world, { rng: { next: () => 0 }, clock, events: emitter });
+    const game = new Game(world, { rng: { next: () => 0, prob: (base) => base > 0 }, clock, events: emitter });
     game.start();
 
     game.turn('look'); // turn 1: turnsLeft → 1, no fire
