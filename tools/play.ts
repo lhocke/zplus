@@ -21,10 +21,20 @@ const logPath = `playtest-logs/session-${stamp}.log`;
 const record = (s: string) => appendFileSync(logPath, s + '\n');
 
 const game = createGame();
+
+// The shipped UI will carry the real status bar; this bare REPL otherwise hides
+// score/moves, which makes treasure and scoring playtests impossible to read.
+const status = () => {
+  const v = game.view();
+  return `        [ ${v.hereName} · score ${v.score}/${v.maxScore} · moves ${v.moves} ]`;
+};
+
 const intro = game.start();
-process.stdout.write(intro + '\n\n');
+process.stdout.write(intro + '\n');
+process.stdout.write(status() + '\n\n');
 record(`=== playtest ${stamp} ===`);
 record(intro);
+record(status());
 record('');
 
 const rl = createInterface({ input: process.stdin, output: process.stdout, prompt: '> ' });
@@ -44,6 +54,8 @@ rl.on('line', (line) => {
       process.stdout.write(output + '\n');
       record(output);
     }
+    process.stdout.write(status() + '\n');
+    record(status());
     record('');
   }
   process.stdout.write('\n');
