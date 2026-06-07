@@ -38,4 +38,13 @@ export class FrotzRng {
     }
     return (result % range) + 1;
   }
+
+  /** ZIL <PROB base> (no loser arg) = <G? base <RANDOM 100>>. */
+  prob(base: number): boolean {
+    return base > this.random(100);
+  }
+
+  /** Rng-interface compliance (not used on the grue path). */
+  next(): number { return (this.random(32768) - 1) / 32768; }
+  nextInt(n: number): number { return this.random(n) - 1; }
 }
