@@ -322,14 +322,22 @@ export function mountShell(app: HTMLElement): void {
   const session = createSession({ sink });
 
   // ── Theme management ────────────────────────────────────────────────────
+  // switcherContainer must be declared before applyTheme is called at boot —
+  // applyTheme references it to sync button state.
+  const savedTheme = localStorage.getItem('zork-theme');
+  const currentTheme: ThemeName = isThemeName(savedTheme) ? savedTheme : DEFAULT_THEME;
+
+  // Theme switcher built early so applyTheme can reference it.
+  const themeLabel = el('div', 'text-xs text-[var(--zork-accent)] uppercase tracking-wider');
+  themeLabel.textContent = 'Theme';
+  const switcherContainer = buildThemeSwitcher((name) => applyTheme(name));
+
   function applyTheme(name: ThemeName) {
     document.documentElement.setAttribute('data-theme', name);
     localStorage.setItem('zork-theme', name);
-    if (switcherContainer) syncThemeBtns(switcherContainer, name);
+    syncThemeBtns(switcherContainer, name);
   }
 
-  const savedTheme = localStorage.getItem('zork-theme');
-  const currentTheme: ThemeName = isThemeName(savedTheme) ? savedTheme : DEFAULT_THEME;
   applyTheme(currentTheme);
 
   // ── Build components ────────────────────────────────────────────────────
@@ -357,10 +365,7 @@ export function mountShell(app: HTMLElement): void {
   const sidebarStatus = el('div', 'text-xs font-mono text-[var(--zork-fg)] border-b border-[var(--zork-accent)] pb-2');
   sidebarStatus.textContent = 'Status';
 
-  // Theme switcher.
-  const themeLabel = el('div', 'text-xs text-[var(--zork-accent)] uppercase tracking-wider');
-  themeLabel.textContent = 'Theme';
-  const switcherContainer = buildThemeSwitcher(applyTheme);
+  // (themeLabel and switcherContainer are built above — before applyTheme.)
   syncThemeBtns(switcherContainer, currentTheme);
 
   // Map area.
