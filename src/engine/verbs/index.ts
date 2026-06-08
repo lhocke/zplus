@@ -593,13 +593,28 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
 // Troll target → the in-world sign (signals content boundary, not a bug).
 // Any other target → brief in-spirit deflection (no villains exist pre-troll).
 // Does NOT set TROLL-FLAG; the exit wall stays up.
+
+// Sign text exported so the pre-parse troll-attack guard in game.ts can reuse it
+// without duplicating the copy (both code paths are PHASE-1 TEMPORARY).
+export const TROLL_SIGN_TEXT =
+  'The troll, bored, produces a hand-lettered sign and holds it up:\n' +
+  '"THANK YOU FOR PLAYING. FURTHER ADVENTURES ARE UNDER DEVELOPMENT."\n' +
+  'He seems disinclined to fight today.';
+
+// Detects bare attack/kill-troll input before the parser sees it.
+// game.ts calls this to intercept the case where GWIM (needing a weapon iobj)
+// would otherwise orphan-prompt or fail the held-check before V-ATTACK dispatches.
+// Named-weapon forms ("attack troll with sword") bypass this and reach verbAttackPhase1
+// through the normal V-ATTACK parser path.
+// PHASE-1 TEMPORARY — removed when real combat replaces verbAttackPhase1.
+const BARE_TROLL_ATTACK = /^\s*(attack|kill|fight)\s+(the\s+)?troll\s*$/i;
+export function isBareAttackTroll(input: string): boolean {
+  return BARE_TROLL_ATTACK.test(input);
+}
+
 function verbAttackPhase1(ctx: VerbContext): VerbResult {
   if (ctx.dobj?.id === 'TROLL') {
-    return result(
-      'The troll, bored, produces a hand-lettered sign and holds it up:\n' +
-      '"THANK YOU FOR PLAYING. FURTHER ADVENTURES ARE UNDER DEVELOPMENT."\n' +
-      'He seems disinclined to fight today.',
-    );
+    return result(TROLL_SIGN_TEXT);
   }
   return result("Violence isn't the answer to this one.");
 }

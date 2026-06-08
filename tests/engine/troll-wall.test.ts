@@ -2,12 +2,12 @@
  * Phase-1 troll-wall tests (spec §6, test strategy §9 §6).
  *
  * Covers:
- *   - attack/kill troll yields the sign (not an error)
- *   - attack troll with sword also yields the sign (GWIM iobj path)
+ *   - attack/kill troll yields the sign (not an error) — real world state (troll holds axe)
+ *   - attack troll with sword also yields the sign (GWIM iobj path via V-ATTACK)
  *   - attack non-troll yields graceful deflection
  *   - examine troll output unchanged vs golden
  *   - east/west blocked by authentic fend-off, TROLL-FLAG stays unset
- *   - PHASE-1 TEMPORARY marker present in verbs source
+ *   - PHASE-1 TEMPORARY marker present in verbs source and game.ts
  *   - Phase-2 guard: test fails if marker coexists with a Phase-2 combat module
  */
 
@@ -26,9 +26,8 @@ const EXAMINE_TROLL_LINE =
   'A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.';
 const FEND_OFF = 'The troll fends you off with a menacing gesture.';
 
-// Give the player a lit lantern and the sword; remove the axe from scope so
-// GWIM finds exactly one weapon and bare "attack troll" / "kill troll" resolve.
-// The axe is a child of the troll — moving it to a far room keeps scope clean.
+// Real-world state: lit lantern + sword held; troll keeps the axe (its normal child).
+// This is what a Phase-1 player actually encounters when they reach the Troll Room.
 function trollRoom() {
   const g = createGame({ startRoom: 'TROLL-ROOM' });
   g.start();
@@ -37,27 +36,54 @@ function trollRoom() {
   type Obj = { set(f: unknown): void; moveTo(d: unknown): void };
   const lamp  = w.get('LAMP')  as Obj | undefined;
   const sword = w.get('SWORD') as Obj | undefined;
-  const axe   = w.get('AXE')   as Obj | undefined;
-  const away  = w.get('CELLAR') as object | undefined; // out of troll-room scope
+  // axe intentionally NOT relocated — troll holds it (real world state)
   if (lamp  && player) { lamp.moveTo(player);  lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
   if (sword && player) { sword.moveTo(player); }
-  if (axe   && away)  { axe.moveTo(away); }   // pull axe out of GWIM candidate set
+  return g;
+}
+
+// No-sword variant: player arrives with only a lamp (no held weapon).
+// GWIM would auto-select the troll's axe, fail the held-check.
+// The pre-parse intercept must still deliver the sign.
+function trollRoomNoSword() {
+  const g = createGame({ startRoom: 'TROLL-ROOM' });
+  g.start();
+  const w = (g as unknown as { world: { get(id: string): unknown } }).world;
+  const player = w.get('PLAYER') as object | undefined;
+  type Obj = { set(f: unknown): void; moveTo(d: unknown): void };
+  const lamp = w.get('LAMP') as Obj | undefined;
+  if (lamp && player) { lamp.moveTo(player); lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
   return g;
 }
 
 describe('attack/kill troll → sign (not an error)', () => {
-  it('attack troll', () => {
+  it('attack troll (sword + troll axe in scope — real world state)', () => {
+    // Two WEAPONBIT objects in scope: held sword + troll's axe.
+    // GWIM can't pick one → orphan prompt without the pre-parse intercept.
     const r = trollRoom().turn('attack troll');
     expect(r.output).toContain(SIGN_FRAGMENT);
   });
 
-  it('kill troll', () => {
+  it('kill troll (sword + troll axe in scope — real world state)', () => {
     const r = trollRoom().turn('kill troll');
     expect(r.output).toContain(SIGN_FRAGMENT);
   });
 
-  it('attack troll with sword (iobj path)', () => {
-    // trollRoom() gives the player the sword; "with sword" explicitly names it.
+  it('attack troll (only troll axe in scope, no held weapon — real world state)', () => {
+    // Single WEAPONBIT in scope (troll's axe), but player doesn't hold it.
+    // GWIM auto-selects the axe, held-check fails without the pre-parse intercept.
+    const r = trollRoomNoSword().turn('attack troll');
+    expect(r.output).toContain(SIGN_FRAGMENT);
+  });
+
+  it('kill troll (only troll axe in scope, no held weapon — real world state)', () => {
+    const r = trollRoomNoSword().turn('kill troll');
+    expect(r.output).toContain(SIGN_FRAGMENT);
+  });
+
+  it('attack troll with sword (explicit iobj path via V-ATTACK)', () => {
+    // Player holds sword → ncn=2, named weapon → FULL MATCH on numObjects=2 syntax →
+    // verbAttackPhase1 dispatched → sign.
     const r = trollRoom().turn('attack troll with sword');
     expect(r.output).toContain(SIGN_FRAGMENT);
   });
@@ -114,6 +140,12 @@ describe('Phase-1 marker and Phase-2 guard', () => {
   it('PHASE-1 TEMPORARY marker present in verbs/index.ts', () => {
     const verbsPath = path.join(REPO_ROOT, 'src/engine/verbs/index.ts');
     const src = fs.readFileSync(verbsPath, 'utf8');
+    expect(src).toContain('PHASE-1 TEMPORARY');
+  });
+
+  it('PHASE-1 TEMPORARY marker present in game.ts (pre-parse intercept)', () => {
+    const gamePath = path.join(REPO_ROOT, 'src/engine/game.ts');
+    const src = fs.readFileSync(gamePath, 'utf8');
     expect(src).toContain('PHASE-1 TEMPORARY');
   });
 
