@@ -78,6 +78,8 @@ async function createGithubIssue(
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
       'Content-Type': 'application/json',
+      // GitHub's REST API rejects requests without a User-Agent (403).
+      'User-Agent': 'zork-playtest-feedback',
     },
     body: JSON.stringify({ title, body, labels }),
   });
@@ -207,8 +209,11 @@ export async function handleFeedback(request: Request, env: Env): Promise<Respon
       issueBody,
       labels,
     );
-  } catch {
-    return new Response('Failed to create issue', { status: 502 });
+  } catch (e) {
+    // Surface GitHub's status (e.g. "GitHub API error: 403") — not sensitive,
+    // and the only way to diagnose a deploy-time auth/scope problem.
+    const detail = e instanceof Error ? e.message : 'unknown error';
+    return new Response(`Failed to create issue: ${detail}`, { status: 502 });
   }
 
   return new Response(JSON.stringify({ ok: true }), {
