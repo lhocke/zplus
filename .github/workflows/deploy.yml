@@ -1,4 +1,4 @@
-# Manual-only deploy to Cloudflare Pages project "zork-3w8".
+# Manual-only deploy to Cloudflare Pages project "zork" (zork-3w8.pages.dev).
 #
 # Required GitHub Actions repo secrets (Settings → Secrets → Actions):
 #   CLOUDFLARE_API_TOKEN  — a Cloudflare API token with "Cloudflare Pages:Edit" permission
@@ -46,5 +46,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=zork-3w8
+          command: pages deploy dist --project-name=zork
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}

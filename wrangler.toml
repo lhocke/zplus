@@ -1,7 +1,7 @@
-# Cloudflare Pages project. Deploy target: zork-3w8.
+# Cloudflare Pages project "zork" (deploys to zork-3w8.pages.dev).
 # Build output: dist/   Functions: functions/ (auto-detected by Pages).
 # R2 binding is deferred (billing) — /api/log degrades to 204 without it.
-name = "zork-3w8"
+name = "zork"
 pages_build_output_dir = "./dist"
 compatibility_date = "2026-06-07"
 
