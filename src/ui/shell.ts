@@ -274,17 +274,145 @@ function buildStatusBar(): { element: HTMLElement; update: (hereName: string, sc
   return { element, update };
 }
 
-// ── Map (rough fog-of-war) ────────────────────────────────────────────────────
+// ── Map (box-drawing spatial fog-of-war) ─────────────────────────────────────
+
+// Exported for unit testing.
+export function renderMapGrid(
+  visited: ReadonlySet<string>,
+  current: string | null,
+  rooms: ReadonlyMap<string, { id: string; label: string; col: number; row: number }>,
+  connections: ReadonlyArray<{ a: string; b: string; reciprocal: boolean }>,
+): string {
+  if (visited.size === 0) return '';
+
+  // Each room cell occupies CELL_W chars wide × CELL_H chars tall on the grid.
+  // Connections occupy the gaps between cells (CON_W / CON_H).
+  const CELL_W = 9; // inner label width; outer box = CELL_W+2 (for │ borders)
+  const CELL_H = 3; // top border + label row + bottom border
+  const CON_W = 3;  // columns between adjacent room columns
+  const CON_H = 1;  // rows between adjacent room rows
+
+  // Determine bounding box of visible rooms (grid coords).
+  let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+  for (const id of visited) {
+    const r = rooms.get(id);
+    if (!r) continue;
+    if (r.col < minCol) minCol = r.col;
+    if (r.col > maxCol) maxCol = r.col;
+    if (r.row < minRow) minRow = r.row;
+    if (r.row > maxRow) maxRow = r.row;
+  }
+  if (!isFinite(minCol)) return '';
+
+  // Character grid dimensions.
+  const cols = maxCol - minCol + 1;
+  const rows = maxRow - minRow + 1;
+  const W = cols * (CELL_W + 2) + (cols - 1) * CON_W;
+  const H = rows * CELL_H + (rows - 1) * CON_H;
+
+  // Fill with spaces.
+  const grid: string[][] = Array.from({ length: H }, () => Array(W).fill(' '));
+
+  function put(cx: number, cy: number, ch: string) {
+    if (cy >= 0 && cy < H && cx >= 0 && cx < W) grid[cy]![cx] = ch;
+  }
+  function putStr(cx: number, cy: number, s: string) {
+    for (let i = 0; i < s.length; i++) put(cx + i, cy, s[i]!);
+  }
+
+  // Grid coord → pixel offset (top-left corner of outer cell box).
+  function cellOrigin(col: number, row: number): [number, number] {
+    const x = (col - minCol) * (CELL_W + 2 + CON_W);
+    const y = (row - minRow) * (CELL_H + CON_H);
+    return [x, y];
+  }
+
+  // Draw a room box (CELL_W+2 wide, CELL_H tall).
+  function drawRoom(id: string, col: number, row: number, isCurrent: boolean) {
+    const [ox, oy] = cellOrigin(col, row);
+    const w = CELL_W + 2;
+    // Top border
+    put(ox, oy, '┌');
+    putStr(ox + 1, oy, '─'.repeat(CELL_W));
+    put(ox + w - 1, oy, '┐');
+    // Bottom border
+    put(ox, oy + 2, '└');
+    putStr(ox + 1, oy + 2, '─'.repeat(CELL_W));
+    put(ox + w - 1, oy + 2, '┘');
+    // Side borders
+    put(ox, oy + 1, '│');
+    put(ox + w - 1, oy + 1, '│');
+    // Label (truncated + current indicator)
+    const room = rooms.get(id);
+    const rawLabel = room?.label ?? id;
+    const label = isCurrent ? `▶${rawLabel}` : rawLabel;
+    const truncated = label.slice(0, CELL_W).padEnd(CELL_W);
+    putStr(ox + 1, oy + 1, truncated);
+  }
+
+  // Draw connection between two adjacent (or near) rooms.
+  // col/row delta determines direction; we only handle orthogonal adjacency.
+  function drawConnection(
+    colA: number, rowA: number,
+    colB: number, rowB: number,
+    reciprocal: boolean,
+  ) {
+    const dc = colB - colA;
+    const dr = rowB - rowA;
+
+    if (Math.abs(dc) > 1 || Math.abs(dr) > 1) return; // skip non-adjacent
+    if (dc !== 0 && dr !== 0) return; // skip diagonal in grid (not needed here)
+
+    const [ox, oy] = cellOrigin(colA, rowA);
+    const w = CELL_W + 2;
+
+    if (dc === 1 && dr === 0) {
+      // Horizontal: A is left, B is right. Fill the CON_W gap.
+      const gapX = ox + w;
+      const cy = oy + 1; // label row
+      if (reciprocal) {
+        putStr(gapX, cy, '───');
+      } else {
+        putStr(gapX, cy, '╌╌╌');
+      }
+    } else if (dc === -1 && dr === 0) {
+      // A is right of B — handled when we process the (B,A) pair.
+    } else if (dc === 0 && dr === 1) {
+      // Vertical: A is above, B is below. Fill the CON_H gap (1 row).
+      const cx = ox + Math.floor(w / 2);
+      const gy = oy + CELL_H; // row after bottom border
+      put(cx, gy, reciprocal ? '│' : '╎');
+    } else if (dc === 0 && dr === -1) {
+      // A is below B — handled when we process the (B,A) pair.
+    }
+  }
+
+  // Pass 1: draw connections (so room boxes overdraw them at junctions).
+  for (const c of connections) {
+    const ra = rooms.get(c.a);
+    const rb = rooms.get(c.b);
+    if (!ra || !rb) continue;
+    if (!visited.has(c.a) || !visited.has(c.b)) continue;
+    drawConnection(ra.col, ra.row, rb.col, rb.row, c.reciprocal);
+    drawConnection(rb.col, rb.row, ra.col, ra.row, c.reciprocal);
+  }
+
+  // Pass 2: draw room boxes (overdraw connection stubs if they overlap box borders).
+  for (const id of visited) {
+    const r = rooms.get(id);
+    if (!r) continue;
+    drawRoom(id, r.col, r.row, id === current);
+  }
+
+  return grid.map(row => row.join('')).join('\n');
+}
 
 function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => void } {
-  const element = el('div', 'text-xs font-mono text-[var(--zork-fg)] py-2');
+  const element = el('div', 'text-xs font-mono text-[var(--zork-fg)] py-2 overflow-x-auto');
 
-  // Lazy-load map layout so the module can be tested without a bundler.
   let _layoutPromise: Promise<typeof import('./map-layout.js')> | null = null;
   function getLayout() {
-    if (!_layoutPromise) {
-      _layoutPromise = import('./map-layout.js');
-    }
+    if (!_layoutPromise) _layoutPromise = import('./map-layout.js');
     return _layoutPromise;
   }
 
@@ -298,15 +426,8 @@ function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => vo
       return;
     }
 
-    // Simple text-based map: list visited rooms, highlight current.
-    const lines: string[] = ['── MAP ──'];
-    for (const [id, room] of layout.ROOM_BY_ID) {
-      if (visited.has(id)) {
-        const marker = id === current ? '▶' : ' ';
-        lines.push(`${marker} ${room.label}`);
-      }
-    }
-    element.textContent = lines.join('\n');
+    const text = renderMapGrid(visited, current, layout.ROOM_BY_ID, layout.ROOM_CONNECTIONS);
+    element.textContent = text || '';
   }
 
   return { element, refresh };

@@ -13,6 +13,11 @@ export interface RoomLayout {
 export interface RoomConnection {
   a: string;
   b: string;
+  // Reciprocal: true iff the direction from A→B and the return direction from B→A
+  // are compass opposites (n/s, e/w, ne/sw, nw/se, u/d) per rooms.json exits.
+  // Derived by inspection of rooms.json exit tables; non-reciprocal links are
+  // one-way or disorienting (e.g. the intentionally maze-like forest connections).
+  reciprocal: boolean;
 }
 
 // Grid is roughly 7 wide × 9 tall.
@@ -54,35 +59,35 @@ export const ROOM_LAYOUT: RoomLayout[] = [
 // Only geographic connections are listed; resurrection teleports are not.
 export const ROOM_CONNECTIONS: RoomConnection[] = [
   // House exterior ring
-  { a: 'WEST-OF-HOUSE',   b: 'NORTH-OF-HOUSE' },
-  { a: 'NORTH-OF-HOUSE',  b: 'EAST-OF-HOUSE' },
-  { a: 'EAST-OF-HOUSE',   b: 'SOUTH-OF-HOUSE' },
-  { a: 'SOUTH-OF-HOUSE',  b: 'WEST-OF-HOUSE' },
+  { a: 'WEST-OF-HOUSE',   b: 'NORTH-OF-HOUSE',  reciprocal: true  },
+  { a: 'NORTH-OF-HOUSE',  b: 'EAST-OF-HOUSE',   reciprocal: true  },
+  { a: 'EAST-OF-HOUSE',   b: 'SOUTH-OF-HOUSE',  reciprocal: true  },
+  { a: 'SOUTH-OF-HOUSE',  b: 'WEST-OF-HOUSE',   reciprocal: true  },
   // Forest / outdoor
-  { a: 'WEST-OF-HOUSE',   b: 'FOREST-1' },
-  { a: 'NORTH-OF-HOUSE',  b: 'PATH' },
-  { a: 'EAST-OF-HOUSE',   b: 'CLEARING' },
-  { a: 'SOUTH-OF-HOUSE',  b: 'FOREST-3' },
-  { a: 'FOREST-1',        b: 'PATH' },
-  { a: 'FOREST-1',        b: 'FOREST-3' },
-  { a: 'FOREST-1',        b: 'GRATING-CLEARING' },
-  { a: 'PATH',            b: 'FOREST-2' },
-  { a: 'PATH',            b: 'GRATING-CLEARING' },
-  { a: 'PATH',            b: 'UP-A-TREE' },
-  { a: 'FOREST-2',        b: 'MOUNTAINS' },
-  { a: 'FOREST-2',        b: 'CLEARING' },
-  { a: 'FOREST-3',        b: 'CLEARING' },
+  { a: 'WEST-OF-HOUSE',   b: 'FOREST-1',        reciprocal: false }, // W→FOREST-1 but FOREST-1 has no east exit back to W-OF-HOUSE
+  { a: 'NORTH-OF-HOUSE',  b: 'PATH',            reciprocal: true  },
+  { a: 'EAST-OF-HOUSE',   b: 'CLEARING',        reciprocal: true  },
+  { a: 'SOUTH-OF-HOUSE',  b: 'FOREST-3',        reciprocal: false }, // S→FOREST-3 south; FOREST-3→S-OF-HOUSE is nw (not opposite)
+  { a: 'FOREST-1',        b: 'PATH',            reciprocal: true  },
+  { a: 'FOREST-1',        b: 'FOREST-3',        reciprocal: false }, // FOREST-1 south→FOREST-3; FOREST-3 west→FOREST-1 (not opposite)
+  { a: 'FOREST-1',        b: 'GRATING-CLEARING',reciprocal: false }, // FOREST-1 north→GRATING; GRATING west→FOREST-1 (not opposite)
+  { a: 'PATH',            b: 'FOREST-2',        reciprocal: true  },
+  { a: 'PATH',            b: 'GRATING-CLEARING',reciprocal: true  },
+  { a: 'PATH',            b: 'UP-A-TREE',       reciprocal: true  },
+  { a: 'FOREST-2',        b: 'MOUNTAINS',       reciprocal: true  },
+  { a: 'FOREST-2',        b: 'CLEARING',        reciprocal: true  },
+  { a: 'FOREST-3',        b: 'CLEARING',        reciprocal: true  },
   // House interior
-  { a: 'EAST-OF-HOUSE',  b: 'KITCHEN' },
-  { a: 'KITCHEN',        b: 'LIVING-ROOM' },
-  { a: 'KITCHEN',        b: 'ATTIC' },
-  { a: 'KITCHEN',        b: 'STUDIO' },  // down to Studio chimney
+  { a: 'EAST-OF-HOUSE',  b: 'KITCHEN',         reciprocal: true  },
+  { a: 'KITCHEN',        b: 'LIVING-ROOM',      reciprocal: true  },
+  { a: 'KITCHEN',        b: 'ATTIC',            reciprocal: true  },
+  { a: 'KITCHEN',        b: 'STUDIO',           reciprocal: false }, // KITCHEN down→STUDIO blocked; STUDIO up→KITCHEN via chimney function
   // Underground
-  { a: 'LIVING-ROOM',    b: 'CELLAR' },  // trapdoor
-  { a: 'CELLAR',         b: 'TROLL-ROOM' },
-  { a: 'CELLAR',         b: 'EAST-OF-CHASM' },
-  { a: 'EAST-OF-CHASM',  b: 'GALLERY' },
-  { a: 'GALLERY',        b: 'STUDIO' },
+  { a: 'LIVING-ROOM',    b: 'CELLAR',           reciprocal: false }, // trapdoor: LIVING-ROOM down via TRAP-DOOR-EXIT (per); CELLAR up→LIVING-ROOM ifFlag
+  { a: 'CELLAR',         b: 'TROLL-ROOM',       reciprocal: true  },
+  { a: 'CELLAR',         b: 'EAST-OF-CHASM',    reciprocal: true  },
+  { a: 'EAST-OF-CHASM',  b: 'GALLERY',          reciprocal: true  },
+  { a: 'GALLERY',        b: 'STUDIO',           reciprocal: true  },
 ];
 
 // Indexed for O(1) lookup by id.

@@ -21,6 +21,11 @@
   --zork-bg: #0a0a0a;
   --zork-accent: #66ff66;
   --zork-font: 'Courier New', Courier, monospace;
+  --zork-desk: #0d0d0d;
+  --zork-bezel: #1a1a1a;
+  --zork-bezel-border: #2a2a2a;
+  --zork-frame-shadow: 0 0 0 3px #1a1a1a, 0 0 40px rgba(51, 255, 51, 0.18), 0 0 80px rgba(51, 255, 51, 0.06);
+  --zork-frame-radius: 10px;
 }
 
 /* Literary — soft off-white page, serif */
@@ -29,6 +34,11 @@
   --zork-bg: #f5f0e8;
   --zork-accent: #2c4a7c;
   --zork-font: 'Georgia', 'Times New Roman', serif;
+  --zork-desk: #d0c8b8;
+  --zork-bezel: #c8bfae;
+  --zork-bezel-border: #a89880;
+  --zork-frame-shadow: 0 0 0 3px #c8bfae, 0 4px 24px rgba(0,0,0,0.18);
+  --zork-frame-radius: 4px;
 }
 
 /* Parchment — aged warm tones */
@@ -37,21 +47,81 @@
   --zork-bg: #e8dcc8;
   --zork-accent: #7a4a1e;
   --zork-font: 'Palatino Linotype', Palatino, 'Book Antiqua', serif;
+  --zork-desk: #c4a882;
+  --zork-bezel: #bfa070;
+  --zork-bezel-border: #8c6030;
+  --zork-frame-shadow: 0 0 0 3px #bfa070, 0 4px 24px rgba(0,0,0,0.22);
+  --zork-frame-radius: 4px;
 }
 
-/* Apply theme vars to the document */
-html, body {
-  background-color: var(--zork-bg);
-  color: var(--zork-fg);
-  font-family: var(--zork-font);
+/* Desk — the area outside the framed screen */
+html {
+  background-color: var(--zork-desk);
   height: 100%;
   margin: 0;
 }
 
-#app {
+body {
+  background-color: var(--zork-desk);
+  color: var(--zork-fg);
+  font-family: var(--zork-font);
   height: 100%;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* Framed screen — bounded CRT monitor / page panel */
+#app {
+  width: 100%;
+  max-width: 1100px;
+  height: 100%;
+  max-height: 88vh;
+  min-height: 400px;
   display: flex;
   flex-direction: column;
+  background-color: var(--zork-bg);
+  color: var(--zork-fg);
+  border: 2px solid var(--zork-bezel-border);
+  border-radius: var(--zork-frame-radius);
+  box-shadow: var(--zork-frame-shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+/* CRT-only effects: scanline overlay + inner vignette */
+[data-theme="crt"] #app::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.12) 2px,
+      rgba(0, 0, 0, 0.12) 4px
+    );
+  z-index: 10;
+  border-radius: var(--zork-frame-radius);
+}
+
+[data-theme="crt"] #app::after {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+  z-index: 11;
+  border-radius: var(--zork-frame-radius);
 }
 
 /* Loading state — shown until the real shell mounts */
