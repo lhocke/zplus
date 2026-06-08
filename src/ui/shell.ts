@@ -13,6 +13,37 @@ import { isThemeName, DEFAULT_THEME, type ThemeName } from './themes.js';
 import { shapeFeedbackPayload, collectBrowserInfo } from './feedback.js';
 import { ALLOWED_CATEGORIES } from '../../functions/lib/sanitize.js';
 
+// Turnstile global — injected by the CF script after lazy load.
+declare const turnstile: {
+  render(container: HTMLElement | string, options: {
+    sitekey: string;
+    callback?: (token: string) => void;
+    'error-callback'?: (code: string) => void;
+    theme?: 'auto' | 'light' | 'dark';
+    size?: 'normal' | 'flexible' | 'compact';
+  }): string;
+  getResponse(widgetId: string): string | undefined;
+  reset(widgetId: string): void;
+};
+
+const TURNSTILE_SITEKEY = '0x4AAAAAADgm7Z4BgxQT7f5W';
+const TURNSTILE_SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+
+/** Load the Turnstile script once; resolves when the global is ready. */
+let turnstileReady: Promise<void> | null = null;
+function loadTurnstile(): Promise<void> {
+  if (turnstileReady) return turnstileReady;
+  turnstileReady = new Promise((resolve) => {
+    if (typeof turnstile !== 'undefined') { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = TURNSTILE_SCRIPT;
+    s.defer = true;
+    s.onload = () => resolve();
+    document.head.appendChild(s);
+  });
+  return turnstileReady;
+}
+
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -632,6 +663,11 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
   // Honeypot — hidden from real users; filled honeypot → rejected by server.
   const hpField = el('input', 'hidden', { type: 'text', autocomplete: 'off', tabindex: '-1', 'aria-hidden': 'true' });
 
+  // Turnstile widget container — rendered lazily when the dialog first opens.
+  const tsContainer = el('div', 'mb-3');
+  let tsWidgetId: string | null = null;
+  let tsToken = '';
+
   // Submit button.
   const submitBtn = el('button', [
     'px-3 py-1 rounded border border-[var(--zork-accent)]',
@@ -644,6 +680,11 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
     const message = (msgArea as HTMLTextAreaElement).value.trim();
     if (!message) {
       status.textContent = 'Message is required.';
+      return;
+    }
+
+    if (!tsToken) {
+      status.textContent = 'Please complete the challenge above.';
       return;
     }
 
@@ -661,7 +702,7 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
         category: catSelect.value as typeof ALLOWED_CATEGORIES[number],
         message,
         sessionId: getSessionId(),
-        turnstileToken: '', // Turnstile widget injects this at G2; empty string accepted in test mode
+        turnstileToken: tsToken,
         context: (ctxArea as HTMLTextAreaElement).value.trim() || undefined,
         browserInfo,
         hp: (hpField as HTMLInputElement).value || undefined,
@@ -685,6 +726,9 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
     } finally {
       submitBtn.removeAttribute('disabled');
       submitBtn.textContent = 'Send';
+      // Tokens are single-use — reset so next submit gets a fresh one.
+      tsToken = '';
+      if (tsWidgetId !== null) turnstile.reset(tsWidgetId);
     }
   });
 
@@ -707,12 +751,28 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
   panel.appendChild(browserDisclosure);
   panel.appendChild(disclosure);
   panel.appendChild(hpField);
+  panel.appendChild(tsContainer);
   panel.appendChild(status);
   panel.appendChild(submitBtn);
   outer.appendChild(panel);
   overlay.appendChild(outer);
 
-  function open() { overlay.classList.remove('hidden'); }
+  function open() {
+    overlay.classList.remove('hidden');
+    // Lazy-load the Turnstile script on first open; render widget once ready.
+    loadTurnstile().then(() => {
+      if (tsWidgetId === null) {
+        tsToken = '';
+        tsWidgetId = turnstile.render(tsContainer, {
+          sitekey: TURNSTILE_SITEKEY,
+          callback: (token: string) => { tsToken = token; },
+          'error-callback': () => { tsToken = ''; },
+          theme: 'auto',
+          size: 'flexible',
+        });
+      }
+    });
+  }
   return { open, element: overlay };
 }
 
