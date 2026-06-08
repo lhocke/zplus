@@ -17,6 +17,13 @@ export interface SessionStart {
   sessionId: string;
   buildId: string;
   ts: string;
+  // Initial game state — carried so FileSink can write the banner block that
+  // tools/play.ts writes on startup (intro output + first status line).
+  output: string;
+  hereName: string;
+  score: number;
+  maxScore: number;
+  moves: number;
 }
 
 export interface TurnEvent {
@@ -27,8 +34,10 @@ export interface TurnEvent {
   command: string;     // raw input
   output: string;      // engine output, verbatim
   score: number;
+  maxScore: number;
   moves: number;
   room: string;        // view().here (ObjectId)
+  hereName: string;    // view().hereName (display name for status line)
   ts: string;          // ISO 8601
 }
 
@@ -85,11 +94,12 @@ export class FileSink implements PlaytestSink {
     let text: string;
 
     if (e.type === 'start') {
-      // Header written immediately so partial sessions have a timestamp.
-      text = `=== playtest ${e.ts} ===\n`;
+      // Header + intro banner + initial status, matching tools/play.ts:35-38.
+      const status = statusLine(e.hereName, e.score, e.maxScore, e.moves);
+      text = `=== playtest ${e.ts} ===\n${e.output}\n${status}\n\n`;
     } else if (e.type === 'turn') {
       // "> command\n<output>\n<status>\n\n"
-      const status = statusLine(e.room, e.score, 350, e.moves);
+      const status = statusLine(e.hereName, e.score, e.maxScore, e.moves);
       text = `> ${e.command}\n${e.output}\n${status}\n\n`;
     } else {
       // SessionEnd: write terminator and mark closed.

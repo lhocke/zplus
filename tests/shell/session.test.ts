@@ -18,7 +18,10 @@ function captureSink(): PlaytestSink & { events: PlaytestEvent[] } {
 
 describe('nullSink', () => {
   it('emit never throws', () => {
-    expect(() => nullSink.emit({ type: 'start', sessionId: 'x', buildId: 'b', ts: 't' })).not.toThrow();
+    expect(() => nullSink.emit({
+      type: 'start', sessionId: 'x', buildId: 'b', ts: 't',
+      output: '', hereName: 'Test Room', score: 0, maxScore: 350, moves: 0,
+    })).not.toThrow();
   });
 
   it('close never throws', () => {
@@ -103,6 +106,25 @@ describe('createSession lifecycle', () => {
     session.close();
     const end = sink.events.find(e => e.type === 'end');
     expect(end).toMatchObject({ type: 'end', lastTurn: 2 });
+  });
+
+  it('empty submit("") emits no TurnEvent, no crash', () => {
+    const sink = captureSink();
+    const session = createSession({ sink });
+    session.start();
+    const out = session.submit('');
+    expect(out).toBe('');
+    const turns = sink.events.filter(e => e.type === 'turn');
+    expect(turns).toHaveLength(0);
+  });
+
+  it('whitespace-only submit emits no TurnEvent, no crash', () => {
+    const sink = captureSink();
+    const session = createSession({ sink });
+    session.start();
+    session.submit('   ');
+    const turns = sink.events.filter(e => e.type === 'turn');
+    expect(turns).toHaveLength(0);
   });
 
   it('submit returns engine output string', () => {
@@ -253,7 +275,11 @@ describe('FileSink', () => {
     const { FileSink } = await import('../../src/shell/sink.js');
     const sink = new FileSink(logsDir);
 
-    sink.emit({ type: 'start', sessionId: 'test-sid', buildId: 'abc', ts: '2026-01-01T00:00:00Z' });
+    sink.emit({
+      type: 'start', sessionId: 'test-sid', buildId: 'abc', ts: '2026-01-01T00:00:00Z',
+      output: 'ZORK I banner text here.',
+      hereName: 'West of House', score: 0, maxScore: 350, moves: 0,
+    });
     sink.emit({
       type: 'turn',
       sessionId: 'test-sid',
@@ -262,8 +288,10 @@ describe('FileSink', () => {
       command: 'look',
       output: 'West of House\nYou are standing.',
       score: 0,
+      maxScore: 350,
       moves: 1,
       room: 'WEST-OF-HOUSE',
+      hereName: 'West of House',
       ts: '2026-01-01T00:00:01Z',
     });
     sink.emit({ type: 'end', sessionId: 'test-sid', ts: '2026-01-01T00:00:02Z', lastTurn: 1 });
@@ -276,6 +304,9 @@ describe('FileSink', () => {
     // Should NOT be JSON.
     expect(() => JSON.parse(content)).toThrow();
 
+    // Should have the banner block right after the header.
+    expect(content).toContain('ZORK I banner text here.');
+
     // Should have the command line.
     expect(content).toContain('> look');
 
@@ -283,8 +314,9 @@ describe('FileSink', () => {
     expect(content).toContain('West of House');
     expect(content).toContain('You are standing.');
 
-    // Should have the status line format.
-    expect(content).toMatch(/\[.*WEST-OF-HOUSE.*0.*350.*1.*\]/);
+    // Status lines use the display name (hereName), not the ObjectId.
+    expect(content).toMatch(/\[.*West of House.*0.*350.*1.*\]/);
+    expect(content).not.toMatch(/WEST-OF-HOUSE/);
 
     // Should have a terminator on close.
     expect(content).toContain('=== end ===');
@@ -295,7 +327,10 @@ describe('FileSink', () => {
     // after each emit, we read the file and verify content is present.
     const { FileSink } = await import('../../src/shell/sink.js');
     const sink = new FileSink(logsDir);
-    sink.emit({ type: 'start', sessionId: 'sid', buildId: 'b', ts: '2026-01-01T00:00:00Z' });
+    sink.emit({
+      type: 'start', sessionId: 'sid', buildId: 'b', ts: '2026-01-01T00:00:00Z',
+      output: 'Banner.', hereName: 'West of House', score: 0, maxScore: 350, moves: 0,
+    });
 
     const [logFile] = readdirSync(logsDir);
     const contentAfterStart = readFileSync(join(logsDir, logFile!), 'utf8');
@@ -309,8 +344,10 @@ describe('FileSink', () => {
       command: 'go north',
       output: 'North of House',
       score: 0,
+      maxScore: 350,
       moves: 1,
       room: 'NORTH-OF-HOUSE',
+      hereName: 'North of House',
       ts: '2026-01-01T00:00:01Z',
     });
 

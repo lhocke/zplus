@@ -13,7 +13,7 @@ import {
   resetSingSong,
 } from '../actions/above-ground.js';
 import { resetMatchCount } from '../actions/light-sources.js';
-import type { PlaytestSink, TurnEvent } from './sink.js';
+import type { PlaytestSink, SessionStart, TurnEvent } from './sink.js';
 
 const DEFAULT_SEED = 42;
 
@@ -58,12 +58,26 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number }): Game
   return {
     start(): string {
       const output = game.start();
-      sink.emit({ type: 'start', sessionId, buildId, ts: new Date().toISOString() });
+      const v = game.view();
+      const event: SessionStart = {
+        type: 'start',
+        sessionId,
+        buildId,
+        ts: new Date().toISOString(),
+        output,
+        hereName: v.hereName,
+        score: v.score,
+        maxScore: v.maxScore,
+        moves: v.moves,
+      };
+      sink.emit(event);
       return output;
     },
 
     submit(command: string): string {
       if (closed) return '';
+      // Empty/blank input: no-op per spec §9 ("Empty submit('') emits no TurnEvent").
+      if (command.trim() === '') return '';
       const { output } = game.turn(command);
       turnCount++;
       const v = game.view();
@@ -75,8 +89,10 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number }): Game
         command,
         output,
         score: v.score,
+        maxScore: v.maxScore,
         moves: v.moves,
         room: v.here,
+        hereName: v.hereName,
         ts: new Date().toISOString(),
       };
       sink.emit(event);
