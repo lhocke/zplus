@@ -4,7 +4,7 @@
 // Layout (§3):
 //   Desktop (≥lg): two columns — terminal left, sidebar right.
 //   Mobile (<lg): terminal full-width; sidebar behind drawer toggle.
-//   Plain Tailwind throughout. Swap seams are marked // TAILWIND-PLUS SWAP SEAM.
+//   Plain Tailwind throughout; Tailwind Plus components adapted into TS.
 
 import { createSession } from '../shell/session.js';
 import { HttpSink } from '../shell/http-sink.js';
@@ -316,13 +316,15 @@ function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => vo
 // ── Known-issues dialog ───────────────────────────────────────────────────────
 
 // Tailwind Plus: modal dialog with dismiss button (04-simple-with-dismiss-button.html)
-function buildKnownIssuesDialog(): { open: () => void; element: HTMLDialogElement } {
-  const dialog = document.createElement('dialog');
-  dialog.id = 'known-issues-dialog';
-  dialog.className = [
-    'fixed inset-0 z-50 size-auto max-h-none max-w-none overflow-y-auto',
-    'bg-transparent backdrop:bg-black/70 p-0 m-0',
-  ].join(' ');
+// Uses div+classList toggle (not native <dialog>) so it works in jsdom and any env
+// that doesn't implement HTMLDialogElement.showModal.
+function buildKnownIssuesDialog(): { open: () => void; element: HTMLElement } {
+  // Outer overlay — backdrop + centering shell. Hidden until open().
+  const overlay = el('div', [
+    'hidden fixed inset-0 z-50 overflow-y-auto',
+    'bg-black/70',
+  ].join(' '), { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'known-issues-title' });
+  overlay.id = 'known-issues-dialog';
 
   const outer = el('div', 'flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0');
 
@@ -377,35 +379,40 @@ function buildKnownIssuesDialog(): { open: () => void; element: HTMLDialogElemen
     list.appendChild(li);
   }
 
-  closeBtn.addEventListener('click', () => dialog.close());
-  dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  function closeDialog() { overlay.classList.add('hidden'); }
+
+  closeBtn.addEventListener('click', closeDialog);
+  // Backdrop click (outside the panel) closes.
+  overlay.addEventListener('click', (e) => { if (e.target === overlay || e.target === outer) closeDialog(); });
+  // Escape key closes.
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeDialog(); });
 
   panel.appendChild(closeBtnWrap);
   panel.appendChild(title);
   panel.appendChild(list);
   outer.appendChild(panel);
-  dialog.appendChild(outer);
-  dialog.setAttribute('aria-labelledby', 'known-issues-title');
+  overlay.appendChild(outer);
 
-  function open() { dialog.showModal(); }
+  function open() { overlay.classList.remove('hidden'); }
 
-  return { open, element: dialog };
+  return { open, element: overlay };
 }
 
 // ── Feedback form dialog ──────────────────────────────────────────────────────
 
 // Tailwind Plus: modal dialog with dismiss button (04-simple-with-dismiss-button.html)
+// Uses div+classList toggle (not native <dialog>) so it works in jsdom and any env
+// that doesn't implement HTMLDialogElement.showModal.
 function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => ThemeName): {
   open: () => void;
-  element: HTMLDialogElement;
+  element: HTMLElement;
 } {
-  const dialog = document.createElement('dialog');
-  dialog.id = 'feedback-dialog';
-  dialog.className = [
-    'fixed inset-0 z-50 size-auto max-h-none max-w-none overflow-y-auto',
-    'bg-transparent backdrop:bg-black/70 p-0 m-0',
-  ].join(' ');
-  dialog.setAttribute('aria-labelledby', 'feedback-dialog-title');
+  // Outer overlay — backdrop + centering shell. Hidden until open().
+  const overlay = el('div', [
+    'hidden fixed inset-0 z-50 overflow-y-auto',
+    'bg-black/70',
+  ].join(' '), { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'feedback-dialog-title' });
+  overlay.id = 'feedback-dialog';
 
   const outer = el('div', 'flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0');
 
@@ -560,8 +567,13 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
     }
   });
 
-  fbCloseBtn.addEventListener('click', () => dialog.close());
-  dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  function closeFeedback() { overlay.classList.add('hidden'); }
+
+  fbCloseBtn.addEventListener('click', closeFeedback);
+  // Backdrop click (outside the panel) closes.
+  overlay.addEventListener('click', (e) => { if (e.target === overlay || e.target === outer) closeFeedback(); });
+  // Escape key closes.
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeFeedback(); });
 
   panel.appendChild(fbCloseBtnWrap);
   panel.appendChild(title);
@@ -577,10 +589,10 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
   panel.appendChild(status);
   panel.appendChild(submitBtn);
   outer.appendChild(panel);
-  dialog.appendChild(outer);
+  overlay.appendChild(outer);
 
-  function open() { dialog.showModal(); }
-  return { open, element: dialog };
+  function open() { overlay.classList.remove('hidden'); }
+  return { open, element: overlay };
 }
 
 // ── Shell mount ───────────────────────────────────────────────────────────────
