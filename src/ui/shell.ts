@@ -28,20 +28,23 @@ function el<K extends keyof HTMLElementTagNameMap>(
 
 // ── Theme switcher ────────────────────────────────────────────────────────────
 
-// TAILWIND-PLUS SWAP SEAM — theme switcher (segmented-control)
-// This plain-Tailwind radio group swaps to a Tailwind Plus SegmentedControl
-// once vendor/tailwind-plus/ lands. Component boundary: buildThemeSwitcher().
+// Tailwind Plus: button group (01-basic.html)
 function buildThemeSwitcher(onSwitch: (t: ThemeName) => void): HTMLElement {
-  const wrap = el('div', 'flex gap-1');
+  const wrap = el('span', 'isolate inline-flex rounded-md shadow-xs');
   const names: ThemeName[] = ['crt', 'literary', 'parchment'];
   const labels: Record<ThemeName, string> = { crt: 'CRT', literary: 'Literary', parchment: 'Parchment' };
 
-  for (const name of names) {
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i]!;
+    const isFirst = i === 0;
+    const isLast = i === names.length - 1;
     const btn = el('button', [
-      'theme-btn px-2 py-1 text-xs rounded border',
-      'border-[var(--zork-accent)] text-[var(--zork-fg)]',
-      'hover:bg-[var(--zork-accent)] hover:text-[var(--zork-bg)]',
+      'theme-btn relative inline-flex items-center px-3 py-1.5 text-xs font-semibold',
+      'border border-[var(--zork-accent)] text-[var(--zork-fg)] bg-[var(--zork-bg)]',
+      'hover:bg-[var(--zork-accent)] hover:text-[var(--zork-bg)] focus:z-10',
       'data-[active=true]:bg-[var(--zork-accent)] data-[active=true]:text-[var(--zork-bg)]',
+      isFirst ? 'rounded-l-md' : '-ml-px',
+      isLast ? 'rounded-r-md' : '',
     ].join(' '), { 'data-theme-target': name });
     btn.textContent = labels[name];
     btn.addEventListener('click', () => onSwitch(name));
@@ -59,49 +62,99 @@ function syncThemeBtns(container: HTMLElement, active: ThemeName) {
 
 // ── Drawer (mobile sidebar) ───────────────────────────────────────────────────
 
-// TAILWIND-PLUS SWAP SEAM — slide-over drawer (mobile)
-// This builds a minimal drawer that slides in from the right. Swaps to a
-// Tailwind Plus SlideOver component as a localized drop-in.
+// Tailwind Plus: slide-over with background overlay (02-with-background-overlay.html)
 function buildDrawer(content: HTMLElement): { overlay: HTMLElement; toggle: HTMLElement } {
-  const overlay = el('div', [
-    'fixed inset-0 z-40 flex justify-end',
-    'pointer-events-none',
-  ].join(' '));
+  // Outer container — always in DOM, toggled via aria-hidden + pointer-events.
+  const overlay = el('div', 'fixed inset-0 z-40 overflow-hidden');
   overlay.setAttribute('aria-hidden', 'true');
 
-  const panel = el('div', [
-    'w-72 h-full bg-[var(--zork-bg)] border-l border-[var(--zork-accent)]',
-    'translate-x-full transition-transform duration-300 ease-in-out',
-    'overflow-y-auto p-4 pointer-events-auto',
+  // Backdrop — fades in/out.
+  const backdrop = el('div', [
+    'absolute inset-0 bg-gray-500/75',
+    'transition-opacity duration-500 ease-in-out opacity-0',
   ].join(' '));
-  panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-label', 'Sidebar');
-  panel.appendChild(content);
-  overlay.appendChild(panel);
+  overlay.appendChild(backdrop);
 
-  // Close button inside the drawer.
-  const closeBtn = el('button', [
-    'mb-4 text-xs text-[var(--zork-accent)] underline',
+  // Slide panel wrapper.
+  const panelWrap = el('div', 'absolute inset-0 pl-10 flex justify-end');
+
+  const panel = el('div', [
+    'ml-auto flex h-full max-w-xs w-full',
+    'transform transition duration-500 ease-in-out translate-x-full',
   ].join(' '));
-  closeBtn.textContent = '✕ close';
-  closeBtn.addEventListener('click', () => closeDrawer());
-  panel.insertBefore(closeBtn, panel.firstChild);
+
+  // Panel inner — styled with Tailwind Plus drawer look, zork theme vars for colors.
+  const panelInner = el('div', [
+    'relative flex h-full flex-col overflow-y-auto',
+    'bg-[var(--zork-bg)] border-l border-[var(--zork-accent)] py-6 shadow-xl',
+  ].join(' '));
+  panelInner.setAttribute('role', 'dialog');
+  panelInner.setAttribute('aria-label', 'Sidebar');
+
+  // Header row with close button (inside panel, per 02 variant).
+  const header = el('div', 'px-4 sm:px-6');
+  const headerRow = el('div', 'flex items-start justify-between');
+  const drawerTitle = el('h2', 'text-base font-semibold text-[var(--zork-accent)]');
+  drawerTitle.textContent = 'Menu';
+  const closeBtnWrap = el('div', 'ml-3 flex h-7 items-center');
+  const closeBtn = el('button', [
+    'relative rounded-md text-[var(--zork-accent)] hover:opacity-75',
+    'focus-visible:outline-2 focus-visible:outline-offset-2',
+  ].join(' '), { type: 'button', 'aria-label': 'Close panel' });
+  const closeSr = el('span', 'absolute -inset-2.5');
+  const closeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  closeIcon.setAttribute('viewBox', '0 0 24 24');
+  closeIcon.setAttribute('fill', 'none');
+  closeIcon.setAttribute('stroke', 'currentColor');
+  closeIcon.setAttribute('stroke-width', '1.5');
+  closeIcon.setAttribute('aria-hidden', 'true');
+  closeIcon.setAttribute('class', 'size-6');
+  const closePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  closePath.setAttribute('d', 'M6 18 18 6M6 6l12 12');
+  closePath.setAttribute('stroke-linecap', 'round');
+  closePath.setAttribute('stroke-linejoin', 'round');
+  closeIcon.appendChild(closePath);
+  closeBtn.appendChild(closeSr);
+  closeBtn.appendChild(closeIcon);
+  closeBtnWrap.appendChild(closeBtn);
+  headerRow.appendChild(drawerTitle);
+  headerRow.appendChild(closeBtnWrap);
+  header.appendChild(headerRow);
+
+  // Content area.
+  const contentWrap = el('div', 'relative mt-6 flex-1 px-4 sm:px-6');
+  contentWrap.appendChild(content);
+
+  panelInner.appendChild(header);
+  panelInner.appendChild(contentWrap);
+  panel.appendChild(panelInner);
+  panelWrap.appendChild(panel);
+  overlay.appendChild(panelWrap);
 
   // Backdrop click closes.
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeDrawer();
-  });
+  backdrop.addEventListener('click', () => closeDrawer());
 
   function openDrawer() {
     overlay.setAttribute('aria-hidden', 'false');
-    overlay.classList.remove('pointer-events-none');
+    overlay.style.pointerEvents = '';
+    backdrop.classList.add('opacity-100');
+    backdrop.classList.remove('opacity-0');
     panel.classList.remove('translate-x-full');
   }
   function closeDrawer() {
-    overlay.setAttribute('aria-hidden', 'true');
-    overlay.classList.add('pointer-events-none');
+    backdrop.classList.remove('opacity-100');
+    backdrop.classList.add('opacity-0');
     panel.classList.add('translate-x-full');
+    // Wait for slide transition before hiding pointer events.
+    overlay.addEventListener('transitionend', () => {
+      overlay.setAttribute('aria-hidden', 'true');
+      overlay.style.pointerEvents = 'none';
+    }, { once: true });
   }
+
+  overlay.style.pointerEvents = 'none';
+
+  closeBtn.addEventListener('click', () => closeDrawer());
 
   const toggle = el('button', [
     'lg:hidden fixed top-3 right-3 z-50',
@@ -262,21 +315,50 @@ function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => vo
 
 // ── Known-issues dialog ───────────────────────────────────────────────────────
 
-// TAILWIND-PLUS SWAP SEAM — modal dialog
-// This plain-Tailwind dialog swaps to a Tailwind Plus Dialog component.
-function buildKnownIssuesDialog(): { open: () => void; element: HTMLElement } {
-  const backdrop = el('div', [
-    'fixed inset-0 z-50 flex items-center justify-center',
-    'bg-black/70 hidden',
-  ].join(' '), { 'aria-modal': 'true', 'role': 'dialog', 'aria-label': 'Known Issues' });
+// Tailwind Plus: modal dialog with dismiss button (04-simple-with-dismiss-button.html)
+function buildKnownIssuesDialog(): { open: () => void; element: HTMLDialogElement } {
+  const dialog = document.createElement('dialog');
+  dialog.id = 'known-issues-dialog';
+  dialog.className = [
+    'fixed inset-0 z-50 size-auto max-h-none max-w-none overflow-y-auto',
+    'bg-transparent backdrop:bg-black/70 p-0 m-0',
+  ].join(' ');
+
+  const outer = el('div', 'flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0');
 
   const panel = el('div', [
-    'w-full max-w-md mx-4 p-6 rounded',
+    'relative transform overflow-hidden rounded-lg px-4 pt-5 pb-4 text-left shadow-xl',
+    'sm:my-8 sm:w-full sm:max-w-lg sm:p-6',
     'bg-[var(--zork-bg)] border border-[var(--zork-accent)]',
     'text-[var(--zork-fg)] font-mono text-sm overflow-y-auto max-h-[80vh]',
   ].join(' '));
 
+  // Close button — top-right (Plus pattern).
+  const closeBtnWrap = el('div', 'absolute top-0 right-0 hidden pt-4 pr-4 sm:block');
+  const closeBtn = el('button', [
+    'rounded-md text-[var(--zork-accent)] hover:opacity-75',
+    'focus:outline-2 focus:outline-offset-2',
+  ].join(' '), { type: 'button' });
+  const closeSr = el('span', 'sr-only');
+  closeSr.textContent = 'Close';
+  const closeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  closeIcon.setAttribute('viewBox', '0 0 24 24');
+  closeIcon.setAttribute('fill', 'none');
+  closeIcon.setAttribute('stroke', 'currentColor');
+  closeIcon.setAttribute('stroke-width', '1.5');
+  closeIcon.setAttribute('aria-hidden', 'true');
+  closeIcon.setAttribute('class', 'size-6');
+  const closePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  closePath.setAttribute('d', 'M6 18 18 6M6 6l12 12');
+  closePath.setAttribute('stroke-linecap', 'round');
+  closePath.setAttribute('stroke-linejoin', 'round');
+  closeIcon.appendChild(closePath);
+  closeBtn.appendChild(closeSr);
+  closeBtn.appendChild(closeIcon);
+  closeBtnWrap.appendChild(closeBtn);
+
   const title = el('h2', 'text-base font-bold mb-4 text-[var(--zork-accent)]');
+  title.id = 'known-issues-title';
   title.textContent = 'Known Issues & Limitations';
 
   const issues = [
@@ -295,44 +377,71 @@ function buildKnownIssuesDialog(): { open: () => void; element: HTMLElement } {
     list.appendChild(li);
   }
 
-  const closeBtn = el('button', 'mt-4 text-xs text-[var(--zork-accent)] underline');
-  closeBtn.textContent = 'Close';
-  closeBtn.addEventListener('click', () => backdrop.classList.add('hidden'));
+  closeBtn.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
 
-  backdrop.addEventListener('click', (e) => {
-    if (e.target === backdrop) backdrop.classList.add('hidden');
-  });
-
+  panel.appendChild(closeBtnWrap);
   panel.appendChild(title);
   panel.appendChild(list);
-  panel.appendChild(closeBtn);
-  backdrop.appendChild(panel);
+  outer.appendChild(panel);
+  dialog.appendChild(outer);
+  dialog.setAttribute('aria-labelledby', 'known-issues-title');
 
-  function open() { backdrop.classList.remove('hidden'); }
+  function open() { dialog.showModal(); }
 
-  return { open, element: backdrop };
+  return { open, element: dialog };
 }
 
 // ── Feedback form dialog ──────────────────────────────────────────────────────
 
-// TAILWIND-PLUS SWAP SEAM — modal dialog
-// Plain-Tailwind modal; swaps to a Tailwind Plus Dialog as a localized drop-in.
+// Tailwind Plus: modal dialog with dismiss button (04-simple-with-dismiss-button.html)
 function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => ThemeName): {
   open: () => void;
-  element: HTMLElement;
+  element: HTMLDialogElement;
 } {
-  const backdrop = el('div', [
-    'fixed inset-0 z-50 flex items-center justify-center',
-    'bg-black/70 hidden',
-  ].join(' '), { 'aria-modal': 'true', 'role': 'dialog', 'aria-label': 'Send Feedback' });
+  const dialog = document.createElement('dialog');
+  dialog.id = 'feedback-dialog';
+  dialog.className = [
+    'fixed inset-0 z-50 size-auto max-h-none max-w-none overflow-y-auto',
+    'bg-transparent backdrop:bg-black/70 p-0 m-0',
+  ].join(' ');
+  dialog.setAttribute('aria-labelledby', 'feedback-dialog-title');
+
+  const outer = el('div', 'flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0');
 
   const panel = el('div', [
-    'w-full max-w-md mx-4 p-6 rounded',
+    'relative transform overflow-hidden rounded-lg px-4 pt-5 pb-4 text-left shadow-xl',
+    'sm:my-8 sm:w-full sm:max-w-lg sm:p-6',
     'bg-[var(--zork-bg)] border border-[var(--zork-accent)]',
     'text-[var(--zork-fg)] font-mono text-sm overflow-y-auto max-h-[90vh]',
   ].join(' '));
 
+  // Close button — top-right (Plus pattern).
+  const fbCloseBtnWrap = el('div', 'absolute top-0 right-0 hidden pt-4 pr-4 sm:block');
+  const fbCloseBtn = el('button', [
+    'rounded-md text-[var(--zork-accent)] hover:opacity-75',
+    'focus:outline-2 focus:outline-offset-2',
+  ].join(' '), { type: 'button' });
+  const fbCloseSr = el('span', 'sr-only');
+  fbCloseSr.textContent = 'Close';
+  const fbCloseIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  fbCloseIcon.setAttribute('viewBox', '0 0 24 24');
+  fbCloseIcon.setAttribute('fill', 'none');
+  fbCloseIcon.setAttribute('stroke', 'currentColor');
+  fbCloseIcon.setAttribute('stroke-width', '1.5');
+  fbCloseIcon.setAttribute('aria-hidden', 'true');
+  fbCloseIcon.setAttribute('class', 'size-6');
+  const fbClosePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  fbClosePath.setAttribute('d', 'M6 18 18 6M6 6l12 12');
+  fbClosePath.setAttribute('stroke-linecap', 'round');
+  fbClosePath.setAttribute('stroke-linejoin', 'round');
+  fbCloseIcon.appendChild(fbClosePath);
+  fbCloseBtn.appendChild(fbCloseSr);
+  fbCloseBtn.appendChild(fbCloseIcon);
+  fbCloseBtnWrap.appendChild(fbCloseBtn);
+
   const title = el('h2', 'text-base font-bold mb-4 text-[var(--zork-accent)]');
+  title.id = 'feedback-dialog-title';
   title.textContent = 'Send Feedback';
 
   // Category select — constrained to spec-defined allow-list.
@@ -451,14 +560,10 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
     }
   });
 
-  const closeBtn = el('button', 'mt-3 text-xs text-[var(--zork-accent)] underline');
-  closeBtn.textContent = 'Close';
-  closeBtn.addEventListener('click', () => backdrop.classList.add('hidden'));
+  fbCloseBtn.addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
 
-  backdrop.addEventListener('click', (e) => {
-    if (e.target === backdrop) backdrop.classList.add('hidden');
-  });
-
+  panel.appendChild(fbCloseBtnWrap);
   panel.appendChild(title);
   panel.appendChild(catLabel);
   panel.appendChild(catSelect);
@@ -471,11 +576,11 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
   panel.appendChild(hpField);
   panel.appendChild(status);
   panel.appendChild(submitBtn);
-  panel.appendChild(closeBtn);
-  backdrop.appendChild(panel);
+  outer.appendChild(panel);
+  dialog.appendChild(outer);
 
-  function open() { backdrop.classList.remove('hidden'); }
-  return { open, element: backdrop };
+  function open() { dialog.showModal(); }
+  return { open, element: dialog };
 }
 
 // ── Shell mount ───────────────────────────────────────────────────────────────

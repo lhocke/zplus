@@ -11,11 +11,7 @@
     --zork-accent  links, highlights, cursor
     --zork-font    font-family stack
 
-  // TAILWIND-PLUS SWAP SEAM — theme switcher control (segmented-control)
-  // The segmented control in src/ui/ThemeSwitcher sits here at the layout
-  // level. When Tailwind Plus lands in vendor/tailwind-plus/ the plain-
-  // Tailwind segmented control in src/ui/ThemeSwitcher.ts swaps to the
-  // Plus RadioGroup/SegmentedControl component without touching the CSS tokens.
+  // Tailwind Plus: button group (01-basic.html) — implemented in buildThemeSwitcher().
 */
 
 /* CRT — green phosphor terminal (default, no attribute required) */
