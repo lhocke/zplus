@@ -4,41 +4,30 @@
  *
  *   npm run play
  *
- * Not part of the shipped app (the web shell arrives in Phase 4). This is a
- * thin readline loop over the same Game the UI will drive. Every input and the
+ * A thin readline loop over the GameSession facade. Every input and the
  * game's response are appended to playtest-logs/session-<timestamp>.log so we
  * can go over what felt off afterward.
  */
 import { createInterface } from 'node:readline';
-import { mkdirSync, appendFileSync } from 'node:fs';
-import { createGame } from '../src/engine/bootstrap.js';
+import { createSession } from '../src/shell/session.js';
+import { FileSink } from '../src/shell/sink.js';
 
-const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-mkdirSync('playtest-logs', { recursive: true });
-const logPath = `playtest-logs/session-${stamp}.log`;
-// Synchronous appends: a dev REPL is low-volume, and this guarantees every
-// line is on disk even if the process exits abruptly (Ctrl-C / piped stdin).
-const record = (s: string) => appendFileSync(logPath, s + '\n');
+const sink = new FileSink();
+const session = createSession({ sink });
 
-const game = createGame();
-
-// The shipped UI will carry the real status bar; this bare REPL otherwise hides
-// score/moves, which makes treasure and scoring playtests impossible to read.
+// Status line: score/moves are otherwise invisible in a bare REPL, which
+// makes treasure and scoring playtests impossible to follow.
 const status = () => {
-  const v = game.view();
+  const v = session.snapshot();
   return `        [ ${v.hereName} · score ${v.score}/${v.maxScore} · moves ${v.moves} ]`;
 };
 
-const intro = game.start();
+const intro = session.start();
 process.stdout.write(intro + '\n');
 process.stdout.write(status() + '\n\n');
-record(`=== playtest ${stamp} ===`);
-record(intro);
-record(status());
-record('');
 
 const rl = createInterface({ input: process.stdin, output: process.stdout, prompt: '> ' });
-process.stdout.write(`[logging this session to ${logPath} — type 'quit' to exit]\n`);
+process.stdout.write(`[logging this session to playtest-logs/ — type 'quit' to exit]\n`);
 rl.prompt();
 
 rl.on('line', (line) => {
@@ -48,22 +37,18 @@ rl.on('line', (line) => {
     return;
   }
   if (input.length > 0) {
-    record(`> ${input}`);
-    const { output } = game.turn(input);
+    const output = session.submit(input);
     if (output) {
       process.stdout.write(output + '\n');
-      record(output);
     }
     process.stdout.write(status() + '\n');
-    record(status());
-    record('');
   }
   process.stdout.write('\n');
   rl.prompt();
 });
 
 rl.on('close', () => {
-  record('=== end ===');
-  process.stdout.write(`\nThanks for playing. Transcript saved to ${logPath}\n`);
+  session.close();
+  process.stdout.write(`\nThanks for playing.\n`);
   process.exit(0);
 });

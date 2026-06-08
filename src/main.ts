@@ -6,8 +6,7 @@ const saved = localStorage.getItem('zork-theme');
 const theme = isThemeName(saved) ? saved : DEFAULT_THEME;
 document.documentElement.setAttribute('data-theme', theme);
 
-// Mount a loading state. The real shell (src/shell/) lands in a later task
-// and will replace this element when it's ready.
+// Mount a loading state while the shell initialises.
 const app = document.querySelector<HTMLDivElement>('#app');
 if (app) {
   const loading = document.createElement('div');
