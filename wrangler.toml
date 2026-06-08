@@ -1,0 +1,7 @@
+name = "zork-playtest"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-06-07"
+
+[[r2_buckets]]
+binding = "PLAYTEST"
+bucket_name = "zork-playtest"

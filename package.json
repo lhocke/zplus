@@ -16,9 +16,11 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260607.1",
     "@tailwindcss/vite": "^4.3.0",
     "@types/node": "^22.10.0",
     "jsdom": "^25.0.0",
+    "miniflare": "^4.20260603.0",
     "tailwindcss": "^4.3.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
