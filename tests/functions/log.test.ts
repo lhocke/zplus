@@ -380,3 +380,42 @@ describe('POST /api/log — per-session event cap', () => {
     expect(r3.status).toBe(429);
   });
 });
+
+// No-R2 binding — handler must degrade to 204, never throw/500.
+// Mirrors the guard added to functions/api/log.ts for unbilled deploys.
+const NO_R2_SCRIPT = /* js */ `
+export default {
+  async fetch(request, env) {
+    if (request.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+    const bucket = env.PLAYTEST;
+    if (!bucket) return new Response(null, { status: 204 });
+    return new Response("unexpected: bucket present", { status: 500 });
+  },
+};
+`;
+
+describe('POST /api/log — no R2 binding', () => {
+  let mfNoR2: Miniflare;
+
+  beforeAll(async () => {
+    // Deliberately omit r2Buckets so env.PLAYTEST is undefined.
+    mfNoR2 = new Miniflare({
+      modules: true,
+      script: NO_R2_SCRIPT,
+    });
+    await mfNoR2.ready;
+  });
+
+  afterAll(async () => {
+    await mfNoR2.dispose();
+  });
+
+  it('returns 204 with no R2 binding — no throw', async () => {
+    const res = await mfNoR2.dispatchFetch('http://localhost/', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ type: 'start', sessionId: 'x', buildId: 'y', ts: new Date().toISOString() }),
+    });
+    expect(res.status).toBe(204);
+  });
+});

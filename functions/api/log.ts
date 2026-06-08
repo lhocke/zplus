@@ -79,7 +79,8 @@ function eventSeq(e: Record<string, unknown>): number {
 
 export async function handleLog(request: Request, env: Env): Promise<Response> {
   const bucket = env.PLAYTEST;
-  if (!bucket) return new Response('No R2 binding', { status: 500 });
+  // R2 not bound (e.g. no billing / early deploy) — degrade gracefully.
+  if (!bucket) return new Response(null, { status: 204 });
 
   // Body size cap — reject before parsing, using Content-Length if present.
   const cl = Number(request.headers.get('content-length') ?? '0');

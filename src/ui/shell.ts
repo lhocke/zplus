@@ -815,11 +815,32 @@ export function mountShell(app: HTMLElement): void {
     'Gameplay in this playtest may be recorded and reviewed to help debug the game during development. Sessions are anonymous.';
 
   // Ko-fi / Patreon links (§7). GitHub Sponsors is NOT included (deferred — §7).
-  const supportLinks = el('div', 'flex gap-3 text-[10px] mt-2');
-  const kofi = el('a', 'text-[var(--zork-accent)] underline', { href: 'https://ko-fi.com', target: '_blank', rel: 'noopener noreferrer' });
-  kofi.textContent = 'Ko-fi';
-  const patreon = el('a', 'text-[var(--zork-accent)] underline', { href: 'https://patreon.com', target: '_blank', rel: 'noopener noreferrer' });
-  patreon.textContent = 'Patreon';
+  // Inline SVG logos — no external scripts or trackers (§4).
+  const supportLinks = el('div', 'flex gap-3 text-[10px] mt-2 items-center');
+
+  const kofi = el('a', 'flex items-center gap-1 text-[#72a4f2] underline', {
+    href: 'https://ko-fi.com/N4N35ZO95',
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    'aria-label': 'Support me on Ko-fi',
+  });
+  kofi.innerHTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">' +
+    '<path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.048 2.683-2.575 2.683-2.575s.084-1.501.097-2.292c4.15.572 7.019-2.241 6.527-5.783zm-6.967 4.01h-.636v2.399h-2.17V12.96h-.666V11.4h3.472zm5.274-.583c-.24 1.59-1.813 2.38-3.42 2.184V9.944c1.565-.271 3.433.372 3.42 2.431z"/>' +
+    '</svg>' +
+    'Ko-fi';
+
+  const patreon = el('a', 'flex items-center gap-1 text-[var(--zork-accent)] underline', {
+    href: 'https://www.patreon.com/lhocke',
+    target: '_blank',
+    rel: 'noopener noreferrer',
+    'aria-label': 'Support on Patreon',
+  });
+  patreon.innerHTML =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">' +
+    '<path d="M14.82 2.41c3.96 0 7.18 3.24 7.18 7.21 0 3.96-3.22 7.18-7.18 7.18-3.97 0-7.21-3.22-7.21-7.18 0-3.97 3.24-7.21 7.21-7.21zM2 21.6h3.5V2.41H2V21.6z"/>' +
+    '</svg>' +
+    'Patreon';
   supportLinks.appendChild(kofi);
   supportLinks.appendChild(patreon);
 

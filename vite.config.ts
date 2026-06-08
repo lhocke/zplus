@@ -2,7 +2,10 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { execSync } from 'node:child_process';
 
+// In CI, VITE_BUILD_ID is set to github.sha (full SHA). Locally, fall back
+// to the short git HEAD so the preflight's short-SHA check still passes.
 const buildId = (() => {
+  if (process.env.VITE_BUILD_ID) return process.env.VITE_BUILD_ID.slice(0, 7);
   try {
     return execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim();
   } catch {
