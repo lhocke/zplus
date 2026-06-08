@@ -324,6 +324,10 @@ export function mountShell(app: HTMLElement): void {
   // ── Theme management ────────────────────────────────────────────────────
   // switcherContainer must be declared before applyTheme is called at boot —
   // applyTheme references it to sync button state.
+  //
+  // localStorage is a stopgap for Phase 1 (§3): device-local, clearable, per-browser.
+  // When real persistence arrives (save slots, cross-device state), migrate to
+  // server-side storage (e.g. D1); localStorage stays at most a cache/fallback.
   const savedTheme = localStorage.getItem('zork-theme');
   const currentTheme: ThemeName = isThemeName(savedTheme) ? savedTheme : DEFAULT_THEME;
 
