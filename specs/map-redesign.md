@@ -27,10 +27,12 @@
 
 ### Engine stays frozen
 
-`src/engine/game.ts` is untouched. `view()` already exposes everything needed:
-`view().here` (current room `ObjectId`), `view().exits` (array of
-`{ dir, known: e.to !== undefined, to? }`), and the prior-room value held in
-shell state between turns. No new engine fields are introduced.
+`src/engine/game.ts` is untouched. `view()` already exposes everything the
+snapshot side needs: `view().here` (current room `ObjectId`) and `view().exits`
+(array of `{ dir, known: e.to !== undefined, to? }`, used only as the `to`-match
+fallback). The walked/blocked **direction** comes from the player's command — the
+shell already has the raw input — so no new engine field (e.g. exposing the exit
+flavor or the resolved walk direction) is required. No engine change is made.
 
 ### Phase-1 map coverage unchanged
 
@@ -55,8 +57,8 @@ Every exit record the shell tracks for a given room carries one of three kinds:
 
 | Kind | Meaning |
 |---|---|
-| `walked` | Player successfully moved in this direction; destination room is known. |
-| `backtrack` | On entering a room, the genuine return direction is auto-credited if the engine's exit data confirms it. |
+| `walked` | Player successfully moved in this direction (direction from input); destination room is known. |
+| `backtrack` | On entering a room via a **reciprocal** edge, the compass-opposite return is auto-credited. Non-reciprocal terrain (forest, one-way drops) credits nothing. |
 | `blocked` | Player typed a direction that failed; the stub records the direction but no destination. |
 
 Nothing about a room's exits is shown until one of these fires. A room's sidebar
@@ -71,7 +73,7 @@ directed exit records:
 type ExitKind = 'walked' | 'backtrack' | 'blocked';
 
 interface ExitRecord {
-  dir: string;        // canonical direction token, e.g. 'north', 'up', 'in'
+  dir: Dir;           // engine direction token, e.g. 'north', 'up', 'in'
   kind: ExitKind;
   to?: string;        // destination ObjectId (walked / backtrack); absent for blocked
 }
@@ -86,56 +88,78 @@ removed.
 
 ### 2.3 Discovery rules
 
-**walked** — fires after a successful `submit()` that changes `view().here`.
-Use the engine's exit data from the *prior room*'s `view().exits` to derive the
-direction: find the exit entry in `view().exits` (on the *old* snapshot, before
-the move) whose `to` equals the new room id. Record that direction on the prior
-room as `{ kind: 'walked', dir, to: newRoom }`.
+**Direction is sourced from player input, NOT from the engine exit table.** The
+engine has three exit flavors (`src/domain/game-object.ts` `Exit`): static `to`
+(UEXIT), flag-gated `to` (CEXIT, `ifFlag`), and function-computed (`per`, FEXIT)
+where `to` is **undefined**. `view().exits` only projects `{dir, known, to}` and
+does not reveal the flavor. The two inter-level moves are *both* `per` exits with
+no `to` (`STUDIO up → UP-CHIMNEY-FUNCTION`, `LIVING-ROOM down → TRAP-DOOR-EXIT`),
+so deriving the walked direction by matching `to` to the destination would fail
+on exactly the transitions this feature exists to show. Therefore the shell
+parses the player's command to a canonical direction token; the engine `to` table
+is used only as a *fallback* for non-compass room changes.
 
-Direction sourcing for walked is engine-data-driven — it reads `view().exits`
-rather than parsing player input, so it is robust to synonyms (`go north`, `n`,
-`north`) and to non-compass room transitions (`enter window`, `climb tree`).
+A shared helper `parseDirection(input): Dir | null` recognizes the direction
+tokens (`n`/`north`, `s`/`south`, `e`/`east`, `w`/`west`, `ne`, `nw`, `se`, `sw`,
+`u`/`up`, `d`/`down`, `in`, `out`) and common movement synonyms (`go north`,
+etc.); it returns `null` for non-movement / non-compass commands.
 
-**backtrack** — fires immediately on entering a room. After recording the walked
-exit on the *prior* room, inspect the *new* room's `view().exits`: find the exit
-whose `to` equals the prior room id. If one exists, record it on the new room as
-`{ kind: 'backtrack', dir, to: priorRoom }`. If no such exit exists (one-way
-drop — chute, trapdoor, chimney), no backtrack is recorded and the new room's
-exit list starts empty.
+**walked** — fires after a `submit()` that changes `view().here`. The direction
+is `parseDirection(command)`. If that is `null` (a non-compass transition such as
+`enter window` or `climb tree`), fall back to the *prior* room's `view().exits`
+entry whose `to` equals the new room id. Record on the prior room as
+`{ kind: 'walked', dir, to: newRoom }`.
 
-The one-way no-return invariant: a room with no engine exit back to the prior
-room correctly leaves the return direction undiscovered. The shell does not
-synthesize a return direction; it only credits what the engine confirms.
+**backtrack** — reciprocal-gated, fires on entering a room. The forest is
+deliberately non-reciprocal (`FOREST-1 —south→ FOREST-3` but the return is
+`FOREST-3 —west→ FOREST-1`); auto-crediting a return there would pre-solve the
+maze the forest is built to be. So a backtrack is auto-credited **only when the
+traversed edge is reciprocal** per `ROOM_CONNECTIONS` (a true compass-opposite,
+unconditional return — the house rooms, normal corridors). When reciprocal, record
+on the new room `{ kind: 'backtrack', dir: opposite(walkedDir), to: priorRoom }`.
 
-**blocked** — fires when `submit()` returns without a room change and the
-command contains a direction token. Parse the raw player input for recognized
-direction tokens (`n`/`north`, `s`/`south`, `e`/`east`, `w`/`west`, `ne`,
-`nw`, `se`, `sw`, `u`/`up`, `d`/`down`, `in`, `out`) and their common
-synonyms. Record `{ kind: 'blocked', dir }` on the current room. This is the
-one seam where the shell must interpret player input, because a failed move
-produces no room-change to infer from.
+When the edge is **non-reciprocal** — the forest, and the one-way drops (trapdoor
+`LIVING-ROOM↔CELLAR`, chimney `KITCHEN↔STUDIO`, both `reciprocal: false`) — **no
+backtrack is auto-credited**. The player learns the way out only by actually
+walking or trying it. This preserves both forest disorientation and one-way-drop
+honesty in a single rule, and it sidesteps the CEXIT problem: gated returns like
+`CELLAR up → LIVING-ROOM` (ifFlag `TRAP-DOOR`) are non-reciprocal, so they are
+never auto-credited as open even though their `to` is statically present.
 
-If the direction is already recorded as `walked` or `backtrack`, a subsequent
-block does not overwrite it.
+Reciprocity and `opposite()` are derived from layout data
+(`ROOM_CONNECTIONS.reciprocal`) and the compass-opposite table
+(`n/s, e/w, ne/sw, nw/se, u/d, in/out`). An edge absent from `ROOM_CONNECTIONS`
+defaults to no auto-backtrack (conservative).
+
+**blocked** — fires when `submit()` returns without a room change and
+`parseDirection(command)` is non-null. Record `{ kind: 'blocked', dir }` on the
+current room. This is the one case where direction *must* come from input, since
+a failed move produces no room-change to infer from (e.g. `WEST-OF-HOUSE east`,
+the boarded door — `{dir:'east', elseMessage:"The door is boarded…"}`, no `to`).
+
+If a direction is already recorded as `walked` or `backtrack`, a subsequent block
+does not overwrite it.
 
 ### 2.4 Public API additions to MapState
 
 ```ts
 // Existing (retained)
-update(snap: RoomSnap): void          // driven by view() after each turn
+update(snap: RoomSnap, dir?: Dir | null): void   // driven by view() after each turn
 visitedRooms(): ReadonlySet<string>
 currentRoom(): string | null
 reset(): void
 
 // New
-recordBlocked(dir: string): void      // called when a failed move direction is parsed
+recordBlocked(dir: Dir): void                            // failed-move direction
 exitsFor(roomId: string): ReadonlyMap<string, ExitRecord>  // dir → record
 ```
 
-`update()` is extended to implement the walked + backtrack rules described above.
-It requires the prior `view()` snapshot (or the prior `view().exits` array) to be
-passed in alongside the new snapshot so it can inspect both rooms' exit tables.
-The `RoomSnap` type is extended accordingly:
+`update()` is extended to implement the walked + backtrack rules. The caller
+passes the player's parsed direction (`parseDirection(command)`, possibly `null`)
+alongside the new snapshot. `MapState` retains the **prior** snapshot internally
+(it already tracks `_current`; it additionally caches the prior snapshot's `exits`
+array) so the `to`-match fallback can inspect the prior room's exit table without
+the caller re-supplying it. The `RoomSnap` type is extended accordingly:
 
 ```ts
 export interface RoomSnap {
@@ -146,6 +170,10 @@ export interface RoomSnap {
 
 (The `exits?: unknown` guard is removed; the caller always passes the full
 `view()` exits array.)
+
+`parseDirection(input): Dir | null` and `opposite(dir): Dir` are free helpers
+(exported from a small `directions.ts`, or co-located in `map-state.ts`), shared
+by the shell input handler (`map` intercept / blocked detection) and `MapState`.
 
 ---
 
@@ -308,19 +336,39 @@ Stated explicitly to bound the implementation:
 All tests drive `MapState` in isolation with scripted `RoomSnap` inputs; no DOM,
 no engine.
 
-- **walked** — move A→B: `exitsFor('A')` has `{ kind: 'walked', dir, to: 'B' }`;
-  direction is derived from the prior snapshot's `exits` array, not from input.
-- **backtrack with real return** — move A→B where B's `exits` includes a `to: A`
-  entry: `exitsFor('B')` has `{ kind: 'backtrack', dir, to: 'A' }`.
-- **backtrack without return (one-way)** — move A→B where B's `exits` has no
-  entry with `to: A` (simulates chimney/trapdoor drop): `exitsFor('B')` is empty
-  (no return direction credited).
+- **walked from input direction** — `update(view('A'), null)` then
+  `update(view('B'), 'north')`: `exitsFor('A')` has
+  `{ kind: 'walked', dir: 'north', to: 'B' }`. Direction came from the passed
+  `dir`, not the exit table.
+- **walked fallback (non-compass move)** — move A→B with `dir = null` where A's
+  cached `exits` has an entry `{ dir: 'east', to: 'B' }` (e.g. `enter window`):
+  `exitsFor('A')` has `{ kind: 'walked', dir: 'east', to: 'B' }` via `to`-match.
+- **walked on a function-exit** — move A→B with `dir = 'down'` where A's `exits`
+  has **no** entry with `to: 'B'` (the `per` trapdoor): still recorded as
+  `{ kind: 'walked', dir: 'down', to: 'B' }` — proves input-sourcing covers the
+  `per`/FEXIT case the old `to`-match could not.
+- **backtrack on reciprocal edge** — walk a reciprocal pair (e.g.
+  `WEST-OF-HOUSE —north→ NORTH-OF-HOUSE`, `reciprocal: true`): `exitsFor` for the
+  new room has `{ kind: 'backtrack', dir: 'south', to: 'WEST-OF-HOUSE' }`
+  (`opposite('north')`).
+- **NO backtrack on non-reciprocal forest edge** — walk `FOREST-1 —south→
+  FOREST-3` (`reciprocal: false`): `exitsFor('FOREST-3')` has **no** backtrack
+  record (forest disorientation preserved). This is the regression guard for the
+  forest bug.
+- **NO backtrack on one-way drop** — walk `LIVING-ROOM —down→ CELLAR`
+  (`reciprocal: false`): `exitsFor('CELLAR')` has no auto-credited return, even
+  though `CELLAR up → LIVING-ROOM` exists in the exit table (it is gated/CEXIT).
+- **NO backtrack on unknown edge** — walk a pair absent from `ROOM_CONNECTIONS`:
+  no backtrack credited (conservative default).
 - **blocked** — `recordBlocked('north')` on current room: `exitsFor(current)` has
   `{ kind: 'blocked', dir: 'north' }`.
-- **blocked does not overwrite walked** — record a `walked` exit north, then
-  call `recordBlocked('north')`: the record remains `walked`.
-- **regression guard** — `MapState` never reads `exits[].known` (static field,
-  useless for discovery); assert no reference to `.known` in `map-state.ts`.
+- **blocked does not overwrite walked/backtrack** — record `walked` north, then
+  `recordBlocked('north')`: the record remains `walked`.
+- **regression guard** — `MapState` never reads `exits[].known`; assert no
+  reference to `.known` in `map-state.ts`.
+- **`parseDirection` / `opposite`** — table-driven: token + synonym coverage for
+  `parseDirection` (incl. `null` for `look`, `take lamp`, `enter window`); full
+  compass-opposite pairs for `opposite`.
 
 ### 6.2 renderMapGrid unit tests
 
