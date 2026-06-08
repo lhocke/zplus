@@ -13,7 +13,8 @@
     "extract:roomtext": "tsx tools/extract-zil/extract-room-text.ts",
     "play": "tsx tools/play.ts",
     "oracle": "tsx tools/oracle/run-corpus.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "preflight": "tsx tools/deploy-preflight.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260607.1",
