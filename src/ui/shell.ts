@@ -10,6 +10,8 @@ import { createSession } from '../shell/session.js';
 import { HttpSink } from '../shell/http-sink.js';
 import { MapState } from './map-state.js';
 import { isThemeName, DEFAULT_THEME, type ThemeName } from './themes.js';
+import { shapeFeedbackPayload, collectBrowserInfo } from './feedback.js';
+import { ALLOWED_CATEGORIES } from '../../functions/lib/sanitize.js';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -311,6 +313,171 @@ function buildKnownIssuesDialog(): { open: () => void; element: HTMLElement } {
   return { open, element: backdrop };
 }
 
+// ── Feedback form dialog ──────────────────────────────────────────────────────
+
+// TAILWIND-PLUS SWAP SEAM — modal dialog
+// Plain-Tailwind modal; swaps to a Tailwind Plus Dialog as a localized drop-in.
+function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => ThemeName): {
+  open: () => void;
+  element: HTMLElement;
+} {
+  const backdrop = el('div', [
+    'fixed inset-0 z-50 flex items-center justify-center',
+    'bg-black/70 hidden',
+  ].join(' '), { 'aria-modal': 'true', 'role': 'dialog', 'aria-label': 'Send Feedback' });
+
+  const panel = el('div', [
+    'w-full max-w-md mx-4 p-6 rounded',
+    'bg-[var(--zork-bg)] border border-[var(--zork-accent)]',
+    'text-[var(--zork-fg)] font-mono text-sm overflow-y-auto max-h-[90vh]',
+  ].join(' '));
+
+  const title = el('h2', 'text-base font-bold mb-4 text-[var(--zork-accent)]');
+  title.textContent = 'Send Feedback';
+
+  // Category select — constrained to spec-defined allow-list.
+  const catLabel = el('label', 'block text-xs mb-1');
+  catLabel.textContent = 'Category';
+  const catSelect = el('select', [
+    'w-full mb-3 px-2 py-1 rounded border border-[var(--zork-accent)]',
+    'bg-[var(--zork-bg)] text-[var(--zork-fg)] font-mono text-sm',
+  ].join(' '));
+  for (const cat of ALLOWED_CATEGORIES) {
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+    catSelect.appendChild(opt);
+  }
+
+  // Message field.
+  const msgLabel = el('label', 'block text-xs mb-1');
+  msgLabel.textContent = 'Message';
+  const msgArea = el('textarea', [
+    'w-full mb-3 px-2 py-1 rounded border border-[var(--zork-accent)]',
+    'bg-[var(--zork-bg)] text-[var(--zork-fg)] font-mono text-xs',
+    'resize-y min-h-[5rem]',
+  ].join(' '), { rows: '4', placeholder: 'Describe the issue or suggestion…' });
+
+  // Optional "what were you doing?" field.
+  const ctxLabel = el('label', 'block text-xs mb-1');
+  ctxLabel.textContent = 'What were you doing? (optional)';
+  const ctxArea = el('textarea', [
+    'w-full mb-3 px-2 py-1 rounded border border-[var(--zork-accent)]',
+    'bg-[var(--zork-bg)] text-[var(--zork-fg)] font-mono text-xs',
+    'resize-y min-h-[3rem]',
+  ].join(' '), { rows: '2', placeholder: 'e.g. I typed "attack troll" and…' });
+
+  // UI-issue browser info disclosure — shown only when "UI issue" is selected.
+  const browserDisclosure = el('p', [
+    'text-[10px] opacity-75 mb-3 hidden',
+    'border-l-2 border-[var(--zork-accent)] pl-2',
+  ].join(' '));
+  browserDisclosure.textContent =
+    'Because you selected "UI issue", your browser info (user agent, viewport, theme) will be attached to help debug rendering problems.';
+
+  catSelect.addEventListener('change', () => {
+    if (catSelect.value === 'UI issue') {
+      browserDisclosure.classList.remove('hidden');
+    } else {
+      browserDisclosure.classList.add('hidden');
+    }
+  });
+
+  // Submission disclosure — session linkage + no personal info reminder.
+  const disclosure = el('p', 'text-[10px] opacity-75 mb-3');
+  disclosure.textContent =
+    "Submitting links this report to your current session's gameplay transcript (anonymous session ID only). " +
+    'Do not type personal information in the fields above.';
+
+  // Status line (empty until submit attempted).
+  const status = el('p', 'text-xs min-h-[1.25rem] mb-2');
+
+  // Honeypot — hidden from real users; filled honeypot → rejected by server.
+  const hpField = el('input', 'hidden', { type: 'text', autocomplete: 'off', tabindex: '-1', 'aria-hidden': 'true' });
+
+  // Submit button.
+  const submitBtn = el('button', [
+    'px-3 py-1 rounded border border-[var(--zork-accent)]',
+    'text-xs text-[var(--zork-fg)] hover:bg-[var(--zork-accent)] hover:text-[var(--zork-bg)]',
+    'disabled:opacity-40 disabled:cursor-not-allowed',
+  ].join(' '));
+  submitBtn.textContent = 'Send';
+
+  submitBtn.addEventListener('click', async () => {
+    const message = (msgArea as HTMLTextAreaElement).value.trim();
+    if (!message) {
+      status.textContent = 'Message is required.';
+      return;
+    }
+
+    submitBtn.setAttribute('disabled', 'true');
+    submitBtn.textContent = 'Sending…';
+    status.textContent = '';
+
+    try {
+      const browserInfo =
+        catSelect.value === 'UI issue'
+          ? collectBrowserInfo(getActiveTheme())
+          : undefined;
+
+      const payload = shapeFeedbackPayload({
+        category: catSelect.value as typeof ALLOWED_CATEGORIES[number],
+        message,
+        sessionId: getSessionId(),
+        turnstileToken: '', // Turnstile widget injects this at G2; empty string accepted in test mode
+        context: (ctxArea as HTMLTextAreaElement).value.trim() || undefined,
+        browserInfo,
+        hp: (hpField as HTMLInputElement).value || undefined,
+      });
+
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        status.textContent = 'Feedback sent. Thank you!';
+        (msgArea as HTMLTextAreaElement).value = '';
+        (ctxArea as HTMLTextAreaElement).value = '';
+      } else {
+        status.textContent = `Send failed (${res.status}). Try again.`;
+      }
+    } catch {
+      status.textContent = 'Send failed. Check your connection.';
+    } finally {
+      submitBtn.removeAttribute('disabled');
+      submitBtn.textContent = 'Send';
+    }
+  });
+
+  const closeBtn = el('button', 'mt-3 text-xs text-[var(--zork-accent)] underline');
+  closeBtn.textContent = 'Close';
+  closeBtn.addEventListener('click', () => backdrop.classList.add('hidden'));
+
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) backdrop.classList.add('hidden');
+  });
+
+  panel.appendChild(title);
+  panel.appendChild(catLabel);
+  panel.appendChild(catSelect);
+  panel.appendChild(msgLabel);
+  panel.appendChild(msgArea);
+  panel.appendChild(ctxLabel);
+  panel.appendChild(ctxArea);
+  panel.appendChild(browserDisclosure);
+  panel.appendChild(disclosure);
+  panel.appendChild(hpField);
+  panel.appendChild(status);
+  panel.appendChild(submitBtn);
+  panel.appendChild(closeBtn);
+  backdrop.appendChild(panel);
+
+  function open() { backdrop.classList.remove('hidden'); }
+  return { open, element: backdrop };
+}
+
 // ── Shell mount ───────────────────────────────────────────────────────────────
 
 export function mountShell(app: HTMLElement): void {
@@ -319,7 +486,20 @@ export function mountShell(app: HTMLElement): void {
 
   const sink = new HttpSink();
   const mapState = new MapState();
-  const session = createSession({ sink });
+
+  // Capture the sessionId from the SessionStart event so the feedback form can
+  // include it. SessionStart is emitted synchronously inside session.start(), so
+  // sessionIdRef is populated before any user interaction begins.
+  let sessionIdRef = '';
+  const trackingSink = {
+    emit(e: Parameters<typeof sink.emit>[0]) {
+      if (e.type === 'start') sessionIdRef = e.sessionId;
+      sink.emit(e);
+    },
+    close() { sink.close(); },
+  };
+
+  const session = createSession({ sink: trackingSink });
 
   // ── Theme management ────────────────────────────────────────────────────
   // switcherContainer must be declared before applyTheme is called at boot —
@@ -329,7 +509,7 @@ export function mountShell(app: HTMLElement): void {
   // When real persistence arrives (save slots, cross-device state), migrate to
   // server-side storage (e.g. D1); localStorage stays at most a cache/fallback.
   const savedTheme = localStorage.getItem('zork-theme');
-  const currentTheme: ThemeName = isThemeName(savedTheme) ? savedTheme : DEFAULT_THEME;
+  let activeTheme: ThemeName = isThemeName(savedTheme) ? savedTheme : DEFAULT_THEME;
 
   // Theme switcher built early so applyTheme can reference it.
   const themeLabel = el('div', 'text-xs text-[var(--zork-accent)] uppercase tracking-wider');
@@ -337,12 +517,13 @@ export function mountShell(app: HTMLElement): void {
   const switcherContainer = buildThemeSwitcher((name) => applyTheme(name));
 
   function applyTheme(name: ThemeName) {
+    activeTheme = name;
     document.documentElement.setAttribute('data-theme', name);
     localStorage.setItem('zork-theme', name);
     syncThemeBtns(switcherContainer, name);
   }
 
-  applyTheme(currentTheme);
+  applyTheme(activeTheme);
 
   // ── Build components ────────────────────────────────────────────────────
   const statusBar = buildStatusBar();
@@ -361,6 +542,10 @@ export function mountShell(app: HTMLElement): void {
 
   const map = buildMap(mapState);
   const { open: openIssues, element: issuesDialog } = buildKnownIssuesDialog();
+  const { open: openFeedback, element: feedbackDialog } = buildFeedbackDialog(
+    () => sessionIdRef,
+    () => activeTheme,
+  );
 
   // ── Sidebar content ─────────────────────────────────────────────────────
   const sidebar = el('div', 'flex flex-col gap-4 min-w-0');
@@ -370,7 +555,7 @@ export function mountShell(app: HTMLElement): void {
   sidebarStatus.textContent = 'Status';
 
   // (themeLabel and switcherContainer are built above — before applyTheme.)
-  syncThemeBtns(switcherContainer, currentTheme);
+  syncThemeBtns(switcherContainer, activeTheme);
 
   // Map area.
   const mapLabel = el('div', 'text-xs text-[var(--zork-accent)] uppercase tracking-wider mt-2');
@@ -381,12 +566,17 @@ export function mountShell(app: HTMLElement): void {
   issuesBtn.textContent = 'Known Issues & Limitations';
   issuesBtn.addEventListener('click', openIssues);
 
+  // Feedback button.
+  const feedbackBtn = el('button', 'text-xs text-[var(--zork-accent)] underline text-left');
+  feedbackBtn.textContent = 'Send Feedback';
+  feedbackBtn.addEventListener('click', openFeedback);
+
   // Notice — §4: gameplay may be reviewed.
   const notice = el('p', 'text-[10px] text-[var(--zork-fg)] opacity-60 mt-auto pt-4');
   notice.textContent =
     'Gameplay in this playtest may be recorded and reviewed to help debug the game during development. Sessions are anonymous.';
 
-  // Ko-fi / Patreon links (§7).
+  // Ko-fi / Patreon links (§7). GitHub Sponsors is NOT included (deferred — §7).
   const supportLinks = el('div', 'flex gap-3 text-[10px] mt-2');
   const kofi = el('a', 'text-[var(--zork-accent)] underline', { href: 'https://ko-fi.com', target: '_blank', rel: 'noopener noreferrer' });
   kofi.textContent = 'Ko-fi';
@@ -401,6 +591,7 @@ export function mountShell(app: HTMLElement): void {
   sidebar.appendChild(mapLabel);
   sidebar.appendChild(map.element);
   sidebar.appendChild(issuesBtn);
+  sidebar.appendChild(feedbackBtn);
   sidebar.appendChild(notice);
   sidebar.appendChild(supportLinks);
 
@@ -446,6 +637,7 @@ export function mountShell(app: HTMLElement): void {
   app.appendChild(drawerOverlay);
   app.appendChild(drawerToggle);
   app.appendChild(issuesDialog);
+  app.appendChild(feedbackDialog);
 
   // ── Boot the game ───────────────────────────────────────────────────────
   const banner = session.start();
