@@ -5,6 +5,9 @@ name = "zork-3w8"
 pages_build_output_dir = "./dist"
 compatibility_date = "2026-06-07"
 
-[[r2_buckets]]
-binding = "PLAYTEST"
-bucket_name = "zork-playtest"
+# Re-enable once R2 is provisioned (billing). Until then this binding must stay
+# commented: wrangler validates bindings at deploy, and pointing at a bucket that
+# doesn't exist fails the deploy. /api/log returns 204 when PLAYTEST is absent.
+# [[r2_buckets]]
+# binding = "PLAYTEST"
+# bucket_name = "zork-playtest"
