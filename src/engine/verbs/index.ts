@@ -588,6 +588,22 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
   return result(lines.join('\n'));
 }
 
+// PHASE-1 TEMPORARY — replaced by real combat in Phase 2.
+// Intercepts V-ATTACK so attack/kill never errors in the pre-troll playtest region.
+// Troll target → the in-world sign (signals content boundary, not a bug).
+// Any other target → brief in-spirit deflection (no villains exist pre-troll).
+// Does NOT set TROLL-FLAG; the exit wall stays up.
+function verbAttackPhase1(ctx: VerbContext): VerbResult {
+  if (ctx.dobj?.id === 'TROLL') {
+    return result(
+      'The troll, bored, produces a hand-lettered sign and holds it up:\n' +
+      '"THANK YOU FOR PLAYING. FURTHER ADVENTURES ARE UNDER DEVELOPMENT."\n' +
+      'He seems disinclined to fight today.',
+    );
+  }
+  return result("Violence isn't the answer to this one.");
+}
+
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
 // Primary dispatch on V-* action id (ZIL PERFORM dispatches on PRSA, gmain.zil:283–284).
@@ -606,6 +622,8 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-DIAGNOSE':  verbDiagnose,
   'V-ADVENT':    verbAdvent,  // PLUGH / XYZZY — gverbs.zil:153
   'V-FROBOZZ':   verbFrobozz, // FROBOZZ — gverbs.zil:704
+  // PHASE-1 TEMPORARY — replaced by real combat in Phase 2.
+  'V-ATTACK':    verbAttackPhase1,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.
