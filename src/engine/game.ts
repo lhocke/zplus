@@ -128,10 +128,12 @@ export class Game {
     // PHASE-1 TEMPORARY — removed when real combat replaces verbAttackPhase1 (verbs/index.ts).
     // Bare "attack/kill troll" would normally go through GWIM to find a weapon iobj, either
     // orphan-prompting when multiple weapons are in scope or failing the held-check when the
-    // troll's axe is the only candidate. Intercept here so the sign always fires without the
-    // parser needing a resolved weapon. Named-weapon forms ("attack troll with sword") still
-    // reach verbAttackPhase1 via the normal V-ATTACK path below.
-    if (isBareAttackTroll(input)) {
+    // troll's axe is the only candidate. Intercept here so the sign fires without the parser
+    // needing a resolved weapon -- but ONLY when the troll is actually present in this room.
+    // Named-weapon forms ("attack troll with sword") still reach verbAttackPhase1 via the
+    // normal V-ATTACK path below.
+    const trollInRoom = this.world.get('TROLL')?.parent === this.here;
+    if (isBareAttackTroll(input, trollInRoom)) {
       return { output: TROLL_SIGN_TEXT, moved: false };
     }
 

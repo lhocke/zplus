@@ -602,18 +602,22 @@ export const TROLL_SIGN_TEXT =
   'He seems disinclined to fight today.';
 
 // Detects bare attack/kill-troll input before the parser sees it.
-// game.ts calls this to intercept the case where GWIM (needing a weapon iobj)
-// would otherwise orphan-prompt or fail the held-check before V-ATTACK dispatches.
+// game.ts calls this (with trollInRoom=true) to intercept the case where GWIM
+// (needing a weapon iobj) would otherwise orphan-prompt or fail the held-check.
+// When the troll is NOT in the current room the intercept is skipped, letting the
+// engine produce its faithful "can't see that" response.
 // Named-weapon forms ("attack troll with sword") bypass this and reach verbAttackPhase1
 // through the normal V-ATTACK parser path.
-// PHASE-1 TEMPORARY — removed when real combat replaces verbAttackPhase1.
+// PHASE-1 TEMPORARY -- removed when real combat replaces verbAttackPhase1.
 const BARE_TROLL_ATTACK = /^\s*(attack|kill|fight)\s+(the\s+)?troll\s*$/i;
-export function isBareAttackTroll(input: string): boolean {
-  return BARE_TROLL_ATTACK.test(input);
+export function isBareAttackTroll(input: string, trollInRoom: boolean): boolean {
+  return trollInRoom && BARE_TROLL_ATTACK.test(input);
 }
 
 function verbAttackPhase1(ctx: VerbContext): VerbResult {
-  if (ctx.dobj?.id === 'TROLL') {
+  // Only show the sign when the troll is actually here; if the parser somehow
+  // resolved TROLL as dobj from a different room, fall through gracefully.
+  if (ctx.dobj?.id === 'TROLL' && ctx.dobj.parent === ctx.here) {
     return result(TROLL_SIGN_TEXT);
   }
   return result("Violence isn't the answer to this one.");
