@@ -9,3 +9,5 @@ node_modules/
 dist/
 # local playtest transcripts
 playtest-logs/
+# licensed Tailwind Plus raw kit — never commit (used components live adapted in src/ui)
+vendor/
