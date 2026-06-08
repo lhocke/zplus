@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+/*
+  Zork playtest — theme custom properties.
+  Selected via data-theme="crt|literary|parchment" on <html>.
+  Variables are consumed by Tailwind utilities and raw CSS below.
+
+  Keys:
+    --zork-fg      foreground / text colour
+    --zork-bg      background colour
+    --zork-accent  links, highlights, cursor
+    --zork-font    font-family stack
+
+  // TAILWIND-PLUS SWAP SEAM — theme switcher control (segmented-control)
+  // The segmented control in src/ui/ThemeSwitcher sits here at the layout
+  // level. When Tailwind Plus lands in vendor/tailwind-plus/ the plain-
+  // Tailwind segmented control in src/ui/ThemeSwitcher.ts swaps to the
+  // Plus RadioGroup/SegmentedControl component without touching the CSS tokens.
+*/
+
+/* CRT — green phosphor terminal (default, no attribute required) */
+:root,
+[data-theme="crt"] {
+  --zork-fg: #33ff33;
+  --zork-bg: #0a0a0a;
+  --zork-accent: #66ff66;
+  --zork-font: 'Courier New', Courier, monospace;
+}
+
+/* Literary — soft off-white page, serif */
+[data-theme="literary"] {
+  --zork-fg: #1a1a2e;
+  --zork-bg: #f5f0e8;
+  --zork-accent: #2c4a7c;
+  --zork-font: 'Georgia', 'Times New Roman', serif;
+}
+
+/* Parchment — aged warm tones */
+[data-theme="parchment"] {
+  --zork-fg: #3b2a1a;
+  --zork-bg: #e8dcc8;
+  --zork-accent: #7a4a1e;
+  --zork-font: 'Palatino Linotype', Palatino, 'Book Antiqua', serif;
+}
+
+/* Apply theme vars to the document */
+html, body {
+  background-color: var(--zork-bg);
+  color: var(--zork-fg);
+  font-family: var(--zork-font);
+  height: 100%;
+  margin: 0;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Loading state — shown until the real shell mounts */
+.zork-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: var(--zork-font);
+  color: var(--zork-accent);
+  letter-spacing: 0.15em;
+}
