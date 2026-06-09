@@ -8,6 +8,7 @@ export interface RoomLayout {
   label: string;
   col: number;
   row: number;
+  level: 'surface' | 'underground';
 }
 
 export interface RoomConnection {
@@ -26,32 +27,32 @@ export interface RoomConnection {
 // Forest/above-ground fills cols 0-1 and 5-6.
 export const ROOM_LAYOUT: RoomLayout[] = [
   // ── Above-ground exterior ──────────────────────────────────────────────
-  { id: 'NORTH-OF-HOUSE',  label: 'N of House',   col: 3, row: 1 },
-  { id: 'WEST-OF-HOUSE',   label: 'W of House',   col: 2, row: 2 },
-  { id: 'EAST-OF-HOUSE',   label: 'E of House',   col: 4, row: 2 },
-  { id: 'SOUTH-OF-HOUSE',  label: 'S of House',   col: 3, row: 3 },
+  { id: 'NORTH-OF-HOUSE',  label: 'N of House',   col: 3, row: 1, level: 'surface' },
+  { id: 'WEST-OF-HOUSE',   label: 'W of House',   col: 2, row: 2, level: 'surface' },
+  { id: 'EAST-OF-HOUSE',   label: 'E of House',   col: 4, row: 2, level: 'surface' },
+  { id: 'SOUTH-OF-HOUSE',  label: 'S of House',   col: 3, row: 3, level: 'surface' },
 
   // ── Forest / outdoor ──────────────────────────────────────────────────
-  { id: 'FOREST-1',        label: 'Forest',       col: 1, row: 2 },
-  { id: 'FOREST-2',        label: 'Forest',       col: 1, row: 0 },
-  { id: 'FOREST-3',        label: 'Forest',       col: 2, row: 4 },
-  { id: 'PATH',            label: 'Forest Path',  col: 1, row: 1 },
-  { id: 'UP-A-TREE',       label: 'Up-a-Tree',    col: 0, row: 1 },
-  { id: 'GRATING-CLEARING',label: 'Grating Clrg', col: 1, row: 0 }, // shares row w FOREST-2; both at north edge
-  { id: 'CLEARING',        label: 'Clearing',     col: 5, row: 2 },
-  { id: 'MOUNTAINS',       label: 'Mountains',    col: 6, row: 0 },
+  { id: 'FOREST-1',        label: 'Forest',       col: 1, row: 2, level: 'surface' },
+  { id: 'FOREST-2',        label: 'Forest',       col: 1, row: 0, level: 'surface' },
+  { id: 'FOREST-3',        label: 'Forest',       col: 2, row: 4, level: 'surface' },
+  { id: 'PATH',            label: 'Forest Path',  col: 1, row: 1, level: 'surface' },
+  { id: 'UP-A-TREE',       label: 'Up-a-Tree',    col: 0, row: 1, level: 'surface' },
+  { id: 'GRATING-CLEARING',label: 'Grating Clrg', col: 1, row: 0, level: 'surface' }, // shares row w FOREST-2; both at north edge
+  { id: 'CLEARING',        label: 'Clearing',     col: 5, row: 2, level: 'surface' },
+  { id: 'MOUNTAINS',       label: 'Mountains',    col: 6, row: 0, level: 'surface' },
 
   // ── House interior ────────────────────────────────────────────────────
-  { id: 'KITCHEN',         label: 'Kitchen',      col: 4, row: 1 },
-  { id: 'ATTIC',           label: 'Attic',        col: 4, row: 0 },
-  { id: 'LIVING-ROOM',     label: 'Living Room',  col: 3, row: 2 },
+  { id: 'KITCHEN',         label: 'Kitchen',      col: 4, row: 1, level: 'surface' },
+  { id: 'ATTIC',           label: 'Attic',        col: 4, row: 0, level: 'surface' },
+  { id: 'LIVING-ROOM',     label: 'Living Room',  col: 3, row: 2, level: 'surface' },
 
   // ── Underground ───────────────────────────────────────────────────────
-  { id: 'CELLAR',          label: 'Cellar',       col: 3, row: 4 },
-  { id: 'TROLL-ROOM',      label: 'Troll Room',   col: 3, row: 5 },
-  { id: 'EAST-OF-CHASM',   label: 'E of Chasm',   col: 3, row: 6 },
-  { id: 'GALLERY',         label: 'Gallery',      col: 4, row: 6 },
-  { id: 'STUDIO',          label: 'Studio',       col: 4, row: 5 },
+  { id: 'CELLAR',          label: 'Cellar',       col: 3, row: 4, level: 'underground' },
+  { id: 'TROLL-ROOM',      label: 'Troll Room',   col: 3, row: 5, level: 'underground' },
+  { id: 'EAST-OF-CHASM',   label: 'E of Chasm',   col: 3, row: 6, level: 'underground' },
+  { id: 'GALLERY',         label: 'Gallery',      col: 4, row: 6, level: 'underground' },
+  { id: 'STUDIO',          label: 'Studio',       col: 4, row: 5, level: 'underground' },
 ];
 
 // Pre-troll room connections (undirected). Derived from rooms.json exit graph,

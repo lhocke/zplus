@@ -8,7 +8,8 @@
 
 import { createSession } from '../shell/session.js';
 import { HttpSink } from '../shell/http-sink.js';
-import { MapState } from './map-state.js';
+import { MapState, type ExitRecord } from './map-state.js';
+import { parseDirection } from './directions.js';
 import { isThemeName, DEFAULT_THEME, type ThemeName } from './themes.js';
 import { shapeFeedbackPayload, collectBrowserInfo } from './feedback.js';
 import { ALLOWED_CATEGORIES } from '../../functions/lib/sanitize.js';
@@ -311,10 +312,17 @@ function buildStatusBar(): { element: HTMLElement; update: (hereName: string, sc
 export function renderMapGrid(
   visited: ReadonlySet<string>,
   current: string | null,
-  rooms: ReadonlyMap<string, { id: string; label: string; col: number; row: number }>,
+  rooms: ReadonlyMap<string, { id: string; label: string; col: number; row: number; level: 'surface' | 'underground' }>,
   connections: ReadonlyArray<{ a: string; b: string; reciprocal: boolean }>,
+  exitRecords: ReadonlyMap<string, ReadonlyMap<string, ExitRecord>>,
+  levelFilter: 'surface' | 'underground',
 ): string {
-  if (visited.size === 0) return '';
+  // Only show rooms on the current level.
+  const visibleVisited = new Set<string>();
+  for (const id of visited) {
+    if (rooms.get(id)?.level === levelFilter) visibleVisited.add(id);
+  }
+  if (visibleVisited.size === 0) return '';
 
   // Each room cell occupies CELL_W chars wide × CELL_H chars tall on the grid.
   // Connections occupy the gaps between cells (CON_W / CON_H).
@@ -322,10 +330,13 @@ export function renderMapGrid(
   const CELL_H = 3; // top border + label row + bottom border
   const CON_W = 3;  // columns between adjacent room columns
   const CON_H = 1;  // rows between adjacent room rows
+  // 1-char margin so that blocked/inter-level stubs written outside room box
+  // corners (ox+w, oy-1, oy+CELL_H) are always in-bounds.
+  const MARGIN = 1;
 
   // Determine bounding box of visible rooms (grid coords).
   let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
-  for (const id of visited) {
+  for (const id of visibleVisited) {
     const r = rooms.get(id);
     if (!r) continue;
     if (r.col < minCol) minCol = r.col;
@@ -335,11 +346,11 @@ export function renderMapGrid(
   }
   if (!isFinite(minCol)) return '';
 
-  // Character grid dimensions.
+  // Character grid dimensions (include margin on all four sides).
   const cols = maxCol - minCol + 1;
   const rows = maxRow - minRow + 1;
-  const W = cols * (CELL_W + 2) + (cols - 1) * CON_W;
-  const H = rows * CELL_H + (rows - 1) * CON_H;
+  const W = cols * (CELL_W + 2) + (cols - 1) * CON_W + 2 * MARGIN;
+  const H = rows * CELL_H + (rows - 1) * CON_H + 2 * MARGIN;
 
   // Fill with spaces.
   const grid: string[][] = Array.from({ length: H }, () => Array(W).fill(' '));
@@ -351,10 +362,10 @@ export function renderMapGrid(
     for (let i = 0; i < s.length; i++) put(cx + i, cy, s[i]!);
   }
 
-  // Grid coord → pixel offset (top-left corner of outer cell box).
+  // Grid coord → character offset (top-left corner of outer cell box), offset by MARGIN.
   function cellOrigin(col: number, row: number): [number, number] {
-    const x = (col - minCol) * (CELL_W + 2 + CON_W);
-    const y = (row - minRow) * (CELL_H + CON_H);
+    const x = MARGIN + (col - minCol) * (CELL_W + 2 + CON_W);
+    const y = MARGIN + (row - minRow) * (CELL_H + CON_H);
     return [x, y];
   }
 
@@ -418,24 +429,126 @@ export function renderMapGrid(
     }
   }
 
+  // Render connection only when at least one endpoint has a walked or backtrack
+  // record pointing at the other. Prevents phantom edges before discovery.
+  function hasExitRecord(roomId: string, toId: string): boolean {
+    const recMap = exitRecords.get(roomId);
+    if (!recMap) return false;
+    for (const [, rec] of recMap) {
+      if ((rec.kind === 'walked' || rec.kind === 'backtrack') && rec.to === toId) return true;
+    }
+    return false;
+  }
+
+  // Draw ⬇/⬆ stubs for exits that cross into the other level.
+  // A destination absent from the rooms map is treated as cross-level (it belongs
+  // to the other level's grid which isn't rendered here).
+  function drawInterLevelStub(roomId: string, col: number, row: number) {
+    const recMap = exitRecords.get(roomId);
+    if (!recMap) return;
+    const [ox, oy] = cellOrigin(col, row);
+    const cx = ox + Math.floor((CELL_W + 2) / 2);
+    for (const [, rec] of recMap) {
+      if (rec.kind === 'blocked') continue;
+      if (!rec.to) continue;
+      const destRoom = rooms.get(rec.to);
+      // Cross-level when the destination is in a different level or not in the map.
+      const isCrossLevel = destRoom ? destRoom.level !== levelFilter : true;
+      if (!isCrossLevel) continue;
+      if (rec.dir === 'down') put(cx, oy + CELL_H, '⬇');
+      if (rec.dir === 'up')   put(cx, oy - 1, '⬆');
+    }
+  }
+
+  // Draw ✕ glyphs at the wall face for each blocked exit record.
+  function drawBlockedStubs(roomId: string, col: number, row: number) {
+    const recMap = exitRecords.get(roomId);
+    if (!recMap) return;
+    const [ox, oy] = cellOrigin(col, row);
+    const w = CELL_W + 2;
+    for (const [, rec] of recMap) {
+      if (rec.kind !== 'blocked') continue;
+      const midY = oy + 1;
+      const midX = ox + Math.floor(w / 2);
+      switch (rec.dir) {
+        case 'east':  put(ox + w, midY, '✕'); break;
+        case 'west':  put(ox - 1, midY, '✕'); break;
+        case 'north': put(midX, oy - 1, '✕'); break;
+        case 'south': put(midX, oy + CELL_H, '✕'); break;
+        case 'up':    put(midX, oy - 1, '✕'); break;
+        case 'down':  put(midX, oy + CELL_H, '✕'); break;
+      }
+    }
+  }
+
   // Pass 1: draw connections (so room boxes overdraw them at junctions).
   for (const c of connections) {
     const ra = rooms.get(c.a);
     const rb = rooms.get(c.b);
     if (!ra || !rb) continue;
-    if (!visited.has(c.a) || !visited.has(c.b)) continue;
+    // Both rooms must be on the current level to draw an in-level connection.
+    if (!visibleVisited.has(c.a) || !visibleVisited.has(c.b)) continue;
+    // Gate on exit records — no phantom edges before discovery.
+    if (!hasExitRecord(c.a, c.b) && !hasExitRecord(c.b, c.a)) continue;
     drawConnection(ra.col, ra.row, rb.col, rb.row, c.reciprocal);
     drawConnection(rb.col, rb.row, ra.col, ra.row, c.reciprocal);
   }
 
   // Pass 2: draw room boxes (overdraw connection stubs if they overlap box borders).
-  for (const id of visited) {
+  for (const id of visibleVisited) {
     const r = rooms.get(id);
     if (!r) continue;
     drawRoom(id, r.col, r.row, id === current);
   }
 
+  // Pass 3: inter-level stubs + blocked stubs (on top of room boxes).
+  for (const id of visibleVisited) {
+    const r = rooms.get(id);
+    if (!r) continue;
+    drawInterLevelStub(id, r.col, r.row);
+    drawBlockedStubs(id, r.col, r.row);
+  }
+
   return grid.map(row => row.join('')).join('\n');
+}
+
+// ── Paths from Here panel ─────────────────────────────────────────────────────
+
+function buildPathsPanel(
+  mapState: MapState,
+  roomById: ReadonlyMap<string, { id: string; label: string; col: number; row: number; level: string }>,
+): { element: HTMLElement; refresh: () => void } {
+  const element = el('div', 'text-xs font-mono text-[var(--zork-fg)] py-1');
+  element.setAttribute('data-testid', 'paths-panel');
+
+  const DIR_LABELS: Record<string, string> = {
+    north: 'North', south: 'South', east: 'East',  west: 'West',
+    ne:    'NE',    nw:    'NW',    se:   'SE',     sw:   'SW',
+    up:    'Up',    down:  'Down',  in:   'In',     out:  'Out',
+  };
+  const DIR_PAD = 6; // fixed left-pad width for direction labels
+
+  function refresh() {
+    const current = mapState.currentRoom();
+    if (!current) { element.textContent = ''; return; }
+
+    const exits = mapState.exitsFor(current);
+    const lines: string[] = [];
+
+    for (const [, record] of exits) {
+      const dirLabel = (DIR_LABELS[record.dir] ?? record.dir).padEnd(DIR_PAD);
+      if (record.kind === 'blocked') {
+        lines.push(`  ${dirLabel}  →  ✕ blocked`);
+      } else if (record.to) {
+        const destLabel = roomById.get(record.to)?.label ?? record.to;
+        lines.push(`  ${dirLabel}  →  ${destLabel}`);
+      }
+    }
+
+    element.textContent = lines.join('\n') || '';
+  }
+
+  return { element, refresh };
 }
 
 function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => void } {
@@ -457,7 +570,15 @@ function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => vo
       return;
     }
 
-    const text = renderMapGrid(visited, current, layout.ROOM_BY_ID, layout.ROOM_CONNECTIONS);
+    const currentLevel: 'surface' | 'underground' = (current ? layout.ROOM_BY_ID.get(current)?.level : undefined) ?? 'surface';
+    const text = renderMapGrid(
+      visited,
+      current,
+      layout.ROOM_BY_ID,
+      layout.ROOM_CONNECTIONS,
+      mapState.getAllExits(),
+      currentLevel,
+    );
     element.textContent = text || '';
   }
 
@@ -778,9 +899,115 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
   return { open, element: overlay };
 }
 
+// ── Map modal ─────────────────────────────────────────────────────────────────
+
+// Same div+classList pattern as buildKnownIssuesDialog. Uses async open() so
+// the map layout can be lazy-loaded and the grid centered on the current room.
+function buildMapModal(
+  mapState: MapState,
+  getLayout: () => Promise<typeof import('./map-layout.js')>,
+): { open: () => void; close: () => void; element: HTMLElement } {
+  const overlay = el('div', [
+    'hidden fixed inset-0 z-50 overflow-y-auto',
+    'bg-black/70',
+  ].join(' '), { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'map-modal-title' });
+  overlay.id = 'map-modal';
+  overlay.setAttribute('data-testid', 'map-modal');
+
+  const outer = el('div', 'flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0');
+
+  const panel = el('div', [
+    'relative transform overflow-hidden rounded-lg px-4 pt-5 pb-4 text-left shadow-xl',
+    'sm:my-8 sm:w-full sm:max-w-3xl sm:p-6',
+    'bg-[var(--zork-bg)] border border-[var(--zork-accent)]',
+    'text-[var(--zork-fg)] font-mono text-sm',
+  ].join(' '));
+
+  const closeBtnWrap = el('div', 'absolute top-0 right-0 hidden pt-4 pr-4 sm:block');
+  const closeBtn = el('button', [
+    'rounded-md text-[var(--zork-accent)] hover:opacity-75',
+    'focus:outline-2 focus:outline-offset-2',
+  ].join(' '), { type: 'button' });
+  const closeSr = el('span', 'sr-only');
+  closeSr.textContent = 'Close';
+  closeBtn.appendChild(closeSr);
+  closeBtn.textContent = '✕';
+  closeBtnWrap.appendChild(closeBtn);
+
+  const title = el('h2', 'text-base font-bold mb-4 text-[var(--zork-accent)]');
+  title.id = 'map-modal-title';
+  title.textContent = 'Map';
+
+  const gridContainer = el('div', 'overflow-auto max-h-[70vh]');
+  const gridPre = el('pre', 'text-xs font-mono text-[var(--zork-fg)] m-0 p-0');
+  gridContainer.appendChild(gridPre);
+
+  function closeModal() { overlay.classList.add('hidden'); }
+
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target === outer) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeModal();
+  });
+
+  async function open() {
+    overlay.classList.remove('hidden');
+    const layout = await getLayout();
+    const visited = mapState.visitedRooms();
+    const current = mapState.currentRoom();
+    const currentLevel: 'surface' | 'underground' = (current ? layout.ROOM_BY_ID.get(current)?.level : undefined) ?? 'surface';
+    const text = renderMapGrid(
+      visited,
+      current,
+      layout.ROOM_BY_ID,
+      layout.ROOM_CONNECTIONS,
+      mapState.getAllExits(),
+      currentLevel,
+    );
+    gridPre.textContent = text;
+
+    // Center viewport on current room.
+    if (current) {
+      const r = layout.ROOM_BY_ID.get(current);
+      if (r) {
+        const CELL_W = 9, CELL_H = 3, CON_W = 3, CON_H = 1;
+        const charW = CELL_W + 2 + CON_W;
+        const charH = CELL_H + CON_H;
+        const pxPerCol = 8;
+        const pxPerRow = 14;
+        let minCol = Infinity, minRow = Infinity;
+        for (const id of visited) {
+          const rm = layout.ROOM_BY_ID.get(id) as { col: number; row: number; level: string } | undefined;
+          if (!rm || rm.level !== currentLevel) continue;
+          if (rm.col < minCol) minCol = rm.col;
+          if (rm.row < minRow) minRow = rm.row;
+        }
+        if (isFinite(minCol)) {
+          const cellX = (r.col - minCol) * charW * pxPerCol;
+          const cellY = (r.row - minRow) * charH * pxPerRow;
+          const halfW = gridContainer.clientWidth / 2;
+          const halfH = gridContainer.clientHeight / 2;
+          gridContainer.scrollLeft = Math.max(0, cellX - halfW);
+          gridContainer.scrollTop  = Math.max(0, cellY - halfH);
+        }
+      }
+    }
+  }
+
+  panel.appendChild(closeBtnWrap);
+  panel.appendChild(title);
+  panel.appendChild(gridContainer);
+  outer.appendChild(panel);
+  overlay.appendChild(outer);
+
+  return { open, close: closeModal, element: overlay };
+}
+
 // ── Shell mount ───────────────────────────────────────────────────────────────
 
-export function mountShell(app: HTMLElement): void {
+export function mountShell(app: HTMLElement): { mapState: MapState; session: import('../shell/session.js').GameSession } {
   // Clear the loading placeholder.
   app.innerHTML = '';
 
@@ -828,19 +1055,66 @@ export function mountShell(app: HTMLElement): void {
   // ── Build components ────────────────────────────────────────────────────
   const statusBar = buildStatusBar();
 
+  const map = buildMap(mapState);
+
+  // Paths panel (sidebar replacement for map). Layout is lazy-loaded; swap in
+  // the real panel once the import resolves.
+  let _pathsLayoutPromise: Promise<typeof import('./map-layout.js')> | null = null;
+  function getPathsLayout() {
+    if (!_pathsLayoutPromise) _pathsLayoutPromise = import('./map-layout.js');
+    return _pathsLayoutPromise;
+  }
+  const pathsPanelPlaceholder = el('div', '');
+  pathsPanelPlaceholder.setAttribute('data-testid', 'paths-panel');
+  let pathsPanel: { element: HTMLElement; refresh: () => void } = {
+    element: pathsPanelPlaceholder,
+    refresh: () => { /* no-op until layout ready */ },
+  };
+  void getPathsLayout().then((layout) => {
+    const real = buildPathsPanel(mapState, layout.ROOM_BY_ID);
+    if (pathsPanel.element.parentNode) {
+      pathsPanel.element.parentNode.replaceChild(real.element, pathsPanel.element);
+    }
+    pathsPanel = real;
+    real.refresh();
+  });
+
+  // Map modal — lazy-loads layout on first open.
+  let _modalLayoutPromise: Promise<typeof import('./map-layout.js')> | null = null;
+  const mapModal = buildMapModal(mapState, () => {
+    if (!_modalLayoutPromise) _modalLayoutPromise = import('./map-layout.js');
+    return _modalLayoutPromise;
+  });
+
   const { container: terminal, appendOutput, appendCommand } = buildTerminal((cmd) => {
+    // Intercept 'map' before the engine sees it — no submit, no moves advance.
+    if (cmd.trim().toLowerCase() === 'map') {
+      void mapModal.open();
+      return;
+    }
     if (cmd.trim()) {
       appendCommand(cmd);
     }
+    const prevRoom = mapState.currentRoom();
     const output = session.submit(cmd);
     if (output) appendOutput(output);
     const snap = session.snapshot();
     statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
-    mapState.update(snap);
+
+    const parsedDir = parseDirection(cmd);
+
+    if (snap.here !== prevRoom) {
+      mapState.update(snap, parsedDir);
+    } else {
+      mapState.update(snap, null);
+      if (parsedDir !== null) {
+        mapState.recordBlocked(parsedDir);
+      }
+    }
+
+    pathsPanel.refresh();
     void map.refresh();
   });
-
-  const map = buildMap(mapState);
   const { open: openIssues, element: issuesDialog } = buildKnownIssuesDialog();
   const { open: openFeedback, element: feedbackDialog } = buildFeedbackDialog(
     () => sessionIdRef,
@@ -859,7 +1133,7 @@ export function mountShell(app: HTMLElement): void {
 
   // Map area.
   const mapLabel = el('div', 'text-xs text-[var(--zork-accent)] uppercase tracking-wider mt-2');
-  mapLabel.textContent = 'Map';
+  mapLabel.textContent = 'Paths from Here';
 
   // Known issues button.
   const issuesBtn = el('button', 'text-xs text-[var(--zork-accent)] underline mt-2 text-left');
@@ -910,7 +1184,7 @@ export function mountShell(app: HTMLElement): void {
   sidebar.appendChild(themeLabel);
   sidebar.appendChild(switcherContainer);
   sidebar.appendChild(mapLabel);
-  sidebar.appendChild(map.element);
+  sidebar.appendChild(pathsPanel.element);
   sidebar.appendChild(issuesBtn);
   sidebar.appendChild(feedbackBtn);
   sidebar.appendChild(notice);
@@ -959,13 +1233,14 @@ export function mountShell(app: HTMLElement): void {
   app.appendChild(drawerToggle);
   app.appendChild(issuesDialog);
   app.appendChild(feedbackDialog);
+  app.appendChild(mapModal.element);
 
   // ── Boot the game ───────────────────────────────────────────────────────
   const banner = session.start();
   appendOutput(banner);
   const snap = session.snapshot();
   statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
-  mapState.update(snap);
+  mapState.update(snap, null);
   void map.refresh();
 
   // Focus the input immediately.
@@ -982,4 +1257,6 @@ export function mountShell(app: HTMLElement): void {
     session.close();
     sink.drainBeacon();
   });
+
+  return { mapState, session };
 }

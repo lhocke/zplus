@@ -3,8 +3,47 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { ROOM_CONNECTIONS, ROOM_BY_ID } from '../../src/ui/map-layout.js';
+import { ROOM_CONNECTIONS, ROOM_BY_ID, ROOM_LAYOUT } from '../../src/ui/map-layout.js';
 import { renderMapGrid } from '../../src/ui/shell.js';
+
+const SURFACE_IDS = new Set([
+  'NORTH-OF-HOUSE', 'WEST-OF-HOUSE', 'EAST-OF-HOUSE', 'SOUTH-OF-HOUSE',
+  'FOREST-1', 'FOREST-2', 'FOREST-3', 'PATH', 'UP-A-TREE',
+  'GRATING-CLEARING', 'CLEARING', 'MOUNTAINS',
+  'KITCHEN', 'ATTIC', 'LIVING-ROOM',
+]);
+
+const UNDERGROUND_IDS = new Set([
+  'CELLAR', 'TROLL-ROOM', 'EAST-OF-CHASM', 'GALLERY', 'STUDIO',
+]);
+
+describe('ROOM_LAYOUT — level field', () => {
+  it('every room has a level field', () => {
+    for (const r of ROOM_LAYOUT) {
+      expect(r.level, `room ${r.id} missing level`).toMatch(/^(surface|underground)$/);
+    }
+  });
+
+  it('surface rooms are classified surface', () => {
+    for (const r of ROOM_LAYOUT) {
+      if (SURFACE_IDS.has(r.id)) {
+        expect(r.level, r.id).toBe('surface');
+      }
+    }
+  });
+
+  it('underground rooms are classified underground', () => {
+    for (const r of ROOM_LAYOUT) {
+      if (UNDERGROUND_IDS.has(r.id)) {
+        expect(r.level, r.id).toBe('underground');
+      }
+    }
+  });
+
+  it('ROOM_LAYOUT covers exactly the 20 expected rooms', () => {
+    expect(ROOM_LAYOUT.length).toBe(20);
+  });
+});
 
 // Helper: find a connection by pair (order-insensitive).
 function findConn(a: string, b: string) {
@@ -82,9 +121,17 @@ describe('ROOM_CONNECTIONS — reciprocal flags', () => {
   });
 });
 
+const NO_EXITS = new Map<string, Map<string, import('../../src/ui/map-state.js').ExitRecord>>();
+
+// Helper: build a one-entry exitRecords map for connection-visibility tests.
+function oneExit(roomId: string, dir: string, to: string): typeof NO_EXITS {
+  const rec: import('../../src/ui/map-state.js').ExitRecord = { kind: 'walked', dir: dir as import('../../src/domain/game-object.js').Dir, to };
+  return new Map([[roomId, new Map([[dir, rec]])]]);
+}
+
 describe('renderMapGrid', () => {
   it('returns empty string when nothing visited', () => {
-    const result = renderMapGrid(new Set(), null, ROOM_BY_ID, ROOM_CONNECTIONS);
+    const result = renderMapGrid(new Set(), null, ROOM_BY_ID, ROOM_CONNECTIONS, NO_EXITS, 'surface');
     expect(result).toBe('');
   });
 
@@ -94,6 +141,8 @@ describe('renderMapGrid', () => {
       'WEST-OF-HOUSE',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      NO_EXITS,
+      'surface',
     );
     expect(result).toContain('┌');
     expect(result).toContain('┐');
@@ -108,6 +157,8 @@ describe('renderMapGrid', () => {
       'WEST-OF-HOUSE',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      NO_EXITS,
+      'surface',
     );
     expect(result).toContain('▶');
   });
@@ -118,16 +169,21 @@ describe('renderMapGrid', () => {
       'NORTH-OF-HOUSE',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      NO_EXITS,
+      'surface',
     );
     expect(result).not.toContain('▶');
   });
 
   it('draws a solid connector between two reciprocally-connected visited rooms', () => {
+    // Connection visibility now requires an exit record — supply one.
     const result = renderMapGrid(
       new Set(['KITCHEN', 'LIVING-ROOM']),
       'KITCHEN',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      oneExit('KITCHEN', 'west', 'LIVING-ROOM'),
+      'surface',
     );
     // KITCHEN (col 4) and LIVING-ROOM (col 3) are horizontally adjacent; reciprocal → ───
     expect(result).toContain('───');
@@ -141,6 +197,8 @@ describe('renderMapGrid', () => {
       'WEST-OF-HOUSE',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      oneExit('WEST-OF-HOUSE', 'west', 'FOREST-1'),
+      'surface',
     );
     expect(result2).toContain('╌');
   });
@@ -151,6 +209,8 @@ describe('renderMapGrid', () => {
       'KITCHEN',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      NO_EXITS,
+      'surface',
     );
     // EW-PASSAGE not in ROOM_BY_ID — should not throw, kitchen box should still render
     expect(result).toContain('┌');
