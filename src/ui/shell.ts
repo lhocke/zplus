@@ -718,6 +718,8 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
         status.textContent = 'Feedback sent. Thank you!';
         (msgArea as HTMLTextAreaElement).value = '';
         (ctxArea as HTMLTextAreaElement).value = '';
+        // Let the confirmation land, then dismiss the dialog.
+        setTimeout(closeFeedback, 1200);
       } else {
         status.textContent = `Send failed (${res.status}). Try again.`;
       }
