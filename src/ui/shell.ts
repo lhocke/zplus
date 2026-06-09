@@ -438,6 +438,45 @@ export function renderMapGrid(
   return grid.map(row => row.join('')).join('\n');
 }
 
+// ── Paths from Here panel ─────────────────────────────────────────────────────
+
+function buildPathsPanel(
+  mapState: MapState,
+  roomById: ReadonlyMap<string, { id: string; label: string; col: number; row: number; level: string }>,
+): { element: HTMLElement; refresh: () => void } {
+  const element = el('div', 'text-xs font-mono text-[var(--zork-fg)] py-1');
+  element.setAttribute('data-testid', 'paths-panel');
+
+  const DIR_LABELS: Record<string, string> = {
+    north: 'North', south: 'South', east: 'East',  west: 'West',
+    ne:    'NE',    nw:    'NW',    se:   'SE',     sw:   'SW',
+    up:    'Up',    down:  'Down',  in:   'In',     out:  'Out',
+  };
+  const DIR_PAD = 6; // fixed left-pad width for direction labels
+
+  function refresh() {
+    const current = mapState.currentRoom();
+    if (!current) { element.textContent = ''; return; }
+
+    const exits = mapState.exitsFor(current);
+    const lines: string[] = [];
+
+    for (const [, record] of exits) {
+      const dirLabel = (DIR_LABELS[record.dir] ?? record.dir).padEnd(DIR_PAD);
+      if (record.kind === 'blocked') {
+        lines.push(`  ${dirLabel}  →  ✕ blocked`);
+      } else if (record.to) {
+        const destLabel = roomById.get(record.to)?.label ?? record.to;
+        lines.push(`  ${dirLabel}  →  ${destLabel}`);
+      }
+    }
+
+    element.textContent = lines.join('\n') || '';
+  }
+
+  return { element, refresh };
+}
+
 function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => void } {
   const element = el('div', 'text-xs font-mono text-[var(--zork-fg)] py-2 overflow-x-auto');
 
@@ -778,7 +817,7 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
 
 // ── Shell mount ───────────────────────────────────────────────────────────────
 
-export function mountShell(app: HTMLElement): void {
+export function mountShell(app: HTMLElement): { mapState: MapState } {
   // Clear the loading placeholder.
   app.innerHTML = '';
 
@@ -826,6 +865,30 @@ export function mountShell(app: HTMLElement): void {
   // ── Build components ────────────────────────────────────────────────────
   const statusBar = buildStatusBar();
 
+  const map = buildMap(mapState);
+
+  // Paths panel (sidebar replacement for map). Layout is lazy-loaded; swap in
+  // the real panel once the import resolves.
+  let _pathsLayoutPromise: Promise<typeof import('./map-layout.js')> | null = null;
+  function getPathsLayout() {
+    if (!_pathsLayoutPromise) _pathsLayoutPromise = import('./map-layout.js');
+    return _pathsLayoutPromise;
+  }
+  const pathsPanelPlaceholder = el('div', '');
+  pathsPanelPlaceholder.setAttribute('data-testid', 'paths-panel');
+  let pathsPanel: { element: HTMLElement; refresh: () => void } = {
+    element: pathsPanelPlaceholder,
+    refresh: () => { /* no-op until layout ready */ },
+  };
+  void getPathsLayout().then((layout) => {
+    const real = buildPathsPanel(mapState, layout.ROOM_BY_ID);
+    if (pathsPanel.element.parentNode) {
+      pathsPanel.element.parentNode.replaceChild(real.element, pathsPanel.element);
+    }
+    pathsPanel = real;
+    real.refresh();
+  });
+
   const { container: terminal, appendOutput, appendCommand } = buildTerminal((cmd) => {
     if (cmd.trim()) {
       appendCommand(cmd);
@@ -835,10 +898,9 @@ export function mountShell(app: HTMLElement): void {
     const snap = session.snapshot();
     statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
     mapState.update(snap, null);
+    pathsPanel.refresh();
     void map.refresh();
   });
-
-  const map = buildMap(mapState);
   const { open: openIssues, element: issuesDialog } = buildKnownIssuesDialog();
   const { open: openFeedback, element: feedbackDialog } = buildFeedbackDialog(
     () => sessionIdRef,
@@ -857,7 +919,7 @@ export function mountShell(app: HTMLElement): void {
 
   // Map area.
   const mapLabel = el('div', 'text-xs text-[var(--zork-accent)] uppercase tracking-wider mt-2');
-  mapLabel.textContent = 'Map';
+  mapLabel.textContent = 'Paths from Here';
 
   // Known issues button.
   const issuesBtn = el('button', 'text-xs text-[var(--zork-accent)] underline mt-2 text-left');
@@ -908,7 +970,7 @@ export function mountShell(app: HTMLElement): void {
   sidebar.appendChild(themeLabel);
   sidebar.appendChild(switcherContainer);
   sidebar.appendChild(mapLabel);
-  sidebar.appendChild(map.element);
+  sidebar.appendChild(pathsPanel.element);
   sidebar.appendChild(issuesBtn);
   sidebar.appendChild(feedbackBtn);
   sidebar.appendChild(notice);
@@ -980,4 +1042,6 @@ export function mountShell(app: HTMLElement): void {
     session.close();
     sink.drainBeacon();
   });
+
+  return { mapState };
 }
