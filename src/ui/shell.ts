@@ -896,9 +896,115 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
   return { open, element: overlay };
 }
 
+// ── Map modal ─────────────────────────────────────────────────────────────────
+
+// Same div+classList pattern as buildKnownIssuesDialog. Uses async open() so
+// the map layout can be lazy-loaded and the grid centered on the current room.
+function buildMapModal(
+  mapState: MapState,
+  getLayout: () => Promise<typeof import('./map-layout.js')>,
+): { open: () => void; close: () => void; element: HTMLElement } {
+  const overlay = el('div', [
+    'hidden fixed inset-0 z-50 overflow-y-auto',
+    'bg-black/70',
+  ].join(' '), { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'map-modal-title' });
+  overlay.id = 'map-modal';
+  overlay.setAttribute('data-testid', 'map-modal');
+
+  const outer = el('div', 'flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0');
+
+  const panel = el('div', [
+    'relative transform overflow-hidden rounded-lg px-4 pt-5 pb-4 text-left shadow-xl',
+    'sm:my-8 sm:w-full sm:max-w-3xl sm:p-6',
+    'bg-[var(--zork-bg)] border border-[var(--zork-accent)]',
+    'text-[var(--zork-fg)] font-mono text-sm',
+  ].join(' '));
+
+  const closeBtnWrap = el('div', 'absolute top-0 right-0 hidden pt-4 pr-4 sm:block');
+  const closeBtn = el('button', [
+    'rounded-md text-[var(--zork-accent)] hover:opacity-75',
+    'focus:outline-2 focus:outline-offset-2',
+  ].join(' '), { type: 'button' });
+  const closeSr = el('span', 'sr-only');
+  closeSr.textContent = 'Close';
+  closeBtn.appendChild(closeSr);
+  closeBtn.textContent = '✕';
+  closeBtnWrap.appendChild(closeBtn);
+
+  const title = el('h2', 'text-base font-bold mb-4 text-[var(--zork-accent)]');
+  title.id = 'map-modal-title';
+  title.textContent = 'Map';
+
+  const gridContainer = el('div', 'overflow-auto max-h-[70vh]');
+  const gridPre = el('pre', 'text-xs font-mono text-[var(--zork-fg)] m-0 p-0');
+  gridContainer.appendChild(gridPre);
+
+  function closeModal() { overlay.classList.add('hidden'); }
+
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target === outer) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeModal();
+  });
+
+  async function open() {
+    overlay.classList.remove('hidden');
+    const layout = await getLayout();
+    const visited = mapState.visitedRooms();
+    const current = mapState.currentRoom();
+    const currentLevel: 'surface' | 'underground' = (current ? layout.ROOM_BY_ID.get(current)?.level : undefined) ?? 'surface';
+    const text = renderMapGrid(
+      visited,
+      current,
+      layout.ROOM_BY_ID,
+      layout.ROOM_CONNECTIONS,
+      mapState.getAllExits(),
+      currentLevel,
+    );
+    gridPre.textContent = text;
+
+    // Center viewport on current room.
+    if (current) {
+      const r = layout.ROOM_BY_ID.get(current);
+      if (r) {
+        const CELL_W = 9, CELL_H = 3, CON_W = 3, CON_H = 1;
+        const charW = CELL_W + 2 + CON_W;
+        const charH = CELL_H + CON_H;
+        const pxPerCol = 8;
+        const pxPerRow = 14;
+        let minCol = Infinity, minRow = Infinity;
+        for (const id of visited) {
+          const rm = layout.ROOM_BY_ID.get(id) as { col: number; row: number; level: string } | undefined;
+          if (!rm || rm.level !== currentLevel) continue;
+          if (rm.col < minCol) minCol = rm.col;
+          if (rm.row < minRow) minRow = rm.row;
+        }
+        if (isFinite(minCol)) {
+          const cellX = (r.col - minCol) * charW * pxPerCol;
+          const cellY = (r.row - minRow) * charH * pxPerRow;
+          const halfW = gridContainer.clientWidth / 2;
+          const halfH = gridContainer.clientHeight / 2;
+          gridContainer.scrollLeft = Math.max(0, cellX - halfW);
+          gridContainer.scrollTop  = Math.max(0, cellY - halfH);
+        }
+      }
+    }
+  }
+
+  panel.appendChild(closeBtnWrap);
+  panel.appendChild(title);
+  panel.appendChild(gridContainer);
+  outer.appendChild(panel);
+  overlay.appendChild(outer);
+
+  return { open, close: closeModal, element: overlay };
+}
+
 // ── Shell mount ───────────────────────────────────────────────────────────────
 
-export function mountShell(app: HTMLElement): { mapState: MapState } {
+export function mountShell(app: HTMLElement): { mapState: MapState; session: import('../shell/session.js').GameSession } {
   // Clear the loading placeholder.
   app.innerHTML = '';
 
@@ -970,7 +1076,19 @@ export function mountShell(app: HTMLElement): { mapState: MapState } {
     real.refresh();
   });
 
+  // Map modal — lazy-loads layout on first open.
+  let _modalLayoutPromise: Promise<typeof import('./map-layout.js')> | null = null;
+  const mapModal = buildMapModal(mapState, () => {
+    if (!_modalLayoutPromise) _modalLayoutPromise = import('./map-layout.js');
+    return _modalLayoutPromise;
+  });
+
   const { container: terminal, appendOutput, appendCommand } = buildTerminal((cmd) => {
+    // Intercept 'map' before the engine sees it — no submit, no moves advance.
+    if (cmd.trim().toLowerCase() === 'map') {
+      void mapModal.open();
+      return;
+    }
     if (cmd.trim()) {
       appendCommand(cmd);
     }
@@ -1100,6 +1218,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState } {
   app.appendChild(drawerToggle);
   app.appendChild(issuesDialog);
   app.appendChild(feedbackDialog);
+  app.appendChild(mapModal.element);
 
   // ── Boot the game ───────────────────────────────────────────────────────
   const banner = session.start();
@@ -1124,5 +1243,5 @@ export function mountShell(app: HTMLElement): { mapState: MapState } {
     sink.drainBeacon();
   });
 
-  return { mapState };
+  return { mapState, session };
 }
