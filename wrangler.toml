@@ -1,13 +1,11 @@
 # Cloudflare Pages project "zork" (deploys to zork-3w8.pages.dev).
 # Build output: dist/   Functions: functions/ (auto-detected by Pages).
-# R2 binding is deferred (billing) — /api/log degrades to 204 without it.
+# R2 binding active (bucket provisioned 2026-06-08) — /api/log degrades to 204 if unbound.
 name = "zork"
 pages_build_output_dir = "./dist"
 compatibility_date = "2026-06-07"
 
-# Re-enable once R2 is provisioned (billing). Until then this binding must stay
-# commented: wrangler validates bindings at deploy, and pointing at a bucket that
-# doesn't exist fails the deploy. /api/log returns 204 when PLAYTEST is absent.
-# [[r2_buckets]]
-# binding = "PLAYTEST"
-# bucket_name = "zork-playtest"
+# Telemetry sink for /api/log (writes sessions/<id>/<seq>.json).
+[[r2_buckets]]
+binding = "PLAYTEST"
+bucket_name = "zork-playtest"
