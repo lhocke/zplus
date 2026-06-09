@@ -834,7 +834,7 @@ export function mountShell(app: HTMLElement): void {
     if (output) appendOutput(output);
     const snap = session.snapshot();
     statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
-    mapState.update(snap);
+    mapState.update(snap, null);
     void map.refresh();
   });
 
@@ -963,7 +963,7 @@ export function mountShell(app: HTMLElement): void {
   appendOutput(banner);
   const snap = session.snapshot();
   statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
-  mapState.update(snap);
+  mapState.update(snap, null);
   void map.refresh();
 
   // Focus the input immediately.
