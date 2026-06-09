@@ -121,9 +121,17 @@ describe('ROOM_CONNECTIONS — reciprocal flags', () => {
   });
 });
 
+const NO_EXITS = new Map<string, Map<string, import('../../src/ui/map-state.js').ExitRecord>>();
+
+// Helper: build a one-entry exitRecords map for connection-visibility tests.
+function oneExit(roomId: string, dir: string, to: string): typeof NO_EXITS {
+  const rec: import('../../src/ui/map-state.js').ExitRecord = { kind: 'walked', dir: dir as import('../../src/domain/game-object.js').Dir, to };
+  return new Map([[roomId, new Map([[dir, rec]])]]);
+}
+
 describe('renderMapGrid', () => {
   it('returns empty string when nothing visited', () => {
-    const result = renderMapGrid(new Set(), null, ROOM_BY_ID, ROOM_CONNECTIONS);
+    const result = renderMapGrid(new Set(), null, ROOM_BY_ID, ROOM_CONNECTIONS, NO_EXITS, 'surface');
     expect(result).toBe('');
   });
 
@@ -133,6 +141,8 @@ describe('renderMapGrid', () => {
       'WEST-OF-HOUSE',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      NO_EXITS,
+      'surface',
     );
     expect(result).toContain('┌');
     expect(result).toContain('┐');
@@ -147,6 +157,8 @@ describe('renderMapGrid', () => {
       'WEST-OF-HOUSE',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      NO_EXITS,
+      'surface',
     );
     expect(result).toContain('▶');
   });
@@ -157,16 +169,21 @@ describe('renderMapGrid', () => {
       'NORTH-OF-HOUSE',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      NO_EXITS,
+      'surface',
     );
     expect(result).not.toContain('▶');
   });
 
   it('draws a solid connector between two reciprocally-connected visited rooms', () => {
+    // Connection visibility now requires an exit record — supply one.
     const result = renderMapGrid(
       new Set(['KITCHEN', 'LIVING-ROOM']),
       'KITCHEN',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      oneExit('KITCHEN', 'west', 'LIVING-ROOM'),
+      'surface',
     );
     // KITCHEN (col 4) and LIVING-ROOM (col 3) are horizontally adjacent; reciprocal → ───
     expect(result).toContain('───');
@@ -180,6 +197,8 @@ describe('renderMapGrid', () => {
       'WEST-OF-HOUSE',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      oneExit('WEST-OF-HOUSE', 'west', 'FOREST-1'),
+      'surface',
     );
     expect(result2).toContain('╌');
   });
@@ -190,6 +209,8 @@ describe('renderMapGrid', () => {
       'KITCHEN',
       ROOM_BY_ID,
       ROOM_CONNECTIONS,
+      NO_EXITS,
+      'surface',
     );
     // EW-PASSAGE not in ROOM_BY_ID — should not throw, kitchen box should still render
     expect(result).toContain('┌');

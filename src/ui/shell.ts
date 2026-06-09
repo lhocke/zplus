@@ -8,7 +8,7 @@
 
 import { createSession } from '../shell/session.js';
 import { HttpSink } from '../shell/http-sink.js';
-import { MapState } from './map-state.js';
+import { MapState, type ExitRecord } from './map-state.js';
 import { isThemeName, DEFAULT_THEME, type ThemeName } from './themes.js';
 import { shapeFeedbackPayload, collectBrowserInfo } from './feedback.js';
 import { ALLOWED_CATEGORIES } from '../../functions/lib/sanitize.js';
@@ -311,10 +311,17 @@ function buildStatusBar(): { element: HTMLElement; update: (hereName: string, sc
 export function renderMapGrid(
   visited: ReadonlySet<string>,
   current: string | null,
-  rooms: ReadonlyMap<string, { id: string; label: string; col: number; row: number }>,
+  rooms: ReadonlyMap<string, { id: string; label: string; col: number; row: number; level: 'surface' | 'underground' }>,
   connections: ReadonlyArray<{ a: string; b: string; reciprocal: boolean }>,
+  exitRecords: ReadonlyMap<string, ReadonlyMap<string, ExitRecord>>,
+  levelFilter: 'surface' | 'underground',
 ): string {
-  if (visited.size === 0) return '';
+  // Only show rooms on the current level.
+  const visibleVisited = new Set<string>();
+  for (const id of visited) {
+    if (rooms.get(id)?.level === levelFilter) visibleVisited.add(id);
+  }
+  if (visibleVisited.size === 0) return '';
 
   // Each room cell occupies CELL_W chars wide × CELL_H chars tall on the grid.
   // Connections occupy the gaps between cells (CON_W / CON_H).
@@ -322,10 +329,13 @@ export function renderMapGrid(
   const CELL_H = 3; // top border + label row + bottom border
   const CON_W = 3;  // columns between adjacent room columns
   const CON_H = 1;  // rows between adjacent room rows
+  // 1-char margin so that blocked/inter-level stubs written outside room box
+  // corners (ox+w, oy-1, oy+CELL_H) are always in-bounds.
+  const MARGIN = 1;
 
   // Determine bounding box of visible rooms (grid coords).
   let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
-  for (const id of visited) {
+  for (const id of visibleVisited) {
     const r = rooms.get(id);
     if (!r) continue;
     if (r.col < minCol) minCol = r.col;
@@ -335,11 +345,11 @@ export function renderMapGrid(
   }
   if (!isFinite(minCol)) return '';
 
-  // Character grid dimensions.
+  // Character grid dimensions (include margin on all four sides).
   const cols = maxCol - minCol + 1;
   const rows = maxRow - minRow + 1;
-  const W = cols * (CELL_W + 2) + (cols - 1) * CON_W;
-  const H = rows * CELL_H + (rows - 1) * CON_H;
+  const W = cols * (CELL_W + 2) + (cols - 1) * CON_W + 2 * MARGIN;
+  const H = rows * CELL_H + (rows - 1) * CON_H + 2 * MARGIN;
 
   // Fill with spaces.
   const grid: string[][] = Array.from({ length: H }, () => Array(W).fill(' '));
@@ -351,10 +361,10 @@ export function renderMapGrid(
     for (let i = 0; i < s.length; i++) put(cx + i, cy, s[i]!);
   }
 
-  // Grid coord → pixel offset (top-left corner of outer cell box).
+  // Grid coord → character offset (top-left corner of outer cell box), offset by MARGIN.
   function cellOrigin(col: number, row: number): [number, number] {
-    const x = (col - minCol) * (CELL_W + 2 + CON_W);
-    const y = (row - minRow) * (CELL_H + CON_H);
+    const x = MARGIN + (col - minCol) * (CELL_W + 2 + CON_W);
+    const y = MARGIN + (row - minRow) * (CELL_H + CON_H);
     return [x, y];
   }
 
@@ -418,21 +428,84 @@ export function renderMapGrid(
     }
   }
 
+  // Render connection only when at least one endpoint has a walked or backtrack
+  // record pointing at the other. Prevents phantom edges before discovery.
+  function hasExitRecord(roomId: string, toId: string): boolean {
+    const recMap = exitRecords.get(roomId);
+    if (!recMap) return false;
+    for (const [, rec] of recMap) {
+      if ((rec.kind === 'walked' || rec.kind === 'backtrack') && rec.to === toId) return true;
+    }
+    return false;
+  }
+
+  // Draw ⬇/⬆ stubs for exits that cross into the other level.
+  // A destination absent from the rooms map is treated as cross-level (it belongs
+  // to the other level's grid which isn't rendered here).
+  function drawInterLevelStub(roomId: string, col: number, row: number) {
+    const recMap = exitRecords.get(roomId);
+    if (!recMap) return;
+    const [ox, oy] = cellOrigin(col, row);
+    const cx = ox + Math.floor((CELL_W + 2) / 2);
+    for (const [, rec] of recMap) {
+      if (rec.kind === 'blocked') continue;
+      if (!rec.to) continue;
+      const destRoom = rooms.get(rec.to);
+      // Cross-level when the destination is in a different level or not in the map.
+      const isCrossLevel = destRoom ? destRoom.level !== levelFilter : true;
+      if (!isCrossLevel) continue;
+      if (rec.dir === 'down') put(cx, oy + CELL_H, '⬇');
+      if (rec.dir === 'up')   put(cx, oy - 1, '⬆');
+    }
+  }
+
+  // Draw ✕ glyphs at the wall face for each blocked exit record.
+  function drawBlockedStubs(roomId: string, col: number, row: number) {
+    const recMap = exitRecords.get(roomId);
+    if (!recMap) return;
+    const [ox, oy] = cellOrigin(col, row);
+    const w = CELL_W + 2;
+    for (const [, rec] of recMap) {
+      if (rec.kind !== 'blocked') continue;
+      const midY = oy + 1;
+      const midX = ox + Math.floor(w / 2);
+      switch (rec.dir) {
+        case 'east':  put(ox + w, midY, '✕'); break;
+        case 'west':  put(ox - 1, midY, '✕'); break;
+        case 'north': put(midX, oy - 1, '✕'); break;
+        case 'south': put(midX, oy + CELL_H, '✕'); break;
+        case 'up':    put(midX, oy - 1, '✕'); break;
+        case 'down':  put(midX, oy + CELL_H, '✕'); break;
+      }
+    }
+  }
+
   // Pass 1: draw connections (so room boxes overdraw them at junctions).
   for (const c of connections) {
     const ra = rooms.get(c.a);
     const rb = rooms.get(c.b);
     if (!ra || !rb) continue;
-    if (!visited.has(c.a) || !visited.has(c.b)) continue;
+    // Both rooms must be on the current level to draw an in-level connection.
+    if (!visibleVisited.has(c.a) || !visibleVisited.has(c.b)) continue;
+    // Gate on exit records — no phantom edges before discovery.
+    if (!hasExitRecord(c.a, c.b) && !hasExitRecord(c.b, c.a)) continue;
     drawConnection(ra.col, ra.row, rb.col, rb.row, c.reciprocal);
     drawConnection(rb.col, rb.row, ra.col, ra.row, c.reciprocal);
   }
 
   // Pass 2: draw room boxes (overdraw connection stubs if they overlap box borders).
-  for (const id of visited) {
+  for (const id of visibleVisited) {
     const r = rooms.get(id);
     if (!r) continue;
     drawRoom(id, r.col, r.row, id === current);
+  }
+
+  // Pass 3: inter-level stubs + blocked stubs (on top of room boxes).
+  for (const id of visibleVisited) {
+    const r = rooms.get(id);
+    if (!r) continue;
+    drawInterLevelStub(id, r.col, r.row);
+    drawBlockedStubs(id, r.col, r.row);
   }
 
   return grid.map(row => row.join('')).join('\n');
@@ -496,7 +569,15 @@ function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => vo
       return;
     }
 
-    const text = renderMapGrid(visited, current, layout.ROOM_BY_ID, layout.ROOM_CONNECTIONS);
+    const currentLevel: 'surface' | 'underground' = (current ? layout.ROOM_BY_ID.get(current)?.level : undefined) ?? 'surface';
+    const text = renderMapGrid(
+      visited,
+      current,
+      layout.ROOM_BY_ID,
+      layout.ROOM_CONNECTIONS,
+      mapState.getAllExits(),
+      currentLevel,
+    );
     element.textContent = text || '';
   }
 
