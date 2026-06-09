@@ -9,6 +9,7 @@
 import { createSession } from '../shell/session.js';
 import { HttpSink } from '../shell/http-sink.js';
 import { MapState, type ExitRecord } from './map-state.js';
+import { parseDirection } from './directions.js';
 import { isThemeName, DEFAULT_THEME, type ThemeName } from './themes.js';
 import { shapeFeedbackPayload, collectBrowserInfo } from './feedback.js';
 import { ALLOWED_CATEGORIES } from '../../functions/lib/sanitize.js';
@@ -1092,11 +1093,23 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
     if (cmd.trim()) {
       appendCommand(cmd);
     }
+    const prevRoom = mapState.currentRoom();
     const output = session.submit(cmd);
     if (output) appendOutput(output);
     const snap = session.snapshot();
     statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
-    mapState.update(snap, null);
+
+    const parsedDir = parseDirection(cmd);
+
+    if (snap.here !== prevRoom) {
+      mapState.update(snap, parsedDir);
+    } else {
+      mapState.update(snap, null);
+      if (parsedDir !== null) {
+        mapState.recordBlocked(parsedDir);
+      }
+    }
+
     pathsPanel.refresh();
     void map.refresh();
   });
