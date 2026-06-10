@@ -6,14 +6,24 @@ import type { Actor } from '../domain/actor.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
-import { executeVerb, describeRoomObjects, META_ACTIONS, isBareAttackTroll, TROLL_SIGN_TEXT } from './verbs/index.js';
+import { executeVerb, describeRoomObjects, META_ACTIONS } from './verbs/index.js';
 import { lit } from './parser/scope.js';
 import { describeRoom as describeRoomMsgs } from './game-messages.js';
 import { Scoring } from './scoring.js';
 import { FlagStore } from './flag-store.js';
 import { lookupPer, lookupPreAction } from '../actions/registry.js';
 import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
-import { jigsUp as jigsUpMsgs } from './game-messages.js';
+import { jigsUp as jigsUpMsgsFn } from './game-messages.js';
+import { jigsUp, type JigsUpCallbacks, type JigsUpMsgs } from './death.js';
+import {
+  heroBlow as combatHeroBlow, findWeapon, TROLL_MELEE,
+  iFight, iCure, doFight,
+  type CombatRng,
+  type IFightCallbacks, type ICureCallbacks, type VillainBlowCallbacks, type VillainTableEntry,
+} from './combat.js';
+import type { HeroBlowCallbacks } from './combat.js';
+import type { VillainEntry } from '../domain/villain-entry.js';
+import { makeTrollFcn } from '../actions/troll-fcn.js';
 
 export interface TurnResult {
   readonly output: string;
@@ -51,7 +61,38 @@ export interface Rng {
   next(): number;
   /** ZIL <PROB base>: true with probability ~base/100. */
   prob(base: number): boolean;
+  /**
+   * ZIL ZPROB — gmacros.zil:115–122. Continuous draw: next()*denom < base.
+   * Optional here so existing test stubs (next+prob only) still type-check;
+   * combat code always runs against the concrete Rng class which implements it.
+   */
+  zprob?(base: number, denom: number): boolean;
+  /**
+   * Returns a pseudo-random integer in [0, n).
+   * Optional so simple test stubs (next+prob only) still type-check;
+   * the concrete Rng class always implements it.
+   */
+  nextInt?(n: number): number;
 }
+
+// Ghost verb table action sets — 1actions.zil:3113–3173.
+// Pass-through: meta verbs + SAVE/RESTORE/RESTART/QUIT handled by META_ACTIONS.
+// Additional pass-through verbs not in META_ACTIONS:
+const GHOST_PASS_ACTIONS: ReadonlySet<string> = new Set([
+  'V-VERSION', 'V-AGAIN', 'V-BACK',
+]);
+
+// ATTACK / MUNG / ALARM / SWING — all such attacks are vain.
+const GHOST_ATTACK_ACTIONS: ReadonlySet<string> = new Set([
+  'V-ATTACK', 'V-MUNG', 'V-ALARM', 'V-SWING',
+]);
+
+// OPEN / CLOSE / EAT / DRINK / INFLATE / DEFLATE / TURN / BURN / TIE / UNTIE / RUB
+// (RUB is also in the TAKE slot; ZIL has it in both — the TAKE clause fires first)
+const GHOST_BEYOND_ACTIONS: ReadonlySet<string> = new Set([
+  'V-OPEN', 'V-CLOSE', 'V-EAT', 'V-DRINK', 'V-INFLATE', 'V-DEFLATE',
+  'V-TURN', 'V-BURN', 'V-TIE', 'V-TIE-UP', 'V-UNTIE',
+]);
 
 const INTRO =
   'ZORK I: The Great Underground Empire\n' +
@@ -60,13 +101,17 @@ const INTRO =
   'Revision 88 / Serial number 840726\n';
 
 export class Game {
-  private readonly world: World;
+  readonly world: World;
   private readonly clock: Clock;
   private readonly rng: Rng;
+  // Separate RNG for combat (I-FIGHT, DO-FIGHT, VILLAIN-BLOW, HERO-BLOW, troll F_FIRST/F_BUSY).
+  // Keeps combat draws from shifting the main RNG stream used by grue / randomizeObjects.
+  private readonly combatRng: CombatRng;
   readonly events: EventEmitter;
 
   private readonly parser: Parser;
-  private player: Actor;
+  // player is exposed read-only for combat (pStrength checks) and tests.
+  player: Actor;
   private here: Room;
 
   private readonly flags: FlagStore;
@@ -80,6 +125,20 @@ export class Game {
   private alwaysLit = false;
   private gameOver = false;
 
+  // ZIL global LUCKY — 1actions.zil:969 (<GLOBAL LUCKY T>).
+  // true at start; set false only by MIRROR-MUNG (1actions.zil:1009), never restored.
+  // zprob callers pass denom=100 (lucky) or denom=300 (unlucky).
+  lucky = true;
+
+  // ZIL encumbrance globals — gglobals.zil:92,94.
+  loadAllowed = 100;
+  loadMax = 100;
+
+  // Set by jigsUp when called from clock context (I-FIGHT → winnerResult → jigsUp).
+  // Checked by turn() after clock.advance() to abort the remaining turn loop.
+  // Cleared at the start of each new turn. (B3)
+  private fatalPending = false;
+
   // Stashed command context for M-END (gmain.zil:151–161).
   // LIVING-ROOM-FCN's M-END branch reads VERB?/PRSO/PRSI (1actions.zil:478–482)
   // to detect a treasure deposit, so M-END needs the just-executed command's values.
@@ -92,15 +151,28 @@ export class Game {
 
   constructor(
     world: World,
-    opts: { rng: Rng; clock: Clock; events: EventEmitter },
+    opts: { rng: Rng; combatRng?: CombatRng; clock: Clock; events: EventEmitter },
   ) {
     this.world = world;
     this.clock = opts.clock;
     this.rng = opts.rng;
+    this.combatRng = opts.combatRng ?? (opts.rng as unknown as CombatRng);
     this.events = opts.events;
     this.parser = new Parser();
     this.flags = new FlagStore();
-    this.scoring = new Scoring(this.events, this.flags);
+
+    // WON-FLAG world effects — gverbs.zil:1858–1862.
+    // Fired once when SCORE first reaches 350 inside scoreUpd or recomputeTrophy.
+    const wonFlagHook = (tell: (s: string) => void): void => {
+      const map = this.world.get('MAP');
+      if (map !== undefined) map.clear(Flag.Invisible);
+      const woh = this.world.get('WEST-OF-HOUSE');
+      if (woh !== undefined) woh.clear(Flag.Touched);
+      // gverbs.zil:1861–1862 — bare newline in ZIL source collapses to a space.
+      tell('An almost inaudible voice whispers in your ear, "Look to your treasures for the final secret."');
+    };
+
+    this.scoring = new Scoring(this.events, this.flags, wonFlagHook);
 
     const playerObj = this.world.get('PLAYER');
     if (playerObj === undefined) {
@@ -112,6 +184,11 @@ export class Game {
       throw new Error('Player has no parent room.');
     }
     this.here = this.player.parent as Room;
+
+    // I-FIGHT: per-turn demon (1actions.zil:3810–3841, turnsLeft=-1 fires every advance).
+    // I-CURE: queued countdown (1actions.zil:3593–3602, CURE_WAIT=30); starts parked (0).
+    this.clock.schedule(this.makeIFightEntry());
+    this.clock.schedule(this.makeICureEntry());
   }
 
   /** Print the intro banner and describe the initial room. */
@@ -121,20 +198,191 @@ export class Game {
     return INTRO + '\n' + roomDesc;
   }
 
+  /**
+   * FINISH — gverbs.zil:33–53, web-shell form (B7).
+   *
+   * Renders V-SCORE (score + moves + rank), emits the terminal string, and
+   * sets gameOver.  RESTART/RESTORE are no-ops (save slots deferred).
+   * The tell callback receives the text so callers can route it to their output
+   * buffer; when tell is not provided the output is discarded (death paths that
+   * call finish() only care about gameOver).
+   */
+  doFinish(tell?: (s: string) => void): void {
+    const score  = this.scoring.score;
+    const moves  = this.moveCount;
+    const rank   = this.scoring.rank();
+    const movePart = moves === 1 ? '1 move.' : `${moves} moves.`;
+    const scoreText = `Your score is ${score} (total of 350 points), in ${movePart}\nThis gives you the rank of ${rank}.`;
+    tell?.(scoreText);
+    tell?.('ZORK: The Great Underground Empire.');
+    this.gameOver = true;
+  }
+
+  /**
+   * DEAD-FUNCTION ghost verb dispatch — 1actions.zil:3113–3173.
+   *
+   * Called from turn() when dead===true. Returns a TurnResult for verbs the
+   * ghost table handles, or undefined for pass-through verbs (movement, meta)
+   * which fall back to normal parse.
+   *
+   * The ZIL routine's final T-clause fires RFATAL + clears P-CONT; we replicate
+   * that by returning a result and not continuing the turn loop.
+   */
+  private ghostDispatch(input: string): TurnResult | undefined {
+    // Parse to get the action. We need the action id to route the ghost table.
+    // A minimal parse is sufficient — we only need the verb.
+    const pr = this.parser.parseSegment(input, this.here, this.player, this.world);
+
+    // On parse error / orphan, let the error message through as-is.
+    if (pr.kind !== 'ok') {
+      return { output: pr.message, moved: false };
+    }
+    const action = pr.command.action;
+    const outputs: string[] = [];
+    const tell = (s: string): void => { outputs.push(s); };
+
+    // 1actions.zil:3114–3117 — WALK: block west from TIMBER-ROOM only.
+    if (action === 'V-WALK') {
+      const dir = pr.command.prep;
+      if (this.here.id === 'TIMBER-ROOM' && dir === 'west') {
+        this.parser.clearContinuation();
+        return { output: 'You cannot enter in your condition.', moved: false };
+      }
+      // All other movement: pass-through (normal walk).
+      return undefined;
+    }
+
+    // 1actions.zil:3132–3133 — SCORE: checked before meta pass-through because
+    // V-SCORE is in META_ACTIONS but the ghost table intercepts it explicitly.
+    if (action === 'V-SCORE') {
+      this.parser.clearContinuation();
+      return { output: "You're dead! How can you think of your score?", moved: false };
+    }
+
+    // 1actions.zil:3118–3120 — meta verbs pass through (BRIEF/VERBOSE/VERSION/SAVE/etc).
+    if (META_ACTIONS.has(action) || GHOST_PASS_ACTIONS.has(action)) {
+      return undefined;
+    }
+
+    // 1actions.zil:3121–3122 — attacks are vain.
+    if (GHOST_ATTACK_ACTIONS.has(action)) {
+      this.parser.clearContinuation();
+      return { output: 'All such attacks are vain in your condition.', moved: false };
+    }
+
+    // 1actions.zil:3123–3127 — physical actions beyond capability.
+    if (GHOST_BEYOND_ACTIONS.has(action)) {
+      this.parser.clearContinuation();
+      return { output: 'Even such an action is beyond your capabilities.', moved: false };
+    }
+
+    // 1actions.zil:3128–3129 — WAIT.
+    if (action === 'V-WAIT') {
+      this.parser.clearContinuation();
+      return { output: "Might as well. You've got an eternity.", moved: false };
+    }
+
+    // 1actions.zil:3130–3131 — LAMP-ON.
+    if (action === 'V-LAMP-ON') {
+      this.parser.clearContinuation();
+      return { output: 'You need no light to guide you.', moved: false };
+    }
+
+    // 1actions.zil:3134–3135 — TAKE or RUB (hand passes through).
+    if (action === 'V-TAKE' || action === 'V-RUB') {
+      this.parser.clearContinuation();
+      return { output: 'Your hand passes through its object.', moved: false };
+    }
+
+    // 1actions.zil:3136–3137 — DROP / THROW / INVENTORY.
+    if (action === 'V-DROP' || action === 'V-THROW' || action === 'V-INVENTORY') {
+      this.parser.clearContinuation();
+      return { output: 'You have no possessions.', moved: false };
+    }
+
+    // 1actions.zil:3138–3139 — DIAGNOSE.
+    if (action === 'V-DIAGNOSE') {
+      this.parser.clearContinuation();
+      return { output: 'You are dead.', moved: false };
+    }
+
+    // 1actions.zil:3140–3151 — LOOK only (<VERB? LOOK> tests PRSA==V?LOOK).
+    // V-EXAMINE is a distinct action (gsyntax.zil:199/301) not in this clause;
+    // EXAMINE / LOOK AT fall to the T-fallback below.
+    if (action === 'V-LOOK') {
+      this.parser.clearContinuation();
+      // 1actions.zil:3142–3146 — different text based on whether objects are present.
+      const hasObjs = this.here.children.size > 0;
+      const line1 = hasObjs
+        ? 'The room looks strange and unearthly and objects appear indistinct.'
+        : 'The room looks strange and unearthly.';
+      const lines: string[] = [line1];
+      // 1actions.zil:3147–3150 — if room is lit (ONBIT), note no-light.
+      if (!this.here.has(Flag.On)) {
+        lines.push('Although there is no light, the room seems dimly illuminated.');
+      }
+      return { output: lines.join('\n'), moved: false };
+    }
+
+    // 1actions.zil:3152–3169 — PRAY: South-Temple resurrection or "not heard".
+    if (action === 'V-PRAY') {
+      this.parser.clearContinuation();
+      if (this.here.id === 'SOUTH-TEMPLE') {
+        // 1actions.zil:3154–3167 — resurrection sequence.
+        const lamp = this.world.get('LAMP');
+        if (lamp !== undefined) lamp.clear(Flag.Invisible);
+        // Clear DEAD-FUNCTION handler slot (ZIL: PUTP WINNER P?ACTION 0).
+        // In our model dead===false is the state; no handler to clear.
+        this.alwaysLit = false;
+        this.dead = false;
+        // 1actions.zil:3159–3160 — if troll is in TROLL-ROOM, clear trollFlag.
+        const troll = this.world.get('TROLL');
+        const trollRoom = this.world.get('TROLL-ROOM');
+        if (troll !== undefined && trollRoom !== undefined && troll.parent === trollRoom) {
+          this.flags.set('TROLL-FLAG', false);
+        }
+        const trumpetMsg =
+          'From the distance the sound of a lone trumpet is heard. The room\n' +
+          'becomes very bright and you feel disembodied. In a moment, the\n' +
+          'brightness fades and you find yourself rising as if from a long\n' +
+          'sleep, deep in the woods. In the distance you can faintly hear a\n' +
+          'songbird and the sounds of the forest.';
+        tell(trumpetMsg);
+        // Goto FOREST-1 — 1actions.zil:3167.
+        const forest1 = this.world.get('FOREST-1') as Room;
+        if (forest1 !== undefined) {
+          this.player.moveTo(forest1);
+          const enterOut = this.onRoomEntered(forest1);
+          if (enterOut) tell(enterOut);
+          tell(this.describeCurrentRoom());
+        }
+        return { output: outputs.join('\n'), moved: true };
+      }
+      // 1actions.zil:3168–3169 — elsewhere.
+      return { output: 'Your prayers are not heard.', moved: false };
+    }
+
+    // 1actions.zil:3170–3173 — T (fallback): "You can't even do that."
+    // ZIL: SETG P-CONT <>; RFATAL.
+    this.parser.clearContinuation();
+    return { output: "You can't even do that.", moved: false };
+  }
+
   /** Execute one command line (may contain chained commands via "then" / "."). */
   turn(input: string): TurnResult {
     if (this.gameOver) return { output: '', moved: false };
+    this.fatalPending = false;
 
-    // PHASE-1 TEMPORARY — removed when real combat replaces verbAttackPhase1 (verbs/index.ts).
-    // Bare "attack/kill troll" would normally go through GWIM to find a weapon iobj, either
-    // orphan-prompting when multiple weapons are in scope or failing the held-check when the
-    // troll's axe is the only candidate. Intercept here so the sign fires without the parser
-    // needing a resolved weapon -- but ONLY when the troll is actually present in this room.
-    // Named-weapon forms ("attack troll with sword") still reach verbAttackPhase1 via the
-    // normal V-ATTACK path below.
-    const trollInRoom = this.world.get('TROLL')?.parent === this.here;
-    if (isBareAttackTroll(input, trollInRoom)) {
-      return { output: TROLL_SIGN_TEXT, moved: false };
+    // Ghost dispatch — spec §9.5 (B8/OQ-4, RATIFIED).
+    // When dead===true, route through the DEAD-FUNCTION verb table
+    // (1actions.zil:3113–3173) before normal parsing. Pass-through verbs
+    // (movement, meta) let normal turn processing continue; all others short-circuit.
+    if (this.dead) {
+      const ghostResult = this.ghostDispatch(input);
+      if (ghostResult !== undefined) {
+        return ghostResult;
+      }
+      // undefined → pass-through (movement or meta verbs); fall into normal parse
     }
 
     const outputs: string[] = [];
@@ -246,17 +494,48 @@ export class Game {
           perResolver: (routineName, here) => this.resolvePer(routineName, here, (text) => handled.push(text)),
           mlookRunner: (room) => this.runMLook(room),
           rng: this.rng,
-          scoreObj: (obj) => this.scoring.scoreObj(obj),
+          scoreObj: (obj) => this.scoring.scoreObj(obj, (text) => handled.push(text)),
           score:  this.scoring.score,
           moves:  this.moveCount,
           rank:   () => this.scoring.rank(),
           deaths: this.deaths,
           getGlobal: (n) => this.flags.get(n),
           setGlobal: (n, v = true) => this.flags.set(n, v),
-          jigsUp: (desc) => this.jigsUp(desc, (text) => handled.push(text)),
+          jigsUp: (desc) => jigsUp(desc, this.jigsUpMsgs(), this.makeJigsUpCallbacks((text) => handled.push(text), () => { /* verb layer marks fatal independently */ })),
           alwaysLit: this.alwaysLit,
           prob: (pct) => this.rng.prob(pct),
           clearContinuation: () => this.parser.clearContinuation(),
+          loadAllowed: this.loadAllowed,
+          loadMax: this.loadMax,
+          playerPStrength: this.player.pStrength,
+          iCureEnabled: this.clock.getEntry('I-CURE')?.enabled ?? false,
+          iCureTick: this.clock.getEntry('I-CURE')?.turnsLeft ?? 0,
+          heroBlow: (targetId, weaponId) => {
+            const out: string[] = [];
+            const entry = this.getVillainEntry(targetId, (s) => out.push(s));
+            if (entry === undefined) {
+              return { output: "Violence isn't the answer to this one.", moved: false };
+            }
+            const cb = this.makeHeroBlowCallbacks(targetId, entry, (s) => out.push(s));
+            // Resolve real descs for REMARK messages (spec §8 "use object desc").
+            const villainObj = this.world.get(targetId);
+            const villainDesc = villainObj?.desc ?? targetId.toLowerCase().replace(/-/g, ' ');
+            const prsiObj = weaponId ? this.world.get(weaponId) : null;
+            const prsiDesc = prsiObj?.desc ?? (weaponId ? weaponId.toLowerCase().replace(/-/g, ' ') : '');
+            combatHeroBlow(
+              targetId,
+              villainDesc,
+              entry,
+              weaponId,
+              prsiDesc,
+              weaponId !== null,
+              this.player.has(Flag.Staggered),
+              this.scoring.score,
+              this.combatRng,
+              cb,
+            );
+            return { output: out.join('\n'), moved: false };
+          },
         }, cmd.action);
 
         if (verbResult.fatal) {
@@ -342,6 +621,13 @@ export class Game {
           }
         }
         this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+
+        // B3: I-FIGHT → jigsUp signaled RFATAL from clock context — abort turn.
+        if (this.fatalPending) {
+          this.fatalPending = false;
+          this.parser.clearContinuation();
+          break;
+        }
       }
 
       if (!this.parser.hasContinuation()) {
@@ -410,13 +696,14 @@ export class Game {
       clearFlag: (obj, flag) => obj.clear(flag),
       moveTo: (obj, dest) => obj.moveTo(dest),
       score: (delta) => this.scoring.add(delta),
-      scoreObj: (obj) => this.scoring.scoreObj(obj),
-      recomputeTrophy: (trophyCase) => this.scoring.recomputeTrophy(trophyCase),
+      scoreObj: (obj) => this.scoring.scoreObj(obj, tell),
+      recomputeTrophy: (trophyCase) => this.scoring.recomputeTrophy(trophyCase, tell),
       enableClock: (id) => this.clock.enable(id),
       disableClock: (id) => this.clock.disable(id),
       getGlobal: (n) => this.flags.get(n),
       setGlobal: (n, v = true) => this.flags.set(n, v),
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
+      finish: () => { this.doFinish(tell); },
     };
   }
 
@@ -524,13 +811,14 @@ export class Game {
       );
       room.handler(ctx);
     }
-    this.emitRoomEntered(room.id);
+    this.emitRoomEntered(room.id, (text) => enterBuf.push(text));
     return enterBuf.join('\n');
   }
 
   private describeCurrentRoom(): string {
     // Darkness gate — gverbs.zil:1637-1649.
-    if (!lit(this.here, this.player, this.world)) {
+    // alwaysLit suppresses darkness for ghost mode (ALWAYS-LIT global, 1actions.zil:4083).
+    if (!this.alwaysLit && !lit(this.here, this.player, this.world)) {
       const sprayed = this.flags.get('SPRAYED?');
       return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
     }
@@ -588,54 +876,431 @@ export class Game {
     return buf.join('\n');
   }
 
-  private emitRoomEntered(roomId: ObjectId): void {
+  private emitRoomEntered(roomId: ObjectId, tell?: (s: string) => void): void {
     const firstVisit = !this.visited.has(roomId);
     this.visited.add(roomId);
     // First-visit room VALUE award — same SCORE-OBJ mechanism as object pickups.
+    // gverbs.zil:1851-1865: scoreObj → scoreUpd → checkWonFlag threads tell so the
+    // WON-FLAG whisper reaches the same output channel as the room description.
     if (firstVisit) {
       const room = this.world.get(roomId);
       if (room !== undefined) {
-        this.scoring.scoreObj(room);
+        this.scoring.scoreObj(room, tell);
       }
     }
     this.events.emit({ type: 'room-entered', room: roomId, firstVisit });
   }
 
-  // JIGS-UP — shared death entry point (1actions.zil:4046-4099).
-  // Called by verbGo's grue path and future combat death handlers.
-  // Not yet ported: ghost-mode/Hades, RANDOMIZE-OBJECTS, KILL-INTERRUPTS,
-  // DEAD-FUNCTION, sprayed-grue variant, FINISH end-screen, "Bad luck" LUCKY branch.
-  private jigsUp(deathMessage: string, tell: (s: string) => void): void {
-    // Re-death guard (1actions.zil:4048-4053): fires when already in ghost mode.
-    if (this.dead) {
-      tell(jigsUpMsgs.talented);
-      this.gameOver = true;
-      return;
+  // Build the JigsUpMsgs bundle from game-messages.
+  private jigsUpMsgs(): JigsUpMsgs {
+    return jigsUpMsgsFn;
+  }
+
+  // getVillainEntry — look up the VillainEntry for a given villain object id.
+  // Returns undefined for non-villains (triggers graceful "Violence isn't the answer").
+  // Currently only TROLL is wired; Thief/Cyclops are built but deferred (spec §1).
+  private getVillainEntry(villainId: string, tell: (s: string) => void): VillainEntry | undefined {
+    if (villainId === 'TROLL') {
+      const hereId = this.here.id;
+      const trollFcnCtx = {
+        hereId,
+        getObj: (id: string) => {
+          const obj = this.world.get(id);
+          if (obj === undefined) return undefined;
+          return {
+            get parentId() { return obj.parent?.id ?? null; },
+            hasFlag: (f: Flag) => obj.has(f),
+            setFlag: (f: Flag) => obj.set(f),
+            clearFlag: (f: Flag) => obj.clear(f),
+            moveTo: (destId: string) => {
+              const dest = this.world.get(destId);
+              if (dest !== undefined) obj.moveTo(dest);
+            },
+            setLdesc: (s: string) => { (obj as { ldesc?: string }).ldesc = s; },
+          };
+        },
+        getTrollFlag: () => this.flags.get('TROLL-FLAG'),
+        setTrollFlag: (v: boolean) => { this.flags.set('TROLL-FLAG', v); },
+        getLucky: () => this.lucky,
+        rng: {
+          prob:  (base: number) => this.combatRng.prob(base),
+          zprob: (base: number, denom: number) => this.combatRng.zprob!(base, denom),
+        },
+        tell,
+        clearContinuation: () => { this.parser.clearContinuation(); },
+      };
+      return {
+        vBest: 'SWORD',
+        vBestAdv: 1,
+        vProb: 0,
+        vMsgs: TROLL_MELEE,
+        action: makeTrollFcn(trollFcnCtx),
+      };
     }
+    return undefined;
+  }
 
-    tell(deathMessage);
-    tell(jigsUpMsgs.youHaveDied);
+  // makeHeroBlowCallbacks — build the HeroBlowCallbacks bundle for a villain.
+  // HeroBlowCallbacks = VillainResultCallbacks + player-reads + stagger + weapon ops.
+  private makeHeroBlowCallbacks(
+    villainId: string,
+    _entry: VillainEntry,
+    tell: (s: string) => void,
+  ): HeroBlowCallbacks {
+    const villain = this.world.get(villainId);
+    return {
+      // Player-side reads (HeroBlowCallbacks interface)
+      getPlayerPStrength: () => this.player.pStrength,
+      getPlayerStaggered: () => this.player.has(Flag.Staggered),
+      clearPlayerStaggered: () => { this.player.clear(Flag.Staggered); },
+      getScore: () => this.scoring.score,
 
-    // SCORE-UPD -10 death penalty — 1actions.zil:4058.
-    this.scoring.scoreUpd(-10);
+      // Villain pStrength (VillainResultCallbacks)
+      getVillainPStrength: () => {
+        const a = this.world.get(villainId);
+        return (a as unknown as { pStrength: number })?.pStrength ?? 0;
+      },
+      setVillainPStrength: (v: number) => {
+        const a = this.world.get(villainId);
+        if (a !== undefined) (a as unknown as { pStrength: number }).pStrength = v;
+      },
 
-    // 3-strike check: ZIL `<NOT <L? ,DEATHS 2>>` = deaths >= 2.
-    // Increment only on the resurrection branch, matching 1actions.zil:4074.
-    if (this.deaths >= 2) {
-      tell(jigsUpMsgs.suicidalManiac);
-      this.gameOver = true;
-      return;
-    }
+      // FSET villain FIGHTBIT — 1actions.zil:3484, called at start of HERO-BLOW.
+      setVillainFightBit: () => {
+        if (villain !== undefined) villain.set(Flag.Fight);
+      },
+      // FCLEAR villain FIGHTBIT — 1actions.zil:3569, called on villain death (DEF==0).
+      clearVillainFightBit: () => {
+        if (villain !== undefined) villain.clear(Flag.Fight);
+      },
+      setVillainStaggered: () => {
+        if (villain !== undefined) villain.set(Flag.Staggered);
+      },
 
-    this.deaths += 1;
-    tell(jigsUpMsgs.deserveAnotherChance);
+      // Villain weapon — findWeapon by canonical name containment (spec §4.2)
+      findVillainWeapon: () => {
+        if (villain === undefined) return null;
+        return findWeapon(villain)?.id ?? null;
+      },
+      disarmVillain: (wepId: string) => {
+        const wep = this.world.get(wepId);
+        if (wep === undefined) return;
+        wep.clear(Flag.NonDescript);
+        wep.set(Flag.Weapon);
+        wep.moveTo(this.here);
+      },
 
-    const forest1 = this.world.get('FOREST-1') as Room;
-    this.player.moveTo(forest1);
-    this.here = forest1;
+      // Remove villain from world on kill (spec §6.4 "removeCarefully")
+      removeVillain: (id: string) => {
+        const v = this.world.get(id);
+        if (v !== undefined) v.moveTo(null);
+      },
 
-    const enterOut = this.onRoomEntered(forest1);
-    if (enterOut) tell(enterOut);
-    tell(this.describeCurrentRoom());
+      // Apply villain F-code callback (F_DEAD / F_UNCONSCIOUS)
+      applyVillainAction: (fcode: number, id: string) => {
+        const entry2 = this.getVillainEntry(id, tell);
+        if (entry2 !== undefined) entry2.action(fcode);
+      },
+
+      emit: tell,
+    };
+  }
+
+  // Build the VILLAIN entry for DO-FIGHT's VillainTableEntry snapshot.
+  // Currently only TROLL is wired; others are looked up lazily.
+  private getVillainTableEntry(id: string, tell: (s: string) => void): VillainTableEntry | null {
+    const villain = this.world.get(id);
+    if (villain === undefined) return null;
+    const entry = this.getVillainEntry(id, tell);
+    if (entry === undefined) return null;
+    return {
+      id,
+      fightBit: villain.has(Flag.Fight),
+      pStrength: (villain as unknown as { pStrength: number }).pStrength ?? 0,
+      entry,
+      inHere: villain.parent?.id === this.here.id,
+      staggered: villain.has(Flag.Staggered),
+    };
+  }
+
+  // makeVillainBlowCallbacks — re-usable VillainBlowCallbacks for doFight context.
+  // tell: the clock tick output channel.
+  private makeVillainBlowCallbacks(tell: (s: string) => void): VillainBlowCallbacks {
+    const clockFatal = (): void => { this.fatalPending = true; };
+    // Tracks which villain is currently being processed by the doFight loop.
+    // Set via setActiveVillain (called by doFight before each villainBlow call)
+    // so that getVillainStaggered/clearVillainStaggered resolve the correct world object.
+    let activeVillainId: string | undefined;
+    return {
+      getPlayerPStrength: () => this.player.pStrength,
+      setPlayerPStrength: (v: number) => { this.player.pStrength = v; },
+      getScore: () => this.scoring.score,
+      jigsUp: (msg: string) => {
+        jigsUp(msg, this.jigsUpMsgs(), this.makeJigsUpCallbacks(tell, clockFatal));
+      },
+      queueICure: (period: number) => { this.clock.queue('I-CURE', period, true); },
+      getLoadAllowed: () => this.loadAllowed,
+      setLoadAllowed: (v: number) => { this.loadAllowed = v; },
+      getLoadMax: () => this.loadMax,
+      getLucky: () => this.lucky,
+      // Returns the held weapon id (for REMARK lookups done inside villainBlow).
+      findPlayerWeapon: () => {
+        const w = findWeapon(this.player);
+        return w?.id ?? null;
+      },
+      // Returns the held weapon's real desc for REMARK messages — spec §8 "use object desc".
+      findPlayerWeaponDesc: () => {
+        const w = findWeapon(this.player);
+        return w?.desc ?? null;
+      },
+      dropPlayerWeapon: (id: string) => {
+        const wep = this.world.get(id);
+        if (wep !== undefined) wep.moveTo(this.here);
+      },
+      // Per-villain stagger: resolved via setActiveVillain hook called by doFight.
+      setActiveVillain: (id: string) => { activeVillainId = id; },
+      getVillainStaggered: () => {
+        if (activeVillainId === undefined) return false;
+        return this.world.get(activeVillainId)?.has(Flag.Staggered) ?? false;
+      },
+      clearVillainStaggered: () => {
+        if (activeVillainId !== undefined) {
+          this.world.get(activeVillainId)?.clear(Flag.Staggered);
+        }
+      },
+      setPlayerStaggered: () => { this.player.set(Flag.Staggered); },
+      clearPlayerStaggered: () => { this.player.clear(Flag.Staggered); },
+      emit: tell,
+    };
+  }
+
+  // makeIFightCallbacks — IFightCallbacks for the I-FIGHT clock entry.
+  private makeIFightCallbacks(tell: (s: string) => void): IFightCallbacks {
+    // The active villain ids in the villain table (excludes cyclops at index 3, per spec §6.5).
+    const VILLAIN_IDS = ['TROLL', 'THIEF'];  // indices 0/1 in the 0-based table (cnt=1/2 in ZIL)
+    const LEN = 3;  // VILLAINS[0]=3 (troll + thief count, cyclops excluded from DO-FIGHT loop)
+
+    const blowCbs = this.makeVillainBlowCallbacks(tell);
+
+    return {
+      getDead: () => this.dead,
+      villainTable: [],  // populated dynamically in makeVillainSnapshot
+      len: LEN,
+
+      getVillainPs: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return 0;
+        const v = this.world.get(id);
+        return (v as unknown as { pStrength: number })?.pStrength ?? 0;
+      },
+      setVillainPs: (idx: number, v: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return;
+        const villain = this.world.get(id);
+        if (villain !== undefined) (villain as unknown as { pStrength: number }).pStrength = v;
+      },
+
+      getVProb: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return 0;
+        const entry = this.getVillainEntry(id, tell);
+        return entry?.vProb ?? 0;
+      },
+      setVProb: (idx: number, v: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return;
+        // vProb is stored on the VillainEntry.  For the troll, we need a mutable vProb.
+        // The VillainEntry is re-created each time getVillainEntry is called; store it
+        // directly on the world object as a prop.
+        const villain = this.world.get(id);
+        if (villain !== undefined) villain.props.set('VPROB', v);
+      },
+
+      isThief: (idx: number) => VILLAIN_IDS[idx] === 'THIEF',
+      isThiefEngrossed: () => false,  // thief deferred — always false
+      setThiefEngrossed: (_v: boolean) => {},
+
+      callVillainAction: (idx: number, fcode: number): boolean => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return false;
+        const entry = this.getVillainEntry(id, tell);
+        if (entry === undefined) return false;
+        return entry.action(fcode);
+      },
+
+      clearFightBit: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return;
+        const v = this.world.get(id);
+        if (v !== undefined) v.clear(Flag.Fight);
+      },
+      clearStaggered: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return;
+        const v = this.world.get(id);
+        if (v !== undefined) v.clear(Flag.Staggered);
+      },
+      clearPlayerStaggered: () => { this.player.clear(Flag.Staggered); },
+
+      onAwaken: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return;
+        const v = this.world.get(id) as unknown as { pStrength: number } | undefined;
+        if (v === undefined) return;
+        // AWAKEN (1actions.zil:3843–3847): only fires F_CONSCIOUS when pStrength < 0.
+        // A dead villain (pStrength=0) must not trigger F_CONSCIOUS — that would
+        // clear TROLL-FLAG via trollFcn(F_CONSCIOUS).
+        if (v.pStrength < 0) {
+          v.pStrength = -v.pStrength;
+          const entry = this.getVillainEntry(id, tell);
+          if (entry !== undefined) entry.action(4);  // F_CONSCIOUS=4
+        }
+      },
+
+      triggerFight: () => {
+        // Build the villain table snapshot for this fight tick.
+        const table: VillainTableEntry[] = VILLAIN_IDS.map((id) =>
+          this.getVillainTableEntry(id, tell) ?? {
+            id,
+            fightBit: false,
+            pStrength: 0,
+            entry: { vBest: null, vBestAdv: 0, vProb: 0, vMsgs: [], action: () => false },
+            inHere: false,
+            staggered: false,
+          }
+        );
+        // Sync live stagger/fightBit from world before passing to doFight.
+        for (let i = 0; i < table.length; i++) {
+          const id = VILLAIN_IDS[i]!;
+          const v = this.world.get(id);
+          if (v !== undefined) {
+            table[i]!.fightBit = v.has(Flag.Fight);
+            table[i]!.staggered = v.has(Flag.Staggered);
+            table[i]!.pStrength = (v as unknown as { pStrength: number }).pStrength ?? 0;
+          }
+        }
+        // doFight reads stagger/fightBit from the table snapshot synced above.
+        // blowCbs.getVillainStaggered reads directly from the world object for
+        // each villain as the loop runs — accurate because the table sync just ran.
+        doFight(LEN, table, this.combatRng, blowCbs);
+      },
+
+      isVillainInHere: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return false;
+        const v = this.world.get(id);
+        return v?.parent?.id === this.here.id;
+      },
+      isVillainInvisible: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return true;
+        const v = this.world.get(id);
+        return v?.has(Flag.Invisible) ?? true;
+      },
+    };
+  }
+
+  // I-FIGHT clock entry — demon (turnsLeft=-1) registered at game start.
+  // 1actions.zil:3810–3841.
+  private makeIFightEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-FIGHT',
+      turnsLeft: -1,
+      enabled: true,
+      tick: (ctx) => {
+        const ifightCbs = this.makeIFightCallbacks(ctx.tell);
+        // Populate villainTable snapshot for the I-FIGHT loop.
+        const VILLAIN_IDS = ['TROLL', 'THIEF'];
+        const table: VillainTableEntry[] = VILLAIN_IDS.map((id) => {
+          const vt = this.getVillainTableEntry(id, ctx.tell);
+          if (vt !== null) return vt;
+          return {
+            id,
+            fightBit: false,
+            pStrength: 0,
+            entry: { vBest: null, vBestAdv: 0, vProb: 0, vMsgs: [], action: () => false },
+            inHere: false,
+            staggered: false,
+          };
+        });
+        // vProb comes from the world prop we store in setVProb.
+        for (let i = 0; i < table.length; i++) {
+          const id = VILLAIN_IDS[i]!;
+          const villain = this.world.get(id);
+          if (villain !== undefined) {
+            const vp = villain.props.get('VPROB');
+            table[i]!.fightBit = villain.has(Flag.Fight);
+            table[i]!.staggered = villain.has(Flag.Staggered);
+            table[i]!.pStrength = (villain as unknown as { pStrength: number }).pStrength ?? 0;
+            if (typeof vp === 'number') {
+              const entry = this.getVillainEntry(id, ctx.tell);
+              if (entry !== undefined) entry.vProb = vp;
+            }
+          }
+        }
+        (ifightCbs as { villainTable: VillainTableEntry[] }).villainTable = table;
+        iFight(ifightCbs, this.combatRng);
+        return true;  // demon: always return true to stay registered
+      },
+    };
+  }
+
+  // I-CURE clock entry — queued countdown (turnsLeft starts at 0 = parked).
+  // Activated by winnerResult via clock.queue('I-CURE', CURE_WAIT, true).
+  // 1actions.zil:3593–3602.
+  private makeICureEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-CURE',
+      turnsLeft: 0,  // parked; activated by clock.queue
+      enabled: false,
+      tick: (_ctx) => {
+        const cb: ICureCallbacks = {
+          getPlayerPStrength: () => this.player.pStrength,
+          setPlayerPStrength: (v: number) => { this.player.pStrength = v; },
+          getLoadAllowed: () => this.loadAllowed,
+          setLoadAllowed: (v: number) => { this.loadAllowed = v; },
+          getLoadMax: () => this.loadMax,
+          queueICure: (period: number) => { this.clock.queue('I-CURE', period, true); },
+          disableICure: () => { this.clock.disable('I-CURE'); },
+        };
+        iCure(cb);
+        return true;  // stays registered (disable() marks it inactive when done)
+      },
+    };
+  }
+
+  // Build the JigsUpCallbacks bundle — called from verb layer and clock context.
+  // tell:       output channel for this invocation.
+  // onFatal:    RFATAL signal (verb layer: no-op; clock context: sets fatalPending).
+  makeJigsUpCallbacks(tell: (s: string) => void, onFatal: () => void): JigsUpCallbacks {
+    return {
+      getDead:  () => this.dead,
+      getLucky: () => this.lucky,
+      getDeaths: () => this.deaths,
+      getHere:  () => this.here,
+      hasSouthTempleVisited: () => this.visited.has('SOUTH-TEMPLE'),
+      getPlayer: () => this.player,
+
+      setDead:     (v) => { this.dead = v; },
+      setDeaths:   (v) => { this.deaths = v; },
+      setTrollFlag: (v) => { this.flags.set('TROLL-FLAG', v); },
+      setAlwaysLit: (v) => { this.alwaysLit = v; },
+      scoreUpd: (delta) => { this.scoring.scoreUpd(delta); },
+
+      tell,
+      gotoRoom: (roomId) => {
+        const room = this.world.get(roomId) as Room;
+        this.player.moveTo(room);
+        return this.onRoomEntered(room);
+      },
+      describeRoom: () => this.describeCurrentRoom(),
+      clearContinuation: () => { this.parser.clearContinuation(); },
+      finish: () => { this.doFinish(tell); },
+      signalFatal: onFatal,
+
+      world: this.world,
+      clock: this.clock,
+      rng:   this.rng,
+    };
   }
 }

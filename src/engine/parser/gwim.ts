@@ -84,7 +84,7 @@ export function gwim(
  */
 function findGwimCandidates(
   findFlag: Flag | undefined,
-  _locBits: number,
+  locBits: number,
   snap: ScopeSnapshot,
   here: Room,
   player: GameObject,
@@ -105,7 +105,11 @@ function findGwimCandidates(
     found.push(id);
   }
 
-  if (isLit) {
+  // Skip room search when locBits has no room bits (SIR=32 or SOG=16).
+  // V-ATTACK iobj locBits = SH+SC+SHAVE — no SIR/SOG → inventory-only.
+  // gparser.zil:909: room pass runs only when the syntax form requests it.
+  const wantRoom = (locBits & (SIR | SOG)) !== 0;
+  if (isLit && wantRoom) {
     const roomFound: string[] = [];
     const roomSeen = new Set<string>();
     doSL(here, SOG, SIR, -1, undefined, undefined, findFlag, player, roomFound, world, roomSeen);

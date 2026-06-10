@@ -316,3 +316,91 @@ describe('Clock: serialise / restore', () => {
     expect(fired).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// queue() — generic re-arm primitive (F1)
+// ---------------------------------------------------------------------------
+
+describe('Clock: queue re-arm', () => {
+  it('queue on an existing entry resets turnsLeft and enables it', () => {
+    const clock = new Clock();
+    let count = 0;
+
+    clock.schedule({ id: 'I-CURE', turnsLeft: 5, enabled: true, tick() { count++; return false; } });
+    // advance past fire — entry removed
+    for (let i = 0; i < 5; i++) clock.advance();
+    expect(count).toBe(1);
+
+    // re-arm: re-schedule then re-queue
+    clock.schedule({ id: 'I-CURE', turnsLeft: 0, enabled: false, tick() { count++; return false; } });
+    clock.queue('I-CURE', 3, true);
+
+    // should fire again after 3 turns
+    clock.advance();
+    clock.advance();
+    expect(count).toBe(1);
+    clock.advance();
+    expect(count).toBe(2);
+  });
+
+  it('queue enables the entry when enabled=true', () => {
+    const clock = new Clock();
+    let fired = false;
+    clock.schedule({ id: 'X', turnsLeft: 2, enabled: false, tick() { fired = true; return false; } });
+    clock.queue('X', 2, true);
+    clock.advance();
+    clock.advance();
+    expect(fired).toBe(true);
+  });
+
+  it('queue with enabled=false arms the period but leaves it disabled', () => {
+    const clock = new Clock();
+    let fired = false;
+    clock.schedule({ id: 'Y', turnsLeft: 0, enabled: false, tick() { fired = true; return false; } });
+    clock.queue('Y', 2, false);
+    clock.advance();
+    clock.advance();
+    // disabled — must not fire
+    expect(fired).toBe(false);
+    // enable it and let the original period count down
+    clock.enable('Y');
+    clock.advance();
+    clock.advance();
+    expect(fired).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// killAll() — batch-disable (F1 / KILL-INTERRUPTS)
+// ---------------------------------------------------------------------------
+
+describe('Clock: killAll batch-disable', () => {
+  it('disables every listed registered slot', () => {
+    const clock = new Clock();
+    clock.schedule({ id: 'I-LANTERN', turnsLeft: 1, enabled: true, tick() { return true; } });
+    clock.schedule({ id: 'I-CANDLES', turnsLeft: 1, enabled: true, tick() { return true; } });
+
+    clock.killAll(['I-LANTERN', 'I-CANDLES']);
+    const snap = clock.snapshot();
+    const lantern = snap.find((s) => s.id === 'I-LANTERN')!;
+    const candles = snap.find((s) => s.id === 'I-CANDLES')!;
+    expect(lantern.enabled).toBe(false);
+    expect(candles.enabled).toBe(false);
+  });
+
+  it('is a safe no-op for unregistered ids', () => {
+    const clock = new Clock();
+    // These ids are not registered at all — must not throw.
+    expect(() => clock.killAll(['I-XB', 'I-XC', 'I-CYCLOPS'])).not.toThrow();
+  });
+
+  it('only disables listed ids, leaving others enabled', () => {
+    const clock = new Clock();
+    clock.schedule({ id: 'A', turnsLeft: 5, enabled: true, tick() { return true; } });
+    clock.schedule({ id: 'B', turnsLeft: 5, enabled: true, tick() { return true; } });
+    clock.killAll(['A']);
+    const snap = clock.snapshot();
+    expect(snap.find((s) => s.id === 'A')!.enabled).toBe(false);
+    expect(snap.find((s) => s.id === 'B')!.enabled).toBe(true);
+  });
+});

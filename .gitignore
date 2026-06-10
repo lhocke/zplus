@@ -7,6 +7,9 @@ docs/
 # build
 node_modules/
 dist/
+# local secrets (R2 reader credentials, etc.) — never commit
+.dev.vars
+.dev.vars.*
 # local playtest transcripts
 playtest-logs/
 # licensed Tailwind Plus raw kit — never commit (used components live adapted in src/ui)

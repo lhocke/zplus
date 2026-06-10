@@ -8,7 +8,7 @@
 
 import type { ActionHandler } from '../domain/game-object.js';
 import { Flag } from '../domain/flags.js';
-import { M_LOOK, M_ENTER, M_END } from '../engine/messages.js';
+import { M_LOOK, M_ENTER, M_END, M_BEG } from '../engine/messages.js';
 import type { PerRoutine } from './registry.js';
 import { pick, dummy, type PickRng } from '../engine/game-messages.js';
 
@@ -1001,6 +1001,47 @@ export const gratingExit: PerRoutine = (ctx) => {
   return undefined;
 };
 
+// Victory text — 1actions.zil:411–429 (standalone / header-bit-8 not set path).
+const STONE_BARROW_VICTORY =
+  'Inside the Barrow\n' +
+  'As you enter the barrow, the door closes inexorably behind you. Around\n' +
+  'you it is dark, but ahead is an enormous cavern, brightly lit. Through\n' +
+  'its center runs a wide stream. Spanning the stream is a small wooden\n' +
+  'footbridge, and beyond a path leads into a dark tunnel. Above the\n' +
+  'bridge, floating in the air, is a large sign. It reads:  All ye who\n' +
+  'stand before this bridge have completed a great and perilous adventure\n' +
+  'which has tested your wit and courage. You have mastered\n' +
+  'the first part of the ZORK trilogy. Those who pass over this bridge must be\n' +
+  'prepared to undertake an even greater adventure that will severely test your\n' +
+  'skill and bravery!\n' +
+  '\n' +
+  'The ZORK trilogy continues with "ZORK II: The Wizard of Frobozz" and\n' +
+  'is completed in "ZORK III: The Dungeon Master."';
+
+/**
+ * STONE-BARROW-FCN — 1actions.zil:403–430.
+ *
+ * Fires on M-BEG for ENTER, WALK west/in, or THROUGH+BARROW.
+ * Prints the victory text and calls finish() (web-shell: V-SCORE + gameOver).
+ */
+export const stoneBarrowFcn: ActionHandler = (ctx) => {
+  if (ctx.rarg !== M_BEG) return false;
+
+  const v = ctx.verb;
+  const isEnter  = v === 'enter';
+  const isWalkIn = v === 'walk' && (ctx.prep === 'west' || ctx.prep === 'in');
+  const isThroughBarrow =
+    v === 'through' &&
+    ctx.dobj !== undefined &&
+    (ctx.dobj.id === 'BARROW' || ctx.dobj.synonyms?.includes('barrow'));
+
+  if (!isEnter && !isWalkIn && !isThroughBarrow) return false;
+
+  ctx.tell(STONE_BARROW_VICTORY);
+  ctx.finish?.();
+  return true;
+};
+
 /** ACTION routines (rooms + objects) for the above-ground region. */
 export const aboveGroundActions: Record<string, ActionHandler> = {
   'WEST-HOUSE': westHouse,
@@ -1032,6 +1073,7 @@ export const aboveGroundActions: Record<string, ActionHandler> = {
   'BARROW-DOOR-FCN': barrowDoorFcn,
   'BARROW-FCN': barrowFcn,
   'CRACK-FCN': crackFcn,
+  'STONE-BARROW-FCN': stoneBarrowFcn,
 };
 
 /** PER (exit-resolution) routines for the above-ground region. */

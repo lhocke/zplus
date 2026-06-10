@@ -73,6 +73,23 @@ export class Clock {
     if (e) e.enabled = false;
   }
 
+  // Re-arm an existing entry: set turnsLeft=period and optionally enable it.
+  // Used by I-CURE which re-queues itself every CURE_WAIT turns.
+  queue(id: string, period: number, enabled: boolean): void {
+    const e = this.entries.get(id);
+    if (!e) return;
+    e.turnsLeft = period;
+    e.enabled = enabled;
+  }
+
+  // Batch-disable — mirrors KILL-INTERRUPTS (1actions.zil:4125–4135).
+  // Safe no-op for unregistered ids.
+  killAll(ids: string[]): void {
+    for (const id of ids) {
+      this.disable(id);
+    }
+  }
+
   // Called once per player turn, after the command executes.
   //
   // Returns any transcript text pushed by interrupt tick() callbacks via
@@ -114,6 +131,13 @@ export class Clock {
     }
 
     return lines;
+  }
+
+  /** Read-only state for a single entry by id (undefined if not registered). */
+  getEntry(id: string): Readonly<ClockSnapshot> | undefined {
+    const e = this.entries.get(id);
+    if (!e) return undefined;
+    return { id: e.id, turnsLeft: e.turnsLeft, enabled: e.enabled };
   }
 
   /** Snapshot for SaveState serialisation. */

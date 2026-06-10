@@ -182,7 +182,7 @@ have been used recently for the preparation of food. A passage
 leads to the west and a dark staircase can be seen leading
 upward. A dark chimney leads down and to the east is a small
 window which is open.
-A bottle is sitting on the table.
+There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
 On the table is an elongated brown sack, smelling of hot peppers.
@@ -324,9 +324,11 @@ A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the 
 The Troll Room
 This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
 A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
+The troll swings his axe, but it misses.
 
 > examine troll
 A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
+The troll's axe barely misses your ear.
 
 > east
 The troll fends you off with a menacing gesture.
@@ -451,7 +453,9 @@ It is pitch black. You are likely to be eaten by a grue.
 
 > south
 Oh, no! A lurking grue slithered into the room and devoured you!
-****  You have died  ****
+
+    ****  You have died  ****
+
 Now, let's take a look here...
 Well, you probably deserve another chance.  I can't quite fix you
 up completely, but you can't have everything.
@@ -463,11 +467,7 @@ Forest
 This is a forest, with trees in all directions. To the east, there appears to be sunlight.
 
 > inventory
-You are carrying:
-  leaflet
-  sword
-  brass lantern
-  painting
+You are empty-handed.
 
 > diagnose
 You are in perfect health.
@@ -600,6 +600,8 @@ Behind House
 You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
+There is a sword here.
+A small leaflet is on the ground.
 
 > east
 Clearing
@@ -772,6 +774,8 @@ Behind House
 You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
+There is a sword here.
+A small leaflet is on the ground.
 
 > south
 South of House
@@ -805,12 +809,16 @@ Behind House
 You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
+There is a sword here.
+A small leaflet is on the ground.
 
 > look
 Behind House
 You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
+There is a sword here.
+A small leaflet is on the ground.
 
 > west
 Kitchen
@@ -819,7 +827,7 @@ have been used recently for the preparation of food. A passage
 leads to the west and a dark staircase can be seen leading
 upward. A dark chimney leads down and to the east is a small
 window which is open.
-A bottle is sitting on the table.
+There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
 On the table is an elongated brown sack, smelling of hot peppers.
@@ -831,7 +839,7 @@ have been used recently for the preparation of food. A passage
 leads to the west and a dark staircase can be seen leading
 upward. A dark chimney leads down and to the east is a small
 window which is open.
-A bottle is sitting on the table.
+There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
 On the table is an elongated brown sack, smelling of hot peppers.
@@ -844,6 +852,8 @@ Behind House
 You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
+There is a sword here.
+A small leaflet is on the ground.
 
 > west
 Kitchen
@@ -852,7 +862,7 @@ have been used recently for the preparation of food. A passage
 leads to the west and a dark staircase can be seen leading
 upward. A dark chimney leads down and to the east is a small
 window which is open.
-A bottle is sitting on the table.
+There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
 On the table is an elongated brown sack, smelling of hot peppers.
@@ -862,6 +872,7 @@ Living Room
 You are in the living room. There is a doorway to the east, a wooden
 door with strange gothic lettering to the west, which appears to be
 nailed shut, a trophy case, and a closed trap door at your feet.
+There is a brass lantern (battery-powered) here.
 
 > open trap door
 The door reluctantly opens to reveal a rickety staircase descending into
@@ -871,14 +882,14 @@ darkness.
 Opened.
 
 > put painting in trophy case
-Done.
+You can't see any painting here!
 
 > score
-Your score is 35 (total of 350 points), in 158 moves.
+Your score is 29 (total of 350 points), in 157 moves.
 This gives you the rank of Amateur Adventurer.
 
 > examine trophy case
-Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
+The trophy case is empty.
 
 > diagnose
 You are in perfect health.
@@ -890,7 +901,7 @@ Living Room
 You are in the living room. There is a doorway to the east, a wooden
 door with strange gothic lettering to the west, which appears to be
 nailed shut, a trophy case, and a rug lying beside an open trap door.
-Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
+There is a brass lantern (battery-powered) here.
 
 > close trophy case
 Closed.
@@ -899,19 +910,20 @@ Closed.
 Opened.
 
 > take painting
-Taken.
+You can't see any painting here!
 
 > drop painting
-Dropped.
+You can't see any painting here!
 
 > put painting in trophy case
-You don't have the painting.
+You can't see any painting here!
 
 > score
-Your score is 29 (total of 350 points), in 165 moves.
+Your score is 29 (total of 350 points), in 162 moves.
 This gives you the rank of Amateur Adventurer.
 
 > turn off lamp
+(Taken)
 The brass lantern is now off.
 
 > look
@@ -919,7 +931,6 @@ Living Room
 You are in the living room. There is a doorway to the east, a wooden
 door with strange gothic lettering to the west, which appears to be
 nailed shut, a trophy case, and a rug lying beside an open trap door.
-Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
 
 > turn on lamp
 The brass lantern is now on.
@@ -929,23 +940,19 @@ Living Room
 You are in the living room. There is a doorway to the east, a wooden
 door with strange gothic lettering to the west, which appears to be
 nailed shut, a trophy case, and a rug lying beside an open trap door.
-Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
 
 > look. score. inventory
 Living Room
 You are in the living room. There is a doorway to the east, a wooden
 door with strange gothic lettering to the west, which appears to be
 nailed shut, a trophy case, and a rug lying beside an open trap door.
-Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
-Your score is 29 (total of 350 points), in 170 moves.
+Your score is 29 (total of 350 points), in 167 moves.
 This gives you the rank of Amateur Adventurer.
 You are carrying:
-  leaflet
-  sword
   brass lantern
 
 > score
-Your score is 29 (total of 350 points), in 171 moves.
+Your score is 29 (total of 350 points), in 168 moves.
 This gives you the rank of Amateur Adventurer.
 
 > diagnose
@@ -955,6 +962,4 @@ You have been killed once.
 
 > inventory
 You are carrying:
-  leaflet
-  sword
   brass lantern

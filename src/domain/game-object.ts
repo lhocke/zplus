@@ -57,6 +57,11 @@ export interface ActionContext {
   disableClock(id: string): void;
   /** Signal fatal outcome — ZIL M-FATAL; stops the PERFORM chain. */
   fatal(): void;
+  /**
+   * FINISH — gverbs.zil:33–53.  Web-shell form: render V-SCORE, set gameOver.
+   * Optional so action contexts that don't need it can omit it.
+   */
+  finish?(): void;
 
   // ZIL global flag store
 

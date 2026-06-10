@@ -1,21 +1,22 @@
 /**
- * Phase-1 troll-wall tests (spec §6, test strategy §9 §6).
+ * Troll-wall tests — reworked at G1 (spec §10.3, §12 G1).
  *
  * Covers:
- *   - attack/kill troll yields the sign (not an error) — real world state (troll holds axe)
- *   - attack troll with sword also yields the sign (GWIM iobj path via V-ATTACK)
- *   - attack non-troll yields graceful deflection
+ *   - attack/kill troll fires real combat (non-empty, non-sign output)
+ *   - attack non-troll yields graceful guard deflection
  *   - examine troll output unchanged vs golden
  *   - east/west blocked by authentic fend-off, TROLL-FLAG stays unset
- *   - no-troll context (West of House) falls through to faithful engine response, NOT the sign
- *   - real-path reachability: walking the actual route into Troll Room fires the sign
- *   - PHASE-1 TEMPORARY marker present in verbs source and game.ts
- *   - Phase-2 guard: test fails if marker coexists with a Phase-2 combat module
+ *   - no-troll context (West of House) falls through to faithful engine response
+ *   - real-path reachability: walking the actual route into Troll Room reaches combat path
+ *   - PHASE-1 TEMPORARY markers are GONE from both source files
+ *   - Phase-2 coexistence guard: combat module present, markers absent
+ *   - troll-kill walkthrough (test H): scripted fight → trollFlag=true, exits unblocked
  */
 
 import { describe, it, expect } from 'vitest';
 import { createGame } from '../../src/engine/bootstrap';
 import { Flag } from '../../src/domain/flags';
+import { ScriptedRng } from '../helpers/scripted-rng';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -29,7 +30,6 @@ const EXAMINE_TROLL_LINE =
 const FEND_OFF = 'The troll fends you off with a menacing gesture.';
 
 // Real-world state: lit lantern + sword held; troll keeps the axe (its normal child).
-// This is what a Phase-1 player actually encounters when they reach the Troll Room.
 function trollRoom() {
   const g = createGame({ startRoom: 'TROLL-ROOM' });
   g.start();
@@ -38,15 +38,12 @@ function trollRoom() {
   type Obj = { set(f: unknown): void; moveTo(d: unknown): void };
   const lamp  = w.get('LAMP')  as Obj | undefined;
   const sword = w.get('SWORD') as Obj | undefined;
-  // axe intentionally NOT relocated -- troll holds it (real world state)
   if (lamp  && player) { lamp.moveTo(player);  lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
   if (sword && player) { sword.moveTo(player); }
   return g;
 }
 
 // No-sword variant: player arrives with only a lamp (no held weapon).
-// GWIM would auto-select the troll's axe, fail the held-check.
-// The pre-parse intercept must still deliver the sign.
 function trollRoomNoSword() {
   const g = createGame({ startRoom: 'TROLL-ROOM' });
   g.start();
@@ -58,40 +55,31 @@ function trollRoomNoSword() {
   return g;
 }
 
-describe('attack/kill troll in Troll Room => sign', () => {
-  it('attack troll (sword + troll axe in scope -- real world state)', () => {
-    // Two WEAPONBIT objects in scope: held sword + troll's axe.
-    // GWIM can't pick one => orphan prompt without the pre-parse intercept.
-    const r = trollRoom().turn('attack troll');
-    expect(r.output).toContain(SIGN_FRAGMENT);
-  });
-
-  it('kill troll (sword + troll axe in scope -- real world state)', () => {
-    const r = trollRoom().turn('kill troll');
-    expect(r.output).toContain(SIGN_FRAGMENT);
-  });
-
-  it('attack troll (only troll axe in scope, no held weapon -- real world state)', () => {
-    // Single WEAPONBIT in scope (troll's axe), but player doesn't hold it.
-    // GWIM auto-selects the axe, held-check fails without the pre-parse intercept.
-    const r = trollRoomNoSword().turn('attack troll');
-    expect(r.output).toContain(SIGN_FRAGMENT);
-  });
-
-  it('kill troll (only troll axe in scope, no held weapon -- real world state)', () => {
-    const r = trollRoomNoSword().turn('kill troll');
-    expect(r.output).toContain(SIGN_FRAGMENT);
-  });
-
-  it('attack troll with sword (explicit iobj path via V-ATTACK)', () => {
-    // Player holds sword => verbAttackPhase1 dispatched => sign.
+describe('attack troll with sword => real combat (not the sign)', () => {
+  it('attack troll with sword produces non-empty output', () => {
     const r = trollRoom().turn('attack troll with sword');
-    expect(r.output).toContain(SIGN_FRAGMENT);
+    expect(r.output.length).toBeGreaterThan(0);
+    expect(r.output).not.toContain(SIGN_FRAGMENT);
+  });
+
+  it('kill troll with sword produces non-empty output', () => {
+    const r = trollRoom().turn('kill troll with sword');
+    expect(r.output.length).toBeGreaterThan(0);
+    expect(r.output).not.toContain(SIGN_FRAGMENT);
+  });
+});
+
+describe('attack troll without weapon => guard fires', () => {
+  it('attack troll bare-handed (no sword) fires bare-hands guard', () => {
+    // No sword held — verbAttack guard 2 fires
+    const r = trollRoomNoSword().turn('attack troll');
+    // Either bare-hands guard or parser can't find weapon — either way not the sign
+    expect(r.output).not.toContain(SIGN_FRAGMENT);
+    expect(r.output.length).toBeGreaterThan(0);
   });
 });
 
 describe('no troll present => faithful engine response, NOT the sign', () => {
-  // The pre-parse intercept must be presence-gated. West of House has no troll.
   it('attack troll at West of House => not the sign', () => {
     const g = createGame();
     g.start();
@@ -107,8 +95,6 @@ describe('no troll present => faithful engine response, NOT the sign', () => {
   });
 
   it('attack troll at West of House => engine produces a non-empty response', () => {
-    // Whatever the engine naturally says ("I don't see..." or similar),
-    // it must not be the sign -- and it must say something.
     const g = createGame();
     g.start();
     const r = g.turn('attack troll');
@@ -118,12 +104,7 @@ describe('no troll present => faithful engine response, NOT the sign', () => {
 });
 
 describe('real-path reachability into Troll Room', () => {
-  // Walk the canonical above-ground route to confirm the sign fires in real play,
-  // not just via the startRoom shortcut.
-  // Route: WoH => N (North of House) => E (Behind House) => open window
-  //        => W (Kitchen) => W (Living Room) => move rug => open trap door
-  //        => down (Cellar) => N (Troll Room)
-  it('sign fires after navigating to Troll Room via cellar route', () => {
+  it('attack troll with sword after navigating to Troll Room fires real combat', () => {
     const g = createGame();
     g.start();
 
@@ -135,21 +116,21 @@ describe('real-path reachability into Troll Room', () => {
     if (lamp && player) { lamp.moveTo(player); lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
     if (sword && player) { sword.moveTo(player); }
 
-    g.turn('north');          // WoH => North of House
-    g.turn('east');           // => Behind House
-    g.turn('open window');    // open kitchen window
-    g.turn('west');           // => Kitchen
-    g.turn('west');           // => Living Room
-    g.turn('move rug');       // expose trap door
-    g.turn('open trap door'); // open it
-    g.turn('down');           // => Cellar
-    const arrived = g.turn('north'); // Cellar => Troll Room
+    g.turn('north');
+    g.turn('east');
+    g.turn('open window');
+    g.turn('west');
+    g.turn('west');
+    g.turn('move rug');
+    g.turn('open trap door');
+    g.turn('down');
+    const arrived = g.turn('north');
 
-    // Confirm arrival (troll ldesc in room description)
     expect(arrived.output).toContain('troll');
 
-    const r = g.turn('attack troll');
-    expect(r.output).toContain(SIGN_FRAGMENT);
+    const r = g.turn('attack troll with sword');
+    expect(r.output.length).toBeGreaterThan(0);
+    expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 });
 
@@ -165,9 +146,7 @@ describe('attack non-troll => graceful deflection (not an unimplemented-verb err
     if (lamp && player) { lamp.moveTo(player); lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
     if (sword && player) { sword.moveTo(player); }
     const r = g.turn('attack cyclops');
-    // Should not be the raw "I don't know how to" fallthrough
     expect(r.output).not.toContain("I don't know how to");
-    // Should not be the sign (sign is troll-only)
     expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 });
@@ -176,7 +155,6 @@ describe('golden-preserving guards', () => {
   it('examine troll output unchanged', () => {
     const r = trollRoom().turn('examine troll');
     expect(r.output).toBe(EXAMINE_TROLL_LINE);
-    // Sign must not bleed into examine path
     expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 
@@ -190,40 +168,45 @@ describe('golden-preserving guards', () => {
     expect(r.output).toBe(FEND_OFF);
   });
 
-  it('attack troll does not set TROLL-FLAG', () => {
-    const g = trollRoom();
-    g.turn('attack troll');
-    // TROLL-FLAG unset => east still fends off
+  it('attack troll does not set TROLL-FLAG when blow misses', () => {
+    // Force MISS: ATT=2, DEF=1 (SWORD vBestAdv), DEF1@1 window.
+    // DEF1[1..9] = [M,M,M,S,S,U,U,K,K]; index 0 → MISS.
+    // next()=0.1 → nextInt(9)=0 → DEF1[1+0]=MISSED.
+    const combatRng = new ScriptedRng([0.1, 0.1, 0.1]);
+    const g = createGame({ startRoom: 'TROLL-ROOM', combatRng });
+    g.start();
+    const w = (g as unknown as { world: { get(id: string): unknown } }).world;
+    const player = w.get('PLAYER') as object | undefined;
+    type Obj = { set(f: unknown): void; moveTo(d: unknown): void };
+    const lamp  = w.get('LAMP')  as Obj | undefined;
+    const sword = w.get('SWORD') as Obj | undefined;
+    if (lamp  && player) { lamp.moveTo(player);  lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
+    if (sword && player) { sword.moveTo(player); }
+    g.turn('attack troll with sword');
+    // Missed blow: TROLL-FLAG stays unset, east still fends off
     const r = g.turn('east');
     expect(r.output).toBe(FEND_OFF);
   });
 });
 
-describe('Phase-1 marker and Phase-2 guard', () => {
-  it('PHASE-1 TEMPORARY marker present in verbs/index.ts', () => {
+describe('Phase-2 coexistence guard — markers gone, combat module present', () => {
+  it('PHASE-1 TEMPORARY marker is absent from verbs/index.ts', () => {
     const verbsPath = path.join(REPO_ROOT, 'src/engine/verbs/index.ts');
     const src = fs.readFileSync(verbsPath, 'utf8');
-    expect(src).toContain('PHASE-1 TEMPORARY');
+    expect(src).not.toContain('PHASE-1 TEMPORARY');
   });
 
-  it('PHASE-1 TEMPORARY marker present in game.ts (pre-parse intercept)', () => {
+  it('PHASE-1 TEMPORARY marker is absent from game.ts', () => {
     const gamePath = path.join(REPO_ROOT, 'src/engine/game.ts');
     const src = fs.readFileSync(gamePath, 'utf8');
-    expect(src).toContain('PHASE-1 TEMPORARY');
+    expect(src).not.toContain('PHASE-1 TEMPORARY');
   });
 
-  /**
-   * Phase-2 guard (spec §6, §9): this test MUST FAIL once real combat lands.
-   * It passes now because the Phase-2 combat module does not yet exist.
-   * When Phase 2 ships src/engine/combat.ts (or similar), this test turns red --
-   * the Phase-1 override and the combat module must not coexist.
-   */
   it('PHASE-1 marker does not coexist with a Phase-2 combat module', () => {
     const verbsPath = path.join(REPO_ROOT, 'src/engine/verbs/index.ts');
     const src = fs.readFileSync(verbsPath, 'utf8');
     const hasMarker = src.includes('PHASE-1 TEMPORARY');
 
-    // Candidate Phase-2 combat module paths
     const combatPaths = [
       path.join(REPO_ROOT, 'src/engine/combat.ts'),
       path.join(REPO_ROOT, 'src/engine/combat.js'),
@@ -231,7 +214,94 @@ describe('Phase-1 marker and Phase-2 guard', () => {
     ];
     const hasCombatModule = combatPaths.some(p => fs.existsSync(p));
 
-    // Both must not be true simultaneously
     expect(hasMarker && hasCombatModule).toBe(false);
+  });
+});
+
+/**
+ * Test H — Troll-kill walkthrough (spec §11.3 H).
+ *
+ * Scripted sword fight with forced RNG driving the troll to DEF=0.
+ * Asserts: F_DEAD fired (trollFlag=true), exits unblocked, non-empty message
+ * from HERO_MELEE slot. Structural — no text-match against exact strings.
+ *
+ * RNG design (score=0 → fightStrength_base=2, player pStrength=0):
+ *   SWORD is troll's vBest (vBestAdv=1): villainStrength('TROLL',2,'SWORD')=max(1,2-1)=1
+ *   So DEF=1 every round while troll pStrength>=1.
+ *   ATT = max(1, fightStrength(true,0,0)) = max(1,2+0) = 2.
+ *   selectWindow(ATT=2, DEF=1): DEF==1, ATT=2 → DEF1_RES[1] = DEF1@1
+ *     DEF1@1 window = DEF1[1..9] = [M,M,M,S,S,U,U,K,K]
+ *     Index 3 → STAGGER (next()=0.34 → floor(0.34*9)=3)
+ *     Index 7 → KILLED  (next()=0.80 → floor(0.80*9)=7)
+ *
+ *   Round 1: nextInt(9)=3 → STAGGER (DEF1[1+3]=DEF1[4]=STAGGER)
+ *     STAGGER + dweapon present → prob(25) draw; need ≥0.25 to preserve STAGGER.
+ *     → villain staggered, pStrength unchanged; trollFlag stays false
+ *     randomElement(HERO_MELEE[STAGGER-1=5], rng): 5 variants → next()=0.1 → variant 0
+ *   Clock I-FIGHT: troll STAGGERED → villainBlow skips ("regains feet"), no RNG draw.
+ *
+ *   Round 2: nextInt(9)=7 → KILLED (DEF1[1+7]=DEF1[8]=KILLED)
+ *     → def=0, villainResult fires F_DEAD → trollFlag=true
+ *     randomElement(HERO_MELEE[KILLED-1=2], rng): 3 variants → next()=0.1 → variant 0
+ */
+describe('troll-kill walkthrough (test H)', () => {
+  function makeTrollKillRng() {
+    return new ScriptedRng([
+      0.34,  // round 1 selectWindow: nextInt(9)=3 → STAGGER
+      0.90,  // round 1 prob(25): 90≥25 → false → STAGGER preserved (no LOSE_WEAPON)
+      0.1,   // round 1 randomElement HERO_MELEE[5]: pick variant 0
+      // clock I-FIGHT: troll STAGGERED → skips blow ("regains feet"), no RNG draw
+      0.80,  // round 2 selectWindow: nextInt(9)=7 → KILLED
+      0.1,   // round 2 randomElement HERO_MELEE[2]: pick variant 0
+      0.5,   // padding
+    ]);
+  }
+
+  function makeTrollKillGame() {
+    const g = createGame({ startRoom: 'TROLL-ROOM', combatRng: makeTrollKillRng() });
+    g.start();
+    const w = (g as unknown as { world: { get(id: string): unknown } }).world;
+    const player = w.get('PLAYER') as object | undefined;
+    type Obj = { set(f: unknown): void; moveTo(d: unknown): void };
+    const lamp  = w.get('LAMP')  as Obj | undefined;
+    const sword = w.get('SWORD') as Obj | undefined;
+    if (lamp  && player) { lamp.moveTo(player);  lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
+    if (sword && player) { sword.moveTo(player); }
+    return g;
+  }
+
+  it('scripted sword fight kills troll: trollFlag=true, exits unblocked', () => {
+    const g = makeTrollKillGame();
+
+    // Round 1: STAGGER — troll still alive, trollFlag stays false
+    const r1 = g.turn('attack troll with sword');
+    expect(r1.output.length).toBeGreaterThan(0);
+    expect(r1.output).not.toContain(SIGN_FRAGMENT);
+
+    // After round 1: troll staggered but alive — exits still blocked
+    const eastAfter1 = g.turn('east');
+    expect(eastAfter1.output).toBe(FEND_OFF);
+
+    // Round 2: KILLED — F_DEAD fires
+    const r2 = g.turn('attack troll with sword');
+    expect(r2.output.length).toBeGreaterThan(0);
+    expect(r2.output).not.toContain(SIGN_FRAGMENT);
+
+    // F_DEAD fired → trollFlag=true → exits now open
+    const trollFlagGame = g as unknown as { flags: { get(n: string): boolean } };
+    expect(trollFlagGame.flags.get('TROLL-FLAG')).toBe(true);
+
+    // East exit is now unblocked
+    const eastAfter2 = g.turn('east');
+    expect(eastAfter2.output).not.toBe(FEND_OFF);
+  });
+
+  it('west exit also unblocked after troll kill', () => {
+    const g = makeTrollKillGame();
+    g.turn('attack troll with sword');  // round 1: stagger
+    g.turn('east');                     // just advance turn state, discard output
+    g.turn('attack troll with sword');  // round 2: kill
+    const westAfter2 = g.turn('west');
+    expect(westAfter2.output).not.toBe(FEND_OFF);
   });
 });

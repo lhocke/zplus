@@ -48,6 +48,10 @@ export enum Flag {
    * lit() checks Flag.On on the room object to implement the ZIL LIT? room-ONBIT path.
    */
   On,
+  /** FIGHTBIT — villain is engaged in combat (FSET/FCLEAR by DO-FIGHT, 1actions.zil:3484). */
+  Fight,
+  /** STAGGERED — actor was staggered last blow; loses next attack turn (1actions.zil:3467). */
+  Staggered,
 }
 
 // Capability predicates — thin wrappers so call sites read as intent, not

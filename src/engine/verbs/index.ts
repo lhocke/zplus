@@ -16,6 +16,7 @@ import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
 import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vPut, preTake, preGive, yuks, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
+import { CURE_WAIT } from '../combat.js';
 
 export interface VerbContext {
   readonly verb: string;
@@ -65,6 +66,36 @@ export interface VerbContext {
    * by verbGo's moved-into-dark path to stop chained commands.
    */
   readonly clearContinuation?: () => void;
+  /**
+   * Current carrying capacity available — ZIL LOAD-ALLOWED (gglobals.zil:94).
+   * Starts at 100; reduced by combat wounds, restored by I-CURE.
+   * verbTake gates pickups unless the item is inside a held container (grandparent==player).
+   */
+  readonly loadAllowed?: number;
+  /**
+   * Maximum carrying capacity — ZIL LOAD-MAX (gglobals.zil:92).
+   * Used to detect whether the player is wounded (loadAllowed < loadMax)
+   * and choose the "especially in light of your condition" suffix.
+   */
+  readonly loadMax?: number;
+  /**
+   * Player pStrength (ZIL P-STRENGTH analog, 1actions.zil:3993).
+   * 0 = healthy; negative = wounded (magnitude = wound depth).
+   * Read by verbDiagnose; defaults to 0 (healthy) when absent.
+   */
+  readonly playerPStrength?: number;
+  /** Whether I-CURE is currently armed (ZIL C-ENABLED?, 1actions.zil:3995). */
+  readonly iCureEnabled?: boolean;
+  /** Remaining ticks on I-CURE (ZIL C-TICK, 1actions.zil:4012). */
+  readonly iCureTick?: number;
+  /**
+   * HERO-BLOW entry point — wired at G1 (spec §12 G1, §6.3).
+   * Called after all four V-ATTACK entry guards pass.
+   * targetId: object id of the villain (PRSO); weaponId: object id of PRSI, or null.
+   * Returns the VerbResult from the blow (a combat message, or a guard string on
+   * pointless/staggered/unarmed paths inside heroBlow).
+   */
+  readonly heroBlow?: (targetId: string, weaponId: string | null) => VerbResult;
 }
 
 export interface VerbResult {
@@ -325,6 +356,18 @@ function verbGo(ctx: VerbContext): VerbResult {
   return enterDest(dest as Room);
 }
 
+// WEIGHT — gverbs.zil:1988: SIZE(obj) + recursive sum over all children.
+// ZIL GETP returns 0 when the property is absent, so objects with no SIZE
+// contribute 0 to the total (the player object has no SIZE, for example).
+function weight(obj: GameObject): number {
+  const size = (obj.props.get('SIZE') as number | undefined) ?? 0;
+  let w = size;
+  for (const child of obj.children) {
+    w += weight(child);
+  }
+  return w;
+}
+
 function verbTake(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Take what?");
@@ -343,7 +386,26 @@ function verbTake(ctx: VerbContext): VerbResult {
     return result(rng !== undefined ? pick(yuks, rng) : yuks.entries[0]!);
   }
 
+  // LOAD-ALLOWED capacity check — gverbs.zil:1931–1940.
+  // ZIL: <NOT <IN? <LOC ,PRSO> ,WINNER>> — grandparent check.
+  // Skips the gate when parent(parent(item)) == player (item inside a held container).
+  const loadAllowed = ctx.loadAllowed;
+  if (loadAllowed !== undefined && item.parent?.parent !== ctx.player) {
+    const itemWeight   = weight(item);
+    const playerWeight = weight(ctx.player);
+    if (itemWeight + playerWeight > loadAllowed) {
+      const loadMax = ctx.loadMax ?? loadAllowed;
+      const suffix  = loadAllowed < loadMax
+        ? ', especially in light of your condition.'
+        : '.';
+      return result(`Your load is too heavy${suffix}`, false, /*fatal*/ true);
+    }
+  }
+
   item.moveTo(ctx.player);
+  // gverbs.zil:1949–1950 — retire the FDESC and mark as touched.
+  item.clear(Flag.NonDescript);
+  item.set(Flag.Touched);
 
   // SCORE-OBJ: award one-time pickup VALUE and zero it (gverbs.zil:1959–1963).
   if (ctx.scoreObj !== undefined) {
@@ -548,16 +610,25 @@ function verbScore(ctx: VerbContext): VerbResult {
 }
 
 // V-DIAGNOSE (1actions.zil:3993–4024)
-// FIGHT-STRENGTH = 2 + floor(SCORE/70) (1actions.zil:3322–3381).
-// Without combat, WD=0 always; RS = fightStrength unadjusted.
+// FIGHT-STRENGTH base = 2 + floor(SCORE/70) (1actions.zil:3375–3381).
+// WD / RS follow the ZIL exactly:
+//   MS = FIGHT-STRENGTH(false) — base only
+//   WD = player pStrength  (raw, still negative at this point)
+//   RS = MS + WD           (so wounds lower RS — ZIL: <+ .MS .WD>)
+//   if !C-ENABLED?: WD = 0   else: WD = -WD  (negate to positive wound depth)
+// Cured-after: CURE_WAIT*(WD-1) + C-TICK  (1actions.zil:4011–4014)
 function verbDiagnose(ctx: VerbContext): VerbResult {
-  const deaths = ctx.deaths ?? 0;
-  const score  = ctx.score  ?? 0;
+  const deaths = ctx.deaths          ?? 0;
+  const score  = ctx.score           ?? 0;
+  const rawPs  = ctx.playerPStrength ?? 0;
+  const cureOn = ctx.iCureEnabled    ?? false;
+  const cureTick = ctx.iCureTick     ?? 0;
 
-  const wd = 0; // wound depth; always 0 until combat is built
   const ms = 2 + Math.floor(score / 70);
+  const rs = ms + rawPs;                      // RS = MS + pStrength (1actions.zil:3994)
 
-  const rs = ms;
+  // WD: 0 when I-CURE is disabled; positive wound depth when armed.
+  const wd = cureOn ? -rawPs : 0;             // 1actions.zil:3995–3998
 
   const lines: string[] = [];
 
@@ -569,7 +640,8 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
       wd === 2 ? 'a serious wound,' :
       wd === 3 ? 'several wounds,' :
       /* wd>3 */ 'serious wounds,';
-    lines.push(`You have ${woundDesc} which will be cured after ${wd} moves.`);
+    const curedAfter = CURE_WAIT * (wd - 1) + cureTick;  // 1actions.zil:4011–4014
+    lines.push(`You have ${woundDesc} which will be cured after ${curedAfter} moves.`);
   }
 
   const survDesc =
@@ -588,39 +660,60 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
   return result(lines.join('\n'));
 }
 
-// PHASE-1 TEMPORARY — replaced by real combat in Phase 2.
-// Intercepts V-ATTACK so attack/kill never errors in the pre-troll playtest region.
-// Troll target → the in-world sign (signals content boundary, not a bug).
-// Any other target → brief in-spirit deflection (no villains exist pre-troll).
-// Does NOT set TROLL-FLAG; the exit wall stays up.
-
-// Sign text exported so the pre-parse troll-attack guard in game.ts can reuse it
-// without duplicating the copy (both code paths are PHASE-1 TEMPORARY).
-export const TROLL_SIGN_TEXT =
-  'The troll, bored, produces a hand-lettered sign and holds it up:\n' +
-  '"THANK YOU FOR PLAYING. FURTHER ADVENTURES ARE UNDER DEVELOPMENT."\n' +
-  'He seems disinclined to fight today.';
-
-// Detects bare attack/kill-troll input before the parser sees it.
-// game.ts calls this (with trollInRoom=true) to intercept the case where GWIM
-// (needing a weapon iobj) would otherwise orphan-prompt or fail the held-check.
-// When the troll is NOT in the current room the intercept is skipped, letting the
-// engine produce its faithful "can't see that" response.
-// Named-weapon forms ("attack troll with sword") bypass this and reach verbAttackPhase1
-// through the normal V-ATTACK parser path.
-// PHASE-1 TEMPORARY -- removed when real combat replaces verbAttackPhase1.
-const BARE_TROLL_ATTACK = /^\s*(attack|kill|fight)\s+(the\s+)?troll\s*$/i;
-export function isBareAttackTroll(input: string, trollInRoom: boolean): boolean {
-  return trollInRoom && BARE_TROLL_ATTACK.test(input);
+// V-PRAY — gverbs.zil:1046–1054.
+// Outside ghost mode: at SOUTH-TEMPLE → GOTO FOREST-1; elsewhere → "If you pray enough".
+// Ghost-mode PRAY is handled by ghostDispatch in game.ts before this is reached.
+function verbPray(ctx: VerbContext): VerbResult {
+  if (ctx.here.id === 'SOUTH-TEMPLE') {
+    const forest1 = ctx.world.get('FOREST-1');
+    if (forest1 !== undefined) ctx.player.moveTo(forest1);
+    return { output: '', moved: true };
+  }
+  return result('If you pray enough, your prayers may be answered.');
 }
 
-function verbAttackPhase1(ctx: VerbContext): VerbResult {
-  // Only show the sign when the troll is actually here; if the parser somehow
-  // resolved TROLL as dobj from a different room, fall through gracefully.
-  if (ctx.dobj?.id === 'TROLL' && ctx.dobj.parent === ctx.here) {
-    return result(TROLL_SIGN_TEXT);
+// V-ATTACK entry guards — gverbs.zil:176–193.
+//
+// Guard order (ZIL COND):
+//   1. !ACTORBIT(PRSO)          → not a creature
+//   2. !PRSI || PRSI==HANDS     → bare hands
+//   3. !IN?(PRSI, WINNER)       → not holding the weapon
+//   4. !WEAPONBIT(PRSI)         → not a weapon
+//   5. T                        → heroBlow (ctx.heroBlow callback)
+//
+// Exported so CB7 tests can call it directly.  Registered as 'V-ATTACK'.
+export function verbAttack(ctx: VerbContext): VerbResult {
+  const target = ctx.dobj;
+  const weapon = ctx.iobj;
+
+  if (target === undefined) return result("Attack what?");
+
+  // Guard 1 — target must be an actor (gverbs.zil:177–179)
+  if (!target.has(Flag.Actor)) {
+    return result(`I've known strange people, but fighting a ${target.desc}?`);
   }
-  return result("Violence isn't the answer to this one.");
+
+  // Guard 2 — must have a non-HANDS weapon (gverbs.zil:180–183)
+  const hands = ctx.world.get('HANDS');
+  if (weapon === undefined || weapon === hands) {
+    return result(`Trying to attack a ${target.desc} with your bare hands is suicidal.`);
+  }
+
+  // Guard 3 — must be holding the weapon (gverbs.zil:184–185)
+  if (weapon.parent !== ctx.player) {
+    return result(`You aren't even holding the ${weapon.desc}.`);
+  }
+
+  // Guard 4 — weapon must have WEAPONBIT (gverbs.zil:186–188)
+  if (!weapon.has(Flag.Weapon)) {
+    return result(`Trying to attack the ${target.desc} with a ${weapon.desc} is suicidal.`);
+  }
+
+  // Guard 5 — all guards passed; delegate to heroBlow (gverbs.zil:189–193)
+  if (ctx.heroBlow !== undefined) {
+    return ctx.heroBlow(target.id, weapon.id);
+  }
+  return result("You can't.");
 }
 
 type VerbHandler = (ctx: VerbContext) => VerbResult;
@@ -639,10 +732,13 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-PUT':       verbPut,
   'V-SCORE':     verbScore,
   'V-DIAGNOSE':  verbDiagnose,
+  'V-PRAY':      verbPray,
   'V-ADVENT':    verbAdvent,  // PLUGH / XYZZY — gverbs.zil:153
   'V-FROBOZZ':   verbFrobozz, // FROBOZZ — gverbs.zil:704
-  // PHASE-1 TEMPORARY — replaced by real combat in Phase 2.
-  'V-ATTACK':    verbAttackPhase1,
+  'V-ATTACK':    verbAttack,
+  // V-WAIT — gverbs.zil:1514–1519. "Time passes..." then clock runs; the turn()
+  // loop's clock.advance() handles the countdown — no extra repeat needed here.
+  'V-WAIT':      () => result('Time passes...'),
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.
