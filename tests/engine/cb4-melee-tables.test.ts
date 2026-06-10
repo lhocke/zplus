@@ -372,6 +372,49 @@ describe('THIEF_MELEE structure (1actions.zil:3735–3788)', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Verbatim string rendering — catches length-prefix bugs (1actions.zil:3623,3634,3722)
+// ---------------------------------------------------------------------------
+
+describe('MELEE variant verbatim text rendering via remark()', () => {
+  function render(ltable: readonly (string | number)[], def: string, wep: string): string {
+    const parts: string[] = [];
+    remark(ltable, def, wep, s => parts.push(s));
+    return parts.join('');
+  }
+
+  // HERO_MELEE[1] variant 3 — 1actions.zil:3623
+  // "The haft of your " F-WEP " knocks out the " F-DEF "."  (5 tokens, not 4)
+  it('HERO_MELEE slot 1 (UNCONSCIOUS) variant 3: renders trailing period (1actions.zil:3623)', () => {
+    const ltable = slotVariant(HERO_MELEE[1]!, 3);
+    expect(render(ltable, 'thief', 'sword'))
+      .toBe('The haft of your sword knocks out the thief.');
+  });
+
+  // HERO_MELEE[3] variant 3 — 1actions.zil:3634
+  // "The blow lands, making a shallow gash in the " F-DEF "'s arm!"  (3 tokens, not 4)
+  it('HERO_MELEE slot 3 (LIGHT_WOUND) variant 3: no trailing undefined (1actions.zil:3634)', () => {
+    const ltable = slotVariant(HERO_MELEE[3]!, 3);
+    const parts: (string | undefined | null)[] = [];
+    remark(ltable, 'troll', 'sword', s => parts.push(s));
+    // Must emit exactly 3 real tokens with no undefined/null past the end
+    expect(parts.every(p => typeof p === 'string')).toBe(true);
+    expect(parts.join('')).toBe("The blow lands, making a shallow gash in the troll's arm!");
+  });
+
+  // TROLL_MELEE[6] variant 1 — 1actions.zil:3722
+  // "The troll swings, you parry, but the force of his blow knocks your " F-WEP " away."
+  // (3 tokens, not 5)
+  it('TROLL_MELEE slot 6 (LOSE_WEAPON) variant 1: no trailing undefined (1actions.zil:3722)', () => {
+    const ltable = slotVariant(TROLL_MELEE[6]!, 1);
+    const parts: (string | undefined | null)[] = [];
+    remark(ltable, 'player', 'sword', s => parts.push(s));
+    // Must emit exactly 3 real tokens with no undefined/null past the end
+    expect(parts.every(p => typeof p === 'string')).toBe(true);
+    expect(parts.join('')).toBe('The troll swings, you parry, but the force of his blow knocks your sword away.');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Grand total: 96 messages across all four tables
 // ---------------------------------------------------------------------------
 

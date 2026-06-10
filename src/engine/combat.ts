@@ -322,7 +322,7 @@ export const HERO_MELEE: readonly MeleeSlot[] = [
     [5, 'Your ', F_WEP, ' crashes down, knocking the ', F_DEF, ' into dreamland.'],
     [3, 'The ', F_DEF, ' is battered into unconsciousness.'],
     [3, 'A furious exchange, and the ', F_DEF, ' is knocked out!'],
-    [4, 'The haft of your ', F_WEP, ' knocks out the ', F_DEF, '.'],
+    [5, 'The haft of your ', F_WEP, ' knocks out the ', F_DEF, '.'],
     [3, 'The ', F_DEF, ' is knocked out!'],
   ],
   // Slot 2 — KILLED (3 variants) — 1actions.zil:3626–3629
@@ -336,7 +336,7 @@ export const HERO_MELEE: readonly MeleeSlot[] = [
     [3, 'The ', F_DEF, ' is struck on the arm; blood begins to trickle down.'],
     [5, 'Your ', F_WEP, ' pinks the ', F_DEF, ' on the wrist, but it\'s not serious.'],
     [1, 'Your stroke lands, but it was only the flat of the blade.'],
-    [4, 'The blow lands, making a shallow gash in the ', F_DEF, '\'s arm!'],
+    [3, 'The blow lands, making a shallow gash in the ', F_DEF, '\'s arm!'],
   ],
   // Slot 4 — SERIOUS_WOUND (4 variants) — 1actions.zil:3635–3639
   [4,
@@ -456,7 +456,7 @@ export const TROLL_MELEE: readonly MeleeSlot[] = [
   // Slot 6 — LOSE_WEAPON (3 variants) — 1actions.zil:3720–3723
   [3,
     [3, 'The axe hits your ', F_WEP, ' and knocks it spinning.'],
-    [5, 'The troll swings, you parry, but the force of his blow knocks your ', F_WEP, ' away.'],
+    [3, 'The troll swings, you parry, but the force of his blow knocks your ', F_WEP, ' away.'],
     [3, 'The axe knocks your ', F_WEP, ' out of your hand. It falls to the floor.'],
   ],
   // Slot 7 — HESITATE (2 variants) — 1actions.zil:3724–3727
