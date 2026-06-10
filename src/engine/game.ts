@@ -555,7 +555,7 @@ export class Game {
       );
       room.handler(ctx);
     }
-    this.emitRoomEntered(room.id);
+    this.emitRoomEntered(room.id, (text) => enterBuf.push(text));
     return enterBuf.join('\n');
   }
 
@@ -619,14 +619,16 @@ export class Game {
     return buf.join('\n');
   }
 
-  private emitRoomEntered(roomId: ObjectId): void {
+  private emitRoomEntered(roomId: ObjectId, tell?: (s: string) => void): void {
     const firstVisit = !this.visited.has(roomId);
     this.visited.add(roomId);
     // First-visit room VALUE award — same SCORE-OBJ mechanism as object pickups.
+    // gverbs.zil:1851-1865: scoreObj → scoreUpd → checkWonFlag threads tell so the
+    // WON-FLAG whisper reaches the same output channel as the room description.
     if (firstVisit) {
       const room = this.world.get(roomId);
       if (room !== undefined) {
-        this.scoring.scoreObj(room);
+        this.scoring.scoreObj(room, tell);
       }
     }
     this.events.emit({ type: 'room-entered', room: roomId, firstVisit });

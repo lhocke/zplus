@@ -18,6 +18,11 @@ import { Thing } from '../../src/domain/thing';
 import { Flag } from '../../src/domain/flags';
 import { createGame } from '../../src/engine/bootstrap';
 
+// Private-field accessor for test-only score seeding.
+function seedScore(game: ReturnType<typeof createGame>, base: number): void {
+  (game as unknown as { scoring: Scoring }).scoring.scoreUpd(base);
+}
+
 // ---------------------------------------------------------------------------
 // A. wonFlagHook callback fires on score=350
 // ---------------------------------------------------------------------------
@@ -192,5 +197,49 @@ describe('SD1-D: game.ts wiring (createGame integration)', () => {
     game.turn('drop lamp');
     const second = game.turn('take lamp');
     expect(second.output).not.toContain(whisperText);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// E. whisper on first-visit room VALUE award (the room-entry scoring path)
+//    Reproduces: gverbs.zil:1851-1865 prints whisper on ANY scoring trigger,
+//    including first-visit room awards. emitRoomEntered must thread tell through
+//    scoreObj so wonFlagHook gets a real output channel, not the no-op fallback.
+// ---------------------------------------------------------------------------
+
+describe('SD1-E: whisper emitted via room-entry first-visit VALUE path', () => {
+  // KITCHEN has VALUE=10 in rooms.json; east of LIVING-ROOM.
+  // Seed baseScore to 340, walk east to KITCHEN (first visit) → score=350 → WON-FLAG.
+  it('whisper via room VALUE — start in LIVING-ROOM, walk east to KITCHEN', () => {
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    seedScore(game, 340);
+
+    const out = game.turn('east');
+    expect(out.output).toContain(
+      'An almost inaudible voice whispers in your ear, "Look to your treasures for the final secret."',
+    );
+  });
+
+  it('MAP revealed via room VALUE path', () => {
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    seedScore(game, 340);
+    const map = game.world.get('MAP')!;
+    expect(map.has(Flag.Invisible)).toBe(true);
+
+    game.turn('east'); // KITCHEN first visit, VALUE=10 → score=350
+    expect(map.has(Flag.Invisible)).toBe(false);
+  });
+
+  it('whisper appears only once on room-entry path', () => {
+    const game = createGame({ startRoom: 'LIVING-ROOM' });
+    seedScore(game, 340);
+
+    const first = game.turn('east'); // KITCHEN — score hits 350
+    expect(first.output).toContain('whispers in your ear');
+
+    // Go back and re-enter — KITCHEN already visited, no VALUE re-award.
+    game.turn('west');
+    const second = game.turn('east');
+    expect(second.output).not.toContain('whispers in your ear');
   });
 });
