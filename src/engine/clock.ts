@@ -133,6 +133,13 @@ export class Clock {
     return lines;
   }
 
+  /** Read-only state for a single entry by id (undefined if not registered). */
+  getEntry(id: string): Readonly<ClockSnapshot> | undefined {
+    const e = this.entries.get(id);
+    if (!e) return undefined;
+    return { id: e.id, turnsLeft: e.turnsLeft, enabled: e.enabled };
+  }
+
   /** Snapshot for SaveState serialisation. */
   snapshot(): ClockSnapshot[] {
     return Array.from(this.entries.values()).map((e) => ({

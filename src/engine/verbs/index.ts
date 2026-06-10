@@ -16,6 +16,7 @@ import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
 import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vPut, preTake, preGive, yuks, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
+import { CURE_WAIT } from '../combat.js';
 
 export interface VerbContext {
   readonly verb: string;
@@ -77,6 +78,16 @@ export interface VerbContext {
    * and choose the "especially in light of your condition" suffix.
    */
   readonly loadMax?: number;
+  /**
+   * Player pStrength (ZIL P-STRENGTH analog, 1actions.zil:3993).
+   * 0 = healthy; negative = wounded (magnitude = wound depth).
+   * Read by verbDiagnose; defaults to 0 (healthy) when absent.
+   */
+  readonly playerPStrength?: number;
+  /** Whether I-CURE is currently armed (ZIL C-ENABLED?, 1actions.zil:3995). */
+  readonly iCureEnabled?: boolean;
+  /** Remaining ticks on I-CURE (ZIL C-TICK, 1actions.zil:4012). */
+  readonly iCureTick?: number;
   /**
    * HERO-BLOW entry point — wired at G1 (spec §12 G1, §6.3).
    * Called after all four V-ATTACK entry guards pass.
@@ -599,16 +610,25 @@ function verbScore(ctx: VerbContext): VerbResult {
 }
 
 // V-DIAGNOSE (1actions.zil:3993–4024)
-// FIGHT-STRENGTH = 2 + floor(SCORE/70) (1actions.zil:3322–3381).
-// Without combat, WD=0 always; RS = fightStrength unadjusted.
+// FIGHT-STRENGTH base = 2 + floor(SCORE/70) (1actions.zil:3375–3381).
+// WD / RS follow the ZIL exactly:
+//   MS = FIGHT-STRENGTH(false) — base only
+//   WD = player pStrength  (raw, still negative at this point)
+//   RS = MS + WD           (so wounds lower RS — ZIL: <+ .MS .WD>)
+//   if !C-ENABLED?: WD = 0   else: WD = -WD  (negate to positive wound depth)
+// Cured-after: CURE_WAIT*(WD-1) + C-TICK  (1actions.zil:4011–4014)
 function verbDiagnose(ctx: VerbContext): VerbResult {
-  const deaths = ctx.deaths ?? 0;
-  const score  = ctx.score  ?? 0;
+  const deaths = ctx.deaths          ?? 0;
+  const score  = ctx.score           ?? 0;
+  const rawPs  = ctx.playerPStrength ?? 0;
+  const cureOn = ctx.iCureEnabled    ?? false;
+  const cureTick = ctx.iCureTick     ?? 0;
 
-  const wd = 0; // wound depth; always 0 until combat is built
   const ms = 2 + Math.floor(score / 70);
+  const rs = ms + rawPs;                      // RS = MS + pStrength (1actions.zil:3994)
 
-  const rs = ms;
+  // WD: 0 when I-CURE is disabled; positive wound depth when armed.
+  const wd = cureOn ? -rawPs : 0;             // 1actions.zil:3995–3998
 
   const lines: string[] = [];
 
@@ -620,7 +640,8 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
       wd === 2 ? 'a serious wound,' :
       wd === 3 ? 'several wounds,' :
       /* wd>3 */ 'serious wounds,';
-    lines.push(`You have ${woundDesc} which will be cured after ${wd} moves.`);
+    const curedAfter = CURE_WAIT * (wd - 1) + cureTick;  // 1actions.zil:4011–4014
+    lines.push(`You have ${woundDesc} which will be cured after ${curedAfter} moves.`);
   }
 
   const survDesc =

@@ -507,6 +507,9 @@ export class Game {
           clearContinuation: () => this.parser.clearContinuation(),
           loadAllowed: this.loadAllowed,
           loadMax: this.loadMax,
+          playerPStrength: this.player.pStrength,
+          iCureEnabled: this.clock.getEntry('I-CURE')?.enabled ?? false,
+          iCureTick: this.clock.getEntry('I-CURE')?.turnsLeft ?? 0,
           heroBlow: (targetId, weaponId) => {
             const out: string[] = [];
             const entry = this.getVillainEntry(targetId, (s) => out.push(s));
