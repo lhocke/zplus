@@ -134,6 +134,18 @@ describe('DT2-B: ghost verb responses', () => {
     expect(r.output).toContain('unearthly');
   });
 
+  it('EXAMINE/LOOK-AT: fallback "You can\'t even do that" — no EXAMINE clause in ZIL table (1actions.zil:3140/3170)', () => {
+    // <VERB? LOOK> at ZIL:3140 tests PRSA==V?LOOK only.
+    // EXAMINE and LOOK AT both map to V-EXAMINE (gsyntax.zil:199,301), not V-LOOK,
+    // so they fall to the T-clause (ZIL:3170-3173): "You can't even do that."
+    const g = ghostGame('SOUTH-TEMPLE');
+    // ALTAR already lives in SOUTH-TEMPLE in the world data — no manual move needed.
+    const examineResult = g.turn('examine altar');
+    expect(examineResult.output).toContain("can't even do that");
+    const lookAtResult = g.turn('look at altar');
+    expect(lookAtResult.output).toContain("can't even do that");
+  });
+
   it('meta verbs pass through (BRIEF/VERBOSE — 1actions.zil:3118–3120)', () => {
     const g = ghostGame('ENTRANCE-TO-HADES');
     // These verbs return <> (false) in ZIL so normal dispatch continues

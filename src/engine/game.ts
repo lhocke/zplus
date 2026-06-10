@@ -286,8 +286,10 @@ export class Game {
       return { output: 'You are dead.', moved: false };
     }
 
-    // 1actions.zil:3140–3151 — LOOK: unearthly description.
-    if (action === 'V-LOOK' || action === 'V-EXAMINE') {
+    // 1actions.zil:3140–3151 — LOOK only (<VERB? LOOK> tests PRSA==V?LOOK).
+    // V-EXAMINE is a distinct action (gsyntax.zil:199/301) not in this clause;
+    // EXAMINE / LOOK AT fall to the T-fallback below.
+    if (action === 'V-LOOK') {
       this.parser.clearContinuation();
       // 1actions.zil:3142–3146 — different text based on whether objects are present.
       const hasObjs = this.here.children.size > 0;
