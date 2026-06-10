@@ -103,7 +103,7 @@ describe('NM-7: DO-FIGHT excludes cyclops (cnt==LEN)', () => {
     const processed: number[] = [];
 
     // Three villain entries — mirroring the ZIL VILLAINS LTABLE (troll, thief, cyclops).
-    // None have FIGHTBIT set, so their action (F_BUSY check) is called.
+    // None have FIGHTBIT set; the ZIL COND first clause has an empty body so NO action is called.
     const table: VillainTableEntry[] = [
       {
         id: 'TROLL',
@@ -137,8 +137,88 @@ describe('NM-7: DO-FIGHT excludes cyclops (cnt==LEN)', () => {
     // LEN=3: loop processes cnt=1,2 (0-based: idx 0,1), skips cnt=3 (idx 2).
     doFight(3, table, rng, state.cbs);
 
+    // No action called at all: !fightBit → empty COND body (1actions.zil:3341).
+    expect(processed).toEqual([]);
     // Cyclops (index 2) must NOT be reached.
     expect(processed).not.toContain(2);
+  });
+
+  it('DO-FIGHT: !fightBit villain — action NOT invoked (1actions.zil:3341 empty body)', () => {
+    let actionCalled = false;
+    const table: VillainTableEntry[] = [
+      {
+        id: 'TROLL',
+        fightBit: false,
+        pStrength: 2,
+        entry: makeEntry({ action: () => { actionCalled = true; return false; } }),
+        inHere: true,
+        staggered: false,
+      },
+    ];
+
+    // LEN=2: cnt=1 only → idx 0 (TROLL, no fightBit) → skip without action
+    doFight(2, table, new ScriptedRng([0.5]), makeBlowCallbacks().cbs);
+    expect(actionCalled).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// NM-7 — I-FIGHT excludes cyclops
+// ---------------------------------------------------------------------------
+
+describe('NM-7: I-FIGHT excludes cyclops (cnt==LEN)', () => {
+  it('with LEN=3, I-FIGHT does not reach cyclops at idx 2', () => {
+    const visited: number[] = [];
+
+    const ctx: IFightCallbacks = {
+      getDead: () => false,
+      villainTable: [
+        {
+          id: 'TROLL',
+          fightBit: false,
+          pStrength: 1,
+          entry: makeEntry(),
+          inHere: true,
+          staggered: false,
+        },
+        {
+          id: 'THIEF',
+          fightBit: false,
+          pStrength: 1,
+          entry: makeEntry(),
+          inHere: true,
+          staggered: false,
+        },
+        {
+          id: 'CYCLOPS',
+          fightBit: false,
+          pStrength: 1,
+          entry: makeEntry(),
+          inHere: true,
+          staggered: false,
+        },
+      ],
+      getVillainPs: (idx) => { visited.push(idx); return 1; },
+      setVillainPs: () => {},
+      getVProb: () => 0,
+      setVProb: () => {},
+      isThief: () => false,
+      isThiefEngrossed: () => false,
+      setThiefEngrossed: () => {},
+      callVillainAction: (idx, _fcode) => { visited.push(idx); return false; },
+      clearFightBit: () => {},
+      clearStaggered: () => {},
+      clearPlayerStaggered: () => {},
+      onAwaken: () => {},
+      triggerFight: () => {},
+      isVillainInHere: () => true,
+      isVillainInvisible: () => false,
+      len: 3,
+    };
+
+    iFight(ctx, new ScriptedRng([0.5]));
+    // cnt=1..2 → idx 0,1 only; cyclops at idx 2 never touched
+    expect(visited).not.toContain(2);
   });
 });
 
@@ -344,7 +424,8 @@ describe('Test F: I-FIGHT V-PROB wake cycle and NM-9', () => {
       triggerFight: () => { state.fightTriggered = true; },
       isVillainInHere: (_idx: number) => opts.villainInHere ?? true,
       isVillainInvisible: (_idx: number) => false,
-      len: 1,
+      // len=2: villainTable[0] is the one real villain; cnt<2 processes idx 0 only.
+      len: 2,
     };
 
     return { ctx, state };
@@ -420,7 +501,8 @@ describe('Test F: I-FIGHT V-PROB wake cycle and NM-9', () => {
       triggerFight: () => {},
       isVillainInHere: () => false,
       isVillainInvisible: () => false,
-      len: 1,
+      // len=2: villainTable[0] is one villain; cnt<2 processes idx 0 only.
+      len: 2,
     };
 
     const rng = new ScriptedRng([0.5]);

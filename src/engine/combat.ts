@@ -1008,14 +1008,10 @@ export function doFight(
       const entry = table[cnt - 1];
       if (entry === undefined) continue;
 
-      // Skip villains without FIGHTBIT (1actions.zil:3341)
-      if (!entry.fightBit) {
-        // F_BUSY callback when not fighting (e.g. troll recovering axe)
-        entry.entry.action(F_BUSY);
-        continue;
-      }
+      // COND 1 (1actions.zil:3341): no FIGHTBIT → empty body, skip
+      if (!entry.fightBit) continue;
 
-      // F_BUSY check: if action returns truthy, skip this villain's blow
+      // COND 2: FIGHTBIT set — call action(F_BUSY); truthy return skips the blow
       if (entry.entry.action(F_BUSY)) continue;
 
       const blowRes = villainBlow(
@@ -1145,7 +1141,8 @@ export function iFight(ctx: IFightCallbacks, rng: CombatRng): boolean {
 
   let fightPending = false;
 
-  for (let cnt = 1; cnt <= ctx.len; cnt++) {
+  // cnt=1..LEN-1 — mirrors ZIL: <EQUAL? .CNT .LEN> exits before reading cyclops (NM-7).
+  for (let cnt = 1; cnt < ctx.len; cnt++) {
     const idx = cnt - 1;
     const row = ctx.villainTable[idx];
     if (row === undefined) continue;
