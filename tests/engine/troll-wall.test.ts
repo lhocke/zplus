@@ -235,8 +235,10 @@ describe('Phase-2 coexistence guard — markers gone, combat module present', ()
  *     Index 7 → KILLED  (next()=0.80 → floor(0.80*9)=7)
  *
  *   Round 1: nextInt(9)=3 → STAGGER (DEF1[1+3]=DEF1[4]=STAGGER)
+ *     STAGGER + dweapon present → prob(25) draw; need ≥0.25 to preserve STAGGER.
  *     → villain staggered, pStrength unchanged; trollFlag stays false
  *     randomElement(HERO_MELEE[STAGGER-1=5], rng): 5 variants → next()=0.1 → variant 0
+ *   Clock I-FIGHT: troll STAGGERED → villainBlow skips ("regains feet"), no RNG draw.
  *
  *   Round 2: nextInt(9)=7 → KILLED (DEF1[1+7]=DEF1[8]=KILLED)
  *     → def=0, villainResult fires F_DEAD → trollFlag=true
@@ -246,7 +248,9 @@ describe('troll-kill walkthrough (test H)', () => {
   function makeTrollKillRng() {
     return new ScriptedRng([
       0.34,  // round 1 selectWindow: nextInt(9)=3 → STAGGER
+      0.90,  // round 1 prob(25): 90≥25 → false → STAGGER preserved (no LOSE_WEAPON)
       0.1,   // round 1 randomElement HERO_MELEE[5]: pick variant 0
+      // clock I-FIGHT: troll STAGGERED → skips blow ("regains feet"), no RNG draw
       0.80,  // round 2 selectWindow: nextInt(9)=7 → KILLED
       0.1,   // round 2 randomElement HERO_MELEE[2]: pick variant 0
       0.5,   // padding

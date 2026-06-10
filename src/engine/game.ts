@@ -15,7 +15,11 @@ import { lookupPer, lookupPreAction } from '../actions/registry.js';
 import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
 import { jigsUp as jigsUpMsgsFn } from './game-messages.js';
 import { jigsUp, type JigsUpCallbacks, type JigsUpMsgs } from './death.js';
-import { heroBlow as combatHeroBlow, findWeapon, TROLL_MELEE } from './combat.js';
+import {
+  heroBlow as combatHeroBlow, findWeapon, TROLL_MELEE,
+  iFight, iCure, doFight,
+  type IFightCallbacks, type ICureCallbacks, type VillainBlowCallbacks, type VillainTableEntry,
+} from './combat.js';
 import type { HeroBlowCallbacks } from './combat.js';
 import type { VillainEntry } from '../domain/villain-entry.js';
 import { makeTrollFcn } from '../actions/troll-fcn.js';
@@ -123,11 +127,13 @@ export class Game {
   lucky = true;
 
   // ZIL encumbrance globals — gglobals.zil:92,94.
-  // LOAD-MAX: the player's carrying capacity ceiling.
-  // LOAD-ALLOWED: current remaining capacity; wound application reduces this,
-  // I-CURE restores it.  Both init 100 per <GLOBAL LOAD-MAX 100> / <GLOBAL LOAD-ALLOWED 100>.
   loadAllowed = 100;
   loadMax = 100;
+
+  // Set by jigsUp when called from clock context (I-FIGHT → winnerResult → jigsUp).
+  // Checked by turn() after clock.advance() to abort the remaining turn loop.
+  // Cleared at the start of each new turn. (B3)
+  private fatalPending = false;
 
   // Stashed command context for M-END (gmain.zil:151–161).
   // LIVING-ROOM-FCN's M-END branch reads VERB?/PRSO/PRSI (1actions.zil:478–482)
@@ -173,6 +179,11 @@ export class Game {
       throw new Error('Player has no parent room.');
     }
     this.here = this.player.parent as Room;
+
+    // I-FIGHT: per-turn demon (1actions.zil:3810–3841, turnsLeft=-1 fires every advance).
+    // I-CURE: queued countdown (1actions.zil:3593–3602, CURE_WAIT=30); starts parked (0).
+    this.clock.schedule(this.makeIFightEntry());
+    this.clock.schedule(this.makeICureEntry());
   }
 
   /** Print the intro banner and describe the initial room. */
@@ -355,6 +366,7 @@ export class Game {
   /** Execute one command line (may contain chained commands via "then" / "."). */
   turn(input: string): TurnResult {
     if (this.gameOver) return { output: '', moved: false };
+    this.fatalPending = false;
 
     // Ghost dispatch — spec §9.5 (B8/OQ-4, RATIFIED).
     // When dead===true, route through the DEAD-FUNCTION verb table
@@ -497,12 +509,19 @@ export class Game {
               return { output: "Violence isn't the answer to this one.", moved: false };
             }
             const cb = this.makeHeroBlowCallbacks(targetId, entry, (s) => out.push(s));
+            // Resolve real descs for REMARK messages (spec §8 "use object desc").
+            const villainObj = this.world.get(targetId);
+            const villainDesc = villainObj?.desc ?? targetId.toLowerCase().replace(/-/g, ' ');
+            const prsiObj = weaponId ? this.world.get(weaponId) : null;
+            const prsiDesc = prsiObj?.desc ?? (weaponId ? weaponId.toLowerCase().replace(/-/g, ' ') : '');
             // The concrete Rng always implements nextInt; the interface has it
             // optional only so test stubs don't need it.  heroBlow requires it.
             combatHeroBlow(
               targetId,
+              villainDesc,
               entry,
               weaponId,
+              prsiDesc,
               weaponId !== null,
               this.player.has(Flag.Staggered),
               this.scoring.score,
@@ -596,6 +615,13 @@ export class Game {
           }
         }
         this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+
+        // B3: I-FIGHT → jigsUp signaled RFATAL from clock context — abort turn.
+        if (this.fatalPending) {
+          this.fatalPending = false;
+          this.parser.clearContinuation();
+          break;
+        }
       }
 
       if (!this.parser.hasContinuation()) {
@@ -933,10 +959,13 @@ export class Game {
         if (a !== undefined) (a as unknown as { pStrength: number }).pStrength = v;
       },
 
-      // FIGHTBIT — set at start of heroBlow, cleared on villain death by setVillainFightBit
-      // (despite the "set" name, villainResult uses it as "clear" when DEF==0: spec §6.4)
+      // FSET villain FIGHTBIT — 1actions.zil:3484, called at start of HERO-BLOW.
       setVillainFightBit: () => {
         if (villain !== undefined) villain.set(Flag.Fight);
+      },
+      // FCLEAR villain FIGHTBIT — 1actions.zil:3569, called on villain death (DEF==0).
+      clearVillainFightBit: () => {
+        if (villain !== undefined) villain.clear(Flag.Fight);
       },
       setVillainStaggered: () => {
         if (villain !== undefined) villain.set(Flag.Staggered);
@@ -968,6 +997,269 @@ export class Game {
       },
 
       emit: tell,
+    };
+  }
+
+  // Build the VILLAIN entry for DO-FIGHT's VillainTableEntry snapshot.
+  // Currently only TROLL is wired; others are looked up lazily.
+  private getVillainTableEntry(id: string, tell: (s: string) => void): VillainTableEntry | null {
+    const villain = this.world.get(id);
+    if (villain === undefined) return null;
+    const entry = this.getVillainEntry(id, tell);
+    if (entry === undefined) return null;
+    return {
+      id,
+      fightBit: villain.has(Flag.Fight),
+      pStrength: (villain as unknown as { pStrength: number }).pStrength ?? 0,
+      entry,
+      inHere: villain.parent?.id === this.here.id,
+      staggered: villain.has(Flag.Staggered),
+    };
+  }
+
+  // makeVillainBlowCallbacks — re-usable VillainBlowCallbacks for doFight context.
+  // tell: the clock tick output channel.
+  private makeVillainBlowCallbacks(tell: (s: string) => void): VillainBlowCallbacks {
+    const clockFatal = (): void => { this.fatalPending = true; };
+    // Tracks which villain is currently being processed by the doFight loop.
+    // Set via setActiveVillain (called by doFight before each villainBlow call)
+    // so that getVillainStaggered/clearVillainStaggered resolve the correct world object.
+    let activeVillainId: string | undefined;
+    return {
+      getPlayerPStrength: () => this.player.pStrength,
+      setPlayerPStrength: (v: number) => { this.player.pStrength = v; },
+      getScore: () => this.scoring.score,
+      jigsUp: (msg: string) => {
+        jigsUp(msg, this.jigsUpMsgs(), this.makeJigsUpCallbacks(tell, clockFatal));
+      },
+      queueICure: (period: number) => { this.clock.queue('I-CURE', period, true); },
+      getLoadAllowed: () => this.loadAllowed,
+      setLoadAllowed: (v: number) => { this.loadAllowed = v; },
+      getLoadMax: () => this.loadMax,
+      getLucky: () => this.lucky,
+      // Returns the held weapon id (for REMARK lookups done inside villainBlow).
+      findPlayerWeapon: () => {
+        const w = findWeapon(this.player);
+        return w?.id ?? null;
+      },
+      // Returns the held weapon's real desc for REMARK messages — spec §8 "use object desc".
+      findPlayerWeaponDesc: () => {
+        const w = findWeapon(this.player);
+        return w?.desc ?? null;
+      },
+      dropPlayerWeapon: (id: string) => {
+        const wep = this.world.get(id);
+        if (wep !== undefined) wep.moveTo(this.here);
+      },
+      // Per-villain stagger: resolved via setActiveVillain hook called by doFight.
+      setActiveVillain: (id: string) => { activeVillainId = id; },
+      getVillainStaggered: () => {
+        if (activeVillainId === undefined) return false;
+        return this.world.get(activeVillainId)?.has(Flag.Staggered) ?? false;
+      },
+      clearVillainStaggered: () => {
+        if (activeVillainId !== undefined) {
+          this.world.get(activeVillainId)?.clear(Flag.Staggered);
+        }
+      },
+      setPlayerStaggered: () => { this.player.set(Flag.Staggered); },
+      clearPlayerStaggered: () => { this.player.clear(Flag.Staggered); },
+      emit: tell,
+    };
+  }
+
+  // makeIFightCallbacks — IFightCallbacks for the I-FIGHT clock entry.
+  private makeIFightCallbacks(tell: (s: string) => void): IFightCallbacks {
+    // The active villain ids in the villain table (excludes cyclops at index 3, per spec §6.5).
+    const VILLAIN_IDS = ['TROLL', 'THIEF'];  // indices 0/1 in the 0-based table (cnt=1/2 in ZIL)
+    const LEN = 3;  // VILLAINS[0]=3 (troll + thief count, cyclops excluded from DO-FIGHT loop)
+
+    const blowCbs = this.makeVillainBlowCallbacks(tell);
+
+    return {
+      getDead: () => this.dead,
+      villainTable: [],  // populated dynamically in makeVillainSnapshot
+      len: LEN,
+
+      getVillainPs: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return 0;
+        const v = this.world.get(id);
+        return (v as unknown as { pStrength: number })?.pStrength ?? 0;
+      },
+      setVillainPs: (idx: number, v: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return;
+        const villain = this.world.get(id);
+        if (villain !== undefined) (villain as unknown as { pStrength: number }).pStrength = v;
+      },
+
+      getVProb: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return 0;
+        const entry = this.getVillainEntry(id, tell);
+        return entry?.vProb ?? 0;
+      },
+      setVProb: (idx: number, v: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return;
+        // vProb is stored on the VillainEntry.  For the troll, we need a mutable vProb.
+        // The VillainEntry is re-created each time getVillainEntry is called; store it
+        // directly on the world object as a prop.
+        const villain = this.world.get(id);
+        if (villain !== undefined) villain.props.set('VPROB', v);
+      },
+
+      isThief: (idx: number) => VILLAIN_IDS[idx] === 'THIEF',
+      isThiefEngrossed: () => false,  // thief deferred — always false
+      setThiefEngrossed: (_v: boolean) => {},
+
+      callVillainAction: (idx: number, fcode: number): boolean => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return false;
+        const entry = this.getVillainEntry(id, tell);
+        if (entry === undefined) return false;
+        return entry.action(fcode);
+      },
+
+      clearFightBit: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return;
+        const v = this.world.get(id);
+        if (v !== undefined) v.clear(Flag.Fight);
+      },
+      clearStaggered: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return;
+        const v = this.world.get(id);
+        if (v !== undefined) v.clear(Flag.Staggered);
+      },
+      clearPlayerStaggered: () => { this.player.clear(Flag.Staggered); },
+
+      onAwaken: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return;
+        const v = this.world.get(id) as unknown as { pStrength: number } | undefined;
+        if (v === undefined) return;
+        // AWAKEN (1actions.zil:3843–3847): only fires F_CONSCIOUS when pStrength < 0.
+        // A dead villain (pStrength=0) must not trigger F_CONSCIOUS — that would
+        // clear TROLL-FLAG via trollFcn(F_CONSCIOUS).
+        if (v.pStrength < 0) {
+          v.pStrength = -v.pStrength;
+          const entry = this.getVillainEntry(id, tell);
+          if (entry !== undefined) entry.action(4);  // F_CONSCIOUS=4
+        }
+      },
+
+      triggerFight: () => {
+        // Build the villain table snapshot for this fight tick.
+        const table: VillainTableEntry[] = VILLAIN_IDS.map((id) =>
+          this.getVillainTableEntry(id, tell) ?? {
+            id,
+            fightBit: false,
+            pStrength: 0,
+            entry: { vBest: null, vBestAdv: 0, vProb: 0, vMsgs: [], action: () => false },
+            inHere: false,
+            staggered: false,
+          }
+        );
+        // Sync live stagger/fightBit from world before passing to doFight.
+        for (let i = 0; i < table.length; i++) {
+          const id = VILLAIN_IDS[i]!;
+          const v = this.world.get(id);
+          if (v !== undefined) {
+            table[i]!.fightBit = v.has(Flag.Fight);
+            table[i]!.staggered = v.has(Flag.Staggered);
+            table[i]!.pStrength = (v as unknown as { pStrength: number }).pStrength ?? 0;
+          }
+        }
+        // doFight reads stagger/fightBit from the table snapshot synced above.
+        // blowCbs.getVillainStaggered reads directly from the world object for
+        // each villain as the loop runs — accurate because the table sync just ran.
+        doFight(LEN, table, this.rng as import('./combat.js').CombatRng, blowCbs);
+      },
+
+      isVillainInHere: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return false;
+        const v = this.world.get(id);
+        return v?.parent?.id === this.here.id;
+      },
+      isVillainInvisible: (idx: number) => {
+        const id = VILLAIN_IDS[idx];
+        if (id === undefined) return true;
+        const v = this.world.get(id);
+        return v?.has(Flag.Invisible) ?? true;
+      },
+    };
+  }
+
+  // I-FIGHT clock entry — demon (turnsLeft=-1) registered at game start.
+  // 1actions.zil:3810–3841.
+  private makeIFightEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-FIGHT',
+      turnsLeft: -1,
+      enabled: true,
+      tick: (ctx) => {
+        const ifightCbs = this.makeIFightCallbacks(ctx.tell);
+        // Populate villainTable snapshot for the I-FIGHT loop.
+        const VILLAIN_IDS = ['TROLL', 'THIEF'];
+        const table: VillainTableEntry[] = VILLAIN_IDS.map((id) => {
+          const vt = this.getVillainTableEntry(id, ctx.tell);
+          if (vt !== null) return vt;
+          return {
+            id,
+            fightBit: false,
+            pStrength: 0,
+            entry: { vBest: null, vBestAdv: 0, vProb: 0, vMsgs: [], action: () => false },
+            inHere: false,
+            staggered: false,
+          };
+        });
+        // vProb comes from the world prop we store in setVProb.
+        for (let i = 0; i < table.length; i++) {
+          const id = VILLAIN_IDS[i]!;
+          const villain = this.world.get(id);
+          if (villain !== undefined) {
+            const vp = villain.props.get('VPROB');
+            table[i]!.fightBit = villain.has(Flag.Fight);
+            table[i]!.staggered = villain.has(Flag.Staggered);
+            table[i]!.pStrength = (villain as unknown as { pStrength: number }).pStrength ?? 0;
+            if (typeof vp === 'number') {
+              const entry = this.getVillainEntry(id, ctx.tell);
+              if (entry !== undefined) entry.vProb = vp;
+            }
+          }
+        }
+        (ifightCbs as { villainTable: VillainTableEntry[] }).villainTable = table;
+        iFight(ifightCbs, this.rng as import('./combat.js').CombatRng);
+        return true;  // demon: always return true to stay registered
+      },
+    };
+  }
+
+  // I-CURE clock entry — queued countdown (turnsLeft starts at 0 = parked).
+  // Activated by winnerResult via clock.queue('I-CURE', CURE_WAIT, true).
+  // 1actions.zil:3593–3602.
+  private makeICureEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-CURE',
+      turnsLeft: 0,  // parked; activated by clock.queue
+      enabled: false,
+      tick: (_ctx) => {
+        const cb: ICureCallbacks = {
+          getPlayerPStrength: () => this.player.pStrength,
+          setPlayerPStrength: (v: number) => { this.player.pStrength = v; },
+          getLoadAllowed: () => this.loadAllowed,
+          setLoadAllowed: (v: number) => { this.loadAllowed = v; },
+          getLoadMax: () => this.loadMax,
+          queueICure: (period: number) => { this.clock.queue('I-CURE', period, true); },
+          disableICure: () => { this.clock.disable('I-CURE'); },
+        };
+        iCure(cb);
+        return true;  // stays registered (disable() marks it inactive when done)
+      },
     };
   }
 

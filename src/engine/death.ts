@@ -276,8 +276,10 @@ export function jigsUp(
   }
 
   // 1actions.zil:4094–4098 — P-CONT clear + randomize + kill interrupts.
-  // <FCLEAR ,TRAP-DOOR ,TOUCHBIT> is handled by data (TRAP-DOOR TOUCHBIT already
-  // cleared when the trapdoor was opened; not tracked separately).
+  // 1actions.zil:4095: <FCLEAR ,TRAP-DOOR ,TOUCHBIT> — re-arms the trap door so
+  // the door "crashes shut" again after resurrection (dfrotz: door slams every time).
+  const trapDoor = cb.world.get('TRAP-DOOR');
+  if (trapDoor !== undefined) trapDoor.clear(Flag.Touched);  // FCLEAR TRAP-DOOR TOUCHBIT
   cb.clearContinuation();                         // P-CONT = NIL — 1actions.zil:4096
   randomizeObjects(cb.world, cb.getPlayer(), cb.rng);  // 1actions.zil:4097
   killInterrupts(cb.clock, cb.world);             // 1actions.zil:4098

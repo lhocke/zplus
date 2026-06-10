@@ -129,6 +129,7 @@ function makeCbs(s: HeroBlowState) {
       void wepId;
     },
     setVillainFightBit: () => { s.fightBitSet = true; },
+    clearVillainFightBit: () => { s.fightBitSet = false; },
     setVillainStaggered: () => { s.staggerSet = true; },
     emit: (text: string) => { s.emitted.push(text); },
     // villain action (F_DEAD / F_UNCONSCIOUS)
@@ -162,25 +163,25 @@ describe('villainResult — DEF==0: villain killed (spec §6.4, 1actions.zil:356
   it('DEF==0: villain pStrength set to 0', () => {
     const s = makeState({ vilPs: 2 });
     const cbs = makeCbs(s);
-    villainResult('TROLL', 0, KILLED, cbs);
+    villainResult('TROLL', 'troll', 0, KILLED, cbs);
     expect(s.vilPs).toBe(0);
   });
 
   it('DEF==0: F_DEAD callback fired', () => {
     const s = makeState({ vilPs: 2 });
-    villainResult('TROLL', 0, KILLED, makeCbs(s));
+    villainResult('TROLL', 'troll', 0, KILLED, makeCbs(s));
     expect(s.fdeadCalled).toBe(true);
   });
 
   it('DEF==0: villain removed from world', () => {
     const s = makeState({ vilPs: 2 });
-    villainResult('TROLL', 0, KILLED, makeCbs(s));
+    villainResult('TROLL', 'troll', 0, KILLED, makeCbs(s));
     expect(s.villainRemoved).toBe(true);
   });
 
   it('DEF==0: emits fog death message (1actions.zil:3570–3573)', () => {
     const s = makeState({ vilPs: 2 });
-    villainResult('TROLL', 0, KILLED, makeCbs(s));
+    villainResult('TROLL', 'troll', 0, KILLED, makeCbs(s));
     const text = s.emitted.join(' ');
     expect(text).toContain('breathes his last breath');
     expect(text).toContain('carcass has disappeared');
@@ -194,19 +195,19 @@ describe('villainResult — DEF==0: villain killed (spec §6.4, 1actions.zil:356
 describe('villainResult — RES==UNCONSCIOUS: F_UNCONSCIOUS fired (spec §6.4, 1actions.zil:3577–3579)', () => {
   it('RES==UNCONSCIOUS: F_UNCONSCIOUS callback fired', () => {
     const s = makeState({ vilPs: -2 });
-    villainResult('TROLL', -2, UNCONSCIOUS, makeCbs(s));
+    villainResult('TROLL', 'troll', -2, UNCONSCIOUS, makeCbs(s));
     expect(s.funconsciousCalled).toBe(true);
   });
 
   it('RES==UNCONSCIOUS: villain NOT removed', () => {
     const s = makeState({ vilPs: -2 });
-    villainResult('TROLL', -2, UNCONSCIOUS, makeCbs(s));
+    villainResult('TROLL', 'troll', -2, UNCONSCIOUS, makeCbs(s));
     expect(s.villainRemoved).toBe(false);
   });
 
   it('RES==UNCONSCIOUS: F_DEAD NOT fired', () => {
     const s = makeState({ vilPs: -2 });
-    villainResult('TROLL', -2, UNCONSCIOUS, makeCbs(s));
+    villainResult('TROLL', 'troll', -2, UNCONSCIOUS, makeCbs(s));
     expect(s.fdeadCalled).toBe(false);
   });
 });
@@ -218,7 +219,7 @@ describe('villainResult — RES==UNCONSCIOUS: F_UNCONSCIOUS fired (spec §6.4, 1
 describe('villainResult — other results: pStrength updated (spec §6.4)', () => {
   it('MISSED: pStrength set to DEF (no change to living villain)', () => {
     const s = makeState({ vilPs: 2 });
-    villainResult('TROLL', 2, MISSED, makeCbs(s));
+    villainResult('TROLL', 'troll', 2, MISSED, makeCbs(s));
     expect(s.vilPs).toBe(2);
     expect(s.fdeadCalled).toBe(false);
     expect(s.funconsciousCalled).toBe(false);
@@ -226,7 +227,7 @@ describe('villainResult — other results: pStrength updated (spec §6.4)', () =
 
   it('LIGHT_WOUND: pStrength updated to reduced DEF', () => {
     const s = makeState({ vilPs: 2 });
-    villainResult('TROLL', 1, LIGHT_WOUND, makeCbs(s));
+    villainResult('TROLL', 'troll', 1, LIGHT_WOUND, makeCbs(s));
     expect(s.vilPs).toBe(1);
   });
 });
@@ -239,21 +240,21 @@ describe('heroBlow — player staggered: "still recovering" + no damage (spec §
   it('player staggered: emits recovery message', () => {
     const s = makeState({ playerStaggered: true });
     const rng = new ScriptedRng([0.5]);
-    heroBlow('TROLL', makeEntry(), 'SWORD', true, true, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry(), 'SWORD', 'sword', true, true, s.score, rng, makeCbs(s));
     expect(s.emitted.some(e => e.includes('still recovering'))).toBe(true);
   });
 
   it('player staggered: clears stagger flag', () => {
     const s = makeState({ playerStaggered: true });
     const rng = new ScriptedRng([0.5]);
-    heroBlow('TROLL', makeEntry(), 'SWORD', true, true, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry(), 'SWORD', 'sword', true, true, s.score, rng, makeCbs(s));
     expect(s.staggerCleared).toBe(true);
   });
 
   it('player staggered: villain pStrength unchanged', () => {
     const s = makeState({ playerStaggered: true, vilPs: 2 });
     const rng = new ScriptedRng([0.5]);
-    heroBlow('TROLL', makeEntry(), 'SWORD', true, true, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry(), 'SWORD', 'sword', true, true, s.score, rng, makeCbs(s));
     expect(s.vilPs).toBe(2);
   });
 });
@@ -267,14 +268,14 @@ describe('heroBlow — DEF==0: "pointless" message (spec §6.3 step 6)', () => {
   it('villain pStrength=0 → "Attacking the X is pointless." emitted', () => {
     const s = makeState({ vilPs: 0 });
     const rng = new ScriptedRng([0.5]);
-    heroBlow('TROLL', makeEntry(), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry(), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.emitted.some(e => e.includes('pointless'))).toBe(true);
   });
 
   it('villain pStrength=0 → no F_DEAD callback', () => {
     const s = makeState({ vilPs: 0 });
     const rng = new ScriptedRng([0.5]);
-    heroBlow('TROLL', makeEntry(), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry(), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.fdeadCalled).toBe(false);
   });
 });
@@ -288,7 +289,7 @@ describe('heroBlow — unarmed villain: instant KILLED (spec §6.3 step 8)', () 
   it('no villain weapon → villain receives KILLED, removed', () => {
     const s = makeState({ vilPs: 2, villainWeaponId: null });
     const rng = new ScriptedRng([0.5]);
-    heroBlow('TROLL', makeEntry(), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry(), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.villainRemoved).toBe(true);
     expect(s.fdeadCalled).toBe(true);
   });
@@ -296,7 +297,7 @@ describe('heroBlow — unarmed villain: instant KILLED (spec §6.3 step 8)', () 
   it('no villain weapon → "unarmed ... cannot defend himself: He dies."', () => {
     const s = makeState({ vilPs: 2, villainWeaponId: null });
     const rng = new ScriptedRng([0.5]);
-    heroBlow('TROLL', makeEntry(), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry(), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     const text = s.emitted.join(' ');
     expect(text).toContain('unarmed');
     expect(text).toContain('cannot defend himself');
@@ -313,7 +314,7 @@ describe('heroBlow — KO\'d villain (DEF < 0): instant KILLED (spec §6.3 step 
     // villainStrength returns pStrength as-is when negative → DEF=-2 < 0 → instant kill
     const s = makeState({ vilPs: -2, villainWeaponId: 'AXE' });
     const rng = new ScriptedRng([0.5]);
-    heroBlow('TROLL', makeEntry(), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry(), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.villainRemoved).toBe(true);
     expect(s.fdeadCalled).toBe(true);
   });
@@ -321,7 +322,7 @@ describe('heroBlow — KO\'d villain (DEF < 0): instant KILLED (spec §6.3 step 
   it('KO\'d villain → "unconscious ... cannot defend himself: He dies."', () => {
     const s = makeState({ vilPs: -2, villainWeaponId: 'AXE' });
     const rng = new ScriptedRng([0.5]);
-    heroBlow('TROLL', makeEntry(), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry(), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     const text = s.emitted.join(' ');
     expect(text).toContain('unconscious');
     expect(text).toContain('cannot defend himself');
@@ -342,21 +343,21 @@ describe('heroBlow — UNCONSCIOUS result: DEF negated (KO, not death) (spec §6
     // score=0 → fightStrength(true,0,0)=2 → ATT=max(1,2)=2
     // DEF=villainStrength()=2 → DEF2B@0; roll=8→UNCONSCIOUS
     const rng = new ScriptedRng([8 / 9 + 0.001]);
-    heroBlow('TROLL', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.vilPs).toBe(-2);  // DEF=2 → -2
   });
 
   it('UNCONSCIOUS roll: F_UNCONSCIOUS fired', () => {
     const s = makeState({ vilPs: 2, score: 0 });
     const rng = new ScriptedRng([8 / 9 + 0.001]);
-    heroBlow('TROLL', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.funconsciousCalled).toBe(true);
   });
 
   it('UNCONSCIOUS roll: villain NOT removed (not dead)', () => {
     const s = makeState({ vilPs: 2, score: 0 });
     const rng = new ScriptedRng([8 / 9 + 0.001]);
-    heroBlow('TROLL', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.villainRemoved).toBe(false);
   });
 });
@@ -372,7 +373,7 @@ describe('heroBlow — KILLED result: DEF=0, villain removed + F_DEAD (spec §6.
   it('KILLED roll: villain removed and F_DEAD fired', () => {
     const s = makeState({ vilPs: 1, score: 0 });
     const rng = new ScriptedRng([7 / 9 + 0.001]);
-    heroBlow('TROLL', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.villainRemoved).toBe(true);
     expect(s.fdeadCalled).toBe(true);
   });
@@ -380,7 +381,7 @@ describe('heroBlow — KILLED result: DEF=0, villain removed + F_DEAD (spec §6.
   it('KILLED roll: villain pStrength = 0', () => {
     const s = makeState({ vilPs: 1, score: 0 });
     const rng = new ScriptedRng([7 / 9 + 0.001]);
-    heroBlow('TROLL', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.vilPs).toBe(0);
   });
 });
@@ -395,7 +396,7 @@ describe('heroBlow — STAGGER: villain STAGGERED set (spec §6.3 step 9)', () =
   it('STAGGER roll: villain stagger flag set', () => {
     const s = makeState({ vilPs: 2, score: 0 });
     const rng = new ScriptedRng([3 / 9 + 0.001]);
-    heroBlow('TROLL', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.staggerSet).toBe(true);
   });
 });
@@ -410,7 +411,7 @@ describe('heroBlow — LIGHT_WOUND: villain DEF reduced by 1 (spec §6.3 step 9)
   it('LIGHT_WOUND: villain pStrength = max(0, DEF-1)', () => {
     const s = makeState({ vilPs: 2, score: 0 });
     const rng = new ScriptedRng([5 / 9 + 0.001]);
-    heroBlow('TROLL', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.vilPs).toBe(1);  // max(0, 2-1)
   });
 });
@@ -424,7 +425,7 @@ describe('heroBlow — FIGHTBIT set on villain (spec §6.3 step 2, 1actions.zil:
     const s = makeState({ vilPs: 2, score: 0 });
     // MISSED roll: nextInt(9)=0 → MISSED
     const rng = new ScriptedRng([0 / 9 + 0.001]);
-    heroBlow('TROLL', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', makeEntry({ vMsgs: HERO_DUMMY_MSGS }), 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.fightBitSet).toBe(true);
   });
 });
@@ -445,7 +446,7 @@ describe('heroBlow — vBest DEF reduction: player weapon matches villain vBest 
     // DEF without vBest reduction = 2; with SWORD → DEF = 1
     // ATT=2, DEF=1 → DEF1_RES[1]; roll 7/9 → KILLED
     const rng = new ScriptedRng([7 / 9 + 0.001]);
-    heroBlow('TROLL', entry, 'SWORD', true, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', entry, 'SWORD', 'sword', true, false, s.score, rng, makeCbs(s));
     expect(s.villainRemoved).toBe(true);
     expect(s.fdeadCalled).toBe(true);
   });
@@ -455,7 +456,7 @@ describe('heroBlow — vBest DEF reduction: player weapon matches villain vBest 
     const entry = makeEntry({ vBest: 'SWORD' as ObjectId, vBestAdv: 1, vMsgs: HERO_DUMMY_MSGS });
     // DEF = 2 (no reduction), ATT=2 → DEF2B@0; roll 7/9 → LIGHT_WOUND (not KILLED)
     const rng = new ScriptedRng([7 / 9 + 0.001]);
-    heroBlow('TROLL', entry, 'AXE', true, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', entry, 'AXE', 'axe', true, false, s.score, rng, makeCbs(s));
     expect(s.villainRemoved).toBe(false);
     expect(s.fdeadCalled).toBe(false);
     expect(s.vilPs).toBe(1);  // LIGHT_WOUND: DEF=2 → pStr = max(0, 2-1) = 1
@@ -466,7 +467,7 @@ describe('heroBlow — vBest DEF reduction: player weapon matches villain vBest 
     const entry = makeEntry({ vBest: 'SWORD' as ObjectId, vBestAdv: 1, vMsgs: HERO_DUMMY_MSGS });
     // prsiIsWeapon=false → no reduction → DEF=2, same outcome as non-vBest case
     const rng = new ScriptedRng([7 / 9 + 0.001]);
-    heroBlow('TROLL', entry, 'SWORD', false, false, s.score, rng, makeCbs(s));
+    heroBlow('TROLL', 'troll', entry, 'SWORD', 'sword', false, false, s.score, rng, makeCbs(s));
     expect(s.villainRemoved).toBe(false);
     expect(s.vilPs).toBe(1);  // LIGHT_WOUND, not KILLED
   });

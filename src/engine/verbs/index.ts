@@ -715,6 +715,9 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-ADVENT':    verbAdvent,  // PLUGH / XYZZY — gverbs.zil:153
   'V-FROBOZZ':   verbFrobozz, // FROBOZZ — gverbs.zil:704
   'V-ATTACK':    verbAttack,
+  // V-WAIT — gverbs.zil:1514–1519. Print "Time passes." and let the clock advance
+  // (turn() calls clock.advance() for any non-meta action; no extra loop needed here).
+  'V-WAIT':      () => result('Time passes.'),
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.

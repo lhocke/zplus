@@ -84,6 +84,7 @@ function makeBlowCallbacks(opts: {
       getLoadMax: () => 100,
       getLucky: () => true,
       findPlayerWeapon: () => null,
+      findPlayerWeaponDesc: () => null,
       dropPlayerWeapon: (_id: string) => {},
       getVillainStaggered: () => false,
       clearVillainStaggered: () => {},

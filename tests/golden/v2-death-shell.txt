@@ -67,7 +67,9 @@ The brass lantern is now off.
 
 > south
 Oh, no! A lurking grue slithered into the room and devoured you!
-****  You have died  ****
+
+    ****  You have died  ****
+
 Now, let's take a look here...
 Well, you probably deserve another chance.  I can't quite fix you
 up completely, but you can't have everything.

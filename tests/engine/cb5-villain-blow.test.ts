@@ -118,6 +118,7 @@ function makeCbs(s: CbState) {
     getLucky: () => s.lucky,
     getScore: () => s.score,
     findPlayerWeapon: () => s.playerWeaponId,
+    findPlayerWeaponDesc: () => s.playerWeaponId,
     dropPlayerWeapon: (_id: string) => {
       s.playerWeaponDropped = true;
       s.playerWeaponId = null;

@@ -73,6 +73,7 @@ function makeVBCbs(opts: {
     getLoadMax: () => 100,
     getLucky: () => true,
     findPlayerWeapon: () => 'SWORD',
+    findPlayerWeaponDesc: () => 'sword',
     dropPlayerWeapon: () => {},
     getVillainStaggered: () => false,
     clearVillainStaggered: () => {},
@@ -273,6 +274,7 @@ describe('NM-5 — PROB vs ZPROB: villain-blow uses LUCKY-sensitive zprob, hero-
       getLoadMax: () => 100,
       getLucky: () => false,  // UNLUCKY: zprob denom=300
       findPlayerWeapon: () => 'SWORD',
+      findPlayerWeaponDesc: () => 'sword',
       dropPlayerWeapon: () => {},
       getVillainStaggered: () => false,
       clearVillainStaggered: () => {},
@@ -304,6 +306,7 @@ describe('NM-5 — PROB vs ZPROB: villain-blow uses LUCKY-sensitive zprob, hero-
       getLoadMax: () => 100,
       getLucky: () => true,   // LUCKY: zprob denom=100
       findPlayerWeapon: () => 'SWORD',
+      findPlayerWeaponDesc: () => 'sword',
       dropPlayerWeapon: () => { weaponDropped = true; },
       getVillainStaggered: () => false,
       clearVillainStaggered: () => {},
@@ -337,6 +340,7 @@ describe('NM-5 — PROB vs ZPROB: villain-blow uses LUCKY-sensitive zprob, hero-
       getVillainPStrength: () => 2,
       setVillainPStrength: () => {},
       setVillainFightBit: () => {},
+      clearVillainFightBit: () => {},
       findVillainWeapon: () => 'AXE' as string | null,
       disarmVillain: (_id: string) => { weaponDropped = true; },
       setVillainStaggered: () => {},
@@ -345,7 +349,7 @@ describe('NM-5 — PROB vs ZPROB: villain-blow uses LUCKY-sensitive zprob, hero-
       emit: () => {},
     };
 
-    heroBlow('TROLL', entry, null, false, false, 0, rng, cbs);
+    heroBlow('TROLL', 'troll', entry, null, '', false, false, 0, rng, cbs);
     expect(weaponDropped).toBe(true);  // prob(25) fires with draw=0.15 regardless of LUCKY
   });
 });
@@ -442,6 +446,7 @@ describe('NM-8 — villainBlow UNCONSCIOUS leaves player pStrength unchanged', (
       getLoadMax: () => 100,
       getLucky: () => true,
       findPlayerWeapon: () => null,
+      findPlayerWeaponDesc: () => null,
       dropPlayerWeapon: () => {},
       getVillainStaggered: () => false,
       clearVillainStaggered: () => {},

@@ -10,9 +10,11 @@ I've known strange people, but fighting a brass lantern?
 
 > knock down troll
 Trying to attack a troll with your bare hands is suicidal.
+The troll swings his axe, but it misses.
 
 > attack troll with axe
 You don't have the bloody axe.
 
 > attack troll with lamp
 Trying to attack the troll with a brass lantern is suicidal.
+The troll's axe barely misses your ear.

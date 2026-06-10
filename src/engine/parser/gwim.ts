@@ -84,7 +84,7 @@ export function gwim(
  */
 function findGwimCandidates(
   findFlag: Flag | undefined,
-  _locBits: number,
+  locBits: number,
   snap: ScopeSnapshot,
   here: Room,
   player: GameObject,
@@ -105,7 +105,12 @@ function findGwimCandidates(
     found.push(id);
   }
 
-  if (isLit) {
+  // Room search only when locBits includes room-search bits (SIR=32 or SOG=16).
+  // ATTACK iobjLocBits = SH+SC+SHAVE (no SIR/SOG) → inventory-only, so bare
+  // "attack troll with axe" (axe held by troll) correctly fails GWIM.
+  // gparser.zil:909 SHOVE checks: room bits absent → skip room pass.
+  const wantRoom = (locBits & (SIR | SOG)) !== 0;
+  if (isLit && wantRoom) {
     const roomFound: string[] = [];
     const roomSeen = new Set<string>();
     doSL(here, SOG, SIR, -1, undefined, undefined, findFlag, player, roomFound, world, roomSeen);

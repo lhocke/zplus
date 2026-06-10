@@ -7,7 +7,6 @@
 import type { VillainEntry } from '../domain/villain-entry.js';
 import type { GameObject, ObjectId } from '../domain/game-object.js';
 
-// ---------------------------------------------------------------------------
 // FIND-WEAPON — 1actions.zil:3401–3409
 //
 // Walks the owner's children (ZIL FIRST?/NEXT?) looking for exactly one of
@@ -16,7 +15,6 @@ import type { GameObject, ObjectId } from '../domain/game-object.js';
 // Containment (name-check), NOT WEAPONBIT — this is the spec-mandated form
 // (spec §4.2, "FIND-WEAPON's weapon set is exactly [STILETTO, AXE, SWORD,
 // KNIFE, RUSTY-KNIFE] by containment (FIRST?/NEXT?), NOT by WEAPONBIT").
-// ---------------------------------------------------------------------------
 
 /** The 5 canonical weapon object ids — 1actions.zil:3406–3408. */
 export const WEAPON_NAMES: readonly ObjectId[] = [
@@ -44,9 +42,7 @@ export interface CombatRng {
   zprob?(base: number, denom: number): boolean;
 }
 
-// ---------------------------------------------------------------------------
 // Blow result codes — 1actions.zil:3244–3254
-// ---------------------------------------------------------------------------
 
 export const MISSED        = 1;  // attacker missed
 export const UNCONSCIOUS   = 2;  // defender knocked out
@@ -74,13 +70,11 @@ export const STRENGTH_MAX = 7;
 export const STRENGTH_MIN = 2;
 export const CURE_WAIT    = 30;
 
-// ---------------------------------------------------------------------------
 // Raw DEF tables — 1actions.zil:3258–3299 (PURE word tables; hand-transcribed)
 //
 // These are the six (PURE) GLOBAL tables.  Values are the blow-result constants
 // above.  Each entry is one word in ZIL; REST(table, N) advances N bytes = N/2
 // words, giving the element-index offsets used in DEF*_RES below.
-// ---------------------------------------------------------------------------
 
 /** DEF1 (13 elements) — 1actions.zil:3258–3263 */
 export const DEF1: readonly number[] = [
@@ -131,7 +125,6 @@ export const DEF3C: readonly number[] = [
   SERIOUS_WOUND, SERIOUS_WOUND, SERIOUS_WOUND,
 ];
 
-// ---------------------------------------------------------------------------
 // Resolution windows — {table, offset} pairs.
 //
 // Each window covers exactly 9 elements (NM-1: never draw from the full raw
@@ -144,7 +137,6 @@ export const DEF3C: readonly number[] = [
 //   1dungeon.zil:2647: PUT DEF2-RES 3 REST(DEF2B,4)  → element 2
 //   1dungeon.zil:2648: PUT DEF3-RES 1 REST(DEF3A,2)  → element 1
 //   1dungeon.zil:2649: PUT DEF3-RES 3 REST(DEF3B,2)  → element 1
-// ---------------------------------------------------------------------------
 
 export interface Window {
   readonly table: readonly number[];
@@ -199,7 +191,6 @@ export const DEF3_RES: readonly Window[] = [
   { table: DEF3C, offset: 0 },
 ];
 
-// ---------------------------------------------------------------------------
 // Table-selection algorithm — 1actions.zil:3429–3440 (HERO-BLOW) / :3510–3521
 // (VILLAIN-BLOW).  The two call sites are identical; ATT/DEF are role-swapped
 // by the caller (NM-2 — spec §3.4):
@@ -208,7 +199,6 @@ export const DEF3_RES: readonly Window[] = [
 //   HERO-BLOW:    ATT = player FIGHT-STRENGTH,   DEF = villain pStrength
 //
 // Returns the blow-result constant from the chosen window.
-// ---------------------------------------------------------------------------
 
 export function selectWindow(att: number, def: number, rng: CombatRng): number {
   let win: Window;
@@ -228,9 +218,7 @@ export function selectWindow(att: number, def: number, rng: CombatRng): number {
   return win.table[win.offset + rng.nextInt(9)]!;
 }
 
-// ---------------------------------------------------------------------------
 // Strength model — 1actions.zil:3375–3397
-// ---------------------------------------------------------------------------
 
 // FIGHT-STRENGTH — 1actions.zil:3375–3381
 // base = STRENGTH_MIN + floor(SCORE / floor(SCORE_MAX / (STRENGTH_MAX - STRENGTH_MIN)))
@@ -275,7 +263,6 @@ export function villainStrength(
   return od;
 }
 
-// ---------------------------------------------------------------------------
 // REMARK message system — 1actions.zil:3363–3370
 //
 // A MELEE "slot" is a frob (length-prefixed LTABLE of variant LTABLEs):
@@ -288,7 +275,6 @@ export function villainStrength(
 // Usage:
 //   const ltable = randomElement(TROLL_MELEE[RES - 1], rng);
 //   remark(ltable, defenderDesc, weaponDesc, emit);
-// ---------------------------------------------------------------------------
 
 /** Token type for MELEE variant LTABLEs. */
 export type MeleeToken = string | typeof F_WEP | typeof F_DEF;
@@ -335,13 +321,11 @@ export function randomElement(frob: readonly (number | MeleeLTable)[], rng: Comb
   return frob[1 + rng.nextInt(n)] as MeleeLTable;
 }
 
-// ---------------------------------------------------------------------------
 // HERO_MELEE — 1actions.zil:3611–3648
 // 7 slots (RES 1–7: MISSED/UNCONSCIOUS/KILLED/LIGHT_WOUND/SERIOUS_WOUND/
 //          STAGGER/LOSE_WEAPON); HERO-BLOW never produces HESITATE/SITTING_DUCK
 // (NM-6 — OUT? is always false on the hero side).
 // Variants per slot: 6,5,3,4,4,5,2 = 29 total.
-// ---------------------------------------------------------------------------
 
 export const HERO_MELEE: readonly MeleeSlot[] = [
   // Slot 0 — MISSED (6 variants) — 1actions.zil:3613–3619
@@ -396,11 +380,9 @@ export const HERO_MELEE: readonly MeleeSlot[] = [
   ],
 ];
 
-// ---------------------------------------------------------------------------
 // CYCLOPS_MELEE — 1actions.zil:3654–3683
 // 9 slots (all RES 1–9); cyclops has no weapon so no F_WEP in most slots.
 // Variants per slot: 2,1,1,2,2,2,2,1,1 = 14 total.
-// ---------------------------------------------------------------------------
 
 export const CYCLOPS_MELEE: readonly MeleeSlot[] = [
   // Slot 0 — MISSED (2 variants) — 1actions.zil:3656–3658
@@ -446,10 +428,8 @@ export const CYCLOPS_MELEE: readonly MeleeSlot[] = [
   ],
 ];
 
-// ---------------------------------------------------------------------------
 // TROLL_MELEE — 1actions.zil:3689–3729
 // 9 slots; variants per slot: 4,1,3,4,3,4,3,2,1 = 25 total.
-// ---------------------------------------------------------------------------
 
 export const TROLL_MELEE: readonly MeleeSlot[] = [
   // Slot 0 — MISSED (4 variants) — 1actions.zil:3691–3695
@@ -506,10 +486,8 @@ export const TROLL_MELEE: readonly MeleeSlot[] = [
   ],
 ];
 
-// ---------------------------------------------------------------------------
 // THIEF_MELEE — 1actions.zil:3735–3788
 // 9 slots; variants per slot: 4,2,3,4,4,3,3,3,2 = 28 total.
-// ---------------------------------------------------------------------------
 
 export const THIEF_MELEE: readonly MeleeSlot[] = [
   // Slot 0 — MISSED (4 variants) — 1actions.zil:3737–3742
@@ -569,13 +547,11 @@ export const THIEF_MELEE: readonly MeleeSlot[] = [
   ],
 ];
 
-// ---------------------------------------------------------------------------
 // WINNER-RESULT callback interface
 //
 // The blow functions mutate game state through an explicit callback bundle
 // rather than taking the Game object directly, keeping them testable in
 // isolation.
-// ---------------------------------------------------------------------------
 
 export interface WinnerResultCallbacks {
   getPlayerPStrength(): number;
@@ -591,16 +567,22 @@ export interface VillainBlowCallbacks extends WinnerResultCallbacks {
   setLoadAllowed(v: number): void;
   getLoadMax(): number;
   getLucky(): boolean;
+  /** Returns the id of the player's held weapon, or null. */
   findPlayerWeapon(): string | null;
+  /** Returns the desc (display name) of the player's held weapon, or null. */
+  findPlayerWeaponDesc(): string | null;
   dropPlayerWeapon(id: string): void;
   getVillainStaggered(): boolean;
   clearVillainStaggered(): void;
   setPlayerStaggered(): void;
   clearPlayerStaggered(): void;
   emit(text: string): void;
+  /** Optional: called by doFight before each villainBlow to inform callbacks which villain
+   *  is currently being processed.  Implementations that need per-villain stagger state
+   *  use this to resolve the correct world object.  Test stubs may omit it. */
+  setActiveVillain?(id: string): void;
 }
 
-// ---------------------------------------------------------------------------
 // WINNER-RESULT — 1actions.zil:3552–3564
 //
 // Called at the end of VILLAIN-BLOW after applying the blow's state changes.
@@ -610,7 +592,6 @@ export interface VillainBlowCallbacks extends WinnerResultCallbacks {
 //
 // NM-4: -10000 drives fightStrength deeply negative → triggers kill path.
 // Nudge overwrites the -10000 so a resurrected player starts at FS=1.
-// ---------------------------------------------------------------------------
 
 export function winnerResult(
   def: number,
@@ -640,7 +621,6 @@ export function winnerResult(
   }
 }
 
-// ---------------------------------------------------------------------------
 // VILLAIN-BLOW — 1actions.zil:3413–3474
 //
 // Called from DO-FIGHT for each active villain.
@@ -655,7 +635,6 @@ export function winnerResult(
 //   score          — current player score (for FIGHT-STRENGTH)
 //   rng            — RNG instance
 //   cb             — callback bundle for state reads/writes
-// ---------------------------------------------------------------------------
 
 export function villainBlow(
   villainId: ObjectId,
@@ -669,10 +648,10 @@ export function villainBlow(
   rng: CombatRng,
   cb: VillainBlowCallbacks,
 ): number {
-  // Step 1 — unconditionally clear player STAGGERED (1actions.zil:3417)
+  // unconditionally clear player STAGGERED (1actions.zil:3417)
   cb.clearPlayerStaggered();
 
-  // Step 2 — if villain is STAGGERED, skip blow and clear (1actions.zil:3418–3422)
+  // if villain is STAGGERED, skip blow and clear (1actions.zil:3418–3422)
   if (cb.getVillainStaggered()) {
     const vDesc = villainId.toLowerCase().replace(/-/g, ' ');
     cb.emit(`The ${vDesc} slowly regains his feet.`);
@@ -680,16 +659,16 @@ export function villainBlow(
     return MISSED;  // regaining feet = effectively missed this turn
   }
 
-  // Step 3 — compute ATT, DEF, OD (1actions.zil:3423–3425)
+  // compute ATT, DEF, OD (1actions.zil:3423–3425)
   const att = villainStrength(villainId, villainPs, entry, prsiId, prsiIsWeapon, thiefEngrossed);
   const playerPs = cb.getPlayerPStrength();
   const def = fightStrength(true,  score, playerPs);
   const od  = fightStrength(false, score, playerPs);
 
-  // Step 4 — if player already dying, skip (1actions.zil:3424)
+  // if player already dying, skip (1actions.zil:3424)
   if (def <= 0) return MISSED;
 
-  // Step 5 — resolve RES (1actions.zil:3427–3451)
+  // resolve RES (1actions.zil:3427–3451)
   let res: number;
   if (def < 0) {
     // Player unconscious → instant kill (1actions.zil:3427)
@@ -702,11 +681,8 @@ export function villainBlow(
       res = res === STAGGER ? HESITATE : SITTING_DUCK;
     }
 
-    // STAGGER + weapon present → ZPROB(25) chance of LOSE_WEAPON (1actions.zil:3444–3447)
-    // ZIL: PROB 25 <COND (.HERO? 10)(T 50)> — in villain-blow, HERO? is always false → denom=50 ... wait
-    // Actually spec §5 NM-5: "VILLAIN-BLOW LOSE-WEAPON → ZPROB(25) (two-arg form)"
-    // and "the ZIL PROB 25 <COND(.HERO? 10)(T 50)> reduces to a two-arg call; .HERO? is always falsy → ZPROB"
-    // So denom is the LUCKY-dependent value: LUCKY? 100 : 300
+    // STAGGER + weapon present → ZPROB(25,denom) chance of LOSE_WEAPON (1actions.zil:3444–3447).
+    // NM-5: LUCKY? denom=100, else denom=300 (two-arg zprob form, spec §5).
     if (res === STAGGER && cb.findPlayerWeapon() !== null) {
       const denom = cb.getLucky() ? 100 : 300;
       if (rng.zprob!(25, denom)) res = LOSE_WEAPON;
@@ -716,19 +692,18 @@ export function villainBlow(
     const slot = (entry.vMsgs as readonly MeleeSlot[])[res - 1];
     if (slot !== undefined) {
       const ltable = randomElement(slot, rng);
-      const dweaponDesc = cb.findPlayerWeapon() ?? '';
+      const dweaponDesc = cb.findPlayerWeaponDesc() ?? '';
       const parts: string[] = [];
       remark(ltable, 'you', dweaponDesc, (s) => parts.push(s));
       if (parts.length > 0) cb.emit(parts.join(''));
     }
   }
 
-  // Step 6 — apply player state (1actions.zil:3452–3473)
+  // apply player state (1actions.zil:3452–3473)
   let defMod = def;  // local DEF, may be reduced by wound
   switch (res) {
     case MISSED:
     case HESITATE:
-      // no effect
       break;
     case UNCONSCIOUS:
       // NM-8: DO-FIGHT loop handles out counter; no pStrength change here
@@ -752,28 +727,28 @@ export function villainBlow(
       const wep = cb.findPlayerWeapon();
       if (wep !== null) {
         cb.dropPlayerWeapon(wep);
-        const nextWep = cb.findPlayerWeapon();
-        if (nextWep !== null) {
-          cb.emit(`Fortunately, you still have a ${nextWep}.`);
+        // After dropping, check for another weapon by desc (1actions.zil:3460–3463)
+        const nextWepDesc = cb.findPlayerWeaponDesc();
+        if (nextWepDesc !== null) {
+          cb.emit(`Fortunately, you still have a ${nextWepDesc}.`);
         }
       }
       break;
     }
   }
 
-  // Step 7 — WINNER-RESULT (1actions.zil:3474)
+  // WINNER-RESULT (1actions.zil:3474)
   winnerResult(defMod, od, cb);
   return res;
 }
 
-// ---------------------------------------------------------------------------
 // VILLAIN-RESULT callback interface
-// ---------------------------------------------------------------------------
 
 export interface VillainResultCallbacks {
   getVillainPStrength(): number;
   setVillainPStrength(v: number): void;
-  setVillainFightBit(): void;
+  /** FCLEAR villain FIGHTBIT — 1actions.zil:3569, called on villain death (DEF==0). */
+  clearVillainFightBit(): void;
   applyVillainAction(fcode: number, villainId: ObjectId): void;
   removeVillain(villainId: ObjectId): void;
   emit(text: string): void;
@@ -788,9 +763,10 @@ export interface HeroBlowCallbacks extends VillainResultCallbacks {
   findVillainWeapon(): string | null;
   disarmVillain(wepId: string): void;
   setVillainStaggered(): void;
+  /** FSET villain FIGHTBIT — 1actions.zil:3484, called at start of HERO-BLOW. */
+  setVillainFightBit(): void;
 }
 
-// ---------------------------------------------------------------------------
 // VILLAIN-RESULT — 1actions.zil:3566–3580
 //
 //   villain.pStrength = DEF
@@ -801,10 +777,10 @@ export interface HeroBlowCallbacks extends VillainResultCallbacks {
 //     apply(villain.action, F_DEAD)
 //   elif RES == UNCONSCIOUS:
 //     apply(villain.action, F_UNCONSCIOUS)
-// ---------------------------------------------------------------------------
 
 export function villainResult(
   villainId: ObjectId,
+  villainDesc: string,
   def: number,
   res: number,
   cb: VillainResultCallbacks,
@@ -813,12 +789,10 @@ export function villainResult(
 
   if (def === 0) {
     // 1actions.zil:3569: FCLEAR villain FIGHTBIT
-    cb.setVillainFightBit();  // caller interprets this as "clear fight bit"
+    cb.clearVillainFightBit();
     // 1actions.zil:3570–3573: fog death message
     cb.emit(
-      'Almost as soon as the ' +
-      villainId.toLowerCase().replace(/-/g, ' ') +
-      ' breathes his last breath, a cloud\nof sinister black fog envelops him, ' +
+      `Almost as soon as the ${villainDesc} breathes his last breath, a cloud\nof sinister black fog envelops him, ` +
       'and when the fog lifts, the\ncarcass has disappeared.',
     );
     // 1actions.zil:3574: REMOVE-CAREFULLY villain
@@ -831,7 +805,6 @@ export function villainResult(
   }
 }
 
-// ---------------------------------------------------------------------------
 // HERO-BLOW (player attacks villain) — 1actions.zil:3476–3548
 //
 // Parameters:
@@ -847,22 +820,23 @@ export function villainResult(
 // Note: OUT? is always false for HERO-BLOW (only DO-FIGHT's villain loop uses
 // the out counter, never the hero side), so HESITATE/SITTING_DUCK are never
 // produced — NM-6: HERO_MELEE has only 7 slots, safe because OUT? is always false.
-// ---------------------------------------------------------------------------
 
 export function heroBlow(
   villainId: ObjectId,
+  villainDesc: string,
   entry: VillainEntry,
   prsiId: ObjectId | null,
+  prsiDesc: string,
   prsiIsWeapon: boolean,
   playerStaggered: boolean,
   score: number,
   rng: CombatRng,
   cb: HeroBlowCallbacks,
 ): void {
-  // Step 2 — FSET villain FIGHTBIT (1actions.zil:3484)
+  // FSET villain FIGHTBIT (1actions.zil:3484)
   cb.setVillainFightBit();
 
-  // Step 3 — player STAGGERED guard (1actions.zil:3485–3490)
+  // player STAGGERED guard (1actions.zil:3485–3490)
   if (playerStaggered) {
     cb.emit(
       'You are still recovering from that last blow, so your attack is\nineffective.',
@@ -871,33 +845,31 @@ export function heroBlow(
     return;
   }
 
-  // Step 4 — ATT = max(1, fightStrength(true)) (1actions.zil:3491–3492)
+  // ATT = max(1, fightStrength(true)) (1actions.zil:3491–3492)
   const att = Math.max(1, fightStrength(true, score, cb.getPlayerPStrength()));
 
-  // Step 5 — OD = DEF = villainStrength(villain) (1actions.zil:3495)
+  // OD = DEF = villainStrength(villain) (1actions.zil:3495)
   //  villain pStrength may be negative if already KO'd
   const vilPs = cb.getVillainPStrength();
   let def = villainStrength(villainId, vilPs, entry, prsiId, prsiIsWeapon, false);
 
-  // Step 6 — DEF == 0: pointless (1actions.zil:3495–3500)
+  // DEF == 0: pointless (1actions.zil:3495–3500)
   if (def === 0) {
-    const vname = villainId.toLowerCase().replace(/-/g, ' ');
-    cb.emit(`Attacking the ${vname} is pointless.`);
+    cb.emit(`Attacking the ${villainDesc} is pointless.`);
     return;
   }
 
-  // Step 7 — find villain's weapon (1actions.zil:3501)
+  // find villain's weapon (1actions.zil:3501)
   const dweapon = cb.findVillainWeapon();
 
-  // Step 8 — unarmed or KO'd villain: instant kill (1actions.zil:3502–3508)
+  // unarmed or KO'd villain: instant kill (1actions.zil:3502–3508)
   let res: number;
   if (!dweapon || def < 0) {
-    const vname = villainId.toLowerCase().replace(/-/g, ' ');
     const adj = def < 0 ? 'unconscious' : 'unarmed';
-    cb.emit(`The ${adj} ${vname} cannot defend himself: He dies.`);
+    cb.emit(`The ${adj} ${villainDesc} cannot defend himself: He dies.`);
     res = KILLED;
   } else {
-    // Step 8 (normal) — roll the table (1actions.zil:3509–3529)
+    // roll the table (1actions.zil:3509–3529)
     // OUT? is always false here (NM-6) — no HESITATE/SITTING_DUCK possible
     res = selectWindow(att, def, rng);
 
@@ -906,10 +878,7 @@ export function heroBlow(
     if (res === STAGGER && dweapon !== null) {
       if (rng.prob(25)) res = LOSE_WEAPON;
     }
-
-    // ASSERT res <= LOSE_WEAPON — NM-6: HERO_MELEE only has 7 slots
-    // (OUT? always false, so HESITATE=8 / SITTING_DUCK=9 can never appear here)
-    // This is a programming invariant; if reached it indicates a selectWindow bug.
+    // NM-6: OUT? always false on hero side, so res <= LOSE_WEAPON (7 slots).
     if (res > LOSE_WEAPON) {
       throw new Error(`heroBlow: unexpected RES ${res} > LOSE_WEAPON — NM-6 violation`);
     }
@@ -918,14 +887,13 @@ export function heroBlow(
     const slot = HERO_MELEE[res - 1];
     if (slot !== undefined) {
       const ltable = randomElement(slot, rng);
-      const prsiDesc = prsiId ? prsiId.toLowerCase().replace(/-/g, ' ') : '';
       const parts: string[] = [];
-      remark(ltable, villainId.toLowerCase().replace(/-/g, ' '), prsiDesc, (s) => parts.push(s));
+      remark(ltable, villainDesc, prsiDesc, (s) => parts.push(s));
       if (parts.length > 0) cb.emit(parts.join(''));
     }
   }
 
-  // Step 9 — apply villain state (1actions.zil:3531–3547)
+  // apply villain state (1actions.zil:3531–3547)
   switch (res) {
     case MISSED:
     case HESITATE:
@@ -954,18 +922,16 @@ export function heroBlow(
       break;
   }
 
-  // Step 10 — villainResult (1actions.zil:3548)
-  villainResult(villainId, def, res, cb);
+  // villainResult (1actions.zil:3548)
+  villainResult(villainId, villainDesc, def, res, cb);
 }
 
-// ---------------------------------------------------------------------------
 // VillainTableEntry — one row of the VILLAINS LTABLE (1actions.zil:3801–3804)
 //
 // Used by DO-FIGHT and I-FIGHT to iterate the live villain table.
 // Mutable fields (fightBit, pStrength, staggered) are read/written via
 // the IFightCallbacks rather than through this record directly; this shape
 // holds the per-call snapshot that the loop needs.
-// ---------------------------------------------------------------------------
 
 export interface VillainTableEntry {
   id: ObjectId;
@@ -977,7 +943,6 @@ export interface VillainTableEntry {
   staggered: boolean;
 }
 
-// ---------------------------------------------------------------------------
 // DO-FIGHT — 1actions.zil:3331–3357
 //
 // Iterates cnt=1..LEN-1 (ZIL is 1-based; we use 0-based array indexing so
@@ -987,7 +952,6 @@ export interface VillainTableEntry {
 // The villainBlow return value is checked for UNCONSCIOUS to set the `out`
 // counter.  With `out > 0` all subsequent blows transform:
 //   STAGGER → HESITATE; anything else → SITTING_DUCK  (via the out? arg).
-// ---------------------------------------------------------------------------
 
 export function doFight(
   len: number,
@@ -1013,6 +977,9 @@ export function doFight(
 
       // COND 2: FIGHTBIT set — call action(F_BUSY); truthy return skips the blow
       if (entry.entry.action(F_BUSY)) continue;
+
+      // Inform callbacks which villain is active (for per-villain stagger resolution).
+      cb.setActiveVillain?.(entry.id);
 
       const blowRes = villainBlow(
         entry.id,
@@ -1052,13 +1019,11 @@ export function doFight(
   }
 }
 
-// ---------------------------------------------------------------------------
 // AWAKEN — 1actions.zil:3843–3847
 //
 // If the villain is unconscious (pStrength < 0), negate pStrength (restore
 // health to the absolute value) and fire the F_CONSCIOUS callback.
 // Returns { newPs } so callers can update the villain's state.
-// ---------------------------------------------------------------------------
 
 export function awaken(
   pStrength: number,
@@ -1072,12 +1037,10 @@ export function awaken(
   return { newPs: pStrength };
 }
 
-// ---------------------------------------------------------------------------
 // IFightCallbacks — context bundle for I-FIGHT
 //
 // Abstracts all game state I-FIGHT touches so the function is testable
 // in isolation without a full Game instance.
-// ---------------------------------------------------------------------------
 
 export interface IFightCallbacks {
   /** Returns true when the player is dead (ghost mode). */
@@ -1128,13 +1091,11 @@ export interface IFightCallbacks {
   isVillainInvisible(idx: number): boolean;
 }
 
-// ---------------------------------------------------------------------------
 // I-FIGHT — 1actions.zil:3810–3841
 //
 // Per-turn demon (turnsLeft = -1, fires every advance()).
 // Returns false when dead (so the clock entry can no-op); otherwise
 // processes the villain table and fires doFight when fight? is true.
-// ---------------------------------------------------------------------------
 
 export function iFight(ctx: IFightCallbacks, rng: CombatRng): boolean {
   if (ctx.getDead()) return false;
@@ -1189,9 +1150,7 @@ export function iFight(ctx: IFightCallbacks, rng: CombatRng): boolean {
   return true;
 }
 
-// ---------------------------------------------------------------------------
 // ICureCallbacks — context bundle for I-CURE
-// ---------------------------------------------------------------------------
 
 export interface ICureCallbacks {
   getPlayerPStrength(): number;
@@ -1205,13 +1164,11 @@ export interface ICureCallbacks {
   disableICure(): void;
 }
 
-// ---------------------------------------------------------------------------
 // I-CURE — 1actions.zil:3593–3602
 //
 // Queued countdown entry (CURE_WAIT=30 turns).  Heals 1 pStrength per tick;
 // re-queues itself until pStrength reaches 0, then restores LOAD_ALLOWED
 // to LOAD_MAX and disables itself.
-// ---------------------------------------------------------------------------
 
 export function iCure(ctx: ICureCallbacks): void {
   let s = ctx.getPlayerPStrength();
