@@ -668,7 +668,7 @@ export function villainBlow(
   score: number,
   rng: CombatRng,
   cb: VillainBlowCallbacks,
-): void {
+): number {
   // Step 1 — unconditionally clear player STAGGERED (1actions.zil:3417)
   cb.clearPlayerStaggered();
 
@@ -677,7 +677,7 @@ export function villainBlow(
     const vDesc = villainId.toLowerCase().replace(/-/g, ' ');
     cb.emit(`The ${vDesc} slowly regains his feet.`);
     cb.clearVillainStaggered();
-    return;
+    return MISSED;  // regaining feet = effectively missed this turn
   }
 
   // Step 3 — compute ATT, DEF, OD (1actions.zil:3423–3425)
@@ -687,7 +687,7 @@ export function villainBlow(
   const od  = fightStrength(false, score, playerPs);
 
   // Step 4 — if player already dying, skip (1actions.zil:3424)
-  if (def <= 0) return;
+  if (def <= 0) return MISSED;
 
   // Step 5 — resolve RES (1actions.zil:3427–3451)
   let res: number;
@@ -763,6 +763,7 @@ export function villainBlow(
 
   // Step 7 — WINNER-RESULT (1actions.zil:3474)
   winnerResult(defMod, od, cb);
+  return res;
 }
 
 // ---------------------------------------------------------------------------
@@ -955,4 +956,291 @@ export function heroBlow(
 
   // Step 10 — villainResult (1actions.zil:3548)
   villainResult(villainId, def, res, cb);
+}
+
+// ---------------------------------------------------------------------------
+// VillainTableEntry — one row of the VILLAINS LTABLE (1actions.zil:3801–3804)
+//
+// Used by DO-FIGHT and I-FIGHT to iterate the live villain table.
+// Mutable fields (fightBit, pStrength, staggered) are read/written via
+// the IFightCallbacks rather than through this record directly; this shape
+// holds the per-call snapshot that the loop needs.
+// ---------------------------------------------------------------------------
+
+export interface VillainTableEntry {
+  id: ObjectId;
+  fightBit: boolean;
+  pStrength: number;
+  entry: VillainEntry;
+  /** Whether the villain is currently in the player's room. */
+  inHere: boolean;
+  staggered: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// DO-FIGHT — 1actions.zil:3331–3357
+//
+// Iterates cnt=1..LEN-1 (ZIL is 1-based; we use 0-based array indexing so
+// cnt maps to table[cnt-1]).  Stops when cnt == LEN (Cyclops at cnt=LEN is
+// never processed — NM-7).
+//
+// The villainBlow return value is checked for UNCONSCIOUS to set the `out`
+// counter.  With `out > 0` all subsequent blows transform:
+//   STAGGER → HESITATE; anything else → SITTING_DUCK  (via the out? arg).
+// ---------------------------------------------------------------------------
+
+export function doFight(
+  len: number,
+  table: VillainTableEntry[],
+  rng: CombatRng,
+  cb: VillainBlowCallbacks,
+): void {
+  let out = 0;
+
+  // Outer REPEAT — re-runs the inner villain loop while there are SITTING_DUCK
+  // turns remaining (out > 0 after decrement).  Mirrors 1actions.zil:3331–3357.
+  while (true) {
+    let res: number | null = null;
+
+    // Inner REPEAT — walk cnt=1..LEN-1 (ZIL 1-based; table is 0-based).
+    // Stops when cnt == LEN (Cyclops excluded — NM-7).
+    for (let cnt = 1; cnt < len; cnt++) {
+      const entry = table[cnt - 1];
+      if (entry === undefined) continue;
+
+      // Skip villains without FIGHTBIT (1actions.zil:3341)
+      if (!entry.fightBit) {
+        // F_BUSY callback when not fighting (e.g. troll recovering axe)
+        entry.entry.action(F_BUSY);
+        continue;
+      }
+
+      // F_BUSY check: if action returns truthy, skip this villain's blow
+      if (entry.entry.action(F_BUSY)) continue;
+
+      const blowRes = villainBlow(
+        entry.id,
+        entry.pStrength,
+        entry.entry,
+        false, // thiefEngrossed — handled in I-FIGHT before calling doFight
+        null,  // prsiId — not available in clock context
+        false,
+        out,   // current out counter; >0 transforms STAGGER→HESITATE / else→SITTING_DUCK
+        cb.getScore(),
+        rng,
+        cb,
+      );
+
+      // VILLAIN-BLOW returned nil/false in ZIL means it handled nothing; we use
+      // MISSED as the "skip" sentinel, so only track actual results.
+      res = blowRes;
+
+      if (blowRes === UNCONSCIOUS) {
+        out = 1 + rng.nextInt(3);
+      }
+    }
+    // Inner loop done (cnt == len) — equivalent to ZIL <EQUAL? .CNT .LEN> RETURN T.
+    if (res === null) res = 1;  // no villain processed → treat as "handled"
+
+    // Outer loop check (1actions.zil:3349–3356):
+    //   if RES is truthy: if OUT==0 → done; else OUT -= 1; if OUT==0 → done
+    //   if RES is nil → done
+    if (res !== 0) {
+      if (out === 0) break;
+      out -= 1;
+      if (out === 0) break;
+      // out > 0: loop back for another SITTING_DUCK pass
+    } else {
+      break;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// AWAKEN — 1actions.zil:3843–3847
+//
+// If the villain is unconscious (pStrength < 0), negate pStrength (restore
+// health to the absolute value) and fire the F_CONSCIOUS callback.
+// Returns { newPs } so callers can update the villain's state.
+// ---------------------------------------------------------------------------
+
+export function awaken(
+  pStrength: number,
+  action: (fcode: number) => boolean,
+): { newPs: number } {
+  if (pStrength < 0) {
+    const newPs = -pStrength;
+    action(F_CONSCIOUS);
+    return { newPs };
+  }
+  return { newPs: pStrength };
+}
+
+// ---------------------------------------------------------------------------
+// IFightCallbacks — context bundle for I-FIGHT
+//
+// Abstracts all game state I-FIGHT touches so the function is testable
+// in isolation without a full Game instance.
+// ---------------------------------------------------------------------------
+
+export interface IFightCallbacks {
+  /** Returns true when the player is dead (ghost mode). */
+  getDead(): boolean;
+
+  /** The villain table — read-only snapshot for the loop. */
+  villainTable: VillainTableEntry[];
+
+  /** Length of the villain table (LEN = VILLAINS[0] in ZIL). */
+  len: number;
+
+  /** Read villain pStrength by table index. */
+  getVillainPs(idx: number): number;
+  /** Write villain pStrength by table index. */
+  setVillainPs(idx: number, v: number): void;
+
+  /** Read V-PROB for wake-cycle logic. */
+  getVProb(idx: number): number;
+  /** Write V-PROB. */
+  setVProb(idx: number, v: number): void;
+
+  /** True if this villain is the THIEF. */
+  isThief(idx: number): boolean;
+  /** True if THIEF-ENGROSSED is currently set. */
+  isThiefEngrossed(): boolean;
+  /** Set/clear THIEF-ENGROSSED. */
+  setThiefEngrossed(v: boolean): void;
+
+  /** Apply the villain's F-code callback. Returns true if handled. */
+  callVillainAction(idx: number, fcode: number): boolean;
+
+  /** Clear FIGHTBIT on the villain. */
+  clearFightBit(idx: number): void;
+  /** Clear STAGGERED on the villain. */
+  clearStaggered(idx: number): void;
+  /** Clear STAGGERED on the player. */
+  clearPlayerStaggered(): void;
+
+  /** Awaken the villain (sets pStrength via callback internally). */
+  onAwaken(idx: number): void;
+
+  /** Signal that a fight should happen this turn. */
+  triggerFight(): void;
+
+  /** Whether villain at idx is in the player's current room. */
+  isVillainInHere(idx: number): boolean;
+  /** Whether the villain is currently INVISIBLE. */
+  isVillainInvisible(idx: number): boolean;
+}
+
+// ---------------------------------------------------------------------------
+// I-FIGHT — 1actions.zil:3810–3841
+//
+// Per-turn demon (turnsLeft = -1, fires every advance()).
+// Returns false when dead (so the clock entry can no-op); otherwise
+// processes the villain table and fires doFight when fight? is true.
+// ---------------------------------------------------------------------------
+
+export function iFight(ctx: IFightCallbacks, rng: CombatRng): boolean {
+  if (ctx.getDead()) return false;
+
+  let fightPending = false;
+
+  for (let cnt = 1; cnt <= ctx.len; cnt++) {
+    const idx = cnt - 1;
+    const row = ctx.villainTable[idx];
+    if (row === undefined) continue;
+
+    if (ctx.isVillainInHere(idx) && !ctx.isVillainInvisible(idx)) {
+      // Villain is present and visible.
+      if (ctx.isThief(idx) && ctx.isThiefEngrossed()) {
+        // Thief engrossed reset (1actions.zil:3822)
+        ctx.setThiefEngrossed(false);
+      } else if (ctx.getVillainPs(idx) < 0) {
+        // Unconscious — V-PROB wake check (1actions.zil:3823–3829, NM-9)
+        const p = ctx.getVProb(idx);
+        if (p !== 0 && rng.prob(p)) {
+          // Wake: reset V-PROB and awaken the villain
+          ctx.setVProb(idx, 0);
+          ctx.onAwaken(idx);
+        } else {
+          // Ramp V-PROB by 25 each tick (0→25→50→75→100)
+          ctx.setVProb(idx, p + 25);
+        }
+      } else if (row.fightBit || ctx.callVillainAction(idx, F_FIRST)) {
+        // Villain is fighting or F_FIRST fired — mark fight pending
+        fightPending = true;
+      }
+    } else {
+      // Villain left the room — clear combat state (1actions.zil:3831–3839)
+      if (row.fightBit) {
+        ctx.callVillainAction(idx, F_BUSY);
+      }
+      if (ctx.isThief(idx)) {
+        ctx.setThiefEngrossed(false);
+      }
+      ctx.clearPlayerStaggered();
+      ctx.clearStaggered(idx);
+      ctx.clearFightBit(idx);
+      ctx.onAwaken(idx);
+    }
+  }
+
+  if (fightPending) {
+    ctx.triggerFight();
+  }
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// ICureCallbacks — context bundle for I-CURE
+// ---------------------------------------------------------------------------
+
+export interface ICureCallbacks {
+  getPlayerPStrength(): number;
+  setPlayerPStrength(v: number): void;
+  getLoadAllowed(): number;
+  setLoadAllowed(v: number): void;
+  getLoadMax(): number;
+  /** Re-arm I-CURE for another CURE_WAIT turns. */
+  queueICure(period: number): void;
+  /** Permanently disable I-CURE (fully healed). */
+  disableICure(): void;
+}
+
+// ---------------------------------------------------------------------------
+// I-CURE — 1actions.zil:3593–3602
+//
+// Queued countdown entry (CURE_WAIT=30 turns).  Heals 1 pStrength per tick;
+// re-queues itself until pStrength reaches 0, then restores LOAD_ALLOWED
+// to LOAD_MAX and disables itself.
+// ---------------------------------------------------------------------------
+
+export function iCure(ctx: ICureCallbacks): void {
+  let s = ctx.getPlayerPStrength();
+
+  // Clamp positive over-heal to 0 (1actions.zil:3595)
+  if (s > 0) {
+    s = 0;
+    ctx.setPlayerPStrength(0);
+  }
+
+  // Heal 1 point per tick (1actions.zil:3596)
+  if (s < 0) {
+    s += 1;
+    ctx.setPlayerPStrength(s);
+  }
+
+  // Re-queue or disable (1actions.zil:3597–3602)
+  if (s < 0) {
+    // Still wounded — restore some encumbrance and re-queue
+    if (ctx.getLoadAllowed() < ctx.getLoadMax()) {
+      ctx.setLoadAllowed(ctx.getLoadAllowed() + 10);
+    }
+    ctx.queueICure(CURE_WAIT);
+  } else {
+    // Fully healed — restore all encumbrance and stop
+    ctx.setLoadAllowed(ctx.getLoadMax());
+    ctx.disableICure();
+  }
 }
