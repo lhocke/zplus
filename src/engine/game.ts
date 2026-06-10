@@ -13,8 +13,8 @@ import { Scoring } from './scoring.js';
 import { FlagStore } from './flag-store.js';
 import { lookupPer, lookupPreAction } from '../actions/registry.js';
 import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
-import { jigsUp as jigsUpMsgs } from './game-messages.js';
-import { killInterrupts } from './death.js';
+import { jigsUp as jigsUpMsgsFn } from './game-messages.js';
+import { jigsUp, type JigsUpCallbacks, type JigsUpMsgs } from './death.js';
 
 export interface TurnResult {
   readonly output: string;
@@ -58,6 +58,12 @@ export interface Rng {
    * combat code always runs against the concrete Rng class which implements it.
    */
   zprob?(base: number, denom: number): boolean;
+  /**
+   * Returns a pseudo-random integer in [0, n).
+   * Optional so simple test stubs (next+prob only) still type-check;
+   * the concrete Rng class always implements it.
+   */
+  nextInt?(n: number): number;
 }
 
 const INTRO =
@@ -285,7 +291,7 @@ export class Game {
           deaths: this.deaths,
           getGlobal: (n) => this.flags.get(n),
           setGlobal: (n, v = true) => this.flags.set(n, v),
-          jigsUp: (desc) => this.jigsUp(desc, (text) => handled.push(text)),
+          jigsUp: (desc) => jigsUp(desc, this.jigsUpMsgs(), this.makeJigsUpCallbacks((text) => handled.push(text), () => { /* verb layer marks fatal independently */ })),
           alwaysLit: this.alwaysLit,
           prob: (pct) => this.rng.prob(pct),
           clearContinuation: () => this.parser.clearContinuation(),
@@ -637,44 +643,43 @@ export class Game {
     this.events.emit({ type: 'room-entered', room: roomId, firstVisit });
   }
 
-  // JIGS-UP — shared death entry point (1actions.zil:4046-4099).
-  // Called by verbGo's grue path and future combat death handlers.
-  // Not yet ported: ghost-mode/Hades, RANDOMIZE-OBJECTS,
-  // DEAD-FUNCTION, sprayed-grue variant, FINISH end-screen, "Bad luck" LUCKY branch.
-  private jigsUp(deathMessage: string, tell: (s: string) => void): void {
-    // Re-death guard (1actions.zil:4048-4053): fires when already in ghost mode.
-    if (this.dead) {
-      tell(jigsUpMsgs.talented);
-      this.gameOver = true;
-      return;
-    }
+  // Build the JigsUpMsgs bundle from game-messages.
+  private jigsUpMsgs(): JigsUpMsgs {
+    return jigsUpMsgsFn;
+  }
 
-    tell(deathMessage);
-    tell(jigsUpMsgs.youHaveDied);
+  // Build the JigsUpCallbacks bundle — called from verb layer and clock context.
+  // tell:       output channel for this invocation.
+  // onFatal:    RFATAL signal (verb layer: no-op; clock context: sets fatalPending).
+  makeJigsUpCallbacks(tell: (s: string) => void, onFatal: () => void): JigsUpCallbacks {
+    return {
+      getDead:  () => this.dead,
+      getLucky: () => this.lucky,
+      getDeaths: () => this.deaths,
+      getHere:  () => this.here,
+      hasSouthTempleVisited: () => this.visited.has('SOUTH-TEMPLE'),
+      getPlayer: () => this.player,
 
-    // SCORE-UPD -10 death penalty — 1actions.zil:4058.
-    this.scoring.scoreUpd(-10);
+      setDead:     (v) => { this.dead = v; },
+      setDeaths:   (v) => { this.deaths = v; },
+      setTrollFlag: (v) => { this.flags.set('TROLL-FLAG', v); },
+      setAlwaysLit: (v) => { this.alwaysLit = v; },
+      scoreUpd: (delta) => { this.scoring.scoreUpd(delta); },
 
-    // 3-strike check: ZIL `<NOT <L? ,DEATHS 2>>` = deaths >= 2.
-    // Increment only on the resurrection branch, matching 1actions.zil:4074.
-    if (this.deaths >= 2) {
-      tell(jigsUpMsgs.suicidalManiac);
-      this.gameOver = true;
-      return;
-    }
+      tell,
+      gotoRoom: (roomId) => {
+        const room = this.world.get(roomId) as Room;
+        this.player.moveTo(room);
+        return this.onRoomEntered(room);
+      },
+      describeRoom: () => this.describeCurrentRoom(),
+      clearContinuation: () => { this.parser.clearContinuation(); },
+      finish: () => { this.gameOver = true; },
+      signalFatal: onFatal,
 
-    this.deaths += 1;
-    tell(jigsUpMsgs.deserveAnotherChance);
-
-    // KILL-INTERRUPTS — 1actions.zil:4098 / 4125–4135.
-    killInterrupts(this.clock, this.world);
-
-    const forest1 = this.world.get('FOREST-1') as Room;
-    this.player.moveTo(forest1);
-    this.here = forest1;
-
-    const enterOut = this.onRoomEntered(forest1);
-    if (enterOut) tell(enterOut);
-    tell(this.describeCurrentRoom());
+      world: this.world,
+      clock: this.clock,
+      rng:   this.rng,
+    };
   }
 }
