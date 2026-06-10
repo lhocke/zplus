@@ -810,6 +810,7 @@ export function villainResult(
 //   villainId        — object id of the villain (PRSO)
 //   entry            — VillainEntry metadata (vMsgs, vBest, etc.)
 //   prsiId           — id of PRSI (the weapon the player is using), or null
+//   prsiIsWeapon     — whether PRSI carries WEAPONBIT (FIND-WEAPON check)
 //   playerStaggered  — whether the player's STAGGERED bit is set
 //   score            — current player score (for FIGHT-STRENGTH / ATT)
 //   rng              — RNG instance
@@ -824,6 +825,7 @@ export function heroBlow(
   villainId: ObjectId,
   entry: VillainEntry,
   prsiId: ObjectId | null,
+  prsiIsWeapon: boolean,
   playerStaggered: boolean,
   score: number,
   rng: CombatRng,
@@ -847,7 +849,7 @@ export function heroBlow(
   // Step 5 — OD = DEF = villainStrength(villain) (1actions.zil:3495)
   //  villain pStrength may be negative if already KO'd
   const vilPs = cb.getVillainPStrength();
-  let def = villainStrength(villainId, vilPs, entry, null, false, false);
+  let def = villainStrength(villainId, vilPs, entry, prsiId, prsiIsWeapon, false);
 
   // Step 6 — DEF == 0: pointless (1actions.zil:3495–3500)
   if (def === 0) {
