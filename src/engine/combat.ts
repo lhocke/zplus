@@ -5,7 +5,34 @@
 // MELEE tables: 1actions.zil:3611–3788.
 
 import type { VillainEntry } from '../domain/villain-entry.js';
-import type { ObjectId } from '../domain/game-object.js';
+import type { GameObject, ObjectId } from '../domain/game-object.js';
+
+// ---------------------------------------------------------------------------
+// FIND-WEAPON — 1actions.zil:3401–3409
+//
+// Walks the owner's children (ZIL FIRST?/NEXT?) looking for exactly one of
+// the 5 canonical weapon object ids.  Returns the first match, or null.
+//
+// Containment (name-check), NOT WEAPONBIT — this is the spec-mandated form
+// (spec §4.2, "FIND-WEAPON's weapon set is exactly [STILETTO, AXE, SWORD,
+// KNIFE, RUSTY-KNIFE] by containment (FIRST?/NEXT?), NOT by WEAPONBIT").
+// ---------------------------------------------------------------------------
+
+/** The 5 canonical weapon object ids — 1actions.zil:3406–3408. */
+export const WEAPON_NAMES: readonly ObjectId[] = [
+  'STILETTO', 'AXE', 'SWORD', 'KNIFE', 'RUSTY-KNIFE',
+];
+
+/**
+ * FIND-WEAPON — return the first weapon in `owner`'s immediate children,
+ * or null if none found.  Walks children in insertion order (FIRST?/NEXT?).
+ */
+export function findWeapon(owner: GameObject): GameObject | null {
+  for (const child of owner.children) {
+    if (WEAPON_NAMES.includes(child.id)) return child;
+  }
+  return null;
+}
 
 // Minimal RNG interface used throughout combat — satisfied by both Rng (concrete)
 // and ScriptedRng (test harness).  zprob is optional here because existing probe

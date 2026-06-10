@@ -628,6 +628,50 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
   return result(lines.join('\n'));
 }
 
+// V-ATTACK entry guards — gverbs.zil:176–193.
+//
+// Guard order (ZIL COND):
+//   1. !ACTORBIT(PRSO)          → not a creature
+//   2. !PRSI || PRSI==HANDS     → bare hands
+//   3. !IN?(PRSI, WINNER)       → not holding the weapon
+//   4. !WEAPONBIT(PRSI)         → not a weapon
+//   5. T                        → heroBlow (wired at G1)
+//
+// Exported so CB7 tests can call it directly.  Not registered in ACTION_HANDLERS
+// yet — G1 removes the Phase-1 override and wires this as the live 'V-ATTACK'.
+export function verbAttack(ctx: VerbContext): VerbResult {
+  const target = ctx.dobj;
+  const weapon = ctx.iobj;
+
+  if (target === undefined) return result("Attack what?");
+
+  // Guard 1 — target must be an actor (gverbs.zil:177–179)
+  if (!target.has(Flag.Actor)) {
+    return result(`I've known strange people, but fighting a ${target.desc}?`);
+  }
+
+  // Guard 2 — must have a non-HANDS weapon (gverbs.zil:180–183)
+  const hands = ctx.world.get('HANDS');
+  if (weapon === undefined || weapon === hands) {
+    return result(`Trying to attack a ${target.desc} with your bare hands is suicidal.`);
+  }
+
+  // Guard 3 — must be holding the weapon (gverbs.zil:184–185)
+  if (weapon.parent !== ctx.player) {
+    return result(`You aren't even holding the ${weapon.desc}.`);
+  }
+
+  // Guard 4 — weapon must have WEAPONBIT (gverbs.zil:186–188)
+  if (!weapon.has(Flag.Weapon)) {
+    return result(`Trying to attack the ${target.desc} with a ${weapon.desc} is suicidal.`);
+  }
+
+  // Guard 5 — pass to heroBlow (G1 wires this)
+  // Until G1 lands, fall through to the Phase-1 handler below via ACTION_HANDLERS.
+  // This export exists for CB7 tests and future wiring; it is not yet registered.
+  return result("You can't.");  // placeholder until G1
+}
+
 // PHASE-1 TEMPORARY — replaced by real combat in Phase 2.
 // Intercepts V-ATTACK so attack/kill never errors in the pre-troll playtest region.
 // Troll target → the in-world sign (signals content boundary, not a bug).
