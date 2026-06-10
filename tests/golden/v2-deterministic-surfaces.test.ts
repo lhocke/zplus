@@ -23,6 +23,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { runEngine } from '../../tools/oracle/engine-runner.js';
+import { createGame } from '../../src/engine/bootstrap.js';
 import { Flag } from '../../src/domain/flags.js';
 import type { Game } from '../../src/engine/game.js';
 import {
@@ -47,6 +48,25 @@ function resetActionState(): void {
 
 type World = { get(id: string): { set(f: unknown): void; moveTo(d: unknown): void } | undefined };
 type Flags = { set(k: string, v: boolean): void };
+
+// runEngineFrom — like runEngine but supports startRoom + a post-start setup
+// callback.  Kept local so tools/oracle/engine-runner.ts stays untouched.
+function runEngineFrom(
+  commands: readonly string[],
+  opts: { startRoom?: string; seed?: number; setup?: (g: Game) => void } = {},
+): string {
+  const game = createGame({ seed: opts.seed ?? 42, startRoom: opts.startRoom });
+  const lines: string[] = [];
+  lines.push(game.start());
+  opts.setup?.(game);
+  for (const cmd of commands) {
+    lines.push('');
+    lines.push(`> ${cmd}`);
+    const result = game.turn(cmd);
+    if (result.output.length > 0) lines.push(result.output);
+  }
+  return lines.join('\n');
+}
 
 const DIR = import.meta.dirname;
 
@@ -92,38 +112,21 @@ const VATK_COMMANDS = [
 
 describe('V2 corpus 1 — V-ATTACK guards (gverbs.zil:176–193)', () => {
   it('guard transcripts are byte-identical to committed golden', () => {
-    const run1 = runEngine(VATK_COMMANDS, {
-      startRoom: 'TROLL-ROOM',
-      seed: 42,
-      setup: (g: Game) => {
-        const w = (g as unknown as { world: World }).world;
-        const player = w.get('PLAYER') as never;
-        const lamp = w.get('LAMP');
-        const sword = w.get('SWORD');
-        // Lit lamp so the room isn't dark.
-        lamp?.moveTo(player);
-        lamp?.set(Flag.OnFire);
-        lamp?.set(Flag.Light);
-        // Sword in player's inventory (needed for guard 1).
-        sword?.moveTo(player);
-      },
-    });
+    const setup = (g: Game) => {
+      const w = (g as unknown as { world: World }).world;
+      const player = w.get('PLAYER') as never;
+      const lamp = w.get('LAMP');
+      const sword = w.get('SWORD');
+      // Lit lamp so the room isn't dark.
+      lamp?.moveTo(player);
+      lamp?.set(Flag.OnFire);
+      lamp?.set(Flag.Light);
+      // Sword in player's inventory (needed for guard 1).
+      sword?.moveTo(player);
+    };
 
-    // Determinism proof.
-    const run2 = runEngine(VATK_COMMANDS, {
-      startRoom: 'TROLL-ROOM',
-      seed: 42,
-      setup: (g: Game) => {
-        const w = (g as unknown as { world: World }).world;
-        const player = w.get('PLAYER') as never;
-        const lamp = w.get('LAMP');
-        const sword = w.get('SWORD');
-        lamp?.moveTo(player);
-        lamp?.set(Flag.OnFire);
-        lamp?.set(Flag.Light);
-        sword?.moveTo(player);
-      },
-    });
+    const run1 = runEngineFrom(VATK_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
+    const run2 = runEngineFrom(VATK_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
     expect(run1).toBe(run2);
 
     saveOrCompare('v2-vatk-guards', run1);
@@ -155,16 +158,8 @@ describe('V2 corpus 2 — troll fend-off (ifFlag TROLL-FLAG)', () => {
       lamp?.set(Flag.Light);
     };
 
-    const run1 = runEngine(TROLL_FEND_COMMANDS, {
-      startRoom: 'TROLL-ROOM',
-      seed: 42,
-      setup,
-    });
-    const run2 = runEngine(TROLL_FEND_COMMANDS, {
-      startRoom: 'TROLL-ROOM',
-      seed: 42,
-      setup,
-    });
+    const run1 = runEngineFrom(TROLL_FEND_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
+    const run2 = runEngineFrom(TROLL_FEND_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
     expect(run1).toBe(run2);
 
     saveOrCompare('v2-troll-fend', run1);
@@ -244,16 +239,8 @@ describe('V2 corpus 4 — STONE-BARROW endgame (1actions.zil:403–430)', () => 
       (g as unknown as { flags: Flags }).flags.set('WON-FLAG', true);
     };
 
-    const run1 = runEngine(STONE_BARROW_COMMANDS, {
-      startRoom: 'WEST-OF-HOUSE',
-      seed: 42,
-      setup,
-    });
-    const run2 = runEngine(STONE_BARROW_COMMANDS, {
-      startRoom: 'WEST-OF-HOUSE',
-      seed: 42,
-      setup,
-    });
+    const run1 = runEngineFrom(STONE_BARROW_COMMANDS, { startRoom: 'WEST-OF-HOUSE', seed: 42, setup });
+    const run2 = runEngineFrom(STONE_BARROW_COMMANDS, { startRoom: 'WEST-OF-HOUSE', seed: 42, setup });
     expect(run1).toBe(run2);
 
     saveOrCompare('v2-stone-barrow', run1);
