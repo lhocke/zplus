@@ -280,3 +280,37 @@ describe('DT1-G: killInterrupts called on resurrection', () => {
     expect(r.output).toMatch(/forest/i);
   });
 });
+
+// ---------------------------------------------------------------------------
+// H. randomizeObjects called on resurrection — inventory empty after death
+//    ZIL: 1actions.zil:4097 <RANDOMIZE-OBJECTS> runs inside JIGS-UP.
+//    Observable: player carrying LAMP through grue death → empty-handed after.
+// ---------------------------------------------------------------------------
+
+describe('DT1-H: randomizeObjects called on resurrection', () => {
+  it('player inventory is empty after grue death (items scattered)', () => {
+    // Give the player the lamp and die in the maze; JIGS-UP scatters inventory.
+    const g = newGameAt('MAZE-1');
+    (g as unknown as { rng: Rng }).rng = grueRng();
+    g.start();
+
+    const lamp = g.world.get('LAMP')!;
+    lamp.moveTo(g.player);
+    expect(g.player.children.size).toBeGreaterThan(0);
+
+    g.turn('north'); // grue kill + resurrection
+    expect(g.player.children.size).toBe(0);
+  });
+
+  it('LAMP is moved to LIVING-ROOM on death, not left with player', () => {
+    const g = newGameAt('MAZE-1');
+    (g as unknown as { rng: Rng }).rng = grueRng();
+    g.start();
+
+    const lamp = g.world.get('LAMP')!;
+    lamp.moveTo(g.player);
+
+    g.turn('north');
+    expect(lamp.parent?.id).toBe('LIVING-ROOM');
+  });
+});

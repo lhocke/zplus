@@ -275,14 +275,12 @@ export function jigsUp(
     cb.tell(cb.describeRoom());
   }
 
-  // 1actions.zil:4094–4098 — P-CONT clear + kill interrupts.
+  // 1actions.zil:4094–4098 — P-CONT clear + randomize + kill interrupts.
   // <FCLEAR ,TRAP-DOOR ,TOUCHBIT> is handled by data (TRAP-DOOR TOUCHBIT already
   // cleared when the trapdoor was opened; not tracked separately).
-  // Note: RANDOMIZE-OBJECTS (SD2) is called here in full ZIL, but the golden master
-  // records inventory-preserved deaths; randomizeObjects must be wired here by the
-  // wave that reconciles the golden (post-DT1).  killInterrupts is safe (no output).
-  cb.clearContinuation();       // P-CONT = NIL — 1actions.zil:4097
-  killInterrupts(cb.clock, cb.world);  // 1actions.zil:4098
+  cb.clearContinuation();                         // P-CONT = NIL — 1actions.zil:4096
+  randomizeObjects(cb.world, cb.getPlayer(), cb.rng);  // 1actions.zil:4097
+  killInterrupts(cb.clock, cb.world);             // 1actions.zil:4098
 
   // RFATAL — abort the current turn (B3). Must be last.
   cb.signalFatal();
