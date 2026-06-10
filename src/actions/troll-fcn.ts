@@ -33,8 +33,9 @@ export interface TrollFcnContext {
   clearContinuation(): void;
 }
 
+// objects.json:2257 canonical value — no embedded newline.
 const LDESC_BRANDISHING =
-  'A nasty-looking troll, brandishing a bloody axe, blocks all passages out of\nthe room.';
+  'A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.';
 const LDESC_UNCONSCIOUS =
   'An unconscious troll is sprawled on the floor. All passages\nout of the room are open.';
 const LDESC_BARE = 'A troll is here.';

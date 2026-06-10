@@ -327,3 +327,40 @@ describe('TROLL-FCN — TROLL-FLAG double-duty (spec §10.2)', () => {
     expect(trollFlag.value).toBe(false);
   });
 });
+
+// objects.json:2257 canonical LDESC — no embedded newline (player-visible wording check).
+const CANONICAL_BRANDISHING =
+  'A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.';
+
+describe('TROLL-FCN — LDESC exact wording (player-visible)', () => {
+  it('F_BUSY pickup sets brandishing LDESC with no embedded newline', () => {
+    const { ctx, troll } = makeCtx({
+      axeParent: 'TROLL-ROOM',
+      hereId: 'TROLL-ROOM',
+      luck: true,
+      rngDraws: [0.1],
+    });
+    makeTrollFcn(ctx)(F_BUSY);
+    expect(troll.ldesc).toBe(CANONICAL_BRANDISHING);
+  });
+
+  it('F_CONSCIOUS (axe in troll) sets brandishing LDESC with no embedded newline', () => {
+    const { ctx, troll } = makeCtx({
+      trollParent: 'TROLL-ROOM',
+      axeParent: 'TROLL',
+      hereId: 'TROLL-ROOM',
+    });
+    makeTrollFcn(ctx)(F_CONSCIOUS);
+    expect(troll.ldesc).toBe(CANONICAL_BRANDISHING);
+  });
+
+  it('F_CONSCIOUS recovery (axe in TROLL-ROOM) sets brandishing LDESC with no embedded newline', () => {
+    const { ctx, troll } = makeCtx({
+      trollParent: 'TROLL-ROOM',
+      axeParent: 'TROLL-ROOM',
+      hereId: 'TROLL-ROOM',
+    });
+    makeTrollFcn(ctx)(F_CONSCIOUS);
+    expect(troll.ldesc).toBe(CANONICAL_BRANDISHING);
+  });
+});
