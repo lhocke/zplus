@@ -6,9 +6,17 @@
  *   <FCLEAR ,PRSO ,NDESCBIT>     — retire the FDESC
  *   <FSET ,PRSO ,TOUCHBIT>       — mark as touched
  *
- * The engine was missing the FCLEAR/FSET pair, so randomizeObjects() could
- * return a touched lamp to LIVING-ROOM and the room would still render
- * the FDESC instead of the LDESC.
+ * The engine was missing the FCLEAR/FSET pair, so items with an fdesc
+ * kept it forever after being taken.  The fix is universal: lamp, sword,
+ * and bottle all retire their fdesc on first take.
+ *
+ * Golden walkthrough changes (all dfrotz-verified):
+ *   lamp  (2 lines, 871/900): "A battery-powered brass lantern is on the trophy case."
+ *          → "There is a brass lantern (battery-powered) here."
+ *   sword (5 lines):          "Above the trophy case hangs an elvish sword of great antiquity."
+ *          → "There is a sword here."
+ *   bottle (4 lines):         "A bottle is sitting on the table."
+ *          → "There is a glass bottle here."
  */
 
 import { describe, it, expect } from 'vitest';
@@ -110,5 +118,51 @@ describe('post-take room render uses ldesc not fdesc (FDESC retirement)', () => 
     const text = lines.join('\n');
     expect(text).toContain('There is a brass lantern (battery-powered) here.');
     expect(text).not.toContain('A battery-powered brass lantern is on the trophy case.');
+  });
+
+  // Sword: dfrotz-verified — after take+drop, "There is a sword here." not fdesc.
+  it('after taking then returning the sword, room renders ldesc', () => {
+    const room = new Room('ROOM', 'Test Room', { ldesc: 'A test room.' });
+    room.set(Flag.On);
+    const sword = new Thing('SWORD', 'sword', {
+      ldesc: 'There is a sword here.',
+      fdesc: 'Above the trophy case hangs an elvish sword of great antiquity.',
+    });
+    sword.set(Flag.Takeable);
+    sword.moveTo(room);
+    const player = new Actor('PLAYER', 'adventurer', {});
+    const world = World.fromObjects([room, player, sword]);
+
+    executeVerb({ verb: 'take', dobj: sword, player, here: room, world });
+    sword.moveTo(room);
+
+    const lines: string[] = [];
+    describeRoomObjects(room, player, (s) => lines.push(s));
+    const text = lines.join('\n');
+    expect(text).toContain('There is a sword here.');
+    expect(text).not.toContain('Above the trophy case');
+  });
+
+  // Bottle: dfrotz-verified — after take+drop, "There is a glass bottle here." not fdesc.
+  it('after taking then returning the bottle, room renders ldesc', () => {
+    const room = new Room('ROOM', 'Test Room', { ldesc: 'A test room.' });
+    room.set(Flag.On);
+    const bottle = new Thing('BOTTLE', 'glass bottle', {
+      ldesc: 'There is a glass bottle here.',
+      fdesc: 'A bottle is sitting on the table.',
+    });
+    bottle.set(Flag.Takeable);
+    bottle.moveTo(room);
+    const player = new Actor('PLAYER', 'adventurer', {});
+    const world = World.fromObjects([room, player, bottle]);
+
+    executeVerb({ verb: 'take', dobj: bottle, player, here: room, world });
+    bottle.moveTo(room);
+
+    const lines: string[] = [];
+    describeRoomObjects(room, player, (s) => lines.push(s));
+    const text = lines.join('\n');
+    expect(text).toContain('There is a glass bottle here.');
+    expect(text).not.toContain('A bottle is sitting on the table.');
   });
 });
