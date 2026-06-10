@@ -289,6 +289,8 @@ export class Game {
           alwaysLit: this.alwaysLit,
           prob: (pct) => this.rng.prob(pct),
           clearContinuation: () => this.parser.clearContinuation(),
+          loadAllowed: this.loadAllowed,
+          loadMax: this.loadMax,
         }, cmd.action);
 
         if (verbResult.fatal) {

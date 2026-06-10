@@ -4,9 +4,18 @@
 // Tables and windows: 1actions.zil:3258–3317, patched by 1dungeon.zil:2644–2649.
 // MELEE tables: 1actions.zil:3611–3788.
 
-import type { Rng } from './rng.js';
 import type { VillainEntry } from '../domain/villain-entry.js';
 import type { ObjectId } from '../domain/game-object.js';
+
+// Minimal RNG interface used throughout combat — satisfied by both Rng (concrete)
+// and ScriptedRng (test harness).  zprob is optional here because existing probe
+// call sites that only use next/prob must still type-check.
+export interface CombatRng {
+  next(): number;
+  nextInt(n: number): number;
+  prob(base: number): boolean;
+  zprob?(base: number, denom: number): boolean;
+}
 
 // ---------------------------------------------------------------------------
 // Blow result codes — 1actions.zil:3244–3254
@@ -174,7 +183,7 @@ export const DEF3_RES: readonly Window[] = [
 // Returns the blow-result constant from the chosen window.
 // ---------------------------------------------------------------------------
 
-export function selectWindow(att: number, def: number, rng: Rng): number {
+export function selectWindow(att: number, def: number, rng: CombatRng): number {
   let win: Window;
   if (def === 1) {
     if (att > 2) att = 3;
@@ -294,7 +303,7 @@ export function remark(
  * RANDOM-ELEMENT — 1actions.zil:3363 (implicit ZIL call form).
  * frob[0] = count N; returns frob[1 + rng.nextInt(N)].
  */
-export function randomElement(frob: readonly (number | MeleeLTable)[], rng: Rng): MeleeLTable {
+export function randomElement(frob: readonly (number | MeleeLTable)[], rng: CombatRng): MeleeLTable {
   const n = frob[0] as number;
   return frob[1 + rng.nextInt(n)] as MeleeLTable;
 }
@@ -532,3 +541,198 @@ export const THIEF_MELEE: readonly MeleeSlot[] = [
     [1, 'The thief, a pragmatist, dispatches you as a threat to his\nlivelihood.'],
   ],
 ];
+
+// ---------------------------------------------------------------------------
+// WINNER-RESULT callback interface
+//
+// The blow functions mutate game state through an explicit callback bundle
+// rather than taking the Game object directly, keeping them testable in
+// isolation.
+// ---------------------------------------------------------------------------
+
+export interface WinnerResultCallbacks {
+  getPlayerPStrength(): number;
+  setPlayerPStrength(v: number): void;
+  getScore(): number;
+  jigsUp(msg: string): void;
+  queueICure(period: number): void;
+}
+
+// VILLAIN-BLOW adds encumbrance + stagger + weapon-drop callbacks.
+export interface VillainBlowCallbacks extends WinnerResultCallbacks {
+  getLoadAllowed(): number;
+  setLoadAllowed(v: number): void;
+  getLoadMax(): number;
+  getLucky(): boolean;
+  findPlayerWeapon(): string | null;
+  dropPlayerWeapon(id: string): void;
+  getVillainStaggered(): boolean;
+  clearVillainStaggered(): void;
+  setPlayerStaggered(): void;
+  clearPlayerStaggered(): void;
+  emit(text: string): void;
+}
+
+// ---------------------------------------------------------------------------
+// WINNER-RESULT — 1actions.zil:3552–3564
+//
+// Called at the end of VILLAIN-BLOW after applying the blow's state changes.
+//   winner.pStrength = (DEF == 0) ? -10000 : (DEF - OD)     // NM-4
+//   if DEF - OD < 0:  queue I-CURE
+//   if fightStrength() <= 0:  nudge pStrength and call jigsUp
+//
+// NM-4: -10000 is the dead sentinel; it drives fightStrength deeply negative
+//       which triggers the <= 0 check → jigsUp (the TD-2/TD-3 seam).
+// ---------------------------------------------------------------------------
+
+export function winnerResult(
+  def: number,
+  od: number,
+  cb: WinnerResultCallbacks,
+): void {
+  // NM-4: dead sentinel when DEF==0 (KILLED or SITTING_DUCK reduced DEF to 0)
+  const newPs = def === 0 ? -10000 : def - od;
+  cb.setPlayerPStrength(newPs);
+
+  // Queue I-CURE when net damage occurred — 1actions.zil:3557
+  if (def !== 0 && def - od < 0) {
+    cb.queueICure(CURE_WAIT);
+  }
+
+  // Kill check — fightStrength(adjust=true) uses the just-set pStrength
+  const fs = fightStrength(true, cb.getScore(), cb.getPlayerPStrength());
+  if (fs <= 0) {
+    // Nudge: 1actions.zil:3560–3562 — ensure adjusted FS reaches exactly 1
+    // after jigsUp restores health; we call jigsUp with the canonical message.
+    cb.jigsUp(
+      'It appears that that last blow was too much for you. ' +
+      'I am afraid that you are dead.\n' +
+      'Well, you can\'t win \'em all.',
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// VILLAIN-BLOW — 1actions.zil:3413–3474
+//
+// Called from DO-FIGHT for each active villain.
+// Parameters:
+//   villainId      — object id (for villainStrength THIEF check)
+//   villainPs      — villain pStrength (for ATT computation via villainStrength)
+//   entry          — VillainEntry metadata (vMsgs, vBest, etc.)
+//   thiefEngrossed — THIEF-ENGROSSED flag (cap in villainStrength)
+//   prsiId         — player's current PRSI weapon id (or null)
+//   prsiIsWeapon   — whether PRSI is in the weapon set
+//   out            — DO-FIGHT out counter (>0 → SITTING_DUCK transformation)
+//   score          — current player score (for FIGHT-STRENGTH)
+//   rng            — RNG instance
+//   cb             — callback bundle for state reads/writes
+// ---------------------------------------------------------------------------
+
+export function villainBlow(
+  villainId: ObjectId,
+  villainPs: number,
+  entry: VillainEntry,
+  thiefEngrossed: boolean,
+  prsiId: ObjectId | null,
+  prsiIsWeapon: boolean,
+  out: number,
+  score: number,
+  rng: CombatRng,
+  cb: VillainBlowCallbacks,
+): void {
+  // Step 1 — unconditionally clear player STAGGERED (1actions.zil:3417)
+  cb.clearPlayerStaggered();
+
+  // Step 2 — if villain is STAGGERED, skip blow and clear (1actions.zil:3418–3422)
+  if (cb.getVillainStaggered()) {
+    const vDesc = villainId.toLowerCase().replace(/-/g, ' ');
+    cb.emit(`The ${vDesc} slowly regains his feet.`);
+    cb.clearVillainStaggered();
+    return;
+  }
+
+  // Step 3 — compute ATT, DEF, OD (1actions.zil:3423–3425)
+  const att = villainStrength(villainId, villainPs, entry, prsiId, prsiIsWeapon, thiefEngrossed);
+  const playerPs = cb.getPlayerPStrength();
+  const def = fightStrength(true,  score, playerPs);
+  const od  = fightStrength(false, score, playerPs);
+
+  // Step 4 — if player already dying, skip (1actions.zil:3424)
+  if (def <= 0) return;
+
+  // Step 5 — resolve RES (1actions.zil:3427–3451)
+  let res: number;
+  if (def < 0) {
+    // Player unconscious → instant kill (1actions.zil:3427)
+    res = KILLED;
+  } else {
+    res = selectWindow(att, def, rng);
+
+    // out? transformation: STAGGER→HESITATE, else→SITTING_DUCK (1actions.zil:3441–3443)
+    if (out > 0) {
+      res = res === STAGGER ? HESITATE : SITTING_DUCK;
+    }
+
+    // STAGGER + weapon present → ZPROB(25) chance of LOSE_WEAPON (1actions.zil:3444–3447)
+    // ZIL: PROB 25 <COND (.HERO? 10)(T 50)> — in villain-blow, HERO? is always false → denom=50 ... wait
+    // Actually spec §5 NM-5: "VILLAIN-BLOW LOSE-WEAPON → ZPROB(25) (two-arg form)"
+    // and "the ZIL PROB 25 <COND(.HERO? 10)(T 50)> reduces to a two-arg call; .HERO? is always falsy → ZPROB"
+    // So denom is the LUCKY-dependent value: LUCKY? 100 : 300
+    if (res === STAGGER && cb.findPlayerWeapon() !== null) {
+      const denom = cb.getLucky() ? 100 : 300;
+      if (rng.zprob!(25, denom)) res = LOSE_WEAPON;
+    }
+
+    // Emit REMARK (1actions.zil:3448–3451)
+    const slot = (entry.vMsgs as readonly MeleeSlot[])[res - 1];
+    if (slot !== undefined) {
+      const ltable = randomElement(slot, rng);
+      const dweaponDesc = cb.findPlayerWeapon() ?? '';
+      const parts: string[] = [];
+      remark(ltable, 'you', dweaponDesc, (s) => parts.push(s));
+      if (parts.length > 0) cb.emit(parts.join(''));
+    }
+  }
+
+  // Step 6 — apply player state (1actions.zil:3452–3473)
+  let defMod = def;  // local DEF, may be reduced by wound
+  switch (res) {
+    case MISSED:
+    case HESITATE:
+      // no effect
+      break;
+    case UNCONSCIOUS:
+      // NM-8: DO-FIGHT loop handles out counter; no pStrength change here
+      break;
+    case KILLED:
+    case SITTING_DUCK:
+      defMod = 0;
+      break;
+    case LIGHT_WOUND:
+      defMod = Math.max(0, def - 1);
+      if (cb.getLoadAllowed() > 50) cb.setLoadAllowed(cb.getLoadAllowed() - 10);
+      break;
+    case SERIOUS_WOUND:
+      defMod = Math.max(0, def - 2);
+      if (cb.getLoadAllowed() > 50) cb.setLoadAllowed(cb.getLoadAllowed() - 20);
+      break;
+    case STAGGER:
+      cb.setPlayerStaggered();
+      break;
+    case LOSE_WEAPON: {
+      const wep = cb.findPlayerWeapon();
+      if (wep !== null) {
+        cb.dropPlayerWeapon(wep);
+        const nextWep = cb.findPlayerWeapon();
+        if (nextWep !== null) {
+          cb.emit(`Fortunately, you still have a ${nextWep}.`);
+        }
+      }
+      break;
+    }
+  }
+
+  // Step 7 — WINNER-RESULT (1actions.zil:3474)
+  winnerResult(defMod, od, cb);
+}

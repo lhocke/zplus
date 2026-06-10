@@ -65,6 +65,18 @@ export interface VerbContext {
    * by verbGo's moved-into-dark path to stop chained commands.
    */
   readonly clearContinuation?: () => void;
+  /**
+   * Current carrying capacity available — ZIL LOAD-ALLOWED (gglobals.zil:94).
+   * Starts at 100; reduced by combat wounds, restored by I-CURE.
+   * verbTake gates pickups against WEIGHT(item)+WEIGHT(player) > loadAllowed.
+   */
+  readonly loadAllowed?: number;
+  /**
+   * Maximum carrying capacity — ZIL LOAD-MAX (gglobals.zil:92).
+   * Used to detect whether the player is wounded (loadAllowed < loadMax)
+   * and choose the "especially in light of your condition" suffix.
+   */
+  readonly loadMax?: number;
 }
 
 export interface VerbResult {
@@ -325,6 +337,18 @@ function verbGo(ctx: VerbContext): VerbResult {
   return enterDest(dest as Room);
 }
 
+// WEIGHT — gverbs.zil:1988: SIZE(obj) + recursive sum over all children.
+// ZIL GETP returns 0 when the property is absent, so objects with no SIZE
+// contribute 0 to the total (the player object has no SIZE, for example).
+function weight(obj: GameObject): number {
+  const size = (obj.props.get('SIZE') as number | undefined) ?? 0;
+  let w = size;
+  for (const child of obj.children) {
+    w += weight(child);
+  }
+  return w;
+}
+
 function verbTake(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Take what?");
@@ -341,6 +365,21 @@ function verbTake(ctx: VerbContext): VerbResult {
   if (!item.has(Flag.Takeable)) {
     const rng = ctx.rng;
     return result(rng !== undefined ? pick(yuks, rng) : yuks.entries[0]!);
+  }
+
+  // LOAD-ALLOWED capacity check — gverbs.zil:1932–1940.
+  // Only fires when the engine provides loadAllowed (test contexts may omit it).
+  const loadAllowed = ctx.loadAllowed;
+  if (loadAllowed !== undefined && item.parent !== ctx.player) {
+    const itemWeight   = weight(item);
+    const playerWeight = weight(ctx.player);
+    if (itemWeight + playerWeight > loadAllowed) {
+      const loadMax = ctx.loadMax ?? loadAllowed;
+      const suffix  = loadAllowed < loadMax
+        ? ', especially in light of your condition.'
+        : '.';
+      return result(`Your load is too heavy${suffix}`, false, /*fatal*/ true);
+    }
   }
 
   item.moveTo(ctx.player);
