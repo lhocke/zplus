@@ -631,6 +631,18 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
   return result(lines.join('\n'));
 }
 
+// V-PRAY — gverbs.zil:1046–1054.
+// Outside ghost mode: at SOUTH-TEMPLE → GOTO FOREST-1; elsewhere → "If you pray enough".
+// Ghost-mode PRAY is handled by ghostDispatch in game.ts before this is reached.
+function verbPray(ctx: VerbContext): VerbResult {
+  if (ctx.here.id === 'SOUTH-TEMPLE') {
+    const forest1 = ctx.world.get('FOREST-1');
+    if (forest1 !== undefined) ctx.player.moveTo(forest1);
+    return { output: '', moved: true };
+  }
+  return result('If you pray enough, your prayers may be answered.');
+}
+
 // V-ATTACK entry guards — gverbs.zil:176–193.
 //
 // Guard order (ZIL COND):
@@ -726,6 +738,7 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-PUT':       verbPut,
   'V-SCORE':     verbScore,
   'V-DIAGNOSE':  verbDiagnose,
+  'V-PRAY':      verbPray,
   'V-ADVENT':    verbAdvent,  // PLUGH / XYZZY — gverbs.zil:153
   'V-FROBOZZ':   verbFrobozz, // FROBOZZ — gverbs.zil:704
   // PHASE-1 TEMPORARY — replaced by real combat in Phase 2.

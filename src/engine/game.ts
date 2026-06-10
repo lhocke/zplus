@@ -66,6 +66,25 @@ export interface Rng {
   nextInt?(n: number): number;
 }
 
+// Ghost verb table action sets — 1actions.zil:3113–3173.
+// Pass-through: meta verbs + SAVE/RESTORE/RESTART/QUIT handled by META_ACTIONS.
+// Additional pass-through verbs not in META_ACTIONS:
+const GHOST_PASS_ACTIONS: ReadonlySet<string> = new Set([
+  'V-VERSION', 'V-AGAIN', 'V-BACK',
+]);
+
+// ATTACK / MUNG / ALARM / SWING — all such attacks are vain.
+const GHOST_ATTACK_ACTIONS: ReadonlySet<string> = new Set([
+  'V-ATTACK', 'V-MUNG', 'V-ALARM', 'V-SWING',
+]);
+
+// OPEN / CLOSE / EAT / DRINK / INFLATE / DEFLATE / TURN / BURN / TIE / UNTIE / RUB
+// (RUB is also in the TAKE slot; ZIL has it in both — the TAKE clause fires first)
+const GHOST_BEYOND_ACTIONS: ReadonlySet<string> = new Set([
+  'V-OPEN', 'V-CLOSE', 'V-EAT', 'V-DRINK', 'V-INFLATE', 'V-DEFLATE',
+  'V-TURN', 'V-BURN', 'V-TIE', 'V-TIE-UP', 'V-UNTIE',
+]);
+
 const INTRO =
   'ZORK I: The Great Underground Empire\n' +
   'Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.\n' +
@@ -159,9 +178,189 @@ export class Game {
     return INTRO + '\n' + roomDesc;
   }
 
+  /**
+   * FINISH — gverbs.zil:33–53, web-shell form (B7).
+   *
+   * Renders V-SCORE (score + moves + rank), emits the terminal string, and
+   * sets gameOver.  RESTART/RESTORE are no-ops (save slots deferred).
+   * The tell callback receives the text so callers can route it to their output
+   * buffer; when tell is not provided the output is discarded (death paths that
+   * call finish() only care about gameOver).
+   */
+  doFinish(tell?: (s: string) => void): void {
+    const score  = this.scoring.score;
+    const moves  = this.moveCount;
+    const rank   = this.scoring.rank();
+    const movePart = moves === 1 ? '1 move.' : `${moves} moves.`;
+    const scoreText = `Your score is ${score} (total of 350 points), in ${movePart}\nThis gives you the rank of ${rank}.`;
+    tell?.(scoreText);
+    tell?.('ZORK: The Great Underground Empire.');
+    this.gameOver = true;
+  }
+
+  /**
+   * DEAD-FUNCTION ghost verb dispatch — 1actions.zil:3113–3173.
+   *
+   * Called from turn() when dead===true. Returns a TurnResult for verbs the
+   * ghost table handles, or undefined for pass-through verbs (movement, meta)
+   * which fall back to normal parse.
+   *
+   * The ZIL routine's final T-clause fires RFATAL + clears P-CONT; we replicate
+   * that by returning a result and not continuing the turn loop.
+   */
+  private ghostDispatch(input: string): TurnResult | undefined {
+    // Parse to get the action. We need the action id to route the ghost table.
+    // A minimal parse is sufficient — we only need the verb.
+    const pr = this.parser.parseSegment(input, this.here, this.player, this.world);
+
+    // On parse error / orphan, let the error message through as-is.
+    if (pr.kind !== 'ok') {
+      return { output: pr.message, moved: false };
+    }
+    const action = pr.command.action;
+    const outputs: string[] = [];
+    const tell = (s: string): void => { outputs.push(s); };
+
+    // 1actions.zil:3114–3117 — WALK: block west from TIMBER-ROOM only.
+    if (action === 'V-WALK') {
+      const dir = pr.command.prep;
+      if (this.here.id === 'TIMBER-ROOM' && dir === 'west') {
+        this.parser.clearContinuation();
+        return { output: 'You cannot enter in your condition.', moved: false };
+      }
+      // All other movement: pass-through (normal walk).
+      return undefined;
+    }
+
+    // 1actions.zil:3132–3133 — SCORE: checked before meta pass-through because
+    // V-SCORE is in META_ACTIONS but the ghost table intercepts it explicitly.
+    if (action === 'V-SCORE') {
+      this.parser.clearContinuation();
+      return { output: "You're dead! How can you think of your score?", moved: false };
+    }
+
+    // 1actions.zil:3118–3120 — meta verbs pass through (BRIEF/VERBOSE/VERSION/SAVE/etc).
+    if (META_ACTIONS.has(action) || GHOST_PASS_ACTIONS.has(action)) {
+      return undefined;
+    }
+
+    // 1actions.zil:3121–3122 — attacks are vain.
+    if (GHOST_ATTACK_ACTIONS.has(action)) {
+      this.parser.clearContinuation();
+      return { output: 'All such attacks are vain in your condition.', moved: false };
+    }
+
+    // 1actions.zil:3123–3127 — physical actions beyond capability.
+    if (GHOST_BEYOND_ACTIONS.has(action)) {
+      this.parser.clearContinuation();
+      return { output: 'Even such an action is beyond your capabilities.', moved: false };
+    }
+
+    // 1actions.zil:3128–3129 — WAIT.
+    if (action === 'V-WAIT') {
+      this.parser.clearContinuation();
+      return { output: "Might as well. You've got an eternity.", moved: false };
+    }
+
+    // 1actions.zil:3130–3131 — LAMP-ON.
+    if (action === 'V-LAMP-ON') {
+      this.parser.clearContinuation();
+      return { output: 'You need no light to guide you.', moved: false };
+    }
+
+    // 1actions.zil:3134–3135 — TAKE or RUB (hand passes through).
+    if (action === 'V-TAKE' || action === 'V-RUB') {
+      this.parser.clearContinuation();
+      return { output: 'Your hand passes through its object.', moved: false };
+    }
+
+    // 1actions.zil:3136–3137 — DROP / THROW / INVENTORY.
+    if (action === 'V-DROP' || action === 'V-THROW' || action === 'V-INVENTORY') {
+      this.parser.clearContinuation();
+      return { output: 'You have no possessions.', moved: false };
+    }
+
+    // 1actions.zil:3138–3139 — DIAGNOSE.
+    if (action === 'V-DIAGNOSE') {
+      this.parser.clearContinuation();
+      return { output: 'You are dead.', moved: false };
+    }
+
+    // 1actions.zil:3140–3151 — LOOK: unearthly description.
+    if (action === 'V-LOOK' || action === 'V-EXAMINE') {
+      this.parser.clearContinuation();
+      // 1actions.zil:3142–3146 — different text based on whether objects are present.
+      const hasObjs = this.here.children.size > 0;
+      const line1 = hasObjs
+        ? 'The room looks strange and unearthly and objects appear indistinct.'
+        : 'The room looks strange and unearthly.';
+      const lines: string[] = [line1];
+      // 1actions.zil:3147–3150 — if room is lit (ONBIT), note no-light.
+      if (!this.here.has(Flag.On)) {
+        lines.push('Although there is no light, the room seems dimly illuminated.');
+      }
+      return { output: lines.join('\n'), moved: false };
+    }
+
+    // 1actions.zil:3152–3169 — PRAY: South-Temple resurrection or "not heard".
+    if (action === 'V-PRAY') {
+      this.parser.clearContinuation();
+      if (this.here.id === 'SOUTH-TEMPLE') {
+        // 1actions.zil:3154–3167 — resurrection sequence.
+        const lamp = this.world.get('LAMP');
+        if (lamp !== undefined) lamp.clear(Flag.Invisible);
+        // Clear DEAD-FUNCTION handler slot (ZIL: PUTP WINNER P?ACTION 0).
+        // In our model dead===false is the state; no handler to clear.
+        this.alwaysLit = false;
+        this.dead = false;
+        // 1actions.zil:3159–3160 — if troll is in TROLL-ROOM, clear trollFlag.
+        const troll = this.world.get('TROLL');
+        const trollRoom = this.world.get('TROLL-ROOM');
+        if (troll !== undefined && trollRoom !== undefined && troll.parent === trollRoom) {
+          this.flags.set('TROLL-FLAG', false);
+        }
+        const trumpetMsg =
+          'From the distance the sound of a lone trumpet is heard. The room\n' +
+          'becomes very bright and you feel disembodied. In a moment, the\n' +
+          'brightness fades and you find yourself rising as if from a long\n' +
+          'sleep, deep in the woods. In the distance you can faintly hear a\n' +
+          'songbird and the sounds of the forest.';
+        tell(trumpetMsg);
+        // Goto FOREST-1 — 1actions.zil:3167.
+        const forest1 = this.world.get('FOREST-1') as Room;
+        if (forest1 !== undefined) {
+          this.player.moveTo(forest1);
+          const enterOut = this.onRoomEntered(forest1);
+          if (enterOut) tell(enterOut);
+          tell(this.describeCurrentRoom());
+        }
+        return { output: outputs.join('\n'), moved: true };
+      }
+      // 1actions.zil:3168–3169 — elsewhere.
+      return { output: 'Your prayers are not heard.', moved: false };
+    }
+
+    // 1actions.zil:3170–3173 — T (fallback): "You can't even do that."
+    // ZIL: SETG P-CONT <>; RFATAL.
+    this.parser.clearContinuation();
+    return { output: "You can't even do that.", moved: false };
+  }
+
   /** Execute one command line (may contain chained commands via "then" / "."). */
   turn(input: string): TurnResult {
     if (this.gameOver) return { output: '', moved: false };
+
+    // Ghost dispatch — spec §9.5 (B8/OQ-4, RATIFIED).
+    // When dead===true, route through the DEAD-FUNCTION verb table
+    // (1actions.zil:3113–3173) before normal parsing. Pass-through verbs
+    // (movement, meta) let normal turn processing continue; all others short-circuit.
+    if (this.dead) {
+      const ghostResult = this.ghostDispatch(input);
+      if (ghostResult !== undefined) {
+        return ghostResult;
+      }
+      // undefined → pass-through (movement or meta verbs); fall into normal parse
+    }
 
     // PHASE-1 TEMPORARY — removed when real combat replaces verbAttackPhase1 (verbs/index.ts).
     // Bare "attack/kill troll" would normally go through GWIM to find a weapon iobj, either
@@ -457,6 +656,7 @@ export class Game {
       getGlobal: (n) => this.flags.get(n),
       setGlobal: (n, v = true) => this.flags.set(n, v),
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
+      finish: () => { this.doFinish(tell); },
     };
   }
 
@@ -570,7 +770,8 @@ export class Game {
 
   private describeCurrentRoom(): string {
     // Darkness gate — gverbs.zil:1637-1649.
-    if (!lit(this.here, this.player, this.world)) {
+    // alwaysLit suppresses darkness for ghost mode (ALWAYS-LIT global, 1actions.zil:4083).
+    if (!this.alwaysLit && !lit(this.here, this.player, this.world)) {
       const sprayed = this.flags.get('SPRAYED?');
       return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
     }
@@ -674,7 +875,7 @@ export class Game {
       },
       describeRoom: () => this.describeCurrentRoom(),
       clearContinuation: () => { this.parser.clearContinuation(); },
-      finish: () => { this.gameOver = true; },
+      finish: () => { this.doFinish(tell); },
       signalFatal: onFatal,
 
       world: this.world,
