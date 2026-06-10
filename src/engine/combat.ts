@@ -737,3 +737,193 @@ export function villainBlow(
   // Step 7 — WINNER-RESULT (1actions.zil:3474)
   winnerResult(defMod, od, cb);
 }
+
+// ---------------------------------------------------------------------------
+// VILLAIN-RESULT callback interface
+// ---------------------------------------------------------------------------
+
+export interface VillainResultCallbacks {
+  getVillainPStrength(): number;
+  setVillainPStrength(v: number): void;
+  setVillainFightBit(): void;
+  applyVillainAction(fcode: number, villainId: ObjectId): void;
+  removeVillain(villainId: ObjectId): void;
+  emit(text: string): void;
+}
+
+// HERO-BLOW adds villain-side state queries.
+export interface HeroBlowCallbacks extends VillainResultCallbacks {
+  getPlayerPStrength(): number;
+  getPlayerStaggered(): boolean;
+  clearPlayerStaggered(): void;
+  getScore(): number;
+  findVillainWeapon(): string | null;
+  disarmVillain(wepId: string): void;
+  setVillainStaggered(): void;
+}
+
+// ---------------------------------------------------------------------------
+// VILLAIN-RESULT — 1actions.zil:3566–3580
+//
+//   villain.pStrength = DEF
+//   if DEF == 0:
+//     FCLEAR villain FIGHTBIT
+//     emit fog-death message
+//     removeCarefully(villain)
+//     apply(villain.action, F_DEAD)
+//   elif RES == UNCONSCIOUS:
+//     apply(villain.action, F_UNCONSCIOUS)
+// ---------------------------------------------------------------------------
+
+export function villainResult(
+  villainId: ObjectId,
+  def: number,
+  res: number,
+  cb: VillainResultCallbacks,
+): void {
+  cb.setVillainPStrength(def);
+
+  if (def === 0) {
+    // 1actions.zil:3569: FCLEAR villain FIGHTBIT
+    cb.setVillainFightBit();  // caller interprets this as "clear fight bit"
+    // 1actions.zil:3570–3573: fog death message
+    cb.emit(
+      'Almost as soon as the ' +
+      villainId.toLowerCase().replace(/-/g, ' ') +
+      ' breathes his last breath, a cloud\nof sinister black fog envelops him, ' +
+      'and when the fog lifts, the\ncarcass has disappeared.',
+    );
+    // 1actions.zil:3574: REMOVE-CAREFULLY villain
+    cb.removeVillain(villainId);
+    // 1actions.zil:3575: APPLY villain.action F_DEAD
+    cb.applyVillainAction(F_DEAD, villainId);
+  } else if (res === UNCONSCIOUS) {
+    // 1actions.zil:3578: APPLY villain.action F_UNCONSCIOUS
+    cb.applyVillainAction(F_UNCONSCIOUS, villainId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// HERO-BLOW (player attacks villain) — 1actions.zil:3476–3548
+//
+// Parameters:
+//   villainId        — object id of the villain (PRSO)
+//   entry            — VillainEntry metadata (vMsgs, vBest, etc.)
+//   prsiId           — id of PRSI (the weapon the player is using), or null
+//   playerStaggered  — whether the player's STAGGERED bit is set
+//   score            — current player score (for FIGHT-STRENGTH / ATT)
+//   rng              — RNG instance
+//   cb               — callback bundle
+//
+// Note: OUT? is always false for HERO-BLOW (only DO-FIGHT's villain loop uses
+// the out counter, never the hero side), so HESITATE/SITTING_DUCK are never
+// produced — NM-6: HERO_MELEE has only 7 slots, safe because OUT? is always false.
+// ---------------------------------------------------------------------------
+
+export function heroBlow(
+  villainId: ObjectId,
+  entry: VillainEntry,
+  prsiId: ObjectId | null,
+  playerStaggered: boolean,
+  score: number,
+  rng: CombatRng,
+  cb: HeroBlowCallbacks,
+): void {
+  // Step 2 — FSET villain FIGHTBIT (1actions.zil:3484)
+  cb.setVillainFightBit();
+
+  // Step 3 — player STAGGERED guard (1actions.zil:3485–3490)
+  if (playerStaggered) {
+    cb.emit(
+      'You are still recovering from that last blow, so your attack is\nineffective.',
+    );
+    cb.clearPlayerStaggered();
+    return;
+  }
+
+  // Step 4 — ATT = max(1, fightStrength(true)) (1actions.zil:3491–3492)
+  const att = Math.max(1, fightStrength(true, score, cb.getPlayerPStrength()));
+
+  // Step 5 — OD = DEF = villainStrength(villain) (1actions.zil:3495)
+  //  villain pStrength may be negative if already KO'd
+  const vilPs = cb.getVillainPStrength();
+  let def = villainStrength(villainId, vilPs, entry, null, false, false);
+
+  // Step 6 — DEF == 0: pointless (1actions.zil:3495–3500)
+  if (def === 0) {
+    const vname = villainId.toLowerCase().replace(/-/g, ' ');
+    cb.emit(`Attacking the ${vname} is pointless.`);
+    return;
+  }
+
+  // Step 7 — find villain's weapon (1actions.zil:3501)
+  const dweapon = cb.findVillainWeapon();
+
+  // Step 8 — unarmed or KO'd villain: instant kill (1actions.zil:3502–3508)
+  let res: number;
+  if (!dweapon || def < 0) {
+    const vname = villainId.toLowerCase().replace(/-/g, ' ');
+    const adj = def < 0 ? 'unconscious' : 'unarmed';
+    cb.emit(`The ${adj} ${vname} cannot defend himself: He dies.`);
+    res = KILLED;
+  } else {
+    // Step 8 (normal) — roll the table (1actions.zil:3509–3529)
+    // OUT? is always false here (NM-6) — no HESITATE/SITTING_DUCK possible
+    res = selectWindow(att, def, rng);
+
+    // STAGGER + villain has weapon → prob(25) → LOSE_WEAPON (one-arg, NM-5)
+    // 1actions.zil:3525–3526: <COND (<AND <EQUAL? .RES ,STAGGER> .DWEAPON <PROB 25>>
+    if (res === STAGGER && dweapon !== null) {
+      if (rng.prob(25)) res = LOSE_WEAPON;
+    }
+
+    // ASSERT res <= LOSE_WEAPON — NM-6: HERO_MELEE only has 7 slots
+    // (OUT? always false, so HESITATE=8 / SITTING_DUCK=9 can never appear here)
+    // This is a programming invariant; if reached it indicates a selectWindow bug.
+    if (res > LOSE_WEAPON) {
+      throw new Error(`heroBlow: unexpected RES ${res} > LOSE_WEAPON — NM-6 violation`);
+    }
+
+    // Emit REMARK from HERO_MELEE (1actions.zil:3527–3530)
+    const slot = HERO_MELEE[res - 1];
+    if (slot !== undefined) {
+      const ltable = randomElement(slot, rng);
+      const prsiDesc = prsiId ? prsiId.toLowerCase().replace(/-/g, ' ') : '';
+      const parts: string[] = [];
+      remark(ltable, villainId.toLowerCase().replace(/-/g, ' '), prsiDesc, (s) => parts.push(s));
+      if (parts.length > 0) cb.emit(parts.join(''));
+    }
+  }
+
+  // Step 9 — apply villain state (1actions.zil:3531–3547)
+  switch (res) {
+    case MISSED:
+    case HESITATE:
+      // no villain state change
+      break;
+    case UNCONSCIOUS:
+      // DEF = -DEF (KO flag, not death) — 1actions.zil:3532
+      def = -def;
+      break;
+    case KILLED:
+    case SITTING_DUCK:
+      def = 0;
+      break;
+    case LIGHT_WOUND:
+      def = Math.max(0, def - 1);
+      break;
+    case SERIOUS_WOUND:
+      def = Math.max(0, def - 2);
+      break;
+    case STAGGER:
+      cb.setVillainStaggered();
+      break;
+    case LOSE_WEAPON:
+      // 1actions.zil:3544–3546: FCLEAR DWEAPON NDESC; FSET DWEAPON WEAPONBIT; MOVE DWEAPON HERE
+      if (dweapon !== null) cb.disarmVillain(dweapon);
+      break;
+  }
+
+  // Step 10 — villainResult (1actions.zil:3548)
+  villainResult(villainId, def, res, cb);
+}
