@@ -31,8 +31,8 @@ import type { Game } from '../../src/engine/game.js';
 // ---------------------------------------------------------------------------
 
 /** Create a game in TROLL-ROOM with sword in player inventory. */
-function makeGame(rng?: ScriptedRng): Game {
-  const g = createGame({ startRoom: 'TROLL-ROOM', rng });
+function makeGame(combatRng?: ScriptedRng): Game {
+  const g = createGame({ startRoom: 'TROLL-ROOM', combatRng });
   // Give the player a sword
   const sword = g.world.get('SWORD');
   if (sword !== undefined) sword.moveTo(g.player);
@@ -142,8 +142,8 @@ describe('FIGHTBIT cleared after villain death', () => {
     // DEF1@1: elements [1..9] = [MISSED,MISSED,MISSED,STAGGER,STAGGER,UNCONSCIOUS,UNCONSCIOUS,KILLED,KILLED]
     // Index 7 = KILLED → draw 7/9 ≈ 0.778
     // Then randomElement: picks from HERO_MELEE slot 2 (KILLED has 3 variants) → 0.x
-    const rng = new ScriptedRng([0.778, 0.1]);
-    const g2 = createGame({ startRoom: 'TROLL-ROOM', rng });
+    const combatRng = new ScriptedRng([0.778, 0.1]);
+    const g2 = createGame({ startRoom: 'TROLL-ROOM', combatRng });
     const sword2 = g2.world.get('SWORD');
     if (sword2 !== undefined) { sword2.moveTo(g2.player); sword2.set(Flag.Weapon); }
     const troll2 = g2.world.get('TROLL');
@@ -238,8 +238,8 @@ describe('REMARK weapon desc', () => {
     // Then zprob(25, denom): 0.1 * 100 < 25 → LOSE_WEAPON.
     // Then REMARK pick from TROLL_MELEE slot 6 (LOSE_WEAPON): 0.1.
     // F_FIRST: 0.2 fires.
-    const rng = new ScriptedRng([0.2, 0.334, 0.1, 0.1, 0.1]);
-    const g = createGame({ startRoom: 'TROLL-ROOM', rng });
+    const combatRng = new ScriptedRng([0.2, 0.334, 0.1, 0.1, 0.1]);
+    const g = createGame({ startRoom: 'TROLL-ROOM', combatRng });
     const knife = g.world.get('KNIFE');
     if (knife !== undefined) { knife.moveTo(g.player); knife.set(Flag.Weapon); }
 

@@ -105,10 +105,9 @@ function findGwimCandidates(
     found.push(id);
   }
 
-  // Room search only when locBits includes room-search bits (SIR=32 or SOG=16).
-  // ATTACK iobjLocBits = SH+SC+SHAVE (no SIR/SOG) → inventory-only, so bare
-  // "attack troll with axe" (axe held by troll) correctly fails GWIM.
-  // gparser.zil:909 SHOVE checks: room bits absent → skip room pass.
+  // Skip room search when locBits has no room bits (SIR=32 or SOG=16).
+  // V-ATTACK iobj locBits = SH+SC+SHAVE — no SIR/SOG → inventory-only.
+  // gparser.zil:909: room pass runs only when the syntax form requests it.
   const wantRoom = (locBits & (SIR | SOG)) !== 0;
   if (isLit && wantRoom) {
     const roomFound: string[] = [];

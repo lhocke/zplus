@@ -172,8 +172,8 @@ describe('golden-preserving guards', () => {
     // Force MISS: ATT=2, DEF=1 (SWORD vBestAdv), DEF1@1 window.
     // DEF1[1..9] = [M,M,M,S,S,U,U,K,K]; index 0 → MISS.
     // next()=0.1 → nextInt(9)=0 → DEF1[1+0]=MISSED.
-    const rng = new ScriptedRng([0.1, 0.1, 0.1]);
-    const g = createGame({ startRoom: 'TROLL-ROOM', rng });
+    const combatRng = new ScriptedRng([0.1, 0.1, 0.1]);
+    const g = createGame({ startRoom: 'TROLL-ROOM', combatRng });
     g.start();
     const w = (g as unknown as { world: { get(id: string): unknown } }).world;
     const player = w.get('PLAYER') as object | undefined;
@@ -258,7 +258,7 @@ describe('troll-kill walkthrough (test H)', () => {
   }
 
   function makeTrollKillGame() {
-    const g = createGame({ startRoom: 'TROLL-ROOM', rng: makeTrollKillRng() });
+    const g = createGame({ startRoom: 'TROLL-ROOM', combatRng: makeTrollKillRng() });
     g.start();
     const w = (g as unknown as { world: { get(id: string): unknown } }).world;
     const player = w.get('PLAYER') as object | undefined;

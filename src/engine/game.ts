@@ -18,6 +18,7 @@ import { jigsUp, type JigsUpCallbacks, type JigsUpMsgs } from './death.js';
 import {
   heroBlow as combatHeroBlow, findWeapon, TROLL_MELEE,
   iFight, iCure, doFight,
+  type CombatRng,
   type IFightCallbacks, type ICureCallbacks, type VillainBlowCallbacks, type VillainTableEntry,
 } from './combat.js';
 import type { HeroBlowCallbacks } from './combat.js';
@@ -103,6 +104,9 @@ export class Game {
   readonly world: World;
   private readonly clock: Clock;
   private readonly rng: Rng;
+  // Separate RNG for combat (I-FIGHT, DO-FIGHT, VILLAIN-BLOW, HERO-BLOW, troll F_FIRST/F_BUSY).
+  // Keeps combat draws from shifting the main RNG stream used by grue / randomizeObjects.
+  private readonly combatRng: CombatRng;
   readonly events: EventEmitter;
 
   private readonly parser: Parser;
@@ -147,11 +151,12 @@ export class Game {
 
   constructor(
     world: World,
-    opts: { rng: Rng; clock: Clock; events: EventEmitter },
+    opts: { rng: Rng; combatRng?: CombatRng; clock: Clock; events: EventEmitter },
   ) {
     this.world = world;
     this.clock = opts.clock;
     this.rng = opts.rng;
+    this.combatRng = opts.combatRng ?? (opts.rng as unknown as CombatRng);
     this.events = opts.events;
     this.parser = new Parser();
     this.flags = new FlagStore();
@@ -514,8 +519,6 @@ export class Game {
             const villainDesc = villainObj?.desc ?? targetId.toLowerCase().replace(/-/g, ' ');
             const prsiObj = weaponId ? this.world.get(weaponId) : null;
             const prsiDesc = prsiObj?.desc ?? (weaponId ? weaponId.toLowerCase().replace(/-/g, ' ') : '');
-            // The concrete Rng always implements nextInt; the interface has it
-            // optional only so test stubs don't need it.  heroBlow requires it.
             combatHeroBlow(
               targetId,
               villainDesc,
@@ -525,7 +528,7 @@ export class Game {
               weaponId !== null,
               this.player.has(Flag.Staggered),
               this.scoring.score,
-              this.rng as import('./combat.js').CombatRng,
+              this.combatRng,
               cb,
             );
             return { output: out.join('\n'), moved: false };
@@ -917,8 +920,8 @@ export class Game {
         setTrollFlag: (v: boolean) => { this.flags.set('TROLL-FLAG', v); },
         getLucky: () => this.lucky,
         rng: {
-          prob:  (base: number) => this.rng.prob(base),
-          zprob: (base: number, denom: number) => this.rng.zprob!(base, denom),
+          prob:  (base: number) => this.combatRng.prob(base),
+          zprob: (base: number, denom: number) => this.combatRng.zprob!(base, denom),
         },
         tell,
         clearContinuation: () => { this.parser.clearContinuation(); },
@@ -1176,7 +1179,7 @@ export class Game {
         // doFight reads stagger/fightBit from the table snapshot synced above.
         // blowCbs.getVillainStaggered reads directly from the world object for
         // each villain as the loop runs — accurate because the table sync just ran.
-        doFight(LEN, table, this.rng as import('./combat.js').CombatRng, blowCbs);
+        doFight(LEN, table, this.combatRng, blowCbs);
       },
 
       isVillainInHere: (idx: number) => {
@@ -1233,7 +1236,7 @@ export class Game {
           }
         }
         (ifightCbs as { villainTable: VillainTableEntry[] }).villainTable = table;
-        iFight(ifightCbs, this.rng as import('./combat.js').CombatRng);
+        iFight(ifightCbs, this.combatRng);
         return true;  // demon: always return true to stay registered
       },
     };
