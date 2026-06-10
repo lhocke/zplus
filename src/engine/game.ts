@@ -14,6 +14,7 @@ import { FlagStore } from './flag-store.js';
 import { lookupPer, lookupPreAction } from '../actions/registry.js';
 import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
 import { jigsUp as jigsUpMsgs } from './game-messages.js';
+import { killInterrupts } from './death.js';
 
 export interface TurnResult {
   readonly output: string;
@@ -636,7 +637,7 @@ export class Game {
 
   // JIGS-UP — shared death entry point (1actions.zil:4046-4099).
   // Called by verbGo's grue path and future combat death handlers.
-  // Not yet ported: ghost-mode/Hades, RANDOMIZE-OBJECTS, KILL-INTERRUPTS,
+  // Not yet ported: ghost-mode/Hades, RANDOMIZE-OBJECTS,
   // DEAD-FUNCTION, sprayed-grue variant, FINISH end-screen, "Bad luck" LUCKY branch.
   private jigsUp(deathMessage: string, tell: (s: string) => void): void {
     // Re-death guard (1actions.zil:4048-4053): fires when already in ghost mode.
@@ -662,6 +663,9 @@ export class Game {
 
     this.deaths += 1;
     tell(jigsUpMsgs.deserveAnotherChance);
+
+    // KILL-INTERRUPTS — 1actions.zil:4098 / 4125–4135.
+    killInterrupts(this.clock, this.world);
 
     const forest1 = this.world.get('FOREST-1') as Room;
     this.player.moveTo(forest1);

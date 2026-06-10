@@ -1,15 +1,17 @@
 // death.ts — JIGS-UP machinery and its dependents.
 //
-// Only RANDOMIZE-OBJECTS is implemented here for now (SD2).
+// RANDOMIZE-OBJECTS (SD2) and KILL-INTERRUPTS (SD3) live here.
 // The full JIGS-UP lift (DT1) will fold game.ts:608–640 in when that task lands.
 //
 // RANDOMIZE-OBJECTS — 1actions.zil:4101–4123
+// KILL-INTERRUPTS   — 1actions.zil:4125–4135
 
 import type { World } from '../domain/world.js';
 import type { Actor } from '../domain/actor.js';
 import type { GameObject } from '../domain/game-object.js';
 import { Flag } from '../domain/flags.js';
 import type { Rng } from './rng.js';
+import type { Clock } from './clock.js';
 
 // 1dungeon.zil:2630–2633 — the 11 above-ground rooms the ZIL ABOVE-GROUND LTABLE holds.
 const ABOVE_GROUND: readonly string[] = [
@@ -92,4 +94,25 @@ export function randomizeObjects(world: World, player: Actor, rng: Rng): void {
       if (dest !== undefined) item.moveTo(dest);
     }
   }
+}
+
+// The full ZIL slot list from 1actions.zil:4126–4133.
+// Registered today: I-LANTERN, I-CANDLES, I-MATCH.
+// Unregistered (no-ops this phase): I-XB, I-XC, I-CYCLOPS, I-SWORD, I-FOREST-ROOM.
+const INTERRUPT_IDS = [
+  'I-XB', 'I-XC', 'I-CYCLOPS',
+  'I-LANTERN', 'I-CANDLES', 'I-SWORD',
+  'I-FOREST-ROOM', 'I-MATCH',
+] as const;
+
+/**
+ * KILL-INTERRUPTS — 1actions.zil:4125–4135.
+ *
+ * Disables every registered slot in the 8-slot list and clears MATCH ONBIT.
+ * Safe no-op for any id that is not registered in the clock.
+ */
+export function killInterrupts(clock: Clock, world: World): void {
+  clock.killAll([...INTERRUPT_IDS]);
+  const match = world.get('MATCH');
+  if (match !== undefined) match.clear(Flag.OnFire);
 }
