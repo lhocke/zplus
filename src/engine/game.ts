@@ -66,13 +66,14 @@ const INTRO =
   'Revision 88 / Serial number 840726\n';
 
 export class Game {
-  private readonly world: World;
+  readonly world: World;
   private readonly clock: Clock;
   private readonly rng: Rng;
   readonly events: EventEmitter;
 
   private readonly parser: Parser;
-  private player: Actor;
+  // player is exposed read-only for combat (pStrength checks) and tests.
+  player: Actor;
   private here: Room;
 
   private readonly flags: FlagStore;
@@ -90,6 +91,13 @@ export class Game {
   // true at start; set false only by MIRROR-MUNG (1actions.zil:1009), never restored.
   // zprob callers pass denom=100 (lucky) or denom=300 (unlucky).
   lucky = true;
+
+  // ZIL encumbrance globals — gglobals.zil:92,94.
+  // LOAD-MAX: the player's carrying capacity ceiling.
+  // LOAD-ALLOWED: current remaining capacity; wound application reduces this,
+  // I-CURE restores it.  Both init 100 per <GLOBAL LOAD-MAX 100> / <GLOBAL LOAD-ALLOWED 100>.
+  loadAllowed = 100;
+  loadMax = 100;
 
   // Stashed command context for M-END (gmain.zil:151–161).
   // LIVING-ROOM-FCN's M-END branch reads VERB?/PRSO/PRSI (1actions.zil:478–482)

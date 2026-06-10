@@ -49,6 +49,16 @@ export function createGame(opts: {
   });
   world.register(player);
 
+  // Load villain base strengths from STRENGTH prop — 1actions.zil:3383.
+  // Each villain Actor's pStrength starts at its object's STRENGTH value.
+  // The player has no STRENGTH prop; player pStrength stays 0.
+  for (const obj of world.all()) {
+    if (obj instanceof Actor && obj !== player) {
+      const s = obj.props.get('STRENGTH');
+      if (typeof s === 'number') obj.pStrength = s;
+    }
+  }
+
   const startRoom = world.get(startRoomId);
   if (startRoom === undefined) {
     throw new Error(`bootstrap: start room "${startRoomId}" not found in world data`);
