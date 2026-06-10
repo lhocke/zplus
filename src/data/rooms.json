@@ -1155,7 +1155,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are in a small room near the maze. There are twisty passages in the immediate vicinity. Above you is a grating locked with a skull-and-crossbones lock.",
+    "ldesc": "You are in a small room near the maze. There are twisty passages in the immediate vicinity.\n Above you is a grating locked with a skull-and-crossbones lock.",
     "actionRoutine": "MAZE-11-FCN",
     "exits": [
       {
@@ -1324,7 +1324,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This room has an exit on the northwest, and a staircase leading up. A cyclops, who looks prepared to eat horses (much less mere adventurers), blocks the staircase. From his state of health, and the bloodstains on the walls, you gather that he is not very friendly, though he likes people.",
+    "ldesc": "This room has an exit on the northwest, and a staircase leading up.\nA cyclops, who looks prepared to eat horses (much less mere adventurers), blocks the staircase. From his state of health, and the bloodstains on the walls, you gather that he is not very friendly, though he likes people.",
     "actionRoutine": "CYCLOPS-ROOM-FCN",
     "exits": [
       {
@@ -1402,7 +1402,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are in a long room on the south shore of a large lake, far too deep and wide for crossing. There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.",
+    "ldesc": "You are in a long room on the south shore of a large lake, far too deep and wide for crossing.\nThere is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.",
     "actionRoutine": "RESERVOIR-SOUTH-FCN",
     "exits": [
       {
@@ -1494,7 +1494,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are in a large cavernous room, north of a large lake. There is a slimy stairway leaving the room to the north.",
+    "ldesc": "You are in a large cavernous room, north of a large lake.\nThere is a slimy stairway leaving the room to the north.",
     "actionRoutine": "RESERVOIR-NORTH-FCN",
     "exits": [
       {
@@ -2054,7 +2054,7 @@
     "synonyms": [],
     "adjectives": [],
     "parent": "TO",
-    "ldesc": "You are outside a large gateway, on which is inscribed\n\nAbandon every hope all ye who enter here!\n\nThe gate is open; through it you can see a desolation, with a pile of mangled bodies in one corner. Thousands of voices, lamenting some hideous fate, can be heard. The way through the gate is barred by evil spirits, who jeer at your attempts to pass.",
+    "ldesc": "You are outside a large gateway, on which is inscribed\n  Abandon every hope all ye who enter here!\nThe gate is open; through it you can see a desolation, with a pile of mangled bodies in one corner. Thousands of voices, lamenting some hideous fate, can be heard.\nThe way through the gate is barred by evil spirits, who jeer at your attempts to pass.",
     "actionRoutine": "LLD-ROOM",
     "exits": [
       {
@@ -2298,7 +2298,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are standing on the top of the Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down. The sluice gates on the dam are closed. Behind the dam, there can be seen a wide reservoir. Water is pouring over the top of the now abandoned dam. There is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble.",
+    "ldesc": "You are standing on the top of the Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down.\nThe sluice gates on the dam are closed. Behind the dam, there can be seen a wide reservoir. Water is pouring over the top of the now abandoned dam.\nThere is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble.",
     "actionRoutine": "DAM-ROOM-FCN",
     "exits": [
       {
@@ -2711,7 +2711,7 @@
     },
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "You are at the top of Aragain Falls, an enormous waterfall with a drop of about 450 feet. The only path here is on the north end. A beautiful rainbow can be seen over the falls and to the west.",
+    "ldesc": "You are at the top of Aragain Falls, an enormous waterfall with a drop of about 450 feet. The only path here is on the north end.\nA beautiful rainbow can be seen over the falls and to the west.",
     "actionRoutine": "FALLS-ROOM",
     "exits": [
       {
