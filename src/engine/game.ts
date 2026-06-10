@@ -119,7 +119,19 @@ export class Game {
     this.events = opts.events;
     this.parser = new Parser();
     this.flags = new FlagStore();
-    this.scoring = new Scoring(this.events, this.flags);
+
+    // WON-FLAG world effects — gverbs.zil:1858–1862.
+    // Fired once when SCORE first reaches 350 inside scoreUpd or recomputeTrophy.
+    const wonFlagHook = (tell: (s: string) => void): void => {
+      const map = this.world.get('MAP');
+      if (map !== undefined) map.clear(Flag.Invisible);
+      const woh = this.world.get('WEST-OF-HOUSE');
+      if (woh !== undefined) woh.clear(Flag.Touched);
+      // gverbs.zil:1861–1862 — bare newline in ZIL source collapses to a space.
+      tell('An almost inaudible voice whispers in your ear, "Look to your treasures for the final secret."');
+    };
+
+    this.scoring = new Scoring(this.events, this.flags, wonFlagHook);
 
     const playerObj = this.world.get('PLAYER');
     if (playerObj === undefined) {
@@ -265,7 +277,7 @@ export class Game {
           perResolver: (routineName, here) => this.resolvePer(routineName, here, (text) => handled.push(text)),
           mlookRunner: (room) => this.runMLook(room),
           rng: this.rng,
-          scoreObj: (obj) => this.scoring.scoreObj(obj),
+          scoreObj: (obj) => this.scoring.scoreObj(obj, (text) => handled.push(text)),
           score:  this.scoring.score,
           moves:  this.moveCount,
           rank:   () => this.scoring.rank(),
@@ -429,8 +441,8 @@ export class Game {
       clearFlag: (obj, flag) => obj.clear(flag),
       moveTo: (obj, dest) => obj.moveTo(dest),
       score: (delta) => this.scoring.add(delta),
-      scoreObj: (obj) => this.scoring.scoreObj(obj),
-      recomputeTrophy: (trophyCase) => this.scoring.recomputeTrophy(trophyCase),
+      scoreObj: (obj) => this.scoring.scoreObj(obj, tell),
+      recomputeTrophy: (trophyCase) => this.scoring.recomputeTrophy(trophyCase, tell),
       enableClock: (id) => this.clock.enable(id),
       disableClock: (id) => this.clock.disable(id),
       getGlobal: (n) => this.flags.get(n),

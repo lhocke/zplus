@@ -28,10 +28,18 @@ export class Scoring {
 
   private readonly emitter: EventEmitter;
   private readonly flagStore?: FlagStore;
+  // Side effects fired once when WON-FLAG is first set (gverbs.zil:1858–1862):
+  // FCLEAR MAP INVISIBLE, FCLEAR WEST-OF-HOUSE TOUCHBIT, TELL whisper.
+  private readonly wonFlagHook?: (tell: (s: string) => void) => void;
 
-  constructor(emitter: EventEmitter, flagStore?: FlagStore) {
+  constructor(
+    emitter: EventEmitter,
+    flagStore?: FlagStore,
+    wonFlagHook?: (tell: (s: string) => void) => void,
+  ) {
     this.emitter = emitter;
     this.flagStore = flagStore;
+    this.wonFlagHook = wonFlagHook;
   }
 
   get score(): number { return this._score; }
@@ -39,10 +47,10 @@ export class Scoring {
   get wonFlag(): boolean { return this._wonFlag; }
 
   // SCORE-UPD — gverbs.zil:1851–1865
-  scoreUpd(delta: number): void {
+  scoreUpd(delta: number, tell?: (s: string) => void): void {
     this._baseScore += delta;
     this._score += delta;
-    this.checkWonFlag();
+    this.checkWonFlag(tell);
     if (delta !== 0) {
       this.emitter.emit({ type: 'score-changed', score: this._score, delta });
     }
@@ -56,10 +64,10 @@ export class Scoring {
 
   // SCORE-OBJ — gverbs.zil:1867–1870
   // Award the one-time VALUE of obj, then zero it so the award cannot repeat.
-  scoreObj(obj: GameObject): void {
+  scoreObj(obj: GameObject, tell?: (s: string) => void): void {
     const val = obj.props.get('VALUE');
     if (typeof val === 'number' && val > 0) {
-      this.scoreUpd(val);
+      this.scoreUpd(val, tell);
       obj.props.set('VALUE', 0);
     }
   }
@@ -80,11 +88,11 @@ export class Scoring {
 
   // recomputeTrophy — 1actions.zil:483–484
   // Direct assign (not scoreUpd) to avoid double-incrementing BASE-SCORE.
-  recomputeTrophy(trophyCase: GameObject): void {
+  recomputeTrophy(trophyCase: GameObject, tell?: (s: string) => void): void {
     const prev = this._score;
     this._score = this._baseScore + this.otvalFrob(trophyCase);
     const delta = this._score - prev;
-    this.checkWonFlag();
+    this.checkWonFlag(tell);
     if (delta !== 0) {
       this.emitter.emit({ type: 'score-changed', score: this._score, delta });
     }
@@ -106,10 +114,12 @@ export class Scoring {
     return 'Beginner';
   }
 
-  private checkWonFlag(): void {
+  private checkWonFlag(tell?: (s: string) => void): void {
     if (!this._wonFlag && this._score === 350) {
       this._wonFlag = true;
       this.flagStore?.set('WON-FLAG', true);
+      // gverbs.zil:1858–1862: FCLEAR MAP INVISIBLE, FCLEAR WEST-OF-HOUSE TOUCHBIT, TELL whisper.
+      this.wonFlagHook?.(tell ?? (() => { /* no output channel */ }));
     }
   }
 }
