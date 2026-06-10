@@ -28,4 +28,12 @@ export class Rng {
   prob(base: number): boolean {
     return this.next() * 100 < base;
   }
+
+  /**
+   * ZPROB from gmacros.zil:115–122 — two-arg form: next()*denom < base.
+   * Caller passes denom=100 when LUCKY, denom=300 when not (~1/3 as likely).
+   */
+  zprob(base: number, denom: number): boolean {
+    return this.next() * denom < base;
+  }
 }

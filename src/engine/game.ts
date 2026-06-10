@@ -51,6 +51,12 @@ export interface Rng {
   next(): number;
   /** ZIL <PROB base>: true with probability ~base/100. */
   prob(base: number): boolean;
+  /**
+   * ZIL ZPROB — gmacros.zil:115–122. Continuous draw: next()*denom < base.
+   * Optional here so existing test stubs (next+prob only) still type-check;
+   * combat code always runs against the concrete Rng class which implements it.
+   */
+  zprob?(base: number, denom: number): boolean;
 }
 
 const INTRO =
@@ -79,6 +85,11 @@ export class Game {
   private dead = false;
   private alwaysLit = false;
   private gameOver = false;
+
+  // ZIL global LUCKY — 1actions.zil:969 (<GLOBAL LUCKY T>).
+  // true at start; set false only by MIRROR-MUNG (1actions.zil:1009), never restored.
+  // zprob callers pass denom=100 (lucky) or denom=300 (unlucky).
+  lucky = true;
 
   // Stashed command context for M-END (gmain.zil:151–161).
   // LIVING-ROOM-FCN's M-END branch reads VERB?/PRSO/PRSI (1actions.zil:478–482)
