@@ -11,6 +11,7 @@
 import type { ActionContext, ActionHandler, ObjectId } from '../domain/game-object.js';
 import { aboveGroundActions, aboveGroundPer } from './above-ground.js';
 import { lightSourcesActions } from './light-sources.js';
+import { coalMineActions } from './coal-mine.js';
 import {
   preBoardHandler,
   preBurnHandler,
@@ -32,6 +33,7 @@ export type PerRoutine = (ctx: ActionContext) => ObjectId | undefined;
 const ACTIONS: Record<string, ActionHandler> = {
   ...aboveGroundActions,
   ...lightSourcesActions,
+  ...coalMineActions,
 };
 
 const PER_ROUTINES: Record<string, PerRoutine> = {
