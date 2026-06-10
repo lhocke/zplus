@@ -37,7 +37,7 @@ export interface TrollFcnContext {
 const LDESC_BRANDISHING =
   'A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.';
 const LDESC_UNCONSCIOUS =
-  'An unconscious troll is sprawled on the floor. All passages\nout of the room are open.';
+  'An unconscious troll is sprawled on the floor. All passages out of the room are open.';
 const LDESC_BARE = 'A troll is here.';
 const LDESC_COWERING = 'A pathetically babbling troll is here.';
 
@@ -78,8 +78,7 @@ export function makeTrollFcn(ctx: TrollFcnContext): (fcode: number) => boolean {
           troll?.setLdesc(LDESC_BRANDISHING);
           if (troll !== undefined && troll.parentId === ctx.hereId) {
             ctx.tell(
-              'The troll, angered and humiliated, recovers his weapon. He appears to have\n' +
-              'an axe to grind with you.',
+              'The troll, angered and humiliated, recovers his weapon. He appears to have an axe to grind with you.',
             );
           }
           return true;
@@ -91,8 +90,7 @@ export function makeTrollFcn(ctx: TrollFcnContext): (fcode: number) => boolean {
       if (troll !== undefined && troll.parentId === ctx.hereId) {
         troll.setLdesc(LDESC_COWERING);
         ctx.tell(
-          'The troll, disarmed, cowers in terror, pleading for his life in\n' +
-          'the guttural tongue of the trolls.',
+          'The troll, disarmed, cowers in terror, pleading for his life in the guttural tongue of the trolls.',
         );
       }
       return true;

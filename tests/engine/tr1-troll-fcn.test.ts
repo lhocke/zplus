@@ -161,10 +161,10 @@ describe('TROLL-FCN — F_UNCONSCIOUS', () => {
     expect(axe.flags.has(Flag.Weapon)).toBe(true);
   });
 
-  it('updates troll LDESC to unconscious message', () => {
+  it('updates troll LDESC to unconscious message (exact wording, no embedded newline)', () => {
     const { ctx, troll } = makeCtx({ axeParent: 'TROLL', hereId: 'TROLL-ROOM' });
     makeTrollFcn(ctx)(F_UNCONSCIOUS);
-    expect(troll.ldesc).toContain('unconscious');
+    expect(troll.ldesc).toBe(CANONICAL_UNCONSCIOUS);
   });
 
   it('sets trollFlag=true', () => {
@@ -269,7 +269,7 @@ describe('TROLL-FCN — F_BUSY', () => {
     // Axe should have NDESCBIT set and WEAPONBIT cleared (now carried by troll)
     expect(axe.flags.has(Flag.NonDescript)).toBe(true);
     expect(axe.flags.has(Flag.Weapon)).toBe(false);
-    expect(emitted.some(s => s.toLowerCase().includes('recovers'))).toBe(true);
+    expect(emitted).toContain(CANONICAL_AXE_RECOVER);
   });
 
   it('shows cowering message when zprob(75) fails (axe in HERE)', () => {
@@ -283,7 +283,7 @@ describe('TROLL-FCN — F_BUSY', () => {
     const result = makeTrollFcn(ctx)(F_BUSY);
     expect(result).toBe(true);
     expect(axe.parentId).toBe('TROLL-ROOM');  // not moved
-    expect(emitted.some(s => s.toLowerCase().includes('cowers') || s.toLowerCase().includes('cowering'))).toBe(true);
+    expect(emitted).toContain(CANONICAL_COWER);
   });
 
   it('unlucky: higher threshold for axe recovery (zprob 75 with denom=300)', () => {
@@ -303,7 +303,7 @@ describe('TROLL-FCN — F_BUSY', () => {
     const { ctx, emitted } = makeCtx({ axeParent: 'OTHER-ROOM', hereId: 'TROLL-ROOM' });
     const result = makeTrollFcn(ctx)(F_BUSY);
     expect(result).toBe(true);
-    expect(emitted.some(s => s.toLowerCase().includes('cowers') || s.toLowerCase().includes('cowering'))).toBe(true);
+    expect(emitted).toContain(CANONICAL_COWER);
   });
 
   it('updates troll LDESC to brandishing when troll gets axe back', () => {
@@ -331,6 +331,15 @@ describe('TROLL-FCN — TROLL-FLAG double-duty (spec §10.2)', () => {
 // objects.json:2257 canonical LDESC — no embedded newline (player-visible wording check).
 const CANONICAL_BRANDISHING =
   'A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.';
+// 1actions.zil:659 — ZIL line-wrap collapses to single space.
+const CANONICAL_UNCONSCIOUS =
+  'An unconscious troll is sprawled on the floor. All passages out of the room are open.';
+// 1actions.zil:649 — ZIL line-wrap collapses to single space.
+const CANONICAL_AXE_RECOVER =
+  'The troll, angered and humiliated, recovers his weapon. He appears to have an axe to grind with you.';
+// 1actions.zil:655 — ZIL line-wrap collapses to single space.
+const CANONICAL_COWER =
+  'The troll, disarmed, cowers in terror, pleading for his life in the guttural tongue of the trolls.';
 
 describe('TROLL-FCN — LDESC exact wording (player-visible)', () => {
   it('F_BUSY pickup sets brandishing LDESC with no embedded newline', () => {
