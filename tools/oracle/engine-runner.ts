@@ -6,6 +6,7 @@
  * so the normalizer can process both transcripts uniformly.
  */
 
+import type { Game } from '../../src/engine/game.js';
 import { createGame } from '../../src/engine/bootstrap.js';
 
 export interface EngineRunOptions {
@@ -14,6 +15,16 @@ export interface EngineRunOptions {
    * runs are deterministic.
    */
   seed?: number;
+  /**
+   * Override the starting room (default: WEST-OF-HOUSE).
+   * Useful for targeted corpus fixtures that don't need the full navigation.
+   */
+  startRoom?: string;
+  /**
+   * Called after game.start() fires and before any commands run.
+   * Use to inject initial state: WON-FLAG, inventory items, etc.
+   */
+  setup?: (game: Game) => void;
 }
 
 /**
@@ -30,12 +41,17 @@ export function runEngine(
   commands: readonly string[],
   opts: EngineRunOptions = {},
 ): string {
-  const game = createGame({ seed: opts.seed ?? 42 });
+  const game = createGame({
+    seed: opts.seed ?? 42,
+    startRoom: opts.startRoom as string | undefined,
+  });
 
   const lines: string[] = [];
 
   // The intro + initial room description
   lines.push(game.start());
+
+  opts.setup?.(game);
 
   for (const cmd of commands) {
     lines.push('');
