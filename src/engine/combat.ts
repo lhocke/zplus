@@ -4,6 +4,8 @@
 // Tables and windows: 1actions.zil:3258–3317, patched by 1dungeon.zil:2644–2649.
 
 import type { Rng } from './rng.js';
+import type { VillainEntry } from '../domain/villain-entry.js';
+import type { ObjectId } from '../domain/game-object.js';
 
 // ---------------------------------------------------------------------------
 // Blow result codes — 1actions.zil:3244–3254
@@ -187,4 +189,51 @@ export function selectWindow(att: number, def: number, rng: Rng): number {
     win = DEF3_RES[net + 2]!;
   }
   return win.table[win.offset + rng.nextInt(9)]!;
+}
+
+// ---------------------------------------------------------------------------
+// Strength model — 1actions.zil:3375–3397
+// ---------------------------------------------------------------------------
+
+// FIGHT-STRENGTH — 1actions.zil:3375–3381
+// base = STRENGTH_MIN + floor(SCORE / floor(SCORE_MAX / (STRENGTH_MAX - STRENGTH_MIN)))
+//      = 2 + floor(SCORE / 70)     (integer division, SCORE_MAX=350)
+// adjust=true:  base + winner.pStrength  (used for DEF tier selection and alive check)
+// adjust=false: base only              (OD — used for WINNER-RESULT wound delta, NM-3)
+export function fightStrength(adjust: boolean, score: number, pStrength: number): number {
+  const base = STRENGTH_MIN + Math.floor(score / 70);
+  return adjust ? base + pStrength : base;
+}
+
+// VILLAIN-STRENGTH — 1actions.zil:3383–3397
+// villainId: the object id of the villain (to detect THIEF for engrossed-cap)
+// pStrength:  the villain's mutable combat state (Actor.pStrength)
+// entry:      the VillainEntry metadata record (vBest, vBestAdv)
+// prsiId:     id of PRSI (the weapon the player is attacking with), or null
+// prsiIsWeapon: whether PRSI is in the weapon set (FIND-WEAPON containment check)
+// thiefEngrossed: whether the thief-engrossed flag is currently set
+//
+// NB: thiefEngrossed is read-only here; callers (VILLAIN-BLOW / I-FIGHT) are
+// responsible for clearing it after the cap fires (spec §4.2).
+export function villainStrength(
+  villainId: ObjectId,
+  pStrength: number,
+  entry: VillainEntry,
+  prsiId: ObjectId | null,
+  prsiIsWeapon: boolean,
+  thiefEngrossed: boolean,
+): number {
+  let od = pStrength;
+  // Unconscious → return negative value as-is (no further checks)
+  if (od < 0) return od;
+  // THIEF-ENGROSSED cap — engine carries this though thief is deferred (spec §1)
+  if (villainId === 'THIEF' && thiefEngrossed) {
+    if (od > 2) od = 2;
+    // thiefEngrossed cleared by caller after this call returns
+  }
+  // Best-weapon advantage — reduces villain strength when player attacks with vBest
+  if (prsiId !== null && prsiIsWeapon && entry.vBest !== null && prsiId === entry.vBest) {
+    od = Math.max(1, od - entry.vBestAdv);
+  }
+  return od;
 }
