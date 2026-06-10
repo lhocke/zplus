@@ -3,6 +3,8 @@
 // Source spine: 1actions.zil:3232–4135.
 // Tables and windows: 1actions.zil:3258–3317, patched by 1dungeon.zil:2644–2649.
 
+import type { Rng } from './rng.js';
+
 // ---------------------------------------------------------------------------
 // Blow result codes — 1actions.zil:3244–3254
 // ---------------------------------------------------------------------------
@@ -157,3 +159,32 @@ export const DEF3_RES: readonly Window[] = [
   { table: DEF3B, offset: 1 },
   { table: DEF3C, offset: 0 },
 ];
+
+// ---------------------------------------------------------------------------
+// Table-selection algorithm — 1actions.zil:3429–3440 (HERO-BLOW) / :3510–3521
+// (VILLAIN-BLOW).  The two call sites are identical; ATT/DEF are role-swapped
+// by the caller (NM-2 — spec §3.4):
+//
+//   VILLAIN-BLOW: ATT = villain pStrength,       DEF = player FIGHT-STRENGTH
+//   HERO-BLOW:    ATT = player FIGHT-STRENGTH,   DEF = villain pStrength
+//
+// Returns the blow-result constant from the chosen window.
+// ---------------------------------------------------------------------------
+
+export function selectWindow(att: number, def: number, rng: Rng): number {
+  let win: Window;
+  if (def === 1) {
+    if (att > 2) att = 3;
+    win = DEF1_RES[att - 1]!;
+  } else if (def === 2) {
+    if (att > 3) att = 4;
+    win = DEF2_RES[att - 1]!;
+  } else {
+    // DEF >= 3 — net = clamp(ATT - DEF, -2, +2)
+    let net = att - def;
+    if (net < -2) net = -2;
+    if (net >  2) net =  2;
+    win = DEF3_RES[net + 2]!;
+  }
+  return win.table[win.offset + rng.nextInt(9)]!;
+}
