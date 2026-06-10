@@ -60,6 +60,7 @@ const GOLDEN_PATH = join(import.meta.dirname, 'walkthrough-master.txt');
 //   - lamp on/off + dark-room pitch-black (Attic, Living Room, Cellar pre-grue)
 //   - GRUE DEATH + RESURRECTION: lamp off in CELLAR, south to EAST-OF-CHASM.
 //     Seed 42, rng.next() call #1 = 0.601 < 0.80 → grue fires. Resurrects at FOREST-1.
+//     lamp + painting scattered on death (RANDOMIZE-OBJECTS)
 //   - flag-gated blocked exits: troll (TROLL-ROOM east/west), nailed door
 //     (Living Room west), boarded windows (North/South of House), locked grate
 //   - scoring: TAKE painting (VALUE=4); room first-visit points; trophy-case
@@ -198,7 +199,7 @@ const COMMANDS: readonly string[] = [
   'south',                  // CELLAR(dark) → EAST-OF-CHASM(dark) → GRUE → FOREST-1
   // ── Post-resurrection at FOREST-1 ─────────────────────────────────────────
   'look',
-  'inventory',              // lamp + painting survived death
+  'inventory',              // lamp + painting scattered on death (RANDOMIZE-OBJECTS)
   'diagnose',               // reports "killed once"
   'score',
   'examine forest',
