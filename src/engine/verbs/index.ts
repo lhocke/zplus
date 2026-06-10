@@ -384,6 +384,9 @@ function verbTake(ctx: VerbContext): VerbResult {
   }
 
   item.moveTo(ctx.player);
+  // gverbs.zil:1949–1950 — retire the FDESC and mark as touched.
+  item.clear(Flag.NonDescript);
+  item.set(Flag.Touched);
 
   // SCORE-OBJ: award one-time pickup VALUE and zero it (gverbs.zil:1959–1963).
   if (ctx.scoreObj !== undefined) {

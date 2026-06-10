@@ -182,7 +182,7 @@ have been used recently for the preparation of food. A passage
 leads to the west and a dark staircase can be seen leading
 upward. A dark chimney leads down and to the east is a small
 window which is open.
-A bottle is sitting on the table.
+There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
 On the table is an elongated brown sack, smelling of hot peppers.
@@ -596,7 +596,7 @@ Behind House
 You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
-Above the trophy case hangs an elvish sword of great antiquity.
+There is a sword here.
 A small leaflet is on the ground.
 
 > east
@@ -770,7 +770,7 @@ Behind House
 You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
-Above the trophy case hangs an elvish sword of great antiquity.
+There is a sword here.
 A small leaflet is on the ground.
 
 > south
@@ -805,7 +805,7 @@ Behind House
 You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
-Above the trophy case hangs an elvish sword of great antiquity.
+There is a sword here.
 A small leaflet is on the ground.
 
 > look
@@ -813,7 +813,7 @@ Behind House
 You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
-Above the trophy case hangs an elvish sword of great antiquity.
+There is a sword here.
 A small leaflet is on the ground.
 
 > west
@@ -823,7 +823,7 @@ have been used recently for the preparation of food. A passage
 leads to the west and a dark staircase can be seen leading
 upward. A dark chimney leads down and to the east is a small
 window which is open.
-A bottle is sitting on the table.
+There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
 On the table is an elongated brown sack, smelling of hot peppers.
@@ -835,7 +835,7 @@ have been used recently for the preparation of food. A passage
 leads to the west and a dark staircase can be seen leading
 upward. A dark chimney leads down and to the east is a small
 window which is open.
-A bottle is sitting on the table.
+There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
 On the table is an elongated brown sack, smelling of hot peppers.
@@ -848,7 +848,7 @@ Behind House
 You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
-Above the trophy case hangs an elvish sword of great antiquity.
+There is a sword here.
 A small leaflet is on the ground.
 
 > west
@@ -858,7 +858,7 @@ have been used recently for the preparation of food. A passage
 leads to the west and a dark staircase can be seen leading
 upward. A dark chimney leads down and to the east is a small
 window which is open.
-A bottle is sitting on the table.
+There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
 On the table is an elongated brown sack, smelling of hot peppers.
@@ -868,7 +868,7 @@ Living Room
 You are in the living room. There is a doorway to the east, a wooden
 door with strange gothic lettering to the west, which appears to be
 nailed shut, a trophy case, and a closed trap door at your feet.
-A battery-powered brass lantern is on the trophy case.
+There is a brass lantern (battery-powered) here.
 
 > open trap door
 The door reluctantly opens to reveal a rickety staircase descending into
@@ -897,7 +897,7 @@ Living Room
 You are in the living room. There is a doorway to the east, a wooden
 door with strange gothic lettering to the west, which appears to be
 nailed shut, a trophy case, and a rug lying beside an open trap door.
-A battery-powered brass lantern is on the trophy case.
+There is a brass lantern (battery-powered) here.
 
 > close trophy case
 Closed.
