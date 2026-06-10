@@ -2,6 +2,7 @@
 //
 // Source spine: 1actions.zil:3232–4135.
 // Tables and windows: 1actions.zil:3258–3317, patched by 1dungeon.zil:2644–2649.
+// MELEE tables: 1actions.zil:3611–3788.
 
 import type { Rng } from './rng.js';
 import type { VillainEntry } from '../domain/villain-entry.js';
@@ -237,3 +238,297 @@ export function villainStrength(
   }
   return od;
 }
+
+// ---------------------------------------------------------------------------
+// REMARK message system — 1actions.zil:3363–3370
+//
+// A MELEE "slot" is a frob (length-prefixed LTABLE of variant LTABLEs):
+//   slot[0]    = variant count N
+//   slot[1..N] = variant LTABLE arrays
+//
+// Each variant LTABLE is [length, token0, token1, ...] where tokens are either
+// string literals or the sentinel constants F_WEP (0) / F_DEF (1).
+//
+// Usage:
+//   const ltable = randomElement(TROLL_MELEE[RES - 1], rng);
+//   remark(ltable, defenderDesc, weaponDesc, emit);
+// ---------------------------------------------------------------------------
+
+/** Token type for MELEE variant LTABLEs. */
+export type MeleeToken = string | typeof F_WEP | typeof F_DEF;
+
+/**
+ * A variant LTABLE: [length, token0, token1, ...].
+ * length is the count of tokens that follow.
+ */
+export type MeleeLTable = readonly [number, ...MeleeToken[]];
+
+/**
+ * A MELEE slot frob: [count, ltable0, ltable1, ...].
+ * count = number of variant LTABLEs that follow.
+ */
+export type MeleeSlot = readonly [number, ...MeleeLTable[]];
+
+/**
+ * REMARK — 1actions.zil:3363–3370.
+ * Iterates ltable[1..ltable[0]], substituting F_WEP/F_DEF tokens with the
+ * provided strings, and emitting all other tokens (string literals) as-is.
+ * F_WEP emits weaponDesc (or '' when empty); F_DEF emits defenderDesc.
+ */
+export function remark(
+  ltable: readonly (MeleeToken | number)[],
+  defenderDesc: string,
+  weaponDesc: string,
+  emit: (s: string) => void,
+): void {
+  const len = ltable[0] as number;
+  for (let i = 1; i <= len; i++) {
+    const tok = ltable[i];
+    if (tok === F_WEP)  { emit(weaponDesc);   }
+    else if (tok === F_DEF) { emit(defenderDesc); }
+    else                    { emit(tok as string); }
+  }
+}
+
+/**
+ * RANDOM-ELEMENT — 1actions.zil:3363 (implicit ZIL call form).
+ * frob[0] = count N; returns frob[1 + rng.nextInt(N)].
+ */
+export function randomElement(frob: readonly (number | MeleeLTable)[], rng: Rng): MeleeLTable {
+  const n = frob[0] as number;
+  return frob[1 + rng.nextInt(n)] as MeleeLTable;
+}
+
+// ---------------------------------------------------------------------------
+// HERO_MELEE — 1actions.zil:3611–3648
+// 7 slots (RES 1–7: MISSED/UNCONSCIOUS/KILLED/LIGHT_WOUND/SERIOUS_WOUND/
+//          STAGGER/LOSE_WEAPON); HERO-BLOW never produces HESITATE/SITTING_DUCK
+// (NM-6 — OUT? is always false on the hero side).
+// Variants per slot: 6,5,3,4,4,5,2 = 29 total.
+// ---------------------------------------------------------------------------
+
+export const HERO_MELEE: readonly MeleeSlot[] = [
+  // Slot 0 — MISSED (6 variants) — 1actions.zil:3613–3619
+  [6,
+    [5, 'Your ', F_WEP, ' misses the ', F_DEF, ' by an inch.'],
+    [3, 'A good slash, but it misses the ', F_DEF, ' by a mile.'],
+    [3, 'You charge, but the ', F_DEF, ' jumps nimbly aside.'],
+    [3, 'Clang! Crash! The ', F_DEF, ' parries.'],
+    [3, 'A quick stroke, but the ', F_DEF, ' is on guard.'],
+    [3, 'A good stroke, but it\'s too slow; the ', F_DEF, ' dodges.'],
+  ],
+  // Slot 1 — UNCONSCIOUS (5 variants) — 1actions.zil:3620–3625
+  [5,
+    [5, 'Your ', F_WEP, ' crashes down, knocking the ', F_DEF, ' into dreamland.'],
+    [3, 'The ', F_DEF, ' is battered into unconsciousness.'],
+    [3, 'A furious exchange, and the ', F_DEF, ' is knocked out!'],
+    [4, 'The haft of your ', F_WEP, ' knocks out the ', F_DEF, '.'],
+    [3, 'The ', F_DEF, ' is knocked out!'],
+  ],
+  // Slot 2 — KILLED (3 variants) — 1actions.zil:3626–3629
+  [3,
+    [5, 'It\'s curtains for the ', F_DEF, ' as your ', F_WEP, ' removes his head.'],
+    [3, 'The fatal blow strikes the ', F_DEF, ' square in the heart: He dies.'],
+    [3, 'The ', F_DEF, ' takes a fatal blow and slumps to the floor dead.'],
+  ],
+  // Slot 3 — LIGHT_WOUND (4 variants) — 1actions.zil:3630–3634
+  [4,
+    [3, 'The ', F_DEF, ' is struck on the arm; blood begins to trickle down.'],
+    [5, 'Your ', F_WEP, ' pinks the ', F_DEF, ' on the wrist, but it\'s not serious.'],
+    [1, 'Your stroke lands, but it was only the flat of the blade.'],
+    [4, 'The blow lands, making a shallow gash in the ', F_DEF, '\'s arm!'],
+  ],
+  // Slot 4 — SERIOUS_WOUND (4 variants) — 1actions.zil:3635–3639
+  [4,
+    [3, 'The ', F_DEF, ' receives a deep gash in his side.'],
+    [3, 'A savage blow on the thigh! The ', F_DEF, ' is stunned but can still fight!'],
+    [1, 'Slash! Your blow lands! That one hit an artery, it could be serious!'],
+    [1, 'Slash! Your stroke connects! This could be serious!'],
+  ],
+  // Slot 5 — STAGGER (5 variants) — 1actions.zil:3640–3645
+  [5,
+    [3, 'The ', F_DEF, ' is staggered, and drops to his knees.'],
+    [3, 'The ', F_DEF, ' is momentarily disoriented and can\'t fight back.'],
+    [3, 'The force of your blow knocks the ', F_DEF, ' back, stunned.'],
+    [3, 'The ', F_DEF, ' is confused and can\'t fight back.'],
+    [3, 'The quickness of your thrust knocks the ', F_DEF, ' back, stunned.'],
+  ],
+  // Slot 6 — LOSE_WEAPON (2 variants) — 1actions.zil:3646–3648
+  [2,
+    [3, 'The ', F_DEF, '\'s weapon is knocked to the floor, leaving him unarmed.'],
+    [3, 'The ', F_DEF, ' is disarmed by a subtle feint past his guard.'],
+  ],
+];
+
+// ---------------------------------------------------------------------------
+// CYCLOPS_MELEE — 1actions.zil:3654–3683
+// 9 slots (all RES 1–9); cyclops has no weapon so no F_WEP in most slots.
+// Variants per slot: 2,1,1,2,2,2,2,1,1 = 14 total.
+// ---------------------------------------------------------------------------
+
+export const CYCLOPS_MELEE: readonly MeleeSlot[] = [
+  // Slot 0 — MISSED (2 variants) — 1actions.zil:3656–3658
+  [2,
+    [1, 'The Cyclops misses, but the backwash almost knocks you over.'],
+    [1, 'The Cyclops rushes you, but runs into the wall.'],
+  ],
+  // Slot 1 — UNCONSCIOUS (1 variant) — 1actions.zil:3659–3660
+  [1,
+    [1, 'The Cyclops sends you crashing to the floor, unconscious.'],
+  ],
+  // Slot 2 — KILLED (1 variant) — 1actions.zil:3661–3662
+  [1,
+    [1, 'The Cyclops breaks your neck with a massive smash.'],
+  ],
+  // Slot 3 — LIGHT_WOUND (2 variants) — 1actions.zil:3663–3665
+  [2,
+    [1, 'A quick punch, but it was only a glancing blow.'],
+    [1, 'A glancing blow from the Cyclops\' fist.'],
+  ],
+  // Slot 4 — SERIOUS_WOUND (2 variants) — 1actions.zil:3666–3669
+  [2,
+    [1, 'The monster smashes his huge fist into your chest, breaking several\nribs.'],
+    [1, 'The Cyclops almost knocks the wind out of you with a quick punch.'],
+  ],
+  // Slot 5 — STAGGER (2 variants) — 1actions.zil:3670–3673
+  [2,
+    [1, 'The Cyclops lands a punch that knocks the wind out of you.'],
+    [1, 'Heedless of your weapons, the Cyclops tosses you against the rock\nwall of the room.'],
+  ],
+  // Slot 6 — LOSE_WEAPON (2 variants) — 1actions.zil:3674–3678
+  [2,
+    [3, 'The Cyclops grabs your ', F_WEP, ', tastes it, and throws it to the\nground in disgust.'],
+    [3, 'The monster grabs you on the wrist, squeezes, and you drop your\n', F_WEP, ' in pain.'],
+  ],
+  // Slot 7 — HESITATE (1 variant) — 1actions.zil:3679–3681
+  [1,
+    [1, 'The Cyclops seems unable to decide whether to broil or stew his\ndinner.'],
+  ],
+  // Slot 8 — SITTING_DUCK (1 variant) — 1actions.zil:3682–3683
+  [1,
+    [1, 'The Cyclops, no sportsman, dispatches his unconscious victim.'],
+  ],
+];
+
+// ---------------------------------------------------------------------------
+// TROLL_MELEE — 1actions.zil:3689–3729
+// 9 slots; variants per slot: 4,1,3,4,3,4,3,2,1 = 25 total.
+// ---------------------------------------------------------------------------
+
+export const TROLL_MELEE: readonly MeleeSlot[] = [
+  // Slot 0 — MISSED (4 variants) — 1actions.zil:3691–3695
+  [4,
+    [1, 'The troll swings his axe, but it misses.'],
+    [1, 'The troll\'s axe barely misses your ear.'],
+    [1, 'The axe sweeps past as you jump aside.'],
+    [1, 'The axe crashes against the rock, throwing sparks!'],
+  ],
+  // Slot 1 — UNCONSCIOUS (1 variant) — 1actions.zil:3696–3698
+  [1,
+    [1, 'The flat of the troll\'s axe hits you delicately on the head, knocking\nyou out.'],
+  ],
+  // Slot 2 — KILLED (3 variants) — 1actions.zil:3699–3702
+  [3,
+    [1, 'The troll neatly removes your head.'],
+    [1, 'The troll\'s axe stroke cleaves you from the nave to the chops.'],
+    [1, 'The troll\'s axe removes your head.'],
+  ],
+  // Slot 3 — LIGHT_WOUND (4 variants) — 1actions.zil:3703–3708
+  [4,
+    [1, 'The axe gets you right in the side. Ouch!'],
+    [1, 'The flat of the troll\'s axe skins across your forearm.'],
+    [1, 'The troll\'s swing almost knocks you over as you barely parry\nin time.'],
+    [1, 'The troll swings his axe, and it nicks your arm as you dodge.'],
+  ],
+  // Slot 4 — SERIOUS_WOUND (3 variants) — 1actions.zil:3709–3712
+  [3,
+    [3, 'The troll charges, and his axe slashes you on your ', F_WEP, ' arm.'],
+    [1, 'An axe stroke makes a deep wound in your leg.'],
+    [1, 'The troll\'s axe swings down, gashing your shoulder.'],
+  ],
+  // Slot 5 — STAGGER (4 variants) — 1actions.zil:3713–3719
+  [4,
+    [1, 'The troll hits you with a glancing blow, and you are momentarily\nstunned.'],
+    [1, 'The troll swings; the blade turns on your armor but crashes\nbroadside into your head.'],
+    [1, 'You stagger back under a hail of axe strokes.'],
+    [1, 'The troll\'s mighty blow drops you to your knees.'],
+  ],
+  // Slot 6 — LOSE_WEAPON (3 variants) — 1actions.zil:3720–3723
+  [3,
+    [3, 'The axe hits your ', F_WEP, ' and knocks it spinning.'],
+    [5, 'The troll swings, you parry, but the force of his blow knocks your ', F_WEP, ' away.'],
+    [3, 'The axe knocks your ', F_WEP, ' out of your hand. It falls to the floor.'],
+  ],
+  // Slot 7 — HESITATE (2 variants) — 1actions.zil:3724–3727
+  [2,
+    [1, 'The troll hesitates, fingering his axe.'],
+    [1, 'The troll scratches his head ruminatively:  Might you be magically\nprotected, he wonders?'],
+  ],
+  // Slot 8 — SITTING_DUCK (1 variant) — 1actions.zil:3728–3729
+  [1,
+    [1, 'Conquering his fears, the troll puts you to death.'],
+  ],
+];
+
+// ---------------------------------------------------------------------------
+// THIEF_MELEE — 1actions.zil:3735–3788
+// 9 slots; variants per slot: 4,2,3,4,4,3,3,3,2 = 28 total.
+// ---------------------------------------------------------------------------
+
+export const THIEF_MELEE: readonly MeleeSlot[] = [
+  // Slot 0 — MISSED (4 variants) — 1actions.zil:3737–3742
+  [4,
+    [1, 'The thief stabs nonchalantly with his stiletto and misses.'],
+    [1, 'You dodge as the thief comes in low.'],
+    [1, 'You parry a lightning thrust, and the thief salutes you with\na grim nod.'],
+    [1, 'The thief tries to sneak past your guard, but you twist away.'],
+  ],
+  // Slot 1 — UNCONSCIOUS (2 variants) — 1actions.zil:3743–3746
+  [2,
+    [1, 'Shifting in the midst of a thrust, the thief knocks you unconscious\nwith the haft of his stiletto.'],
+    [1, 'The thief knocks you out.'],
+  ],
+  // Slot 2 — KILLED (3 variants) — 1actions.zil:3747–3752
+  [3,
+    [1, 'Finishing you off, the thief inserts his blade into your heart.'],
+    [1, 'The thief comes in from the side, feints, and inserts the blade\ninto your ribs.'],
+    [1, 'The thief bows formally, raises his stiletto, and with a wry grin,\nends the battle and your life.'],
+  ],
+  // Slot 3 — LIGHT_WOUND (4 variants) — 1actions.zil:3753–3760
+  [4,
+    [1, 'A quick thrust pinks your left arm, and blood starts to\ntrickle down.'],
+    [1, 'The thief draws blood, raking his stiletto across your arm.'],
+    [1, 'The stiletto flashes faster than you can follow, and blood wells\nfrom your leg.'],
+    [1, 'The thief slowly approaches, strikes like a snake, and leaves\nyou wounded.'],
+  ],
+  // Slot 4 — SERIOUS_WOUND (4 variants) — 1actions.zil:3761–3767
+  [4,
+    [1, 'The thief strikes like a snake! The resulting wound is serious.'],
+    [1, 'The thief stabs a deep cut in your upper arm.'],
+    [1, 'The stiletto touches your forehead, and the blood obscures your\nvision.'],
+    [1, 'The thief strikes at your wrist, and suddenly your grip is slippery\nwith blood.'],
+  ],
+  // Slot 5 — STAGGER (3 variants) — 1actions.zil:3768–3773
+  [3,
+    [1, 'The butt of his stiletto cracks you on the skull, and you stagger\nback.'],
+    [1, 'The thief rams the haft of his blade into your stomach, leaving\nyou out of breath.'],
+    [1, 'The thief attacks, and you fall back desperately.'],
+  ],
+  // Slot 6 — LOSE_WEAPON (3 variants) — 1actions.zil:3774–3779
+  [3,
+    [5, 'A long, theatrical slash. You catch it on your ', F_WEP, ', but the\nthief twists his knife, and the ', F_WEP, ' goes flying.'],
+    [3, 'The thief neatly flips your ', F_WEP, ' out of your hands, and it drops\nto the floor.'],
+    [3, 'You parry a low thrust, and your ', F_WEP, ' slips out of your hand.'],
+  ],
+  // Slot 7 — HESITATE (3 variants) — 1actions.zil:3780–3783
+  [3,
+    [1, 'The thief, a man of superior breeding, pauses for a moment to consider the propriety of finishing you off.'],
+    [1, 'The thief amuses himself by searching your pockets.'],
+    [1, 'The thief entertains himself by rifling your pack.'],
+  ],
+  // Slot 8 — SITTING_DUCK (2 variants) — 1actions.zil:3784–3788
+  [2,
+    [1, 'The thief, forgetting his essentially genteel upbringing, cuts your\nthroat.'],
+    [1, 'The thief, a pragmatist, dispatches you as a threat to his\nlivelihood.'],
+  ],
+];
