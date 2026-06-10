@@ -68,7 +68,7 @@ export interface VerbContext {
   /**
    * Current carrying capacity available — ZIL LOAD-ALLOWED (gglobals.zil:94).
    * Starts at 100; reduced by combat wounds, restored by I-CURE.
-   * verbTake gates pickups against WEIGHT(item)+WEIGHT(player) > loadAllowed.
+   * verbTake gates pickups unless the item is inside a held container (grandparent==player).
    */
   readonly loadAllowed?: number;
   /**
@@ -367,10 +367,11 @@ function verbTake(ctx: VerbContext): VerbResult {
     return result(rng !== undefined ? pick(yuks, rng) : yuks.entries[0]!);
   }
 
-  // LOAD-ALLOWED capacity check — gverbs.zil:1932–1940.
-  // Only fires when the engine provides loadAllowed (test contexts may omit it).
+  // LOAD-ALLOWED capacity check — gverbs.zil:1931–1940.
+  // ZIL: <NOT <IN? <LOC ,PRSO> ,WINNER>> — grandparent check.
+  // Skips the gate when parent(parent(item)) == player (item inside a held container).
   const loadAllowed = ctx.loadAllowed;
-  if (loadAllowed !== undefined && item.parent !== ctx.player) {
+  if (loadAllowed !== undefined && item.parent?.parent !== ctx.player) {
     const itemWeight   = weight(item);
     const playerWeight = weight(ctx.player);
     if (itemWeight + playerWeight > loadAllowed) {

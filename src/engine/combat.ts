@@ -578,11 +578,11 @@ export interface VillainBlowCallbacks extends WinnerResultCallbacks {
 //
 // Called at the end of VILLAIN-BLOW after applying the blow's state changes.
 //   winner.pStrength = (DEF == 0) ? -10000 : (DEF - OD)     // NM-4
-//   if DEF - OD < 0:  queue I-CURE
-//   if fightStrength() <= 0:  nudge pStrength and call jigsUp
+//   if DEF - OD < 0:  queue I-CURE  (no DEF!=0 guard)
+//   if fightStrength() <= 0:  nudge pStrength to (1-base), call jigsUp
 //
-// NM-4: -10000 is the dead sentinel; it drives fightStrength deeply negative
-//       which triggers the <= 0 check → jigsUp (the TD-2/TD-3 seam).
+// NM-4: -10000 drives fightStrength deeply negative → triggers kill path.
+// Nudge overwrites the -10000 so a resurrected player starts at FS=1.
 // ---------------------------------------------------------------------------
 
 export function winnerResult(
@@ -594,20 +594,21 @@ export function winnerResult(
   const newPs = def === 0 ? -10000 : def - od;
   cb.setPlayerPStrength(newPs);
 
-  // Queue I-CURE when net damage occurred — 1actions.zil:3557
-  if (def !== 0 && def - od < 0) {
+  // Queue I-CURE whenever DEF-OD < 0 — no DEF!=0 exclusion (1actions.zil:3556)
+  if (def - od < 0) {
     cb.queueICure(CURE_WAIT);
   }
 
   // Kill check — fightStrength(adjust=true) uses the just-set pStrength
   const fs = fightStrength(true, cb.getScore(), cb.getPlayerPStrength());
   if (fs <= 0) {
-    // Nudge: 1actions.zil:3560–3562 — ensure adjusted FS reaches exactly 1
-    // after jigsUp restores health; we call jigsUp with the canonical message.
+    // Nudge pStrength to 1-base: 1actions.zil:3559
+    //   <PUTP ,WINNER ,P?STRENGTH <+ 1 <- <FIGHT-STRENGTH <>>>>
+    //   = 1 + (-base) = 1 - base
+    const nudged = 1 - fightStrength(false, cb.getScore(), 0);
+    cb.setPlayerPStrength(nudged);
     cb.jigsUp(
-      'It appears that that last blow was too much for you. ' +
-      'I am afraid that you are dead.\n' +
-      'Well, you can\'t win \'em all.',
+      "It appears that that last blow was too much for you. I'm afraid you\nare dead.",
     );
   }
 }

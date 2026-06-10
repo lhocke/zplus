@@ -137,10 +137,12 @@ function makeCbs(s: CbState) {
 // ---------------------------------------------------------------------------
 
 describe('winnerResult — NM-4: -10000 dead sentinel (spec §6.2)', () => {
-  it('DEF==0 → pStrength = -10000', () => {
-    const s = makeCbState();
+  it('DEF==0 → sentinel triggers kill path, final pStrength = 1-base (score=0 → -1)', () => {
+    // -10000 is set first (NM-4), then overwritten by the pStrength nudge.
+    // score=0 → base=2 → final pStrength = 1-base = -1.
+    const s = makeCbState({ score: 0 });
     winnerResult(0, 2, makeCbs(s));
-    expect(s.playerPStrength).toBe(-10000);
+    expect(s.playerPStrength).toBe(-1);
   });
 
   it('-10000 sentinel drives fightStrength deeply negative', () => {
@@ -179,10 +181,12 @@ describe('winnerResult — I-CURE queue on net damage', () => {
     expect(s.icureCalled).toBe(false);
   });
 
-  it('DEF==0 (dead sentinel path) → no I-CURE queued', () => {
+  it('DEF==0, OD>0 → I-CURE queued (DEF-OD = -OD < 0, no DEF!=0 guard)', () => {
+    // ZIL: <L? <- .DEF .OD> 0> = (0-2)<0 = true → queue I-CURE
+    // 1actions.zil:3556
     const s = makeCbState();
     winnerResult(0, 2, makeCbs(s));
-    expect(s.icureCalled).toBe(false);
+    expect(s.icureCalled).toBe(true);
   });
 });
 
@@ -190,18 +194,33 @@ describe('winnerResult — I-CURE queue on net damage', () => {
 // 3. Test D — killing-blow → jigsUp chain (spec §11.3 test D)
 // ---------------------------------------------------------------------------
 
-describe('Test D — killing-blow chain: DEF==0 → pStrength=-10000 → jigsUp (spec §11.3)', () => {
-  it('DEF==0 → pStrength=-10000, jigsUp fires', () => {
+describe('Test D — killing-blow chain: DEF==0 → pStrength=-10000 → nudge → jigsUp (spec §11.3)', () => {
+  it('DEF==0 → -10000 sentinel set, then nudged to 1-base, jigsUp fires', () => {
+    // ZIL: pStrength = -10000, then <PUTP WINNER P?STRENGTH 1-base>.
+    // score=0 → base=2 → final pStrength = 1-2 = -1
     const s = makeCbState({ score: 0 });
     winnerResult(0, 2, makeCbs(s));
-    expect(s.playerPStrength).toBe(-10000);
+    expect(s.playerPStrength).toBe(-1);  // nudged from -10000 to 1-base
     expect(s.jigsUpCalled).toBe(true);
   });
 
-  it('jigsUp message contains canonical "last blow" text', () => {
+  it('jigsUp message is byte-exact ZIL text (1actions.zil:3561-3562)', () => {
+    // ZIL: "It appears that that last blow was too much for you. I'm afraid you\nare dead."
     const s = makeCbState();
     winnerResult(0, 2, makeCbs(s));
-    expect(s.jigsUpMsg).toContain('last blow');
+    expect(s.jigsUpMsg).toBe(
+      "It appears that that last blow was too much for you. I'm afraid you\nare dead.",
+    );
+  });
+
+  it('killing blow: pStrength nudged to 1-base before jigsUp (1actions.zil:3559)', () => {
+    // ZIL: <PUTP ,WINNER ,P?STRENGTH <+ 1 <- <FIGHT-STRENGTH <>>>>
+    //      = 1 + (-base) = 1 - base
+    // score=0 → base=2; nudged pStrength = 1 - 2 = -1
+    const s = makeCbState({ score: 0 });
+    winnerResult(0, 2, makeCbs(s));
+    // pStrength starts at -10000 (NM-4), then nudged to 1-base = -1
+    expect(s.playerPStrength).toBe(-1);
   });
 
   it('non-lethal wound (fightStrength > 0): jigsUp NOT called', () => {
@@ -467,6 +486,35 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     const item = makeTestItem('NEW', 50);  // 50+50=100 ≤ 100 → allowed
     item.moveTo(room);
 
+    const r = executeVerb({
+      verb: 'take',
+      dobj: item,
+      player,
+      here: room,
+      world: mockWorld,
+      loadAllowed: 100,
+      loadMax: 100,
+    }, 'V-TAKE');
+
+    expect(r.output).toBe('Taken.');
+  });
+
+  it('item inside held container skips load check (grandparent==player, gverbs.zil:1931)', () => {
+    // ZIL: <NOT <IN? <LOC ,PRSO> ,WINNER>> — grandparent check.
+    // If parent(parent(item)) == player, the load gate does NOT fire.
+    const player = makeTestPlayer();
+    // The player carries a container (sack, SIZE=5) plus other heavy stuff
+    const sack = makeTestItem('SACK', 5);
+    sack.moveTo(player);
+    const heavyOther = makeTestItem('HEAVY', 95);
+    heavyOther.moveTo(player);  // total carried weight already = 5+95=100
+    const room = makeTestRoom();
+    const item = makeTestItem('GARLIC', 5);
+    item.moveTo(sack);  // item inside held container → grandparent = player
+
+    // With loadAllowed=100, weight(player) includes sack+children=100, so
+    // item(5)+player(100)=105 > 100.  But because grandparent==player, ZIL skips
+    // the load gate and the take succeeds.
     const r = executeVerb({
       verb: 'take',
       dobj: item,
