@@ -77,6 +77,14 @@ export interface VerbContext {
    * and choose the "especially in light of your condition" suffix.
    */
   readonly loadMax?: number;
+  /**
+   * HERO-BLOW entry point — wired at G1 (spec §12 G1, §6.3).
+   * Called after all four V-ATTACK entry guards pass.
+   * targetId: object id of the villain (PRSO); weaponId: object id of PRSI, or null.
+   * Returns the VerbResult from the blow (a combat message, or a guard string on
+   * pointless/staggered/unarmed paths inside heroBlow).
+   */
+  readonly heroBlow?: (targetId: string, weaponId: string | null) => VerbResult;
 }
 
 export interface VerbResult {
@@ -650,10 +658,9 @@ function verbPray(ctx: VerbContext): VerbResult {
 //   2. !PRSI || PRSI==HANDS     → bare hands
 //   3. !IN?(PRSI, WINNER)       → not holding the weapon
 //   4. !WEAPONBIT(PRSI)         → not a weapon
-//   5. T                        → heroBlow (wired at G1)
+//   5. T                        → heroBlow (ctx.heroBlow callback)
 //
-// Exported so CB7 tests can call it directly.  Not registered in ACTION_HANDLERS
-// yet — G1 removes the Phase-1 override and wires this as the live 'V-ATTACK'.
+// Exported so CB7 tests can call it directly.  Registered as 'V-ATTACK'.
 export function verbAttack(ctx: VerbContext): VerbResult {
   const target = ctx.dobj;
   const weapon = ctx.iobj;
@@ -681,45 +688,11 @@ export function verbAttack(ctx: VerbContext): VerbResult {
     return result(`Trying to attack the ${target.desc} with a ${weapon.desc} is suicidal.`);
   }
 
-  // Guard 5 — pass to heroBlow (G1 wires this)
-  // Until G1 lands, fall through to the Phase-1 handler below via ACTION_HANDLERS.
-  // This export exists for CB7 tests and future wiring; it is not yet registered.
-  return result("You can't.");  // placeholder until G1
-}
-
-// PHASE-1 TEMPORARY — replaced by real combat in Phase 2.
-// Intercepts V-ATTACK so attack/kill never errors in the pre-troll playtest region.
-// Troll target → the in-world sign (signals content boundary, not a bug).
-// Any other target → brief in-spirit deflection (no villains exist pre-troll).
-// Does NOT set TROLL-FLAG; the exit wall stays up.
-
-// Sign text exported so the pre-parse troll-attack guard in game.ts can reuse it
-// without duplicating the copy (both code paths are PHASE-1 TEMPORARY).
-export const TROLL_SIGN_TEXT =
-  'The troll, bored, produces a hand-lettered sign and holds it up:\n' +
-  '"THANK YOU FOR PLAYING. FURTHER ADVENTURES ARE UNDER DEVELOPMENT."\n' +
-  'He seems disinclined to fight today.';
-
-// Detects bare attack/kill-troll input before the parser sees it.
-// game.ts calls this (with trollInRoom=true) to intercept the case where GWIM
-// (needing a weapon iobj) would otherwise orphan-prompt or fail the held-check.
-// When the troll is NOT in the current room the intercept is skipped, letting the
-// engine produce its faithful "can't see that" response.
-// Named-weapon forms ("attack troll with sword") bypass this and reach verbAttackPhase1
-// through the normal V-ATTACK parser path.
-// PHASE-1 TEMPORARY -- removed when real combat replaces verbAttackPhase1.
-const BARE_TROLL_ATTACK = /^\s*(attack|kill|fight)\s+(the\s+)?troll\s*$/i;
-export function isBareAttackTroll(input: string, trollInRoom: boolean): boolean {
-  return trollInRoom && BARE_TROLL_ATTACK.test(input);
-}
-
-function verbAttackPhase1(ctx: VerbContext): VerbResult {
-  // Only show the sign when the troll is actually here; if the parser somehow
-  // resolved TROLL as dobj from a different room, fall through gracefully.
-  if (ctx.dobj?.id === 'TROLL' && ctx.dobj.parent === ctx.here) {
-    return result(TROLL_SIGN_TEXT);
+  // Guard 5 — all guards passed; delegate to heroBlow (gverbs.zil:189–193)
+  if (ctx.heroBlow !== undefined) {
+    return ctx.heroBlow(target.id, weapon.id);
   }
-  return result("Violence isn't the answer to this one.");
+  return result("You can't.");
 }
 
 type VerbHandler = (ctx: VerbContext) => VerbResult;
@@ -741,8 +714,7 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-PRAY':      verbPray,
   'V-ADVENT':    verbAdvent,  // PLUGH / XYZZY — gverbs.zil:153
   'V-FROBOZZ':   verbFrobozz, // FROBOZZ — gverbs.zil:704
-  // PHASE-1 TEMPORARY — replaced by real combat in Phase 2.
-  'V-ATTACK':    verbAttackPhase1,
+  'V-ATTACK':    verbAttack,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.

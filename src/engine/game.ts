@@ -6,7 +6,7 @@ import type { Actor } from '../domain/actor.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
-import { executeVerb, describeRoomObjects, META_ACTIONS, isBareAttackTroll, TROLL_SIGN_TEXT } from './verbs/index.js';
+import { executeVerb, describeRoomObjects, META_ACTIONS } from './verbs/index.js';
 import { lit } from './parser/scope.js';
 import { describeRoom as describeRoomMsgs } from './game-messages.js';
 import { Scoring } from './scoring.js';
@@ -15,6 +15,10 @@ import { lookupPer, lookupPreAction } from '../actions/registry.js';
 import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
 import { jigsUp as jigsUpMsgsFn } from './game-messages.js';
 import { jigsUp, type JigsUpCallbacks, type JigsUpMsgs } from './death.js';
+import { heroBlow as combatHeroBlow, findWeapon, TROLL_MELEE } from './combat.js';
+import type { HeroBlowCallbacks } from './combat.js';
+import type { VillainEntry } from '../domain/villain-entry.js';
+import { makeTrollFcn } from '../actions/troll-fcn.js';
 
 export interface TurnResult {
   readonly output: string;
@@ -364,18 +368,6 @@ export class Game {
       // undefined → pass-through (movement or meta verbs); fall into normal parse
     }
 
-    // PHASE-1 TEMPORARY — removed when real combat replaces verbAttackPhase1 (verbs/index.ts).
-    // Bare "attack/kill troll" would normally go through GWIM to find a weapon iobj, either
-    // orphan-prompting when multiple weapons are in scope or failing the held-check when the
-    // troll's axe is the only candidate. Intercept here so the sign fires without the parser
-    // needing a resolved weapon -- but ONLY when the troll is actually present in this room.
-    // Named-weapon forms ("attack troll with sword") still reach verbAttackPhase1 via the
-    // normal V-ATTACK path below.
-    const trollInRoom = this.world.get('TROLL')?.parent === this.here;
-    if (isBareAttackTroll(input, trollInRoom)) {
-      return { output: TROLL_SIGN_TEXT, moved: false };
-    }
-
     const outputs: string[] = [];
     let moved = false;
 
@@ -498,6 +490,27 @@ export class Game {
           clearContinuation: () => this.parser.clearContinuation(),
           loadAllowed: this.loadAllowed,
           loadMax: this.loadMax,
+          heroBlow: (targetId, weaponId) => {
+            const out: string[] = [];
+            const entry = this.getVillainEntry(targetId, (s) => out.push(s));
+            if (entry === undefined) {
+              return { output: "Violence isn't the answer to this one.", moved: false };
+            }
+            const cb = this.makeHeroBlowCallbacks(targetId, entry, (s) => out.push(s));
+            // The concrete Rng always implements nextInt; the interface has it
+            // optional only so test stubs don't need it.  heroBlow requires it.
+            combatHeroBlow(
+              targetId,
+              entry,
+              weaponId,
+              weaponId !== null,
+              this.player.has(Flag.Staggered),
+              this.scoring.score,
+              this.rng as import('./combat.js').CombatRng,
+              cb,
+            );
+            return { output: out.join('\n'), moved: false };
+          },
         }, cmd.action);
 
         if (verbResult.fatal) {
@@ -849,6 +862,113 @@ export class Game {
   // Build the JigsUpMsgs bundle from game-messages.
   private jigsUpMsgs(): JigsUpMsgs {
     return jigsUpMsgsFn;
+  }
+
+  // getVillainEntry — look up the VillainEntry for a given villain object id.
+  // Returns undefined for non-villains (triggers graceful "Violence isn't the answer").
+  // Currently only TROLL is wired; Thief/Cyclops are built but deferred (spec §1).
+  private getVillainEntry(villainId: string, tell: (s: string) => void): VillainEntry | undefined {
+    if (villainId === 'TROLL') {
+      const hereId = this.here.id;
+      const trollFcnCtx = {
+        hereId,
+        getObj: (id: string) => {
+          const obj = this.world.get(id);
+          if (obj === undefined) return undefined;
+          return {
+            get parentId() { return obj.parent?.id ?? null; },
+            hasFlag: (f: Flag) => obj.has(f),
+            setFlag: (f: Flag) => obj.set(f),
+            clearFlag: (f: Flag) => obj.clear(f),
+            moveTo: (destId: string) => {
+              const dest = this.world.get(destId);
+              if (dest !== undefined) obj.moveTo(dest);
+            },
+            setLdesc: (s: string) => { (obj as { ldesc?: string }).ldesc = s; },
+          };
+        },
+        getTrollFlag: () => this.flags.get('TROLL-FLAG'),
+        setTrollFlag: (v: boolean) => { this.flags.set('TROLL-FLAG', v); },
+        getLucky: () => this.lucky,
+        rng: {
+          prob:  (base: number) => this.rng.prob(base),
+          zprob: (base: number, denom: number) => this.rng.zprob!(base, denom),
+        },
+        tell,
+        clearContinuation: () => { this.parser.clearContinuation(); },
+      };
+      return {
+        vBest: 'SWORD',
+        vBestAdv: 1,
+        vProb: 0,
+        vMsgs: TROLL_MELEE,
+        action: makeTrollFcn(trollFcnCtx),
+      };
+    }
+    return undefined;
+  }
+
+  // makeHeroBlowCallbacks — build the HeroBlowCallbacks bundle for a villain.
+  // HeroBlowCallbacks = VillainResultCallbacks + player-reads + stagger + weapon ops.
+  private makeHeroBlowCallbacks(
+    villainId: string,
+    _entry: VillainEntry,
+    tell: (s: string) => void,
+  ): HeroBlowCallbacks {
+    const villain = this.world.get(villainId);
+    return {
+      // Player-side reads (HeroBlowCallbacks interface)
+      getPlayerPStrength: () => this.player.pStrength,
+      getPlayerStaggered: () => this.player.has(Flag.Staggered),
+      clearPlayerStaggered: () => { this.player.clear(Flag.Staggered); },
+      getScore: () => this.scoring.score,
+
+      // Villain pStrength (VillainResultCallbacks)
+      getVillainPStrength: () => {
+        const a = this.world.get(villainId);
+        return (a as unknown as { pStrength: number })?.pStrength ?? 0;
+      },
+      setVillainPStrength: (v: number) => {
+        const a = this.world.get(villainId);
+        if (a !== undefined) (a as unknown as { pStrength: number }).pStrength = v;
+      },
+
+      // FIGHTBIT — set at start of heroBlow, cleared on villain death by setVillainFightBit
+      // (despite the "set" name, villainResult uses it as "clear" when DEF==0: spec §6.4)
+      setVillainFightBit: () => {
+        if (villain !== undefined) villain.set(Flag.Fight);
+      },
+      setVillainStaggered: () => {
+        if (villain !== undefined) villain.set(Flag.Staggered);
+      },
+
+      // Villain weapon — findWeapon by canonical name containment (spec §4.2)
+      findVillainWeapon: () => {
+        if (villain === undefined) return null;
+        return findWeapon(villain)?.id ?? null;
+      },
+      disarmVillain: (wepId: string) => {
+        const wep = this.world.get(wepId);
+        if (wep === undefined) return;
+        wep.clear(Flag.NonDescript);
+        wep.set(Flag.Weapon);
+        wep.moveTo(this.here);
+      },
+
+      // Remove villain from world on kill (spec §6.4 "removeCarefully")
+      removeVillain: (id: string) => {
+        const v = this.world.get(id);
+        if (v !== undefined) v.moveTo(null);
+      },
+
+      // Apply villain F-code callback (F_DEAD / F_UNCONSCIOUS)
+      applyVillainAction: (fcode: number, id: string) => {
+        const entry2 = this.getVillainEntry(id, tell);
+        if (entry2 !== undefined) entry2.action(fcode);
+      },
+
+      emit: tell,
+    };
   }
 
   // Build the JigsUpCallbacks bundle — called from verb layer and clock context.
