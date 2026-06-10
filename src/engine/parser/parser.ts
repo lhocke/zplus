@@ -403,7 +403,13 @@ export class Parser {
               d1.dobjLocBits, d1.iobjLocBits ?? 0,
               effectivePlayer, world,
             );
-            if ('kind' in c6d1ok) return c6d1ok;
+            if ('kind' in c6d1ok) {
+              const pfx = gwimText;
+              return {
+                kind: 'fail',
+                message: pfx ? `${pfx}\n${c6d1ok.message}` : c6d1ok.message,
+              };
+            }
             return {
               kind: 'ok',
               command: {
@@ -515,7 +521,15 @@ export class Parser {
             d2.dobjLocBits, d2.iobjLocBits,
             effectivePlayer, world,
           );
-          if ('kind' in c6d2ok) return c6d2ok;
+          if ('kind' in c6d2ok) {
+            // GWIM printed a parenthetical before ITAKE-CHECK failed.
+            // gparser.zil:1074-1078 + 1277-1286: both lines appear in output.
+            const pfx = gwimResult.text;
+            return {
+              kind: 'fail',
+              message: pfx ? `${pfx}\n${c6d2ok.message}` : c6d2ok.message,
+            };
+          }
           return {
             kind: 'ok',
             command: {
