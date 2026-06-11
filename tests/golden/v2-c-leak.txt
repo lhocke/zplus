@@ -35,12 +35,12 @@ The water level here is now up to your knees.
 Time passes...
 The water level here is now up to your knees.
 
-> put putty on leak
-I don't know the word "putty".
+> put gunk on leak
+By some miracle of Zorkian technology, you have managed to stop the
+leak in the dam.
 
 > wait
 Time passes...
-The water level here is now up to your hips.
 
 > look
 Maintenance Room
@@ -49,4 +49,3 @@ There is a wrench here.
 There is an object which looks like a tube of toothpaste here.
 There is a screwdriver here.
 There is a group of tool chests here.
-The water level here is now up to your hips.

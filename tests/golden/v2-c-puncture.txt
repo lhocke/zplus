@@ -32,18 +32,21 @@ Dam Base
 You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
 There is a punctured boat here.
 
-> put putty on boat
-I don't know the word "putty".
+> put gunk on boat
+Well done. The boat is repaired.
 
 > look
 Dam Base
 You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
-There is a punctured boat here.
+There is a folded pile of plastic here which has a small valve attached.
 
 > inflate boat with pump
-No chance. Some moron punctured it.
+The boat inflates and appears seaworthy.
+A tan label is lying inside the boat.
 
 > look
 Dam Base
 You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
-There is a punctured boat here.
+There is a magic boat here.
+The magic boat contains:
+  A tan label

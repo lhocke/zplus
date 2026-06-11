@@ -216,10 +216,10 @@ describe('C-RIVER — inflate, board, launch, drift, buoy hint', () => {
 
 const C_SAND_CMDS = [
   'look',
-  // Take shovel from sandy cave area
-  'ne',
+  // Shovel is in SANDY-BEACH; take it here before going to the cave.
   'take shovel',
-  'sw',
+  // SAND object (and SCARAB) are in SANDY-CAVE.
+  'ne',
   // dig ×4: progress msgs then reveal
   'dig sand with shovel',
   'dig sand with shovel',
@@ -269,21 +269,21 @@ describe('C-SAND — dig scarab, BDIGS progression, reveal on dig #4', () => {
 
 const C_RAINBOW_CMDS = [
   'look',
-  // Wave sceptre at ARAGAIN-FALLS → rainbow solid
+  // Wave sceptre at ARAGAIN-FALLS → rainbow solid, pot-of-gold revealed
   'wave sceptre',
   'look',
-  // Cross to END-OF-RAINBOW
+  // ARAGAIN-FALLS → ON-RAINBOW → END-OF-RAINBOW (two west moves)
+  'west',
   'west',
   'look',
-  // Wave sceptre at END-OF-RAINBOW → pot of gold appears
-  'wave sceptre',
-  'look',
-  // Take the pot
+  // Pot of gold is already here (INVISIBLE cleared by the wave above).
+  // Take it — no second wave needed.
   'take pot',
-  // Cross back to ARAGAIN-FALLS
+  // Cross back: END-OF-RAINBOW → ON-RAINBOW → ARAGAIN-FALLS (two east moves)
+  'east',
   'east',
   'look',
-  // Wave again → rainbow dissolves
+  // Wave again at ARAGAIN-FALLS → rainbow dissolves
   'wave sceptre',
   'look',
 ] as const;
@@ -331,8 +331,8 @@ const C_LEAK_CMDS = [
   'wait',   // WL 3
   'wait',   // WL 4
   'wait',   // WL 5
-  // Repair with putty
-  'put putty on leak',
+  // Repair with gunk (PUTTY synonyms: MATERIAL, GUNK — "putty" is not in vocab)
+  'put gunk on leak',
   // Confirm repair message + demon stopped
   'wait',   // no more rise
   'look',
@@ -383,8 +383,8 @@ const C_PUNCTURE_CMDS = [
   // Board with sword in inventory → puncture
   'board boat',
   'look',
-  // Repair with putty
-  'put putty on boat',
+  // Repair with gunk (PUTTY synonyms: MATERIAL, GUNK — "putty" is not in vocab)
+  'put gunk on boat',
   'look',
   // Now inflatable again: re-inflate and confirm seaworthy
   'inflate boat with pump',
