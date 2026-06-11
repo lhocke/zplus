@@ -1,0 +1,54 @@
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> give lunch to cyclops
+The cyclops says "Mmm Mmm. I love hot peppers! But oh, could I use
+a drink. Perhaps I could drink the blood of that thing."  From the
+gleam in his eye, it could be surmised that you are "that thing".
+The cyclops appears to be getting more agitated.
+
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> give garlic to cyclops
+The cyclops may be hungry, but there is a limit.
+
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> give water to cyclops
+The cyclops apparently is not thirsty and refuses your generous offer.
+
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> give water to cyclops
+The cyclops takes the bottle, checks that it's open, and drinks the water.
+A moment later, he lets out a yawn that nearly blows you over, and then
+falls fast asleep (what did you put in that drink, anyway?).
+
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> give sword to cyclops
+The cyclops is not so stupid as to eat THAT!
