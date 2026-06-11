@@ -116,8 +116,10 @@ describe('blank-room static ldesc render', () => {
 
   // DAM-ROOM — 1actions.zil:1159-1185
   // Flag: Land, On — always lit
+  // DAM-ROOM-FCN (CB-DAM1) produces a multi-line dynamic description; normalize
+  // source newlines to spaces for comparison so the test is line-ending agnostic.
   it('DAM-ROOM shows dam top with sluice gates closed', () => {
-    const out = startOutput('DAM-ROOM');
+    const out = startOutput('DAM-ROOM').replace(/\n/g, ' ');
     expect(out).toContain('You are standing on the top of the Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down.');
     expect(out).toContain('The sluice gates on the dam are closed. Behind the dam, there can be seen a wide reservoir. Water is pouring over the top of the now abandoned dam.');
     expect(out).toContain('There is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble.');

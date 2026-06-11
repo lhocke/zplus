@@ -710,6 +710,7 @@ export class Game {
       recomputeTrophy: (trophyCase) => this.scoring.recomputeTrophy(trophyCase, tell),
       enableClock: (id) => this.clock.enable(id),
       disableClock: (id) => this.clock.disable(id),
+      queueClock: (id, period, enabled) => this.clock.queue(id, period, enabled),
       getGlobal: (n) => this.flags.get(n),
       setGlobal: (n, v = true) => this.flags.set(n, v),
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),

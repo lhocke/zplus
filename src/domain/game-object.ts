@@ -55,6 +55,12 @@ export interface ActionContext {
   recomputeTrophy(trophyCase: GameObject): void;
   enableClock(id: string): void;
   disableClock(id: string): void;
+  /**
+   * Re-arm a clock entry: set its turnsLeft and enable/disable it.
+   * Mirrors the ZIL <ENABLE <QUEUE id period>> + <QUEUE id 0> park idiom.
+   * Optional so existing test stubs that don't wire the clock still type-check.
+   */
+  queueClock?(id: string, period: number, enabled: boolean): void;
   /** Signal fatal outcome — ZIL M-FATAL; stops the PERFORM chain. */
   fatal(): void;
   /**

@@ -182,6 +182,40 @@ export function createGame(opts: {
   };
   clock.schedule(iSwordEntry);
 
+  // I-RFILL / I-REMPTY — 8-tick one-shot timers that fill/drain the reservoir.
+  // Spec §9 Wave 0: NOT queued at GO (unlike lantern/candles/sword).
+  // Registered parked (turnsLeft=0, enabled=false); BOLT-F arms whichever
+  // is needed via queueClock(id, 8, true) and parks the opposite with (id, 0, false).
+  // 1actions.zil:1197,1204 (tick count exact = 8).
+  //
+  // The tick bodies live in dam.ts (CB-DAM2); these stubs register the slots
+  // so BOLT-F's queueClock calls can find them via clock.getEntry().
+  clock.schedule({
+    id: 'I-RFILL',
+    turnsLeft: 0,   // parked — never fires until BOLT-F arms it
+    enabled: false,
+    tick(_ctx): boolean {
+      // CB-DAM2 will replace this with the full body.
+      // For now: fires (if somehow armed) and self-removes.
+      return false;
+    },
+  });
+
+  clock.schedule({
+    id: 'I-REMPTY',
+    turnsLeft: 0,   // parked
+    enabled: false,
+    tick(_ctx): boolean {
+      return false;
+    },
+  });
+
+  // DAM-ROOM has a static ldesc in rooms.json (the S0 sealed description).
+  // DAM-ROOM-FCN handles all 4 water-level states via M-LOOK, so clear the
+  // static ldesc to let the dynamic handler fire.
+  const damRoom = world.get('DAM-ROOM');
+  if (damRoom !== undefined) damRoom.ldesc = undefined;
+
   const rng = opts.rng ?? new Rng(seed);
   // Separate RNG stream for combat — same seed, independent state.
   // Prevents I-FIGHT draws from shifting the main stream used by grue / randomizeObjects.
