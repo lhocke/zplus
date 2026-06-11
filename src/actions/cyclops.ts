@@ -198,7 +198,9 @@ export function cyclopsFcn(ctx: CyclopsCtx): boolean {
   }
 
   // ZIL branch 7: TIE — :1589–1591
-  if (ctx.action === 'V-TIE' || ctx.action === 'V-TIE-UP') {
+  // Only V-TIE; V-TIE-UP (gsyntax.zil:498) is a distinct action not caught here —
+  // it falls through so the default gverbs.zil:1471 routine runs.
+  if (ctx.action === 'V-TIE') {
     ctx.tell('You cannot tie the cyclops, though he is fit to be tied.');
     return true;
   }

@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, preTake, preGive, yuks, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, preTake, preGive, yuks, goto, vTieUp, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { CURE_WAIT } from '../combat.js';
 
@@ -781,6 +781,8 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LOOK-UNDER':  verbLookUnder,        // gverbs.zil:899-900
   'V-LOOK-BEHIND': verbLookBehind,       // gverbs.zil:862-863
   'V-LOOK-ON':     verbLookOn,           // gverbs.zil:892-897
+  // gverbs.zil:1471 — default when no object handler claims V-TIE-UP.
+  'V-TIE-UP': () => result(vTieUp.response),
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.

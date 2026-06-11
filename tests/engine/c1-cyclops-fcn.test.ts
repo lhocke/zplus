@@ -520,11 +520,22 @@ describe('CYCLOPS-FCN: TAKE/TIE/LISTEN', () => {
     expect(output.join('\n')).toContain("doesn't take kindly");
   });
 
-  it('TIE: "fit to be tied"', () => {
+  it('TIE (V-TIE): "fit to be tied"', () => {
     const { ctx, output } = makeCtx({ verb: 'tie' });
     const r = cyclopsFcn(ctx);
     expect(r).toBe(true);
     expect(output.join('\n')).toContain('fit to be tied');
+  });
+
+  // ZIL 1actions.zil:1589 only checks <VERB? TIE> — V-TIE-UP is a distinct action
+  // (gsyntax.zil:498, gverbs.zil:1471) that CYCLOPS-FCN does NOT intercept.
+  // Returning false lets the default V-TIE-UP routine run ("You could certainly
+  // never tie it with that!") — gverbs.zil:1471.
+  it('TIE-UP (V-TIE-UP): falls through (returns false)', () => {
+    const { ctx, output } = makeCtx({ verb: 'tie', action: 'V-TIE-UP' });
+    const r = cyclopsFcn(ctx);
+    expect(r).toBe(false);
+    expect(output).toHaveLength(0);
   });
 
   it('LISTEN: "stomach rumbling"', () => {
@@ -690,5 +701,27 @@ describe('CYCLOPS-ROOM-FCN: end-to-end look via game.turn', () => {
     (g as unknown as { flags: Flags }).flags.set('MAGIC-FLAG', true);
     const r = g.turn('look');
     expect(r.output).toContain('cyclops-sized opening');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// V-TIE-UP end-to-end: cyclopsFcn falls through; default gverbs.zil:1471 fires.
+//
+// "tie up cyclops with rope": V-TIE-UP, PRSO=CYCLOPS, PRSI=ROPE.
+// ZIL CYCLOPS-FCN only checks <VERB? TIE> (1actions.zil:1589), so V-TIE-UP
+// falls through and V-TIE-UP () in gverbs.zil:1471 prints the default message.
+// ---------------------------------------------------------------------------
+
+describe('V-TIE-UP: end-to-end via game.turn', () => {
+  it('"tie up cyclops with rope" → default V-TIE-UP message (gverbs.zil:1471)', () => {
+    const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
+    g.start();
+    litLamp(g);
+    // Move rope to player so the parser can resolve it as iobj.
+    const w = (g as unknown as { world: WorldHandle }).world;
+    const player = w.get('PLAYER') as never;
+    w.get('ROPE')?.moveTo(player);
+    const r = g.turn('tie up cyclops with rope');
+    expect(r.output).toContain('You could certainly never tie it with that!');
   });
 });
