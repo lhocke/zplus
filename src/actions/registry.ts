@@ -13,6 +13,7 @@ import { aboveGroundActions, aboveGroundPer } from './above-ground.js';
 import { lightSourcesActions } from './light-sources.js';
 import { coalMineActions } from './coal-mine.js';
 import { damActions } from './dam.js';
+import { boatActions } from './boat.js';
 import {
   preBoardHandler,
   preBurnHandler,
@@ -36,6 +37,7 @@ const ACTIONS: Record<string, ActionHandler> = {
   ...lightSourcesActions,
   ...coalMineActions,
   ...damActions,
+  ...boatActions,
 };
 
 const PER_ROUTINES: Record<string, PerRoutine> = {
