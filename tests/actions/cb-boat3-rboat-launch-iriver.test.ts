@@ -213,6 +213,24 @@ describe('CB-BOAT3 — LAUNCH: GO-NEXT + I-RIVER arm (1actions.zil:2738)', () =>
     // Player is not in the boat, so RBOAT-FUNCTION fires the "not in the boat" branch
     expect(out).toContain("not in the boat");
   });
+
+  // RIVER-5 is NOT in the ZIL "already on water" check (1actions.zil:2739-2740).
+  // The list is RIVER-1..4, RESERVOIR, IN-STREAM only. RIVER-5 is also not a key
+  // in RIVER-LAUNCH (:2698-2706), so GO-NEXT returns false → "can't launch it here."
+  it('launch while at RIVER-5 (in boat) → "can\'t launch it here" not "on the river"', () => {
+    const g = newGameAt('DAM-BASE');
+    inflateAndBoard(g);
+    // Drift to RIVER-5: launch(→RIVER-1) + 3+4+3+2 waits
+    g.turn('launch');
+    for (let i = 0; i < 12; i++) g.turn('wait');
+    const inflated = g.world.get('INFLATED-BOAT')!;
+    const river5   = g.world.get('RIVER-5')!;
+    expect(inflated.parent).toBe(river5);
+    // Now attempt launch — ZIL falls through to "can't launch it here"
+    const out = g.turn('launch').output;
+    expect(out).toContain("can't launch");
+    expect(out).not.toContain('or have you forgotten');
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -289,11 +289,13 @@ function rboatMBeg(ctx: Parameters<ActionHandler>[0]): boolean {
   if (ctx.verb === 'launch') {
     const hereId = ctx.here.id;
 
-    // :2739–2748 — already on river/reservoir/stream → blocked
+    // :2739–2740 — already on river/reservoir/stream → blocked.
+    // ZIL checks: RIVER-1, RIVER-2, RIVER-3, RIVER-4, RESERVOIR, IN-STREAM.
+    // RIVER-5 is intentionally absent — at RIVER-5 launch falls through to
+    // GO-NEXT(RIVER-LAUNCH), which has no RIVER-5 key → "can't launch it here."
     const onWater =
       hereId === 'RIVER-1' || hereId === 'RIVER-2' || hereId === 'RIVER-3' ||
-      hereId === 'RIVER-4' || hereId === 'RIVER-5' ||
-      hereId === 'RESERVOIR' || hereId === 'IN-STREAM';
+      hereId === 'RIVER-4' || hereId === 'RESERVOIR' || hereId === 'IN-STREAM';
 
     if (onWater) {
       const where = hereId === 'RESERVOIR' ? 'reservoir'
