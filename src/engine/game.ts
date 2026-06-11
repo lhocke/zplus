@@ -134,6 +134,12 @@ export class Game {
   loadAllowed = 100;
   loadMax = 100;
 
+  // Phase-3 dam/river integer globals (not boolean — stored separately from FlagStore).
+  // WATER-LEVEL: maintenance-room leak depth 0–14 (-1 = repaired). 1actions.zil:1295.
+  // BEACH-DIG: sandy-beach dig counter, -1 = reset sentinel. 1actions.zil:2851.
+  waterLevel = 0;
+  beachDig = -1;
+
   // Set by jigsUp when called from clock context (I-FIGHT → winnerResult → jigsUp).
   // Checked by turn() after clock.advance() to abort the remaining turn loop.
   // Cleared at the start of each new turn. (B3)
@@ -160,6 +166,10 @@ export class Game {
     this.events = opts.events;
     this.parser = new Parser();
     this.flags = new FlagStore();
+
+    // Phase-3 dam/river boolean globals — non-default (true) init values.
+    // BUOY-FLAG: buoy hint not yet given. 1actions.zil:2842 <GLOBAL BUOY-FLAG T>.
+    this.flags.set('BUOY-FLAG', true);
 
     // WON-FLAG world effects — gverbs.zil:1858–1862.
     // Fired once when SCORE first reaches 350 inside scoreUpd or recomputeTrophy.

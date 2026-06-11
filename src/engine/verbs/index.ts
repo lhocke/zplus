@@ -716,6 +716,59 @@ export function verbAttack(ctx: VerbContext): VerbResult {
   return result("You can't.");
 }
 
+// ---------------------------------------------------------------------------
+// Phase-3 dam/river verb shells
+//
+// ZIL default verb routines (V-INFLATE, V-DEFLATE, V-DIG, etc.) are mostly
+// fall-throughs — real behavior lives in the object ACTION handlers (IBOAT-FUNCTION,
+// RBOAT-FUNCTION, SAND-FUNCTION, etc.) invoked earlier in the PERFORM chain.
+// These stubs ensure the verbs are routed rather than hitting the unknown-verb
+// fallback; the object handlers in later tasks short-circuit before these fire.
+// ---------------------------------------------------------------------------
+
+// V-INFLATE (gverbs.zil) — fall-through when no object handler claims inflate.
+function verbInflate(_ctx: VerbContext): VerbResult {
+  return result("That's not something you can inflate.");
+}
+
+// V-DEFLATE — fall-through.
+function verbDeflate(_ctx: VerbContext): VerbResult {
+  return result("That's not something you can deflate.");
+}
+
+// V-BOARD — fall-through when BOARD isn't handled by the vehicle object.
+function verbBoard(_ctx: VerbContext): VerbResult {
+  return result("You can't board that.");
+}
+
+// V-DISEMBARK (gverbs.zil:418–432) — exit a vehicle.
+// Over water: fatal ("getting out here would be fatal.").
+// On land: "You are on your own feet again." — handled by object; stub here.
+function verbDisembark(_ctx: VerbContext): VerbResult {
+  return result("You're not in anything you can disembark from.");
+}
+
+// V-LAUNCH — fall-through when no boat handler claims launch.
+function verbLaunch(_ctx: VerbContext): VerbResult {
+  return result("You can't launch that here.");
+}
+
+// V-LAND — the boat lands automatically via GOTO into an RLANDBIT room;
+// this stub handles bare "land" with no applicable object.
+function verbLand(_ctx: VerbContext): VerbResult {
+  return result("You're not in anything that can land.");
+}
+
+// V-DIG (gverbs.zil:405–416) — fall-through when not in SANDY-BEACH context.
+function verbDig(_ctx: VerbContext): VerbResult {
+  return result("Digging here would be futile.");
+}
+
+// V-WAVE — fall-through when no sceptre handler claims the verb.
+function verbWave(_ctx: VerbContext): VerbResult {
+  return result("Nothing happens.");
+}
+
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
 // Primary dispatch on V-* action id (ZIL PERFORM dispatches on PRSA, gmain.zil:283–284).
@@ -739,6 +792,17 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   // V-WAIT — gverbs.zil:1514–1519. "Time passes..." then clock runs; the turn()
   // loop's clock.advance() handles the countdown — no extra repeat needed here.
   'V-WAIT':      () => result('Time passes...'),
+
+  // Phase-3 dam/river verbs — thin shells; object handlers (IBOAT-FUNCTION etc.)
+  // short-circuit before these in the PERFORM chain.
+  'V-INFLATE':   verbInflate,
+  'V-DEFLATE':   verbDeflate,
+  'V-BOARD':     verbBoard,
+  'V-DISEMBARK': verbDisembark,
+  'V-LAUNCH':    verbLaunch,
+  'V-LAND':      verbLand,
+  'V-DIG':       verbDig,
+  'V-WAVE':      verbWave,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.
