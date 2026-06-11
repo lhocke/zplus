@@ -908,6 +908,21 @@ function verbEcho(_ctx: VerbContext): VerbResult {
   return result('echo echo ...');
 }
 
+// V-CROSS (gverbs.zil:371–372) — fall-through when RAINBOW-FCN doesn't handle it.
+function verbCross(_ctx: VerbContext): VerbResult {
+  return result("You can't cross that!");
+}
+
+// V-RAISE (gverbs.zil:1131) — fall-through when object handler doesn't claim it.
+function verbRaise(_ctx: VerbContext): VerbResult {
+  return result("You can't raise that.");
+}
+
+// V-LOOK-UNDER (gverbs.zil) — fall-through.
+function verbLookUnder(_ctx: VerbContext): VerbResult {
+  return result("There's nothing of interest under there.");
+}
+
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
 // Primary dispatch on V-* action id (ZIL PERFORM dispatches on PRSA, gmain.zil:283–284).
@@ -942,8 +957,11 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LAUNCH':    verbLaunch,
   'V-LAND':      verbLand,
   'V-DIG':       verbDig,
-  'V-WAVE':      verbWave,
-  'V-ECHO':      verbEcho,
+  'V-WAVE':       verbWave,
+  'V-ECHO':       verbEcho,
+  'V-CROSS':      verbCross,
+  'V-RAISE':      verbRaise,
+  'V-LOOK-UNDER': verbLookUnder,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.

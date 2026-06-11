@@ -16,6 +16,7 @@ import { damActions } from './dam.js';
 import { boatActions } from './boat.js';
 import { riverObjActions } from './river-obj.js';
 import { beachActions } from './beach.js';
+import { rainbowActions } from './rainbow.js';
 import {
   preBoardHandler,
   preBurnHandler,
@@ -42,6 +43,7 @@ const ACTIONS: Record<string, ActionHandler> = {
   ...boatActions,
   ...riverObjActions,
   ...beachActions,
+  ...rainbowActions,
 };
 
 const PER_ROUTINES: Record<string, PerRoutine> = {
