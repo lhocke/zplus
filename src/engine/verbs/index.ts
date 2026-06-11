@@ -931,15 +931,18 @@ function verbBreathe(ctx: VerbContext): VerbResult {
   if (dobj === undefined) return result("You can't see any boat here!");
   const inflatable = ctx.world.get('INFLATABLE-BOAT');
   const inflated   = ctx.world.get('INFLATED-BOAT');
-  // Inflatable pile of plastic: apply IBOAT-FUNCTION lungs branch
+  const punctured  = ctx.world.get('PUNCTURED-BOAT');
+  // Inflatable pile of plastic: IBOAT-FUNCTION lungs branch (1actions.zil:2835)
   if (dobj === inflatable) {
     if (dobj.parent !== ctx.here) return result('The boat must be on the ground to be inflated.');
     return result("You don't have enough lung power to inflate it.");
   }
-  // Already-inflated boat: RBOAT-FUNCTION inflate fall-through
+  // Already-inflated boat: RBOAT-FUNCTION inflate fall-through (1actions.zil:2801)
   if (dobj === inflated) return result('Inflating it further would probably burst it.');
-  // Non-boat: lung power message (ZIL IBOAT-FUNCTION :2835 is the only non-pump branch)
-  return result("You don't have enough lung power to inflate it.");
+  // Punctured boat: DBOAT-FUNCTION inflate rejection (1actions.zil:2656)
+  if (dobj === punctured) return result('No chance. Some moron punctured it.');
+  // Non-boat: V-INFLATE default (gverbs.zil:757–758)
+  return result(vInflate.response);
 }
 
 type VerbHandler = (ctx: VerbContext) => VerbResult;

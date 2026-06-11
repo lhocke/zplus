@@ -319,6 +319,29 @@ describe('NM-F — inflate messages: pump inflates; lungs and other tools distin
     const out = g.turn('inflate boat with wrench').output;
     expect(out).toContain('jest');
   });
+
+  it('blow in teeth → "How can you inflate that?" (non-boat V-BREATHE fall-through)', () => {
+    // V-BREATHE dispatches <PERFORM V?INFLATE PRSO LUNGS>.  A non-boat dobj has no
+    // IBOAT-FUNCTION branch → falls through to V-INFLATE: "How can you inflate that?"
+    // ZIL: gverbs.zil:757–758 (V-INFLATE default)
+    const g = newGameAt('WEST-OF-HOUSE');
+    giveLight(g);
+    // TEETH is a global object (NDESCBIT); always accessible.
+    const out = g.turn('blow in teeth').output;
+    expect(out).toContain('How can you inflate that?');
+  });
+
+  it('blow in punctured-boat → "No chance. Some moron punctured it." (1actions.zil:2656)', () => {
+    // DBOAT-FUNCTION intercepts the BREATHE/INFLATE call and returns the puncture rejection.
+    // ZIL: 1actions.zil:2652–2668 (DBOAT-FUNCTION)
+    const g = newGameAt('DAM-BASE');
+    // Remove inflatable so "boat" unambiguously resolves to the punctured boat.
+    g.world.get('INFLATABLE-BOAT')!.moveTo(g.world.get('TROPHY-CASE')!);
+    const punctured = g.world.get('PUNCTURED-BOAT')!;
+    punctured.moveTo(g.world.get('DAM-BASE')!);
+    const out = g.turn('blow in boat').output;
+    expect(out).toContain('moron punctured it');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -346,7 +369,8 @@ describe('NM-G — BOARD with six named sharp objects punctures', () => {
   for (const id of sharpObjects) {
     it(`board with ${id} in inventory → punctured boat`, () => {
       const g = setupBoard(id);
-      if (!g.world.get(id)) return;  // object absent in this build
+      // all six sharp objects must exist — a missing one is a data bug, not a skip
+      expect(g.world.get(id)).toBeTruthy();
       const out = g.turn('board boat').output;
       expect(out).toMatch(/puncture|punctured|slipped/i);
       expect(g.world.get('PUNCTURED-BOAT')!.parent?.id).not.toBeNull();
