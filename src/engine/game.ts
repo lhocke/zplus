@@ -199,6 +199,14 @@ export class Game {
     // I-CURE: queued countdown (1actions.zil:3593–3602, CURE_WAIT=30); starts parked (0).
     this.clock.schedule(this.makeIFightEntry());
     this.clock.schedule(this.makeICureEntry());
+
+    // I-RFILL / I-REMPTY: replace bootstrap stubs with real tick bodies.
+    // Stubs are registered by bootstrap.ts (turnsLeft=0, enabled=false) so BOLT-F can
+    // call queueClock before the Game constructor runs.  We overwrite here with closures
+    // that can reach game state (world, flags, player, jigsUp).
+    // 1actions.zil:1226–1282 (CB-DAM2).
+    this.clock.schedule(this.makeIRfillEntry());
+    this.clock.schedule(this.makeIRemptyEntry());
   }
 
   /** Print the intro banner and describe the initial room. */
@@ -1276,6 +1284,144 @@ export class Game {
         };
         iCure(cb);
         return true;  // stays registered (disable() marks it inactive when done)
+      },
+    };
+  }
+
+  // I-REMPTY — reservoir drains (one-shot, 8 ticks). 1actions.zil:1263–1282.
+  // FSET RESERVOIR RLANDBIT; FCLEAR RESERVOIR NONLANDBIT; clear TOUCHBIT on deep-canyon
+  // and loud-room; reveal TRUNK unconditionally; set LOW-TIDE=true; per-room messages.
+  private makeIRemptyEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-REMPTY',
+      turnsLeft: 0,   // parked — armed by BOLT-F via queueClock('I-REMPTY', 8, true)
+      enabled: false,
+      tick: (ctx): boolean => {
+        const res = this.world.get('RESERVOIR');
+        if (res !== undefined) {
+          res.set(Flag.Land);      // FSET RESERVOIR RLANDBIT
+          res.clear(Flag.NonLand); // FCLEAR RESERVOIR NONLANDBIT
+        }
+        const dc = this.world.get('DEEP-CANYON');
+        if (dc !== undefined) dc.clear(Flag.Touched);   // FCLEAR DEEP-CANYON TOUCHBIT
+        const lr = this.world.get('LOUD-ROOM');
+        if (lr !== undefined) lr.clear(Flag.Touched);   // FCLEAR LOUD-ROOM TOUCHBIT
+
+        const trunk = this.world.get('TRUNK');
+        if (trunk !== undefined) trunk.clear(Flag.Invisible);  // FCLEAR TRUNK INVISIBLE — always
+
+        this.flags.set('LOW-TIDE', true);  // SETG LOW-TIDE T
+
+        // Per-room messages — 1actions.zil:1270–1282.
+        const hereId = this.here.id;
+        if (hereId === 'RESERVOIR') {
+          // :1271 — in vehicle (boat): boat sinks into mud. Otherwise: nothing (on-foot
+          // is now safe because the reservoir drained).
+          if (this.player.parent !== null && this.player.parent.has(Flag.Vehicle)) {
+            ctx.tell(
+              'The water level has dropped to the point at which the boat can no\n' +
+              'longer stay afloat. It sinks into the mud.',
+            );
+          }
+        } else if (hereId === 'DEEP-CANYON') {
+          // :1276
+          ctx.tell('The roar of rushing water is quieter now.');
+        } else if (hereId === 'RESERVOIR-NORTH' || hereId === 'RESERVOIR-SOUTH') {
+          // :1280
+          ctx.tell(
+            'The water level is now quite low here and you could easily cross over\n' +
+            'to the other side.',
+          );
+        }
+
+        return false;  // one-shot: remove after firing
+      },
+    };
+  }
+
+  // I-RFILL — reservoir fills (one-shot, 8 ticks). 1actions.zil:1226–1259.
+  // FSET RESERVOIR NONLANDBIT; FCLEAR RESERVOIR RLANDBIT; clear TOUCHBIT;
+  // re-hide TRUNK only if still in RESERVOIR (NM-B); set LOW-TIDE=false.
+  // Flag mutations complete BEFORE jigsUp call (NM-L).
+  private makeIRfillEntry(): import('./clock.js').ClockEntry {
+    // LOUD-RUNS: the three possible panic-scramble destinations. 1actions.zil:1261.
+    const LOUD_RUNS: readonly string[] = ['DAMP-CAVE', 'ROUND-ROOM', 'DEEP-CANYON'];
+
+    return {
+      id: 'I-RFILL',
+      turnsLeft: 0,   // parked — armed by BOLT-F via queueClock('I-RFILL', 8, true)
+      enabled: false,
+      tick: (ctx): boolean => {
+        const res = this.world.get('RESERVOIR');
+        if (res !== undefined) {
+          res.set(Flag.NonLand); // FSET RESERVOIR NONLANDBIT
+          res.clear(Flag.Land);  // FCLEAR RESERVOIR RLANDBIT
+        }
+        const dc = this.world.get('DEEP-CANYON');
+        if (dc !== undefined) dc.clear(Flag.Touched);
+        const lr = this.world.get('LOUD-ROOM');
+        if (lr !== undefined) lr.clear(Flag.Touched);
+
+        // NM-B: re-hide trunk only if it is still in the reservoir (player may have taken it).
+        // 1actions.zil:1231 <AND <IN? ,TRUNK ,RESERVOIR> <FSET ,TRUNK ,INVISIBLE>>
+        const trunk = this.world.get('TRUNK');
+        if (trunk !== undefined && trunk.parent === res) {
+          trunk.set(Flag.Invisible);
+        }
+
+        // NM-L: LOW-TIDE flip happens BEFORE the switch/jigsUp — must not be rolled back.
+        this.flags.set('LOW-TIDE', false);  // SETG LOW-TIDE <>
+
+        // Per-room messages and conditional jigsUp — 1actions.zil:1237–1257.
+        const clockFatal = (): void => { this.fatalPending = true; };
+        const hereId = this.here.id;
+
+        if (hereId === 'RESERVOIR') {
+          // :1238 — in vehicle: float message. On foot: drown. (NM-L: flag mutations above already done)
+          if (this.player.parent !== null && this.player.parent.has(Flag.Vehicle)) {
+            ctx.tell(
+              'The boat lifts gently out of the mud and is now floating on\n' +
+              'the reservoir.',
+            );
+          } else {
+            jigsUp(
+              'You are lifted up by the rising river! You try to swim, but the\n' +
+              'currents are too strong. You come closer, closer to the awesome\n' +
+              'structure of Flood Control Dam #3. The dam beckons to you.\n' +
+              'The roar of the water nearly deafens you, but you remain conscious\n' +
+              'as you tumble over the dam toward your certain doom among the rocks\n' +
+              'at its base.',
+              this.jigsUpMsgs(),
+              this.makeJigsUpCallbacks(ctx.tell, clockFatal),
+            );
+          }
+        } else if (hereId === 'DEEP-CANYON') {
+          // :1248
+          ctx.tell('A sound, like that of flowing water, starts to come from below.');
+        } else if (hereId === 'LOUD-ROOM') {
+          // :1251 — panic scramble to a random LOUD-RUNS room
+          ctx.tell(
+            'All of a sudden, an alarmingly loud roaring sound fills the room.\n' +
+            'Filled with fear, you scramble away.',
+          );
+          const idx = Math.floor(this.rng.next() * LOUD_RUNS.length);
+          const destId = LOUD_RUNS[idx] ?? LOUD_RUNS[0]!;
+          const dest = this.world.get(destId) as Room;
+          if (dest !== undefined) {
+            this.player.moveTo(dest);  // ZIL GOTO moves the player
+            const enterOut = this.onRoomEntered(dest);
+            if (enterOut) ctx.tell(enterOut);
+            ctx.tell(this.describeCurrentRoom());
+          }
+        } else if (hereId === 'RESERVOIR-NORTH' || hereId === 'RESERVOIR-SOUTH') {
+          // :1255
+          ctx.tell(
+            'You notice that the water level has risen to the point that it\n' +
+            'is impossible to cross.',
+          );
+        }
+
+        return false;  // one-shot: remove after firing
       },
     };
   }
