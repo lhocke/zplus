@@ -148,12 +148,13 @@ describe('CB-LOUD — LOUD-ROOM-FCN M-END: panic scramble to LOUD-RUNS set', () 
 // ---------------------------------------------------------------------------
 
 describe('CB-LOUD — loud-room input mode: whitelist gate (NM-D)', () => {
-  it('non-whitelist input returns "echo echo" response', () => {
+  it('non-whitelist input echoes the last word (V-ECHO behavior, gverbs.zil:529–545)', () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);  // S0: loud (default state)
+    // "take bar" → last word is "bar" → "bar bar ..."
     const out = g.turn('take bar').output;
-    expect(out).toContain('echo');
+    expect(out).toMatch(/bar bar \.\.\./);
   });
 
   it('W exit passes through (moves west to ROUND-ROOM)', () => {
@@ -248,5 +249,153 @@ describe('CB-LOUD — ECHO in quiet room: V-ECHO fallback', () => {
     giveLight(g);
     const out = g.turn('echo').output;
     expect(out).toContain('echo');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Observable faithfulness bugs (repair CB-LOUD)
+// ---------------------------------------------------------------------------
+
+describe('CB-LOUD — whitelist: only W/E/U pass; N/S/D echo (1actions.zil:1711–1716)', () => {
+  // ZIL whitelist only passes W?W/W?WEST, W?E/W?EAST, W?U/W?UP.
+  // N, S, D are NOT in the whitelist → fall to T → V-ECHO ("north north ...").
+  it('north in loud mode echoes, player stays in LOUD-ROOM', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('north').output;
+    expect(out).toContain('north north');
+    expect(g.world.get('PLAYER')!.parent?.id).toBe('LOUD-ROOM');
+  });
+
+  it('south in loud mode echoes, player stays in LOUD-ROOM', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('south').output;
+    expect(out).toContain('south south');
+    expect(g.world.get('PLAYER')!.parent?.id).toBe('LOUD-ROOM');
+  });
+
+  it('down in loud mode echoes, player stays in LOUD-ROOM', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('down').output;
+    expect(out).toContain('down down');
+    expect(g.world.get('PLAYER')!.parent?.id).toBe('LOUD-ROOM');
+  });
+});
+
+describe('CB-LOUD — echo text: last-word-twice + "..." (gverbs.zil:526–548)', () => {
+  // V-ECHO echoes the LAST lexed word twice + "...".
+  // Only falls back to "echo echo ..." when P-LEXWORDS == 0 (empty input).
+  it('take bar → "bar bar ..." (last word is "bar")', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('take bar').output;
+    expect(out).toMatch(/bar bar \.\.\./);
+    expect(out).not.toMatch(/^echo echo/m);
+  });
+
+  it('diagnose → "diagnose diagnose ..."', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('diagnose').output;
+    expect(out).toMatch(/diagnose diagnose \.\.\./);
+  });
+
+  it('xyzzy → "xyzzy xyzzy ..."', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('xyzzy').output;
+    expect(out).toMatch(/xyzzy xyzzy \.\.\./);
+  });
+
+  it('read the ancient leaflet → "leaflet leaflet ..." (no normal parser error)', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('read the ancient leaflet').output;
+    expect(out).toMatch(/leaflet leaflet \.\.\./);
+    expect(out).not.toContain("can't see");
+  });
+});
+
+describe('CB-LOUD — unparseable input echoes; no parser errors escape (1actions.zil:1693–1728)', () => {
+  // ZIL reads raw P-LEXV words; parser errors never surface inside the loud room.
+  // "say xyzzy" → WRD=slot5="xyzzy", matches nothing → V-ECHO → "xyzzy xyzzy ..."
+  it('say xyzzy → echoes "xyzzy xyzzy ..." (no "I recognize" error)', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('say xyzzy').output;
+    expect(out).toMatch(/xyzzy xyzzy \.\.\./);
+    expect(out).not.toContain("recognize");
+  });
+
+  it('press red button → echoes last word, no "can\'t see" error', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('press red button').output;
+    expect(out).toMatch(/button button \.\.\./);
+    expect(out).not.toContain("can't see");
+  });
+
+  it('flibber the wuggle → echoes "wuggle wuggle ...", no unknown-word error', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('flibber the wuggle').output;
+    expect(out).toMatch(/wuggle wuggle \.\.\./);
+    expect(out).not.toContain("don't know the word");
+  });
+});
+
+describe('CB-LOUD — V-BUG whitelist branch (1actions.zil:1717–1718)', () => {
+  // W?BUG is a named special case in the ZIL whitelist:
+  //   (<EQUAL? .WRD ,W?BUG> <TELL "That's only your opinion." CR>)
+  it('bug → "That\'s only your opinion." (not an echo)', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('bug').output;
+    expect(out).toContain("That's only your opinion.");
+    expect(out).not.toContain('echo');
+  });
+
+  it('bug: player stays in LOUD-ROOM', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    g.turn('bug');
+    expect(g.world.get('PLAYER')!.parent?.id).toBe('LOUD-ROOM');
+  });
+});
+
+describe('CB-LOUD — ECHO solve: room re-description follows (1actions.zil:1719–1728)', () => {
+  // After <RETURN> from the ZIL REPEAT loop, M-ENTER finishes and the game
+  // fires a normal turn: LOUD-FLAG is set → room is now quiet → M-LOOK fires,
+  // producing the "eerie in its quietness" description.
+  it('ECHO solve output includes the room re-description', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('echo').output;
+    // Message first, then blank line, then room name / description
+    expect(out).toContain('acoustics of the room change subtly');
+    expect(out).toContain('Loud Room');
+  });
+
+  it('ECHO solve room description shows quiet suffix', () => {
+    const g = newGameAt('LOUD-ROOM');
+    giveLight(g);
+    setFlags(g, false, false);
+    const out = g.turn('echo').output;
+    expect(out).toContain('eerie in its quietness');
   });
 });

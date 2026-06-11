@@ -6,6 +6,7 @@ import type { Actor } from '../domain/actor.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
+import { tokenize } from './parser/tokenizer.js';
 import { executeVerb, describeRoomObjects, META_ACTIONS } from './verbs/index.js';
 import { lit } from './parser/scope.js';
 import { describeRoom as describeRoomMsgs } from './game-messages.js';
@@ -408,48 +409,75 @@ export class Game {
   }
 
   /**
+   * Extract the last lexed word from raw player input — mirrors ZIL's V-ECHO
+   * which navigates to the last P-LEXV entry and prints its P-INBUF chars
+   * (gverbs.zil:529–545).  Falls back to "echo" when no tokens (empty input).
+   */
+  private loudEchoWord(input: string): string {
+    const tokens = tokenize(input);
+    return tokens.length > 0 ? tokens[tokens.length - 1] : 'echo';
+  }
+
+  /**
    * Loud-room command interceptor — 1actions.zil:1693–1728.
    *
-   * Routes the parsed command through the whitelist gate:
-   *   - V-WALK (movement): pass-through (return undefined → normal processing)
-   *   - META_ACTIONS (SAVE/RESTORE/QUIT/BRIEF/etc.): pass-through
-   *   - V-ECHO: solve — set LOUD-FLAG, clear BAR.SACREDBIT, print message
-   *   - everything else: V-ECHO fallback ("echo echo ..."), consume the turn
-   *
-   * M-END fires after every intercepted command (same as the normal turn loop)
-   * so the LOUD-ROOM-FCN M-END panic scramble can eject the player.
+   * ZIL whitelist (exact):
+   *   W?W/W?WEST → ROUND-ROOM, W?E/W?EAST → DAMP-CAVE, W?U/W?UP → DEEP-CANYON
+   *   W?SAVE, W?RESTORE, W?Q/W?QUIT: pass through
+   *   W?BUG: "That's only your opinion."  (1actions.zil:1717–1718)
+   *   W?ECHO: solve — set LOUD-FLAG, clear BAR.SACREDBIT, print message, re-LOOK
+   *   everything else (including parse failures, unknown words, N/S/D movement):
+   *     → V-ECHO fallback — echo last lexed word twice + "..."  (gverbs.zil:529–545)
    *
    * Returns a TurnResult for intercepted commands; undefined for pass-throughs.
    */
   private loudRoomDispatch(input: string): TurnResult | undefined {
+    // META_ACTIONS (SAVE/RESTORE/QUIT/BRIEF/VERBOSE/etc.): pass through before
+    // attempting parse, so meta verbs always work regardless of parse result.
+    // We still need the parse for ECHO/BUG/direction checks below.
     const pr = this.parser.parseSegment(input, this.here, this.player, this.world);
 
-    if (pr.kind !== 'ok') {
-      return { output: pr.message, moved: false };
+    if (pr.kind === 'ok') {
+      const action = pr.command.action;
+
+      // Only W/E/U are whitelist exits (1actions.zil:1711–1716).
+      // N, S, D are not exits of LOUD-ROOM → echo, not pass-through.
+      if (action === 'V-WALK') {
+        const dir = pr.command.prep;
+        if (dir === 'west' || dir === 'east' || dir === 'up') return undefined;
+        // Non-exit direction: falls to echo below.
+      } else if (META_ACTIONS.has(action)) {
+        return undefined;
+      }
     }
-    const action = pr.command.action;
-
-    // V-WALK: movement exits pass through (W/E/U are the whitelist exits).
-    if (action === 'V-WALK') return undefined;
-
-    // META_ACTIONS (SAVE/RESTORE/QUIT/BRIEF/VERBOSE/etc.): pass through.
-    if (META_ACTIONS.has(action)) return undefined;
 
     const outputs: string[] = [];
     const tell = (s: string): void => { outputs.push(s); };
 
-    // V-ECHO: solve the ECHO puzzle — 1actions.zil:1719–1725.
+    // Parse to get action (may be ok or fail); on ok, check named whitelist entries.
+    const action = pr.kind === 'ok' ? pr.command.action : null;
+
     if (action === 'V-ECHO') {
+      // ECHO solve — 1actions.zil:1719–1725.
       this.flags.set('LOUD-FLAG', true);
       const bar = this.world.get('BAR');
       if (bar !== undefined) bar.clear(Flag.Sacred);
       this.parser.clearContinuation();
       tell('The acoustics of the room change subtly.');
-    } else {
-      // All other input → V-ECHO fallback ("echo echo ...").
-      // ZIL: non-whitelist input routes to V-ECHO. gverbs.zil:546.
+      // ZIL <RETURN> exits the REPEAT; normal turn resumes → room re-described
+      // because LOUD-FLAG is now set and the game fires M-LOOK as if room entered.
+      tell(this.describeCurrentRoom());
+    } else if (action === 'V-BUG') {
+      // 1actions.zil:1717–1718 — W?BUG is a named special case.
       this.parser.clearContinuation();
-      tell('echo echo ...');
+      tell("That's only your opinion.");
+    } else {
+      // All other input — parse failures, unknown words, N/S/D, any unwhitelisted
+      // verb — routes to V-ECHO: echo the last lexed word twice + "..."
+      // gverbs.zil:529–545: echoes P-INBUF bytes of the last P-LEXV entry.
+      this.parser.clearContinuation();
+      const w = this.loudEchoWord(input);
+      tell(`${w} ${w} ...`);
     }
 
     // M-END fires each turn even in the captive loop (1actions.zil:1674–1680).
