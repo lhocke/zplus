@@ -19,6 +19,15 @@ import objectsData from '../data/objects.json';
 const DEFAULT_SEED = 42;
 const DEFAULT_START_ROOM: ObjectId = 'WEST-OF-HOUSE';
 
+// isInfested — 1actions.zil:3879–3884 (INFESTED? routine).
+// A room is infested if it contains an ACTORBIT object that is NOT invisible.
+function isInfested(room: import('../domain/game-object.js').GameObject): boolean {
+  for (const obj of room.children) {
+    if (obj.has(Flag.Actor) && !obj.has(Flag.Invisible)) return true;
+  }
+  return false;
+}
+
 /**
  * Load the real world data and return a fully-bootstrapped Game instance.
  */
@@ -113,6 +122,65 @@ export function createGame(opts: {
     },
   };
   clock.schedule(iMatchEntry);
+
+  // I-SWORD: per-turn demon (1actions.zil:3849–3877) — elvish sword glow based
+  // on villain proximity. Fires every turn while enabled (turnsLeft=-1 demon).
+  // Registered here so KILL-INTERRUPTS (clock.killAll) can disable it; the
+  // swordFcn TAKE handler calls clock.enable('I-SWORD') which makes this live.
+  //
+  // Glow levels (stored in SWORD P?TVALUE):
+  //   0 = none  1 = faint blue  2 = very bright
+  //
+  // Infested: room contains an ACTORBIT object that is NOT invisible.
+  const iSwordEntry: ClockEntry = {
+    id: 'I-SWORD',
+    turnsLeft: -1,   // demon — fires every advance()
+    enabled: false,  // armed by swordFcn on TAKE
+    tick(ctx): boolean {
+      const sword = world.get('SWORD');
+      if (sword === undefined) return true;
+
+      // 1actions.zil:3853: if sword not in ADVENTURER → disable demon.
+      if (sword.parent !== player) {
+        clock.disable('I-SWORD');
+        return true;
+      }
+
+      const here = player.parent;
+      if (here === null || here === undefined) return true;
+
+      const g = (sword.props.get('TVALUE') as number | undefined) ?? 0;
+      let ng = 0;
+
+      // 1actions.zil:3854–3868: check current room first, then adjacent rooms.
+      if (isInfested(here)) {
+        ng = 2;
+      } else {
+        // Iterate exits — check each reachable adjacent room.
+        for (const exit of (here as import('../domain/room.js').Room).exits) {
+          if (exit.to === undefined) continue;
+          const adj = world.get(exit.to);
+          if (adj !== undefined && isInfested(adj)) {
+            ng = 1;
+            break;
+          }
+        }
+      }
+
+      // 1actions.zil:3869–3875: print on state change only, then update TVALUE.
+      if (ng === g) return true;
+      if (ng === 2) {
+        ctx.tell('Your sword has begun to glow very brightly.');
+      } else if (ng === 1) {
+        ctx.tell('Your sword is glowing with a faint blue glow.');
+      } else {
+        ctx.tell('Your sword is no longer glowing.');
+      }
+      sword.props.set('TVALUE', ng);
+      return true;
+    },
+  };
+  clock.schedule(iSwordEntry);
 
   const rng = opts.rng ?? new Rng(seed);
   // Separate RNG stream for combat — same seed, independent state.
