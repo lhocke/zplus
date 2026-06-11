@@ -698,8 +698,8 @@ export class Game {
           this.parser.clearContinuation();
           if (verbResult.moved) {
             moved = true;
-            const newRoom = this.player.parent as Room;
-            if (newRoom !== undefined && newRoom !== this.here) {
+            const newRoom = this.currentRoom();
+            if (newRoom !== null && newRoom !== this.here) {
               this.here = newRoom;
             }
           }
@@ -713,13 +713,13 @@ export class Game {
 
         if (verbResult.moved) {
           moved = true;
-          const newRoom = this.player.parent as Room;
+          const newRoom = this.currentRoom();
 
           if (verbResult.movedIntoDark) {
             // Dark destination (ZIL GOTO order): darkPlaceEntered notice, then M-ENTER,
             // then describeCurrentRoom() → pitch-black message.
             let enterOut = '';
-            if (newRoom !== undefined && newRoom !== this.here) {
+            if (newRoom !== null && newRoom !== this.here) {
               enterOut = this.onRoomEntered(newRoom);
             }
             const roomDesc = this.describeCurrentRoom();
@@ -734,7 +734,7 @@ export class Game {
             } else {
               outputs.push(mergedParts.join('\n'));
             }
-          } else if (newRoom !== undefined && newRoom !== this.here) {
+          } else if (newRoom !== null && newRoom !== this.here) {
             // Lit destination: fire M-ENTER and prepend its output before room description.
             const enterOut = this.onRoomEntered(newRoom);
             if (enterOut.length > 0) {
@@ -986,6 +986,22 @@ export class Game {
     if (per === undefined) return undefined;
     const ctx = this.makeContext(here, 'walk', undefined, undefined, undefined, undefined, tell);
     return per(ctx);
+  }
+
+  /**
+   * Resolve the player's current room, accounting for vehicle containment.
+   * When the player is inside a vehicle (player.parent.has(Flag.Vehicle)),
+   * the room is vehicle.parent (the vehicle's parent room).
+   * ZIL equivalent: <SETG HERE .RM> after <MOVE .WLOC .RM>.
+   */
+  private currentRoom(): Room | null {
+    const loc = this.player.parent;
+    if (loc === null) return null;
+    if (loc instanceof Room) return loc;
+    // In a vehicle: loc is the vehicle, loc.parent is the room.
+    if (loc.has(Flag.Vehicle) && loc.parent instanceof Room) return loc.parent;
+    // Fallback for any other non-Room container (should not occur in normal play).
+    return loc instanceof Room ? loc : null;
   }
 
   /**

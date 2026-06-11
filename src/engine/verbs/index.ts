@@ -272,6 +272,14 @@ function verbLook(ctx: VerbContext): VerbResult {
   return result(describeRoom(ctx.here, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal));
 }
 
+// Map ZIL VTYPE prop string to the Flag it names.  Only NONLANDBIT is used in
+// Zork I (the magic boat); RLANDBIT would name a land-vehicle (none in Zork I).
+// gverbs.zil:2051 <SET AV <GETP .WLOC ,P?VTYPE>>
+const VTYPE_FLAG: Record<string, Flag> = {
+  NONLANDBIT: Flag.NonLand,
+  RLANDBIT:   Flag.Land,
+};
+
 function verbGo(ctx: VerbContext): VerbResult {
   const dir = ctx.prep;
   if (!dir) return result("Go where?");
@@ -286,11 +294,38 @@ function verbGo(ctx: VerbContext): VerbResult {
 
   const prob = ctx.prob ?? (() => false);
 
+  // ZIL GOTO vehicle interlock (gverbs.zil:2045–2088).
+  // WLOC = LOC(WINNER): the player's immediate container (vehicle or room).
+  // AV = WLOC's VTYPE flag, or undefined when on foot.
+  const wloc = ctx.player.parent;
+  const inVehicle = wloc !== null && wloc !== undefined && wloc.has(Flag.Vehicle);
+  const vtypeStr = inVehicle ? (wloc!.props.get('VTYPE') as string | undefined) : undefined;
+  const av: Flag | undefined = vtypeStr !== undefined ? VTYPE_FLAG[vtypeStr] : undefined;
+
   // ZIL GOTO (gverbs.zil:2048-2120): capture OLIT before the move, recompute
   // LIT after. Grue gate fires only on dark→dark (both rooms unlit).
+  //
+  // When in a vehicle: move the vehicle to dest (gverbs.zil:2090 <MOVE .WLOC .RM>),
+  // not the player.  The player stays inside the vehicle.
   const enterDest = (dest: Room): VerbResult => {
     const oldLit = (ctx.alwaysLit ?? false) || lit(ctx.here, ctx.player, ctx.world);
-    ctx.player.moveTo(dest);
+    const fromLand = ctx.here.has(Flag.Land);
+    const toLand   = dest.has(Flag.Land);
+
+    // Landing message: boat leaves water and comes to rest on shore.
+    // gverbs.zil:2071–2077: LB && !HERE.RLANDBIT && !DEAD && WLOC.VEHBIT.
+    let landingMsg = '';
+    if (toLand && !fromLand && inVehicle) {
+      landingMsg = `The ${wloc!.desc} comes to a rest on the shore.`;
+    }
+
+    if (inVehicle) {
+      // Move vehicle (wloc) to destination; player remains inside it.
+      wloc!.moveTo(dest);
+    } else {
+      ctx.player.moveTo(dest);
+    }
+
     const newLit = (ctx.alwaysLit ?? false) || lit(dest, ctx.player, ctx.world);
 
     // Grue gate (gverbs.zil:2095-2116): dark→dark, non-NonLand room, PROB 80.
@@ -309,7 +344,25 @@ function verbGo(ctx: VerbContext): VerbResult {
       return result(goto.darkPlaceEntered, true, false, /*movedIntoDark*/true);
     }
 
-    return result(describeRoom(dest, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal), true);
+    const roomDesc = describeRoom(dest, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal);
+    const parts = [landingMsg, roomDesc].filter(s => s.length > 0);
+    return result(parts.join('\n'), true);
+  };
+
+  // -------------------------------------------------------------------------
+  // Resolve destination first (for vehicle rejection checks we need to know
+  // the dest's flags, which requires the destination object).
+  // per exits are resolved below; for plain exits resolve here for the checks.
+  // -------------------------------------------------------------------------
+
+  // Helper: emit NO-GO-TELL (gverbs.zil:2038–2043).
+  // With AV: "You can't go there in a <vehicle>."
+  // Without: "You can't go there without a vehicle."
+  const noGoTell = (): VerbResult => {
+    const msg = inVehicle && wloc !== null && wloc !== undefined
+      ? `You can't go there in a ${wloc.desc}.`
+      : "You can't go there without a vehicle.";
+    return result(msg, /*moved*/false, /*fatal*/true);
   };
 
   if (exit.per !== undefined) {
@@ -353,7 +406,34 @@ function verbGo(ctx: VerbContext): VerbResult {
     return result("You can't go that way.", /*moved*/false, /*fatal*/true);
   }
 
-  return enterDest(dest as Room);
+  const destRoom = dest as Room;
+  const lb = destRoom.has(Flag.Land);  // dest is RLANDBIT
+  const destIsWater = destRoom.has(Flag.NonLand);  // dest is NONLANDBIT
+
+  // GOTO vehicle rejection clauses (gverbs.zil:2052–2066).
+  // In real Zork I every room has either RLANDBIT or NONLANDBIT; clause 1 is
+  // equivalent to "dest is a water room AND on foot".  Test fixtures may omit
+  // RLANDBIT on synthetic land rooms, so we key on NONLANDBIT directly — the
+  // semantics are identical for any room that matches real-game data.
+  // gverbs.zil:2052–2055: (<AND <NOT .LB> <NOT .AV>> ...)
+  if (destIsWater && av === undefined) return noGoTell();
+
+  // Clause 2: in vehicle, dest not land AND dest lacks the vehicle's terrain type.
+  // gverbs.zil:2056–2058: (<AND <NOT .LB> <NOT <FSET? .RM .AV>>> ...)
+  if (!lb && av !== undefined && !destRoom.has(av)) return noGoTell();
+
+  // Clause 3: in water-vehicle on land, dest is land, dest lacks NONLANDBIT.
+  // Prevents a beached water-vehicle from walking to another land room.
+  // gverbs.zil:2060–2066: HERE.RLANDBIT && LB && AV && AV!=RLANDBIT && !FSET? RM .AV
+  if (
+    ctx.here.has(Flag.Land) && lb &&
+    av !== undefined && av !== Flag.Land &&
+    !destRoom.has(av)
+  ) {
+    return noGoTell();
+  }
+
+  return enterDest(destRoom);
 }
 
 // WEIGHT — gverbs.zil:1988: SIZE(obj) + recursive sum over all children.
