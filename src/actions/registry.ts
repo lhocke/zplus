@@ -19,6 +19,7 @@ import {
   largeBagFAction,
   dumbContainerAction,
 } from './treasure-room.js';
+import { cyclopsFcnAction, cyclopsRoomFcnAction } from './cyclops.js';
 import {
   preBoardHandler,
   preBurnHandler,
@@ -46,6 +47,8 @@ const ACTIONS: Record<string, ActionHandler> = {
   'STILETTO-FUNCTION': stilettoFunctionAction,
   'LARGE-BAG-F':       largeBagFAction,
   'DUMB-CONTAINER':    dumbContainerAction,
+  'CYCLOPS-FCN':       cyclopsFcnAction,
+  'CYCLOPS-ROOM-FCN':  cyclopsRoomFcnAction,
 };
 
 const PER_ROUTINES: Record<string, PerRoutine> = {
