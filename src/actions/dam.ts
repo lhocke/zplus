@@ -184,9 +184,228 @@ export const damFunction: ActionHandler = (ctx) => {
   return false;
 };
 
+// ---------------------------------------------------------------------------
+// BUTTON-F — 1actions.zil:1298–1330
+//
+// READ any button: "They're greek to you."
+// PUSH:
+//   BLUE   — if WATER-LEVEL==0: start leak, arm I-MAINT-ROOM. else "jammed".
+//   RED    — toggle MAINTENANCE-ROOM ONBIT (lights on/off).
+//   BROWN  — GATE-FLAG=false + clear DAM-ROOM TOUCHBIT + "Click."
+//   YELLOW — GATE-FLAG=true  + clear DAM-ROOM TOUCHBIT + "Click."
+// ---------------------------------------------------------------------------
+
+export const buttonF: ActionHandler = (ctx) => {
+  if (ctx.verb === 'read') {
+    ctx.tell("They're greek to you.");
+    return true;
+  }
+
+  if (ctx.verb !== 'push') return false;
+
+  const id = ctx.self.id;
+
+  if (id === 'BLUE-BUTTON') {
+    const wl = ctx.getIntGlobal?.('WATER-LEVEL') ?? 0;
+    if (wl === 0) {
+      // :1304 — reveal the leak
+      const leak = ctx.world.get('LEAK');
+      if (leak) ctx.clearFlag(leak, Flag.Invisible);
+      ctx.tell(
+        'There is a rumbling sound and a stream of water appears to burst\n' +
+        'from the east wall of the room (apparently, a leak has occurred in a\n' +
+        'pipe).',
+      );
+      ctx.setIntGlobal?.('WATER-LEVEL', 1);
+      // :1310 — ENABLE <QUEUE I-MAINT-ROOM -1> (every-turn demon)
+      ctx.queueClock?.('I-MAINT-ROOM', -1, true);
+    } else {
+      // :1313 — already leaking or repaired
+      ctx.tell('The blue button appears to be jammed.');
+    }
+    return true;
+  }
+
+  if (id === 'RED-BUTTON') {
+    // :1315 — toggle ONBIT on HERE (lights)
+    ctx.tell('The lights within the room ');
+    if (ctx.hasFlag(ctx.here, Flag.On)) {
+      ctx.clearFlag(ctx.here, Flag.On);
+      ctx.tell('shut off.');
+    } else {
+      ctx.setFlag(ctx.here, Flag.On);
+      ctx.tell('come on.');
+    }
+    return true;
+  }
+
+  if (id === 'BROWN-BUTTON') {
+    // :1323
+    const damRoom = ctx.world.get('DAM-ROOM');
+    if (damRoom) ctx.clearFlag(damRoom, Flag.Touched);
+    ctx.setGlobal?.('GATE-FLAG', false);
+    ctx.tell('Click.');
+    return true;
+  }
+
+  if (id === 'YELLOW-BUTTON') {
+    // :1327
+    const damRoom = ctx.world.get('DAM-ROOM');
+    if (damRoom) ctx.clearFlag(damRoom, Flag.Touched);
+    ctx.setGlobal?.('GATE-FLAG', true);
+    ctx.tell('Click.');
+    return true;
+  }
+
+  return false;
+};
+
+// ---------------------------------------------------------------------------
+// LEAK-FUNCTION — 1actions.zil:1362–1370
+//
+// Only acts when WATER-LEVEL > 0 (active leak).
+// PUT/PUT-ON PUTTY  or  PLUG LEAK WITH PUTTY → FIX-MAINT-LEAK.
+// PLUG with other PRSI → WITH-TELL "With a <prsi>?"
+// ---------------------------------------------------------------------------
+
+function fixMaintLeak(ctx: Parameters<ActionHandler>[0]): void {
+  // 1actions.zil:1372–1377
+  ctx.setIntGlobal?.('WATER-LEVEL', -1);
+  ctx.queueClock?.('I-MAINT-ROOM', 0, false);   // park the demon
+  ctx.tell(
+    'By some miracle of Zorkian technology, you have managed to stop the\n' +
+    'leak in the dam.',
+  );
+}
+
+export const leakFunction: ActionHandler = (ctx) => {
+  const wl = ctx.getIntGlobal?.('WATER-LEVEL') ?? 0;
+  if (wl <= 0) return false;  // no active leak — ignore
+
+  const putty = ctx.world.get('PUTTY');
+
+  // PUT PUTTY [ON LEAK] or PUT-ON PUTTY → PRSO==PUTTY check (:1364)
+  if ((ctx.verb === 'put' || ctx.verb === 'put-on') && ctx.dobj === putty) {
+    fixMaintLeak(ctx);
+    return true;
+  }
+
+  // PLUG [LEAK] WITH <PRSI> (:1367)
+  if (ctx.verb === 'plug') {
+    if (ctx.iobj === putty) {
+      fixMaintLeak(ctx);
+      return true;
+    }
+    // WITH-TELL: "With a <prsi>?" — :1370
+    const prsiDesc = ctx.iobj?.desc ?? 'that';
+    ctx.tell(`With a ${prsiDesc}?`);
+    return true;
+  }
+
+  return false;
+};
+
+// ---------------------------------------------------------------------------
+// PUTTY-FCN — 1actions.zil:1379–1384
+//
+// (VERB? OIL)(EQUAL? PRSI PUTTY) → "all-purpose gunk isn't a lubricant."
+// (VERB? PUT)(EQUAL? PRSO PUTTY) → same message (wrong target).
+// ---------------------------------------------------------------------------
+
+export const puttyFcn: ActionHandler = (ctx) => {
+  const putty = ctx.self;
+
+  // OIL <something> WITH PUTTY — putty as iobj
+  if (ctx.verb === 'lubricate' && ctx.iobj === putty) {
+    ctx.tell("The all-purpose gunk isn't a lubricant.");
+    return true;
+  }
+
+  // PUT PUTTY (bare put, putty is dobj) — not the normal use; reject
+  if (ctx.verb === 'put' && ctx.dobj === putty && ctx.iobj === undefined) {
+    ctx.tell("The all-purpose gunk isn't a lubricant.");
+    return true;
+  }
+
+  return false;
+};
+
+// ---------------------------------------------------------------------------
+// TUBE-FUNCTION — 1actions.zil:1386–1398
+//
+// PUT <something> IN TUBE → "refuses to accept anything."
+// SQUEEZE TUBE:
+//   open + putty inside   → move putty to winner, "oozes into your hand."
+//   open, empty            → "The tube is apparently empty."
+//   closed                 → "The tube is closed."
+// ---------------------------------------------------------------------------
+
+export const tubeFunction: ActionHandler = (ctx) => {
+  const tube = ctx.self;
+
+  // :1387 — PUT <x> IN TUBE (tube is iobj)
+  if (ctx.verb === 'put' && ctx.iobj === tube) {
+    ctx.tell('The tube refuses to accept anything.');
+    return true;
+  }
+
+  // :1390 — SQUEEZE TUBE
+  if (ctx.verb === 'squeeze') {
+    const isOpen = ctx.hasFlag(tube, Flag.Open);
+    if (isOpen) {
+      // Find putty inside the tube
+      const putty = ctx.world.get('PUTTY');
+      if (putty !== undefined && putty.parent === tube) {
+        // :1393
+        putty.moveTo(ctx.actor);
+        ctx.tell('The viscous material oozes into your hand.');
+      } else {
+        // :1395 — open but empty
+        ctx.tell('The tube is apparently empty.');
+      }
+    } else {
+      // :1397 — closed
+      ctx.tell('The tube is closed.');
+    }
+    return true;
+  }
+
+  return false;
+};
+
+// ---------------------------------------------------------------------------
+// TOOL-CHEST-FCN — 1actions.zil:1332–1341
+//
+// EXAMINE → "The chests are all empty."
+// TAKE/OPEN/PUT → remove chest, print crumble message.
+// ---------------------------------------------------------------------------
+
+export const toolChestFcn: ActionHandler = (ctx) => {
+  if (ctx.verb === 'examine') {
+    ctx.tell('The chests are all empty.');
+    return true;
+  }
+
+  if (ctx.verb === 'take' || ctx.verb === 'open' || ctx.verb === 'put') {
+    ctx.self.moveTo(null);   // REMOVE-CAREFULLY — chest crumbles
+    ctx.tell(
+      'The chests are so rusty and corroded that they crumble when you\n' +
+      'touch them.',
+    );
+    return true;
+  }
+
+  return false;
+};
+
 export const damActions: Record<string, ActionHandler> = {
-  'BOLT-F':        boltF,
-  'DAM-ROOM-FCN':  damRoomFcn,
-  'DAM-FUNCTION':  damFunction,
-  'BUBBLE-F':      bubbleFcn,
+  'BOLT-F':          boltF,
+  'DAM-ROOM-FCN':    damRoomFcn,
+  'DAM-FUNCTION':    damFunction,
+  'BUBBLE-F':        bubbleFcn,
+  'BUTTON-F':        buttonF,
+  'LEAK-FUNCTION':   leakFunction,
+  'PUTTY-FCN':       puttyFcn,
+  'TUBE-FUNCTION':   tubeFunction,
+  'TOOL-CHEST-FCN':  toolChestFcn,
 };

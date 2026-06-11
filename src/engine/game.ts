@@ -207,6 +207,11 @@ export class Game {
     // 1actions.zil:1226–1282 (CB-DAM2).
     this.clock.schedule(this.makeIRfillEntry());
     this.clock.schedule(this.makeIRemptyEntry());
+
+    // I-MAINT-ROOM: every-turn demon for the maintenance-room leak.
+    // Starts parked (turnsLeft=0, disabled); blue button arms it via queueClock(-1, true).
+    // 1actions.zil:1343–1360 (CB-DAM3).
+    this.clock.schedule(this.makeIMaintRoomEntry());
   }
 
   /** Print the intro banner and describe the initial room. */
@@ -721,6 +726,19 @@ export class Game {
       queueClock: (id, period, enabled) => this.clock.queue(id, period, enabled),
       getGlobal: (n) => this.flags.get(n),
       setGlobal: (n, v = true) => this.flags.set(n, v),
+      getIntGlobal: (n) => {
+        if (n === 'WATER-LEVEL') return this.waterLevel;
+        if (n === 'BEACH-DIG')   return this.beachDig;
+        return 0;
+      },
+      setIntGlobal: (n, v) => {
+        if (n === 'WATER-LEVEL') { this.waterLevel = v; return; }
+        if (n === 'BEACH-DIG')   { this.beachDig = v; return; }
+      },
+      mungRoom: (roomId, desc) => {
+        const room = this.world.get(roomId);
+        if (room !== undefined) room.ldesc = desc;
+      },
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
       finish: () => { this.doFinish(tell); },
     };
@@ -1422,6 +1440,85 @@ export class Game {
         }
 
         return false;  // one-shot: remove after firing
+      },
+    };
+  }
+
+  // I-MAINT-ROOM — maintenance-room leak demon. 1actions.zil:1343–1360.
+  // Every-turn demon (turnsLeft=-1) armed by the blue button pushing;
+  // stops itself (queue 0, disabled) when WATER-LEVEL >= 14.
+  private makeIMaintRoomEntry(): import('./clock.js').ClockEntry {
+    // DROWNINGS table — 1actions.zil:1284–1293 (9 strings, 0-indexed).
+    const DROWNINGS: readonly string[] = [
+      'up to your ankles.',
+      'up to your shin.',
+      'up to your knees.',
+      'up to your hips.',
+      'up to your waist.',
+      'up to your chest.',
+      'up to your neck.',
+      'over your head.',
+      'high in your lungs.',
+    ];
+
+    return {
+      id: 'I-MAINT-ROOM',
+      turnsLeft: 0,   // parked — blue button arms via queueClock(-1, true)
+      enabled: false,
+      tick: (ctx): boolean => {
+        const hereIsMaint = this.here.id === 'MAINTENANCE-ROOM';
+
+        // :1345 — if HERE == MAINTENANCE-ROOM, print drowning level
+        if (hereIsMaint) {
+          const idx = Math.floor(this.waterLevel / 2);
+          const msg = DROWNINGS[idx] ?? DROWNINGS[DROWNINGS.length - 1]!;
+          ctx.tell(`The water level here is now ${msg}`);
+        }
+
+        // :1347 — increment WATER-LEVEL
+        this.waterLevel += 1;
+
+        // :1348 — at or above 14: MUNG-ROOM, stop demon, maybe drown
+        if (this.waterLevel >= 14) {
+          const mroom = this.world.get('MAINTENANCE-ROOM');
+          if (mroom !== undefined) {
+            mroom.ldesc = 'The room is full of water and cannot be entered.';
+          }
+          // :1351 — park the demon
+          this.clock.queue('I-MAINT-ROOM', 0, false);
+
+          // :1352 — if HERE, drown
+          if (hereIsMaint) {
+            const clockFatal = (): void => { this.fatalPending = true; };
+            jigsUp(
+              "I'm afraid you have done drowned yourself.",
+              this.jigsUpMsgs(),
+              this.makeJigsUpCallbacks(ctx.tell, clockFatal),
+            );
+          }
+          return true;  // demon stays registered (disabled by the queue call above)
+        }
+
+        // :1355 — player in inflated boat in dam-adjacent area → drown in boat
+        // "WINNER in INFLATED-BOAT" = player.parent == INFLATED-BOAT
+        const inflatedBoat = this.world.get('INFLATED-BOAT');
+        if (
+          inflatedBoat !== undefined &&
+          this.player.parent === inflatedBoat &&
+          (this.here.id === 'MAINTENANCE-ROOM' ||
+           this.here.id === 'DAM-ROOM' ||
+           this.here.id === 'DAM-LOBBY')
+        ) {
+          const clockFatal = (): void => { this.fatalPending = true; };
+          jigsUp(
+            'The rising water carries the boat over the dam, down the river, and over\n' +
+            'the falls. Tsk, tsk.',
+            this.jigsUpMsgs(),
+            this.makeJigsUpCallbacks(ctx.tell, clockFatal),
+          );
+        }
+
+        return true;  // demon: keep registered
       },
     };
   }

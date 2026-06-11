@@ -210,6 +210,18 @@ export function createGame(opts: {
     },
   });
 
+  // I-MAINT-ROOM: every-turn demon for the maintenance-room leak (CB-DAM3).
+  // Stub registered here (turnsLeft=0, disabled) so BUTTON-F's queueClock can
+  // find the slot; the real tick body is wired in Game constructor.
+  clock.schedule({
+    id: 'I-MAINT-ROOM',
+    turnsLeft: 0,   // parked — blue button arms via queueClock(-1, true)
+    enabled: false,
+    tick(_ctx): boolean {
+      return true;
+    },
+  });
+
   // DAM-ROOM has a static ldesc in rooms.json (the S0 sealed description).
   // DAM-ROOM-FCN handles all 4 water-level states via M-LOOK, so clear the
   // static ldesc to let the dynamic handler fire.

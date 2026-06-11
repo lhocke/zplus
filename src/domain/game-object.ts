@@ -75,6 +75,21 @@ export interface ActionContext {
   getGlobal?(name: string): boolean;
   /** Write a ZIL global boolean.  Optional; test contexts may omit. */
   setGlobal?(name: string, value?: boolean): void;
+  /**
+   * Read a ZIL integer global by name.
+   * Supports 'WATER-LEVEL' and 'BEACH-DIG' (Phase-3 dam/river integer globals).
+   * Optional; absent → 0.
+   */
+  getIntGlobal?(name: string): number;
+  /** Write a ZIL integer global by name.  Optional; test contexts may omit. */
+  setIntGlobal?(name: string, value: number): void;
+  /**
+   * MUNG-ROOM: replace a room's ldesc with a flooded/destroyed description
+   * and move it out of the live description path.  Used by I-MAINT-ROOM when
+   * the maintenance room fills with water.  Optional; no-op when absent.
+   * 1actions.zil:1349 / gverbs.zil:2183–2189.
+   */
+  mungRoom?(roomId: string, desc: string): void;
 }
 
 export type ActionHandler = (ctx: ActionContext) => HandlerResult;
