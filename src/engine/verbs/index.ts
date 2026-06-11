@@ -841,9 +841,20 @@ function verbDeflate(_ctx: VerbContext): VerbResult {
   return result(vDeflate.response);
 }
 
-// V-BOARD — fall-through when BOARD isn't handled by the vehicle object.
-function verbBoard(_ctx: VerbContext): VerbResult {
-  return result("You can't board that.");
+// V-BOARD (gverbs.zil:224–228) — board a vehicle.
+// PRE-BOARD (already run) has verified PRSO is a vehicle in the room and
+// the player is not already in one.  V-BOARD moves the player inside.
+// RBOAT-FUNCTION's BOARD branch intercepts first and returns T to abort
+// V-BOARD (sharp-object puncture); returning false here lets V-BOARD run.
+function verbBoard(ctx: VerbContext): VerbResult {
+  const vehicle = ctx.dobj;
+  if (vehicle === undefined || !vehicle.has(Flag.Vehicle)) {
+    return result("You can't board that.");
+  }
+  // :225 <TELL "You are now in the " D ,PRSO "." CR>
+  // :226 <MOVE ,WINNER ,PRSO>
+  ctx.player.moveTo(vehicle);
+  return result(`You are now in the ${vehicle.desc}.`, /*moved*/true);
 }
 
 // V-DISEMBARK (gverbs.zil:418–432) — exit a vehicle.

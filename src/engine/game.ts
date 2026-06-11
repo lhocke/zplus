@@ -213,6 +213,11 @@ export class Game {
     // Starts parked (turnsLeft=0, disabled); blue button arms it via queueClock(-1, true).
     // 1actions.zil:1343–1360 (CB-DAM3).
     this.clock.schedule(this.makeIMaintRoomEntry());
+
+    // I-RIVER: per-section drift timer (CB-BOAT3).
+    // Starts parked; LAUNCH arms it via queueClock(RIVER-SPEEDS[dest], true).
+    // 1actions.zil:2708–2720.
+    this.clock.schedule(this.makeIRiverEntry());
   }
 
   /** Print the intro banner and describe the initial room. */
@@ -623,10 +628,19 @@ export class Game {
       this.parser.setLastWon(true);
 
       if (chainResult.handled) {
+        // Detect room change after handler: either the player moved directly,
+        // or the player is in a vehicle that moved (e.g. LAUNCH or GOTO vehicle).
+        // In the vehicle case, player.parent is the boat (not a Room), so we
+        // use currentRoom() which resolves through vehicle containment.
         const newRoomAfterHandler = this.player.parent as Room;
-        if (newRoomAfterHandler !== undefined && newRoomAfterHandler !== prevRoom) {
+        const newCurrentRoom = this.currentRoom();
+        const roomMoved =
+          (newRoomAfterHandler instanceof Room && newRoomAfterHandler !== prevRoom) ||
+          (newCurrentRoom !== null && newCurrentRoom !== this.here);
+        if (roomMoved) {
           moved = true;
-          const enterOut = this.onRoomEntered(newRoomAfterHandler);
+          const targetRoom = newCurrentRoom ?? (newRoomAfterHandler as Room);
+          const enterOut = this.onRoomEntered(targetRoom);
           const roomDesc = this.describeCurrentRoom();
           const parts = [...handled, ...(enterOut ? [enterOut] : []), roomDesc].filter(s => s.length > 0);
           const cmdOut = parts.join('\n');
@@ -929,9 +943,17 @@ export class Game {
       }
     }
 
-    // room P?ACTION rarg=M-BEG — gmain.zil:212
-    if (this.here.handler !== undefined) {
-      if (this.here.handler(ctx(this.here, M_BEG))) {
+    // LOC(WINNER).P?ACTION rarg=M-BEG — gmain.zil:212
+    // In ZIL: <APPLY <GETP <LOC ,WINNER> ,P?ACTION> ,M-BEG>
+    // LOC(WINNER) is the player's immediate container: the boat when inside one,
+    // or the room when on foot.  When in a vehicle, the boat's handler gets M-BEG
+    // (so RBOAT-FUNCTION can restrict directions, intercept LAUNCH, etc.).
+    const locWinner = this.player.parent;
+    const mbegTarget = (locWinner !== null && locWinner.has(Flag.Vehicle))
+      ? locWinner   // inside a vehicle: M-BEG → vehicle handler
+      : this.here;  // on foot: M-BEG → room handler
+    if (mbegTarget.handler !== undefined) {
+      if (mbegTarget.handler(ctx(mbegTarget, M_BEG))) {
         return { handled: true, fatal };
       }
     }
@@ -1691,6 +1713,77 @@ export class Game {
         }
 
         return true;  // demon: keep registered
+      },
+    };
+  }
+
+  // I-RIVER — per-section drift timer. 1actions.zil:2708–2720.
+  // Armed by RBOAT-FUNCTION LAUNCH via queueClock(RIVER-SPEEDS[dest], true).
+  // Fires once, moves boat downstream, then re-arms at the new section's speed.
+  // Disables itself when the player leaves the river (not on RIVER-1..5).
+  private makeIRiverEntry(): import('./clock.js').ClockEntry {
+    // RIVER-NEXT: downstream section map. 1actions.zil:2695–2696.
+    const RIVER_NEXT: Readonly<Record<string, string>> = {
+      'RIVER-1': 'RIVER-2',
+      'RIVER-2': 'RIVER-3',
+      'RIVER-3': 'RIVER-4',
+      'RIVER-4': 'RIVER-5',
+    };
+    // RIVER-SPEEDS: per-section drift period. 1actions.zil:2692–2693.
+    const RIVER_SPEEDS: Readonly<Record<string, number>> = {
+      'RIVER-1': 4,
+      'RIVER-2': 4,
+      'RIVER-3': 3,
+      'RIVER-4': 2,
+      'RIVER-5': 1,
+    };
+    const RIVER_ROOMS = new Set(['RIVER-1', 'RIVER-2', 'RIVER-3', 'RIVER-4', 'RIVER-5']);
+
+    return {
+      id: 'I-RIVER',
+      turnsLeft: 0,   // parked — LAUNCH arms it
+      enabled: false,
+      tick: (ctx): boolean => {
+        const hereId = this.here.id;
+
+        // :2709–2711 — if not on RIVER-1..5, disable and return
+        if (!RIVER_ROOMS.has(hereId)) {
+          this.clock.disable('I-RIVER');
+          return true;  // keep entry registered; just disabled
+        }
+
+        const nextId = RIVER_NEXT[hereId];
+        if (nextId !== undefined) {
+          // :2713–2715 — drift one section downstream
+          ctx.tell('The flow of the river carries you downstream.');
+          const dest = this.world.get(nextId) as Room;
+          if (dest !== undefined) {
+            // Move the boat (player is inside it)
+            const inflated = this.world.get('INFLATED-BOAT');
+            if (inflated !== undefined) inflated.moveTo(dest);
+            // Re-describe: fire onRoomEntered for M-ENTER + score
+            const enterOut = this.onRoomEntered(dest);
+            if (enterOut) ctx.tell(enterOut);
+            ctx.tell(this.describeCurrentRoom());
+          }
+          // :2715 — re-arm at new section's speed (NM-H: read speed AFTER the move)
+          const newSpeed = RIVER_SPEEDS[nextId];
+          if (newSpeed !== undefined) {
+            this.clock.queue('I-RIVER', newSpeed, true);
+          }
+        } else {
+          // :2716–2720 — past RIVER-5 (no RIVER-NEXT entry) → waterfall death (NM-I)
+          const clockFatal = (): void => { this.fatalPending = true; };
+          jigsUp(
+            'Unfortunately, the magic boat doesn\'t provide protection from\n' +
+            'the rocks and boulders one meets at the bottom of waterfalls.\n' +
+            'Including this one.',
+            this.jigsUpMsgs(),
+            this.makeJigsUpCallbacks(ctx.tell, clockFatal),
+          );
+        }
+
+        return true;  // keep entry registered (re-arm or keep for disable)
       },
     };
   }

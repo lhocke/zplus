@@ -222,6 +222,18 @@ export function createGame(opts: {
     },
   });
 
+  // I-RIVER: per-section drift timer (CB-BOAT3).
+  // Stub registered here; real tick body wired in Game constructor.
+  // 1actions.zil:2708–2720.
+  clock.schedule({
+    id: 'I-RIVER',
+    turnsLeft: 0,   // parked — LAUNCH arms via queueClock(speed, true)
+    enabled: false,
+    tick(_ctx): boolean {
+      return true;
+    },
+  });
+
   // Several dam rooms carry a static ldesc in rooms.json (the H2 hotfix S0 baseline).
   // Their FCNs handle all water-level states via M-LOOK, so clear the static ldescs
   // so the dynamic handlers fire instead.
