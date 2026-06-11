@@ -539,6 +539,26 @@ describe('LARGE-BAG-F', () => {
     }
   });
 
+  // ZIL VERB? EXAMINE LOOK-INSIDE only — LOOK-UNDER/BEHIND/ON must fall through
+  // to the generic handlers (gverbs.zil:899-900, :862-863, :892-896).
+  it('LOOK UNDER bag falls through (returns false) — not ZIL VERB? EXAMINE LOOK-INSIDE', () => {
+    const { ctx, emitted } = makeCtx({ verb: 'look', prep: 'UNDER' });
+    expect(largeBagF(ctx)).toBe(false);
+    expect(emitted).toHaveLength(0);
+  });
+
+  it('LOOK BEHIND bag falls through (returns false) — not ZIL VERB? EXAMINE LOOK-INSIDE', () => {
+    const { ctx, emitted } = makeCtx({ verb: 'look', prep: 'BEHIND' });
+    expect(largeBagF(ctx)).toBe(false);
+    expect(emitted).toHaveLength(0);
+  });
+
+  it('LOOK ON bag falls through (returns false) — not ZIL VERB? EXAMINE LOOK-INSIDE', () => {
+    const { ctx, emitted } = makeCtx({ verb: 'look', prep: 'ON' });
+    expect(largeBagF(ctx)).toBe(false);
+    expect(emitted).toHaveLength(0);
+  });
+
   it('other verbs: returns false', () => {
     const { ctx } = makeCtx({ verb: 'listen' });
     expect(largeBagF(ctx)).toBe(false);

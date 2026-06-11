@@ -205,6 +205,7 @@ export class Game {
         const ctx = this.buildRobberFcnCtx(this.here.id, tell);
         const vd: VerbDispatch = {
           verb:     actCtx.verb.toUpperCase(),
+          prep:     actCtx.prep,
           prsoId:   actCtx.dobj?.id,
           prsiId:   actCtx.iobj?.id,
           fighting: this.world.get('THIEF')?.has(Flag.Fight) ?? false,

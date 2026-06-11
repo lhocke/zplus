@@ -20,6 +20,7 @@ import {
   ROBBER_C_DESC,
   ROBBER_U_DESC,
 } from './thief-state.js';
+import { isExamineDispatch, isLookInsideDispatch } from './treasure-room.js';
 
 /** Minimal handle for an in-world object that ROBBER-FUNCTION touches. */
 export interface RobberObj {
@@ -38,6 +39,8 @@ export interface RobberObj {
 export interface VerbDispatch {
   /** ZIL PRSA — action name, e.g. 'TELL', 'GIVE', 'THROW', 'EXAMINE'. */
   verb: string;
+  /** Preposition from the parsed command (UPPERCASE — matches syntax.json). */
+  prep?: string;
   /** ZIL PRSO id — direct object, if any. */
   prsoId?: string;
   /** ZIL PRSI id — indirect object (the thief for give/throw). */
@@ -107,6 +110,7 @@ export function makeRobberFcn(
     // Verb-dispatch path (MODE absent in ZIL — 1actions.zil:1951–2024)
     // -----------------------------------------------------------------------
     const verb = vd?.verb ?? '';
+    const prep = vd?.prep;
 
     // TELL — 1actions.zil:1948–1950
     if (verb === 'TELL') {
@@ -218,10 +222,9 @@ export function makeRobberFcn(
     }
 
     // EXAMINE / LOOK-INSIDE — 1actions.zil:2016–2021
-    // ZIL VERB? EXAMINE LOOK-INSIDE checks PRSA; engine produces verb WORD:
-    //   'EXAMINE' for plain examine or examine-prep variants
-    //   'LOOK' for look at/in/with thief (V-EXAMINE or V-LOOK-INSIDE)
-    if (verb === 'EXAMINE' || verb === 'LOOK') {
+    // ZIL VERB? EXAMINE LOOK-INSIDE — only those two actions, not look-under/behind/on.
+    // Use prep-aware predicates (shared with dumbContainer) to gate correctly.
+    if (isExamineDispatch(verb.toLowerCase(), prep) || isLookInsideDispatch(verb.toLowerCase(), prep)) {
       ctx.tell(
         'The thief is a slippery character with beady eyes that flit back\n' +
         'and forth. He carries, along with an unmistakable arrogance, a large bag\n' +

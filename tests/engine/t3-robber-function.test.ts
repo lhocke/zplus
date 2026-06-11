@@ -515,13 +515,46 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
     expect(emitted.join('')).toContain('beady eyes');
   });
 
-  it('LOOK → same beady-eyes desc (engine verb for look in/at thief)', () => {
-    // engine produces verb='LOOK' for both "look in thief" (V-LOOK-INSIDE)
-    // and "look at thief" (V-EXAMINE); ZIL VERB? EXAMINE LOOK-INSIDE catches both.
+  it('LOOK AT → beady-eyes desc (V-EXAMINE form, 1actions.zil:2016)', () => {
+    // "look at thief" → verb='LOOK', prep='AT' → V-EXAMINE → ZIL VERB? EXAMINE LOOK-INSIDE
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    fn(undefined, { verb: 'LOOK' });
+    fn(undefined, { verb: 'LOOK', prep: 'AT' });
     expect(emitted.join('')).toContain('beady eyes');
+  });
+
+  it('LOOK IN → beady-eyes desc (V-LOOK-INSIDE form, 1actions.zil:2016)', () => {
+    // "look in thief" → verb='LOOK', prep='IN' → V-LOOK-INSIDE → ZIL VERB? EXAMINE LOOK-INSIDE
+    const { ctx, emitted } = makeCtx();
+    const fn = makeRobberFcn(ctx);
+    fn(undefined, { verb: 'LOOK', prep: 'IN' });
+    expect(emitted.join('')).toContain('beady eyes');
+  });
+
+  // ZIL VERB? EXAMINE LOOK-INSIDE only — LOOK-UNDER/BEHIND/ON are NOT in the arm
+  // (1actions.zil:2016) and must fall through to the generic V-LOOK-UNDER/BEHIND/ON handlers.
+  it('LOOK UNDER thief falls through (returns false) — not ZIL VERB? EXAMINE LOOK-INSIDE', () => {
+    const { ctx, emitted } = makeCtx();
+    const fn = makeRobberFcn(ctx);
+    const handled = fn(undefined, { verb: 'LOOK', prep: 'UNDER' });
+    expect(handled).toBe(false);
+    expect(emitted).toHaveLength(0);
+  });
+
+  it('LOOK BEHIND thief falls through (returns false) — not ZIL VERB? EXAMINE LOOK-INSIDE', () => {
+    const { ctx, emitted } = makeCtx();
+    const fn = makeRobberFcn(ctx);
+    const handled = fn(undefined, { verb: 'LOOK', prep: 'BEHIND' });
+    expect(handled).toBe(false);
+    expect(emitted).toHaveLength(0);
+  });
+
+  it('LOOK ON thief falls through (returns false) — not ZIL VERB? EXAMINE LOOK-INSIDE', () => {
+    const { ctx, emitted } = makeCtx();
+    const fn = makeRobberFcn(ctx);
+    const handled = fn(undefined, { verb: 'LOOK', prep: 'ON' });
+    expect(handled).toBe(false);
+    expect(emitted).toHaveLength(0);
   });
 
   it('LISTEN → not been formally introduced', () => {

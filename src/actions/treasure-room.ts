@@ -131,13 +131,13 @@ export function thiefInTreasure(ctx: T4Ctx): void {
 // so it can be registered as its own ACTIONS entry for the ivory torch.
 // ---------------------------------------------------------------------------
 
-function isLookInsideDispatch(verb: string, prep: string | undefined): boolean {
+export function isLookInsideDispatch(verb: string, prep: string | undefined): boolean {
   if (verb === 'look') return prep === 'IN' || prep === 'WITH';
   if (verb === 'examine') return prep === 'IN' || prep === 'ON';
   return false;
 }
 
-function isExamineDispatch(verb: string, prep: string | undefined): boolean {
+export function isExamineDispatch(verb: string, prep: string | undefined): boolean {
   if (verb === 'examine') return prep === undefined || prep === null || (prep !== 'IN' && prep !== 'ON');
   if (verb === 'look') return prep === 'AT';
   return false;
@@ -240,6 +240,7 @@ export function stilettoFunction(ctx: T4Ctx): boolean {
 
 export function largeBagF(ctx: T4Ctx): boolean {
   const v = ctx.verb;
+  const p = ctx.prep;
 
   if (v === 'take') {
     const thief = ctx.getObj('THIEF');
@@ -264,9 +265,9 @@ export function largeBagF(ctx: T4Ctx): boolean {
     return true;
   }
 
-  // ZIL: VERB? EXAMINE LOOK-INSIDE — catches V-EXAMINE and V-LOOK-INSIDE.
-  // Engine verb words: 'examine' (plain or with prep) or 'look' (any look+obj).
-  if (v === 'examine' || v === 'look') {
+  // ZIL: VERB? EXAMINE LOOK-INSIDE — only V-EXAMINE and V-LOOK-INSIDE arms;
+  // look-under/behind/on are distinct verbs not in this arm (1actions.zil:2109).
+  if (isExamineDispatch(v, p) || isLookInsideDispatch(v, p)) {
     ctx.tell(
       "The bag is underneath the thief, so one can't say what, if anything, is\ninside.",
     );
