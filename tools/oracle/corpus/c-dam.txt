@@ -1,0 +1,112 @@
+# C-DAM corpus — dam bolt open/close cycle, drain/fill, trunk reveal
+#
+# MECHANIC: Turn bolt with wrench → sluice gates open (I-REMPTY armed); wait 8
+# turns for reservoir to drain (trunk visible); turn bolt again → I-RFILL armed;
+# wait 8 for refill (trunk hidden, crossing re-blocked).
+#
+# RNG NOTE: The route to the dam passes through the Troll Room.  To get a
+# deterministic troll fight run dfrotz with seed 1 (-s 1) and use the knife
+# (NOT the sword, to avoid the I-SWORD glow demon).  With seed -s 1 the troll
+# dies after 5 "kill troll with knife" commands (~moves 17–21).
+#
+# Run with:
+#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-dam.txt
+#
+# The automated golden test (tests/golden/v2-dam-oracle.test.ts, C-DAM) uses
+# a startRoom teleport to MAINTENANCE-ROOM, so the troll section does not run
+# in CI.  This file documents the full dfrotz-navigable path for manual oracle
+# runs and code review.
+
+# --- Into the house, down to the Cellar (take knife, skip sword) ---
+north
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+
+# --- Troll Room (RNG-driven with -s 1: troll dies in ~5 kills with knife) ---
+east
+take knife
+kill troll with knife
+kill troll with knife
+kill troll with knife
+kill troll with knife
+kill troll with knife
+
+# --- East of Chasm → Round Room → Troll Room exits → dam area ---
+east
+north
+west
+south
+west
+south
+west
+west
+north
+north
+west
+north
+north
+
+# --- Now in DAM-LOBBY area; push yellow button to unlock panel ---
+push yellow button
+
+# --- Navigate to DAM-ROOM ---
+west
+south
+
+# Confirm initial dam state (sluice gates closed, reservoir full)
+look
+
+# Open the sluice gates
+turn bolt with wrench
+
+# Confirm gates open, water level high
+look
+
+# Wait 8 turns for I-REMPTY to drain the reservoir
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+
+# Confirm drained state: dam-room description shows low water
+look
+
+# Cross to RESERVOIR-SOUTH
+west
+look
+
+# Walk into the (now-dry) reservoir — trunk should be visible
+north
+look
+
+# Return to close the gates
+south
+east
+turn bolt with wrench
+
+# Confirm gates closed, reservoir refilling
+look
+
+# Wait 8 turns for I-RFILL to refill the reservoir
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+
+# Confirm refilled state: dam-room description shows full reservoir
+look

@@ -1,0 +1,60 @@
+# C-RAINBOW corpus — wave sceptre, cross rainbow, pot of gold
+#
+# MECHANIC: The sceptre is in END-OF-RAINBOW (west of ARAGAIN-FALLS).  Wave
+# sceptre at ARAGAIN-FALLS → rainbow solidifies.  Cross west to END-OF-RAINBOW.
+# Wave sceptre there → pot of gold appears.  Take pot, cross back east.  Wave
+# again → rainbow dissolves.
+#
+# Route: no troll required.  ARAGAIN-FALLS is south of the river exits, reachable
+# from above ground via forest/canyon paths south of the Sandy Beach area.
+#
+# RNG NOTE: This route avoids the Troll Room.  No combat required.
+#
+# Run with:
+#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/c-rainbow.txt
+# (no seed needed — no RNG in this walkthrough)
+
+# --- Route to Aragain Falls ---
+# Above-ground route: house → forest → south toward Aragain area
+north
+east
+south
+south
+south
+east
+east
+south
+south
+# Canyon/Aragain Falls vicinity
+south
+# Aragain Falls
+look
+
+# Sceptre is in END-OF-RAINBOW (west); get it first
+west
+take sceptre
+east
+
+# C-RAINBOW walkthrough proper
+# Wave sceptre at ARAGAIN-FALLS → rainbow solid
+wave sceptre
+look
+
+# Cross to END-OF-RAINBOW
+west
+look
+
+# Wave sceptre at END-OF-RAINBOW → pot of gold appears
+wave sceptre
+look
+
+# Take the pot
+take pot
+
+# Cross back to ARAGAIN-FALLS
+east
+look
+
+# Wave again → rainbow dissolves
+wave sceptre
+look

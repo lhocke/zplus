@@ -1,0 +1,120 @@
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a folded pile of plastic here which has a small valve attached.
+
+> look
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a folded pile of plastic here which has a small valve attached.
+
+> inflate boat with pump
+The boat inflates and appears seaworthy.
+A tan label is lying inside the boat.
+
+> look
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> board boat
+You are now in the magic boat.
+
+> launch
+(magic boat)
+Frigid River
+You are on the Frigid River in the vicinity of the Dam. The river flows quietly here. There is a landing on the west shore.
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> look
+Frigid River
+You are on the Frigid River in the vicinity of the Dam. The river flows quietly here. There is a landing on the west shore.
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> wait
+Time passes...
+
+> wait
+Time passes...
+The flow of the river carries you downstream.
+Frigid River
+The river turns a corner here making it impossible to see the Dam. The White Cliffs loom on the east bank and large rocks prevent landing on the west.
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> look
+Frigid River
+The river turns a corner here making it impossible to see the Dam. The White Cliffs loom on the east bank and large rocks prevent landing on the west.
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> wait
+Time passes...
+
+> wait
+Time passes...
+
+> wait
+Time passes...
+The flow of the river carries you downstream.
+Frigid River
+The river descends here into a valley. There is a narrow beach on the west shore below the cliffs. In the distance a faint rumbling can be heard.
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> wait
+Time passes...
+
+> wait
+Time passes...
+
+> wait
+Time passes...
+The flow of the river carries you downstream.
+Frigid River
+The river is running faster here and the sound ahead appears to be that of rushing water. On the east shore is a sandy beach. A small area of beach can also be seen below the cliffs on the west shore.
+There is a red buoy here (probably a warning).
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> take buoy
+Taken.
+You notice something funny about the feel of the buoy.
+
+> wait
+Time passes...
+The flow of the river carries you downstream.
+Frigid River
+The sound of rushing water is nearly unbearable here. On the east shore is a large landing area.
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> east
+The magic boat comes to a rest on the shore.
+Shore
+You are on the east shore of the river. The water here seems somewhat treacherous. A path travels from north to south here, the south end quickly turning around a sharp corner.
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> look
+Shore
+You are on the east shore of the river. The water here seems somewhat treacherous. A path travels from north to south here, the south end quickly turning around a sharp corner.
+There is a magic boat here.
+The magic boat contains:
+  A tan label

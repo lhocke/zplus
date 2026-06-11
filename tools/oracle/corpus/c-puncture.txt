@@ -1,0 +1,94 @@
+# C-PUNCTURE corpus — board boat with sword → puncture; putty repair
+#
+# MECHANIC: If the player boards the inflatable boat while carrying a sharp
+# object (sword, knife, axe, sceptre, stiletto, rusty-knife), the boat is
+# punctured: "(Your X punctures the boat!)" + boat state → PUNCTURED-BOAT.
+# Apply putty to the punctured boat → repaired (folded plastic again).
+# Re-inflate to confirm seaworthy.
+#
+# Sharp objects: SWORD, KNIFE, AXE, STILETTO, RUSTY-KNIFE, SCEPTRE.
+# This walkthrough uses the sword.
+#
+# RNG NOTE: Path to DAM-BASE passes through the Troll Room (see c-dam.txt for
+# the -s 1 knife route).  The sword is in the Living Room above ground; pick it
+# up before going underground.  The pump is retrieved from RESERVOIR-NORTH
+# after draining the dam (see c-river.txt).
+#
+# Run with:
+#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-puncture.txt
+
+# --- Setup: get sword + pump, reach DAM-BASE ---
+north
+east
+open window
+west
+west
+take sword
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+east
+# Troll fight (sword works too but triggers I-SWORD glow divergence; use knife
+# for oracle diffing — here we use sword since puncture requires it)
+kill troll with sword
+kill troll with sword
+kill troll with sword
+kill troll with sword
+kill troll with sword
+east
+north
+west
+south
+west
+south
+west
+west
+north
+north
+west
+north
+north
+push yellow button
+west
+south
+# Drain dam to access RESERVOIR-NORTH for pump
+turn bolt with wrench
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+west
+north
+east
+take pump
+west
+south
+east
+south
+down
+
+# --- C-PUNCTURE walkthrough proper (at DAM-BASE) ---
+look
+
+# Inflate boat
+inflate boat with pump
+look
+
+# Board boat with sword in inventory → puncture message
+board boat
+look
+
+# Repair with putty (putty tube is in MAINTENANCE-ROOM; for dfrotz manual run
+# you need to retrieve it first — or adapt this corpus to do so)
+put putty on boat
+look
+
+# Re-inflate to confirm boat is seaworthy again
+inflate boat with pump
+look

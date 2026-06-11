@@ -1,0 +1,73 @@
+# C-LEAK corpus — blue-button leak, DROWNINGS progression, putty repair
+#
+# MECHANIC: MAINTENANCE-ROOM has a blue button that starts a leak.  A demon
+# (I-MAINT-ROOM) increments WATER-LEVEL each turn; DROWNINGS[level/2] fires
+# a message at odd water levels.  Putty applied to the leak stops the demon.
+# At WATER-LEVEL 14 the room floods (player dies).
+#
+# The putty tube is in MAINTENANCE-ROOM; squeeze it to get PUTTY, or use PUTTY
+# directly (implementation-dependent).
+#
+# RNG NOTE: MAINTENANCE-ROOM is accessed via the DAM-LOBBY area (push yellow
+# button to unlock the north door from DAM-LOBBY).  The path to the dam passes
+# through the Troll Room (see c-dam.txt for the -s 1 knife route).
+#
+# Run with:
+#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-leak.txt
+
+# --- Setup: get to MAINTENANCE-ROOM (abbreviated troll-kill path) ---
+north
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+east
+take knife
+kill troll with knife
+kill troll with knife
+kill troll with knife
+kill troll with knife
+kill troll with knife
+east
+north
+west
+south
+west
+south
+west
+west
+north
+north
+west
+north
+north
+
+# Yellow button unlocks the north door in DAM-LOBBY
+push yellow button
+
+# Enter MAINTENANCE-ROOM (north from DAM-LOBBY)
+north
+
+# C-LEAK walkthrough proper
+look
+
+# Push blue button → leak starts
+push blue button
+
+# Observe DROWNINGS progression (water level rises each turn)
+wait
+wait
+wait
+wait
+
+# Repair with putty before level 14
+put putty on leak
+
+# Confirm repair — no more water rise
+wait
+look

@@ -1,0 +1,67 @@
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+Aragain Falls
+You are at the top of Aragain Falls, an enormous waterfall with a
+drop of about 450 feet. The only path here is on the north end.
+A beautiful rainbow can be seen over the falls and to the west.
+
+> look
+Aragain Falls
+You are at the top of Aragain Falls, an enormous waterfall with a
+drop of about 450 feet. The only path here is on the north end.
+A beautiful rainbow can be seen over the falls and to the west.
+
+> wave sceptre
+Suddenly, the rainbow appears to become solid and, I venture,
+walkable (I think the giveaway was the stairs and bannister).
+
+> look
+Aragain Falls
+You are at the top of Aragain Falls, an enormous waterfall with a
+drop of about 450 feet. The only path here is on the north end.
+A solid rainbow spans the falls.
+
+> west
+On the Rainbow
+You are on top of a rainbow (I bet you never thought you would walk on a rainbow), with a magnificent view of the Falls. The rainbow travels east-west here.
+
+> look
+On the Rainbow
+You are on top of a rainbow (I bet you never thought you would walk on a rainbow), with a magnificent view of the Falls. The rainbow travels east-west here.
+
+> wave sceptre
+The structural integrity of the rainbow is severely compromised,
+leaving you hanging in midair, supported only by water vapor. Bye.
+
+    ****  You have died  ****
+
+Now, let's take a look here...
+Well, you probably deserve another chance.  I can't quite fix you
+up completely, but you can't have everything.
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+
+> look
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+
+> take pot
+You can't see any pot here!
+
+> east
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> look
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> wave sceptre
+You can't see any sceptre here!
+
+> look
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.

@@ -1,0 +1,112 @@
+# C-RIVER corpus — inflate boat, board, launch, drift RIVER-1→5, buoy hint
+#
+# MECHANIC: Inflate folded plastic (boat) with pump at DAM-BASE; board boat;
+# launch onto Frigid River; drift section-by-section downstream.  The buoy at
+# RIVER-4 triggers the buoy-hint message on pickup.  Exit east at RIVER-5 to
+# land at Shore/Sandy Beach without dying at the falls.
+#
+# I-RIVER clock speeds: RIVER-1: 4, RIVER-2: 4, RIVER-3: 3, RIVER-4: 2, RIVER-5: 1.
+# Drift fires when the clock counts down to 0 (advance fires at end of each turn).
+#   launch → RIVER-1, clock=4→3
+#   look: 3→2 | wait: 2→1 | wait: 1→0 FIRE → RIVER-2 (rearm 4)
+#   look: 4→3 | wait×3: 3→2→1→0 FIRE → RIVER-3 (rearm 3)
+#   wait×3: 3→2→1→0 FIRE → RIVER-4 (rearm 2)
+#   take buoy: 2→1 | wait: 1→0 FIRE → RIVER-5
+#   east: exit to Shore
+#
+# RNG NOTE: Path to DAM-BASE passes through the Troll Room (see c-dam.txt for
+# the -s 1 knife route).  The pump is in RESERVOIR-NORTH; to get it, drain the
+# reservoir first (open the dam bolt) then retrieve the pump.  Alternatively,
+# the automated golden test gives the pump directly to the player via setup.
+#
+# Run with:
+#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-river.txt
+
+# --- Setup: get to the dam area and retrieve the pump ---
+# (abbreviated; see c-dam.txt for the full troll-kill path)
+north
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+east
+take knife
+kill troll with knife
+kill troll with knife
+kill troll with knife
+kill troll with knife
+kill troll with knife
+east
+north
+west
+south
+west
+south
+west
+west
+north
+north
+west
+north
+north
+push yellow button
+west
+south
+turn bolt with wrench
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+# Reservoir drained; pump is now accessible at RESERVOIR-NORTH
+west
+north
+east
+take pump
+west
+south
+# Close the dam (not strictly needed for the river; omit or include as desired)
+
+# --- Navigate to DAM-BASE (scramble down) ---
+east
+south
+down
+
+# --- River walkthrough proper ---
+look
+inflate boat with pump
+look
+board boat
+launch
+
+# RIVER-1: look(3→2), wait(2→1), wait(1→0 FIRE→RIVER-2)
+look
+wait
+wait
+
+# RIVER-2: look(4→3), wait×3 (3→2→1→0 FIRE→RIVER-3)
+look
+wait
+wait
+wait
+
+# RIVER-3: wait×3 (3→2→1→0 FIRE→RIVER-4)
+wait
+wait
+wait
+
+# RIVER-4: buoy pickup, then wait(1→0 FIRE→RIVER-5)
+take buoy
+wait
+
+# RIVER-5: exit east to Shore (Sandy Beach east shore)
+east
+look

@@ -1,0 +1,43 @@
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> look
+Sandy Beach
+You are on a large sandy beach on the east shore of the river, which is flowing quickly by. A path runs beside the river to the south here, and a passage is partially buried in sand to the northeast.
+There is a shovel here.
+
+> ne
+Sandy Cave
+This is a sand-filled cave whose exit is to the southwest.
+
+> take shovel
+You can't see any shovel here!
+
+> sw
+Sandy Beach
+You are on a large sandy beach on the east shore of the river, which is flowing quickly by. A path runs beside the river to the south here, and a passage is partially buried in sand to the northeast.
+There is a shovel here.
+
+> dig sand with shovel
+You can't see any sand here!
+
+> dig sand with shovel
+You can't see any sand here!
+
+> dig sand with shovel
+You can't see any sand here!
+
+> dig sand with shovel
+You can't see any sand here!
+
+> take scarab
+You can't see any scarab here!
+
+> look
+Sandy Beach
+You are on a large sandy beach on the east shore of the river, which is flowing quickly by. A path runs beside the river to the south here, and a passage is partially buried in sand to the northeast.
+There is a shovel here.

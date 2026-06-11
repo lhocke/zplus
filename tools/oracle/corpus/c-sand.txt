@@ -1,0 +1,51 @@
+# C-SAND corpus — dig scarab at Sandy Beach (BDIGS progression + reveal)
+#
+# MECHANIC: Shovel is in SANDY-CAVE (northeast of SANDY-BEACH).  Four digs:
+#   dig #1 → BDIGS[0]: "The beach shifts slightly."
+#   dig #2 → BDIGS[1]: "You are digging a hole in the sand..."
+#   dig #3 → BDIGS[2]: "You continue to dig..."
+#   dig #4 → scarab revealed: "An Egyptian scarab lies in the hole."
+# A fifth dig causes the hole to collapse and the scarab is re-hidden.
+#
+# SANDY-BEACH is reachable from the east shore of RIVER-5, or overland from the
+# Aragain Falls area.  This corpus routes through the troll-free coastal path:
+#   forest → Sandy Beach (south along the coast, no troll required).
+# Actually the shortest deterministic path from the house: go south/southeast
+# through the forest to the Sandy Beach area.
+#
+# RNG NOTE: This route avoids the Troll Room entirely.  SANDY-BEACH is reachable
+# from above-ground (Behind House → south forest path → Sandy Beach vicinity) or
+# from the river exit.  No combat required.
+#
+# Run with:
+#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/c-sand.txt
+# (no seed needed — no RNG in this walkthrough)
+
+# --- Route to Sandy Beach via above-ground path ---
+# North of House → Behind House → forest south
+north
+east
+south
+south
+south
+# Now at forest near Sandy Beach; go east toward beach
+east
+east
+south
+# Sandy Beach
+look
+
+# Get the shovel from Sandy Cave (northeast)
+ne
+take shovel
+sw
+
+# Dig progression: BDIGS[0], [1], [2], then reveal
+dig sand with shovel
+dig sand with shovel
+dig sand with shovel
+dig sand with shovel
+
+# Scarab visible: take it
+take scarab
+look
