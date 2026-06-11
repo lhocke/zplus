@@ -72,6 +72,7 @@ function makeCtx(opts: {
   iThiefEnabled?: boolean;
   dead?: boolean;
   verb?: string;
+  prep?: string;
   prsoId?: string;
   prsiId?: string;
   rarg?: number;
@@ -91,6 +92,7 @@ function makeCtx(opts: {
   const ctx: T4Ctx = {
     hereId,
     verb: opts.verb ?? 'take',
+    prep: opts.prep,
     prsoId: opts.prsoId,
     prsiId: opts.prsiId,
     rarg: opts.rarg,
@@ -519,9 +521,17 @@ describe('LARGE-BAG-F', () => {
     }
   });
 
-  it('EXAMINE/LOOK-INSIDE: "underneath the thief"', () => {
-    for (const verb of ['examine', 'look-inside']) {
-      const { ctx, emitted } = makeCtx({ verb });
+  it('EXAMINE/LOOK-INSIDE: "underneath the thief" — real dispatch verbs', () => {
+    // engine produces verb='examine' (plain examine), verb='look' (look in bag),
+    // or verb='examine' with prep (examine in bag) — never the string 'look-inside'.
+    const cases: Array<{ verb: string; prep?: string }> = [
+      { verb: 'examine' },               // examine bag — V-EXAMINE
+      { verb: 'look', prep: 'IN' },      // look in bag — V-LOOK-INSIDE
+      { verb: 'examine', prep: 'IN' },   // examine in bag — V-LOOK-INSIDE
+      { verb: 'look', prep: 'AT' },      // look at bag — V-EXAMINE (same ZIL arm)
+    ];
+    for (const { verb, prep } of cases) {
+      const { ctx, emitted } = makeCtx({ verb, prep });
       expect(largeBagF(ctx)).toBe(true);
       expect(emitted[0]).toBe(
         "The bag is underneath the thief, so one can't say what, if anything, is\ninside.",
@@ -540,21 +550,50 @@ describe('LARGE-BAG-F', () => {
 // ---------------------------------------------------------------------------
 
 describe('DUMB-CONTAINER', () => {
-  it('OPEN/CLOSE/LOOK-INSIDE: "You can\'t do that."', () => {
-    for (const verb of ['open', 'close', 'look-inside']) {
+  it('OPEN/CLOSE: "You can\'t do that."', () => {
+    for (const verb of ['open', 'close']) {
       const { ctx, emitted } = makeCtx({ verb });
       expect(dumbContainer(ctx)).toBe(true);
       expect(emitted[0]).toBe("You can't do that.");
     }
   });
 
-  it('EXAMINE: "It looks pretty much like a <desc>."', () => {
+  it('LOOK-INSIDE via real dispatch verbs: "You can\'t do that."', () => {
+    // engine never produces verb='look-inside'; it produces verb='look' or
+    // verb='examine' with a prep that selects the V-LOOK-INSIDE syntax.
+    const cases: Array<{ verb: string; prep?: string }> = [
+      { verb: 'look', prep: 'IN' },      // look in pedestal — V-LOOK-INSIDE
+      { verb: 'look', prep: 'WITH' },    // look with pedestal — V-LOOK-INSIDE
+      { verb: 'examine', prep: 'IN' },   // examine in pedestal — V-LOOK-INSIDE
+      { verb: 'examine', prep: 'ON' },   // examine on pedestal — V-LOOK-INSIDE
+    ];
+    for (const { verb, prep } of cases) {
+      const { ctx, emitted } = makeCtx({ verb, prep });
+      expect(dumbContainer(ctx)).toBe(true);
+      expect(emitted[0]).toBe("You can't do that.");
+    }
+  });
+
+  it('EXAMINE (plain, no prep): "It looks pretty much like a <desc>."', () => {
     const item = makeObj('CHALICE', 'HERE', { desc: 'chalice' });
     const { ctx, emitted } = makeCtx({
       verb: 'examine',
       prsoId: 'CHALICE',
       objs: [item],
     });
+    expect(dumbContainer(ctx)).toBe(true);
+    expect(emitted[0]).toBe('It looks pretty much like a chalice.');
+  });
+
+  it('LOOK AT (V-EXAMINE form): falls through to examine arm', () => {
+    const item = makeObj('CHALICE', 'HERE', { desc: 'chalice' });
+    const { ctx, emitted } = makeCtx({
+      verb: 'look',
+      prep: 'AT',
+      prsoId: 'CHALICE',
+      objs: [item],
+    });
+    // look at X is V-EXAMINE, not V-LOOK-INSIDE — falls through to the examine branch
     expect(dumbContainer(ctx)).toBe(true);
     expect(emitted[0]).toBe('It looks pretty much like a chalice.');
   });

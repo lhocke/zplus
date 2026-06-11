@@ -40,6 +40,8 @@ export interface T4Ctx {
 
   /** Current parsed verb (ZIL PRSA). */
   readonly verb: string;
+  /** Preposition from the parsed command (UPPERCASE, matches syntax.json). */
+  readonly prep?: string;
   /** Direct object id (ZIL PRSO). */
   readonly prsoId?: string;
   /** Indirect object id (ZIL PRSI). */
@@ -119,17 +121,36 @@ export function thiefInTreasure(ctx: T4Ctx): void {
 // Handles OPEN/CLOSE/LOOK-INSIDE with "You can't do that." and EXAMINE with
 // "It looks pretty much like a <desc>."  Returns false for everything else.
 //
+// ZIL uses VERB? which checks PRSA (the action), not the verb word.  The engine
+// dispatches on cmd.verb (canonical verb word), so we distinguish V-LOOK-INSIDE
+// from V-EXAMINE by checking the preposition:
+//   V-LOOK-INSIDE: verb='look' + prep IN|WITH, or verb='examine' + prep IN|ON
+//   V-EXAMINE:     verb='examine' (no prep), or verb='look' + prep AT
+//
 // Exposed as a standalone export (and used as CHALICE-FCN's else fallthrough)
 // so it can be registered as its own ACTIONS entry for the ivory torch.
 // ---------------------------------------------------------------------------
 
+function isLookInsideDispatch(verb: string, prep: string | undefined): boolean {
+  if (verb === 'look') return prep === 'IN' || prep === 'WITH';
+  if (verb === 'examine') return prep === 'IN' || prep === 'ON';
+  return false;
+}
+
+function isExamineDispatch(verb: string, prep: string | undefined): boolean {
+  if (verb === 'examine') return prep === undefined || prep === null || (prep !== 'IN' && prep !== 'ON');
+  if (verb === 'look') return prep === 'AT';
+  return false;
+}
+
 export function dumbContainer(ctx: T4Ctx): boolean {
   const v = ctx.verb;
-  if (v === 'open' || v === 'close' || v === 'look-inside') {
+  const p = ctx.prep;
+  if (v === 'open' || v === 'close' || isLookInsideDispatch(v, p)) {
     ctx.tell("You can't do that.");
     return true;
   }
-  if (v === 'examine') {
+  if (isExamineDispatch(v, p)) {
     const prso = ctx.prsoId !== undefined ? ctx.getObj(ctx.prsoId) : undefined;
     ctx.tell('It looks pretty much like a ' + (prso?.desc ?? 'that') + '.');
     return true;
@@ -243,7 +264,9 @@ export function largeBagF(ctx: T4Ctx): boolean {
     return true;
   }
 
-  if (v === 'examine' || v === 'look-inside') {
+  // ZIL: VERB? EXAMINE LOOK-INSIDE — catches V-EXAMINE and V-LOOK-INSIDE.
+  // Engine verb words: 'examine' (plain or with prep) or 'look' (any look+obj).
+  if (v === 'examine' || v === 'look') {
     ctx.tell(
       "The bag is underneath the thief, so one can't say what, if anything, is\ninside.",
     );
@@ -265,6 +288,7 @@ function makeT4Ctx(ac: ActionContext): T4Ctx {
   return {
     hereId: ac.here.id,
     verb: ac.verb,
+    prep: ac.prep,
     prsoId: ac.dobj?.id,
     prsiId: ac.iobj?.id,
     rarg: ac.rarg,

@@ -515,10 +515,12 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
     expect(emitted.join('')).toContain('beady eyes');
   });
 
-  it('LOOK-INSIDE → same beady-eyes desc', () => {
+  it('LOOK → same beady-eyes desc (engine verb for look in/at thief)', () => {
+    // engine produces verb='LOOK' for both "look in thief" (V-LOOK-INSIDE)
+    // and "look at thief" (V-EXAMINE); ZIL VERB? EXAMINE LOOK-INSIDE catches both.
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    fn(undefined, { verb: 'LOOK-INSIDE' });
+    fn(undefined, { verb: 'LOOK' });
     expect(emitted.join('')).toContain('beady eyes');
   });
 

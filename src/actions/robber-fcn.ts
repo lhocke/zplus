@@ -218,7 +218,10 @@ export function makeRobberFcn(
     }
 
     // EXAMINE / LOOK-INSIDE — 1actions.zil:2016–2021
-    if (verb === 'EXAMINE' || verb === 'LOOK-INSIDE') {
+    // ZIL VERB? EXAMINE LOOK-INSIDE checks PRSA; engine produces verb WORD:
+    //   'EXAMINE' for plain examine or examine-prep variants
+    //   'LOOK' for look at/in/with thief (V-EXAMINE or V-LOOK-INSIDE)
+    if (verb === 'EXAMINE' || verb === 'LOOK') {
       ctx.tell(
         'The thief is a slippery character with beady eyes that flit back\n' +
         'and forth. He carries, along with an unmistakable arrogance, a large bag\n' +
