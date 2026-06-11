@@ -191,35 +191,46 @@ describe('clock-context death aborts turn', () => {
 // ---------------------------------------------------------------------------
 
 describe('GWIM locBits — bare attack troll', () => {
-  it('bare "attack troll" selects held sword via GWIM', () => {
-    // Player holds sword; GWIM for iobj (WEAPONBIT) with locBits=194 (SH|SC|SHAVE)
-    // should find only the sword in inventory, not weapons in the room.
+  it('ARMED: bare "attack troll" with held sword → "(with the sword)" (dfrotz anchored)', () => {
+    // dfrotz (release 119/880429): "attack troll" with sword in inventory →
+    //   "(with the sword)"
+    //   The troll takes a fatal blow and slumps to the floor dead.
+    // GWIM searches room (P-SLOCBITS=-1 during match) AND inventory, finds sword.
+    // ITAKE-CHECK: sword IS held → passes. Action proceeds.
+    //
+    // gparser.zil:1068-1078: GET-OBJECT always sets P-SLOCBITS=-1 before DO-SL HERE
+    // and DO-SL PLAYER; locBits=194 (SH|SC|SHAVE) is the *post-match* ITAKE-CHECK
+    // constraint, not the search gate.
     const g = createGame({ startRoom: 'TROLL-ROOM' });
     const sword = g.world.get('SWORD');
     if (sword !== undefined) { sword.moveTo(g.player); sword.set(Flag.Weapon); }
-    // Need light so the parser can resolve 'troll' in scope.
     const lamp = g.world.get('LAMP');
     if (lamp !== undefined) { lamp.moveTo(g.player); lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
 
-    // "attack troll" with no weapon specified — GWIM should auto-supply "(with the sword)"
     const result = g.turn('attack troll');
-    // Should NOT be "What do you want to attack troll with?" (orphan)
-    // and should NOT be "That sentence isn't one"
+    expect(result.output).toContain('(with the sword)');
     expect(result.output).not.toContain("What do you want to");
-    expect(result.output).not.toContain("That sentence isn't one");
   });
 
-  it('does not auto-select room weapon not held by player', () => {
-    // GWIM with SH|SC locBits should NOT find the sword in the room (not held).
+  it('UNARMED: bare "attack troll" lamp-only → "(with the bloody axe)" then "You don\'t have the bloody axe." (dfrotz anchored)', () => {
+    // dfrotz (release 119/880429): "attack troll" with lamp only (no held weapon) →
+    //   "(with the bloody axe)"
+    //   You don't have the bloody axe.
+    // GWIM finds axe in room (inside open troll). ITAKE-CHECK: axe not held, SHAVE bit
+    // set → prints "You don't have the bloody axe." and aborts. Parenthetical printed
+    // first because GWIM ran and found a single candidate.
+    //
+    // gparser.zil:1074-1078: DO-SL HERE SOG SIR runs unconditionally when LIT;
+    // locBits gate only applies at ITAKE-CHECK (gparser.zil:1252-1290).
     const g = createGame({ startRoom: 'TROLL-ROOM' });
-    // Don't give player the sword — it stays in room.
-    // Need light so the parser can resolve 'troll' in scope.
     const lamp = g.world.get('LAMP');
     if (lamp !== undefined) { lamp.moveTo(g.player); lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
-    // Attack troll bare — should emit orphan since no weapon in inventory.
+    // sword stays in LIVING-ROOM; axe is in troll's inventory (troll in room)
+
     const result = g.turn('attack troll');
-    // With no held weapon, GWIM fails → orphan prompt.
-    expect(result.output).toContain('What do you want to');
+    expect(result.output).toContain('(with the bloody axe)');
+    expect(result.output).toContain("You don't have the bloody axe.");
+    expect(result.output).not.toContain("What do you want to");
   });
 });
 

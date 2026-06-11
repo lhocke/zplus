@@ -301,6 +301,7 @@ Cellar
 You are in a dark and damp cellar with a narrow passageway leading
 north, and a crawlway to the south. On the west is the bottom of a
 steep metal ramp which is unclimbable.
+Your sword is glowing with a faint blue glow.
 
 > look
 Cellar
@@ -319,6 +320,7 @@ There's nothing special about the chute.
 The Troll Room
 This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
 A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
+Your sword has begun to glow very brightly.
 
 > look
 The Troll Room
@@ -341,10 +343,12 @@ Cellar
 You are in a dark and damp cellar with a narrow passageway leading
 north, and a crawlway to the south. On the west is the bottom of a
 steep metal ramp which is unclimbable.
+Your sword is glowing with a faint blue glow.
 
 > south
 East of Chasm
 You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east.
+Your sword is no longer glowing.
 
 > look
 East of Chasm
@@ -415,6 +419,7 @@ Cellar
 You are in a dark and damp cellar with a narrow passageway leading
 north, and a crawlway to the south. On the west is the bottom of a
 steep metal ramp which is unclimbable.
+Your sword is glowing with a faint blue glow.
 
 > look
 Cellar
@@ -433,6 +438,7 @@ You are carrying:
 The Troll Room
 This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
 A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
+Your sword has begun to glow very brightly.
 
 > look
 The Troll Room
@@ -444,6 +450,7 @@ Cellar
 You are in a dark and damp cellar with a narrow passageway leading
 north, and a crawlway to the south. On the west is the bottom of a
 steep metal ramp which is unclimbable.
+Your sword is glowing with a faint blue glow.
 
 > turn off lamp
 The brass lantern is now off.

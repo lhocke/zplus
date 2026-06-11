@@ -3,9 +3,9 @@
  *
  * 1actions.zil:4125–4135: on death, disable 8 interrupt slots + clear MATCH ONBIT.
  *
- * Spec §9.4 + §12 SD3 done-criteria (D5, RATIFIED):
- *   - The 3 registered slots (I-LANTERN, I-CANDLES, I-MATCH) are disabled.
- *   - The 5 unregistered slots (I-XB, I-XC, I-CYCLOPS, I-SWORD, I-FOREST-ROOM)
+ * Spec §9.4 + §12 SD3 done-criteria (D5, updated — I-SWORD now registered):
+ *   - The 4 registered slots (I-LANTERN, I-CANDLES, I-MATCH, I-SWORD) are disabled.
+ *   - The 4 unregistered slots (I-XB, I-XC, I-CYCLOPS, I-FOREST-ROOM)
  *     are no-ops — killAll does not throw on unknown ids.
  *   - MATCH ONBIT (Flag.OnFire) is cleared.
  */
@@ -24,11 +24,11 @@ import { Rng } from '../../src/engine/rng.js';
 // ---------------------------------------------------------------------------
 
 describe('SD3-A: registered slots disabled after killInterrupts', () => {
-  it('I-LANTERN, I-CANDLES, and I-MATCH are disabled', () => {
+  it('I-LANTERN, I-CANDLES, I-MATCH, and I-SWORD are disabled', () => {
     const emitter = new SimpleEventEmitter();
     const clock = new Clock();
 
-    // Register the three slots that bootstrap.ts registers.
+    // Register the four slots that bootstrap.ts now registers.
     new LanternInterrupt(clock, emitter);       // schedules I-LANTERN enabled=true
     new CandleInterrupt(clock, emitter, 40);    // schedules I-CANDLES enabled=true
     const iMatchEntry: ClockEntry = {
@@ -36,6 +36,11 @@ describe('SD3-A: registered slots disabled after killInterrupts', () => {
       tick() { return false; },
     };
     clock.schedule(iMatchEntry);
+    const iSwordEntry: ClockEntry = {
+      id: 'I-SWORD', turnsLeft: -1, enabled: true,
+      tick() { return true; },
+    };
+    clock.schedule(iSwordEntry);
 
     const game = createGame();
 
@@ -45,14 +50,15 @@ describe('SD3-A: registered slots disabled after killInterrupts', () => {
     expect(snap.find((s) => s.id === 'I-LANTERN')!.enabled).toBe(false);
     expect(snap.find((s) => s.id === 'I-CANDLES')!.enabled).toBe(false);
     expect(snap.find((s) => s.id === 'I-MATCH')!.enabled).toBe(false);
+    expect(snap.find((s) => s.id === 'I-SWORD')!.enabled).toBe(false);
   });
 });
 
 describe('SD3-B: unregistered slots are safe no-ops', () => {
-  it('killInterrupts does not throw for I-XB, I-XC, I-CYCLOPS, I-SWORD, I-FOREST-ROOM', () => {
+  it('killInterrupts does not throw for I-XB, I-XC, I-CYCLOPS, I-FOREST-ROOM', () => {
     const clock = new Clock();
     const game = createGame();
-    // None of these ids are registered — must not throw.
+    // I-SWORD is now registered; I-XB/I-XC/I-CYCLOPS/I-FOREST-ROOM remain unregistered.
     expect(() => killInterrupts(clock, game.world)).not.toThrow();
   });
 });

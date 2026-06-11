@@ -19,6 +19,12 @@
  *     "(<desc>)"              e.g. "(brass lantern)", "(sword)"
  *     NOTE: no "the" in the bare branch (gparser.zil:922: <TELL D .OBJ ")" CR>)
  *
+ * Two-pass GET-OBJECT semantics (gparser.zil:1043-1137):
+ *   Pass 1: wide (P-SLOCBITS=-1) — room (DO-SL HERE SOG SIR) + inventory (DO-SL PLAYER SH SC).
+ *   If >1 candidates: retry with XBITS (the syntax form's locBits) — narrows to
+ *   whichever scopes the syntax form permits (e.g., inventory-only for V-ATTACK iobj).
+ *   ITAKE-CHECK (SHAVE/STAKE bits) is enforced AFTER the match by the caller, not here.
+ *
  * RMUNGBIT is deliberately NOT in find-bits.ts (it is not a real Flag). GWIM
  * checks for it explicitly here as a string sentinel before converting to Flag.
  */
@@ -44,7 +50,7 @@ export type GwimResult =
   | { kind: 'ok'; id: string; text: string }    // exactly 1 match; text is the parenthetical
   | { kind: 'fail' };                            // 0 or 2+ matches
 
-/** Port of GWIM (gparser.zil:901-926). */
+/** Port of GWIM (gparser.zil:901-926) with GET-OBJECT two-pass semantics. */
 export function gwim(
   findBitName: string | undefined,
   locBits: number,
@@ -66,7 +72,18 @@ export function gwim(
   const findFlag: Flag | undefined =
     findBitName !== undefined ? FINDBIT_TO_FLAG[findBitName] : undefined;
 
-  const candidates = findGwimCandidates(findFlag, locBits, snap, here, player, world, isLit, excludeIds);
+  // gparser.zil:1068-1097 — two-pass GET-OBJECT:
+  //   Pass 1 (wide, P-SLOCBITS=-1): room + inventory + localGlobals/globals.
+  //   If >1 found: retry with XBITS — only DO-SL calls (no globals in narrow pass).
+  //   Pass 2 (narrow, P-SLOCBITS=XBITS): only the scopes the syntax form permits.
+  //   ITAKE-CHECK (SHAVE/STAKE) is enforced by the caller after the match.
+  let candidates = searchScope(findFlag, -1, snap, here, player, world, isLit, excludeIds, true);
+
+  if (candidates.length > 1) {
+    // gparser.zil:1091-1096: >1 in wide pass → retry with XBITS.
+    // GLOBAL-CHECK is NOT re-run in the narrow pass (gparser.zil:1068-1137).
+    candidates = searchScope(findFlag, locBits, snap, here, player, world, isLit, excludeIds, false);
+  }
 
   if (candidates.length !== 1) {
     return { kind: 'fail' };
@@ -79,18 +96,24 @@ export function gwim(
 }
 
 /**
- * Collect all objects in scope that pass the flag filter.
- * Room + inventory + local globals, then global objects only when nothing else matched.
+ * One scope pass: search room (when lit) + inventory.
+ * Optionally includes localGlobals/globalObjects (wide pass only).
+ *
+ * pSlocBits=-1 (wide): DO-SL uses -1 → all sub-levels (SRCALL).
+ * pSlocBits=XBITS (narrow): DO-SL uses XBITS → only scopes the syntax permits.
+ * includeGlobals=true for wide pass; false for narrow (GLOBAL-CHECK not re-run).
+ * gparser.zil:1068-1137, 1202-1213.
  */
-function findGwimCandidates(
+function searchScope(
   findFlag: Flag | undefined,
-  locBits: number,
+  pSlocBits: number,
   snap: ScopeSnapshot,
   here: Room,
   player: GameObject,
   world: World,
   isLit: boolean,
-  excludeIds?: ReadonlySet<string>,
+  excludeIds: ReadonlySet<string> | undefined,
+  includeGlobals: boolean,
 ): string[] {
   const found: string[] = [];
   const seen = new Set<string>();
@@ -105,37 +128,40 @@ function findGwimCandidates(
     found.push(id);
   }
 
-  // Skip room search when locBits has no room bits (SIR=32 or SOG=16).
-  // V-ATTACK iobj locBits = SH+SC+SHAVE — no SIR/SOG → inventory-only.
-  // gparser.zil:909: room pass runs only when the syntax form requests it.
-  const wantRoom = (locBits & (SIR | SOG)) !== 0;
-  if (isLit && wantRoom) {
+  // gparser.zil:1074-1077: room search, when lit.
+  if (isLit) {
     const roomFound: string[] = [];
     const roomSeen = new Set<string>();
-    doSL(here, SOG, SIR, -1, undefined, undefined, findFlag, player, roomFound, world, roomSeen);
+    doSL(here, SOG, SIR, pSlocBits, undefined, undefined, findFlag, player, roomFound, world, roomSeen);
     for (const id of roomFound) addIfMatch(id);
   }
 
+  // gparser.zil:1078: inventory search.
   const invFound: string[] = [];
   const invSeen = new Set<string>();
-  doSL(player, SH, SC, -1, undefined, undefined, findFlag, null, invFound, world, invSeen);
+  doSL(player, SH, SC, pSlocBits, undefined, undefined, findFlag, null, invFound, world, invSeen);
   for (const id of invFound) addIfMatch(id);
 
-  for (const obj of snap.localGlobals) {
-    if (thisItQ(obj, undefined, undefined, findFlag)) {
-      if (!seen.has(obj.id)) {
-        seen.add(obj.id);
-        found.push(obj.id);
-      }
-    }
-  }
-
-  if (found.length === 0) {
-    for (const obj of snap.globalObjects) {
+  // Local globals and global-objects fallback — wide pass only.
+  // In the narrow pass (XBITS retry) GLOBAL-CHECK does not re-run
+  // (gparser.zil:1068-1137: <AGAIN> loops back to the DO-SL block, not GLOBAL-CHECK).
+  if (includeGlobals) {
+    for (const obj of snap.localGlobals) {
       if (thisItQ(obj, undefined, undefined, findFlag)) {
         if (!seen.has(obj.id)) {
           seen.add(obj.id);
           found.push(obj.id);
+        }
+      }
+    }
+
+    if (found.length === 0) {
+      for (const obj of snap.globalObjects) {
+        if (thisItQ(obj, undefined, undefined, findFlag)) {
+          if (!seen.has(obj.id)) {
+            seen.add(obj.id);
+            found.push(obj.id);
+          }
         }
       }
     }
