@@ -54,6 +54,9 @@ export function resetGrunlock(): void {
 /** SING-SONG — ZIL <GLOBAL SING-SONG <>> (1actions.zil:2968). */
 let singSong = false;
 
+/** Read SING-SONG state — canonical module field; thief code reads via this. */
+export function getSingSong(): boolean { return singSong; }
+
 /** Reset for test isolation. */
 export function resetSingSong(): void {
   singSong = false;
