@@ -11,6 +11,7 @@ import { Flag } from '../domain/flags.js';
 import { M_LOOK, M_ENTER, M_END, M_BEG } from '../engine/messages.js';
 import type { PerRoutine } from './registry.js';
 import { pick, dummy, type PickRng } from '../engine/game-messages.js';
+import { isLookInsideDispatch } from './treasure-room.js';
 
 function pickDummy(rng: PickRng | undefined): string {
   if (rng !== undefined) return pick(dummy, rng);
@@ -394,7 +395,8 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
     return false;
   }
 
-  if (ctx.verb === 'look') {
+  // ZIL: VERB? LOOK-INSIDE only (1actions.zil:257) — look-under/behind/on fall through.
+  if (isLookInsideDispatch(ctx.verb, ctx.prep)) {
     if (ctx.here.id === 'KITCHEN') {
       ctx.tell('You can see a clear area leading towards a forest.');
     } else {
@@ -461,7 +463,8 @@ export const rugFcn: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'look') {
+  // ZIL: VERB? LOOK-UNDER only (1actions.zil:603) — look-in/behind/on fall through.
+  if (ctx.verb === 'look' && ctx.prep === 'UNDER') {
     if (!rugMoved) {
       const trapDoor = ctx.world.get('TRAP-DOOR');
       const trapOpen = trapDoor !== undefined && ctx.hasFlag(trapDoor, Flag.Open);
@@ -534,7 +537,8 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
       return true;
     }
 
-    if (ctx.verb === 'look') {
+    // ZIL: VERB? LOOK-UNDER only (1actions.zil:514) — look-in/behind/on fall through.
+    if (ctx.verb === 'look' && ctx.prep === 'UNDER') {
       if (ctx.hasFlag(door, Flag.Open)) {
         ctx.tell('You see a rickety staircase descending into darkness.');
       } else {
@@ -678,7 +682,8 @@ export const leafPile: ActionHandler = (ctx) => {
     return ctx.verb === 'take' ? false : true;
   }
 
-  if (ctx.verb === 'look') {
+  // ZIL: VERB? LOOK-UNDER only (1actions.zil:809) — look-in/behind/on fall through.
+  if (ctx.verb === 'look' && ctx.prep === 'UNDER') {
     if (!grateRevealed) {
       ctx.tell(
         'Underneath the pile of leaves is a grating. As you release the leaves,\n' +

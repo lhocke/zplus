@@ -527,7 +527,8 @@ function verbInventory(ctx: VerbContext): VerbResult {
 }
 
 // V-LOOK-INSIDE core — gverbs.zil:865-890.
-// Shared by verbExamine (container/door branch) and verbLookOn (SURFACEBIT).
+// Shared by verbExamine (container/door branch), verbLookOn (SURFACEBIT),
+// and verbLookInsideAction (V-LOOK-INSIDE dispatch).
 function verbLookInsideImpl(item: GameObject, ctx: VerbContext): VerbResult {
   if (item.has(Flag.Door)) {
     return item.has(Flag.Open)
@@ -570,6 +571,18 @@ function verbAdvent(_ctx: VerbContext): VerbResult {
 // V-FROBOZZ — frobozz easter egg (gverbs.zil:704–706)
 function verbFrobozz(_ctx: VerbContext): VerbResult {
   return result(vFrobozz.response);
+}
+
+// V-LOOK-INSIDE — gverbs.zil:865-890.
+// Full dispatch: door / container / else "You can't look inside a <x>."
+// Called when no object action handler intercepts the V-LOOK-INSIDE action.
+function verbLookInsideAction(ctx: VerbContext): VerbResult {
+  const item = ctx.dobj;
+  if (item === undefined) return result("Look inside what?");
+  if (item.has(Flag.Door) || item.has(Flag.Container)) {
+    return verbLookInsideImpl(item, ctx);
+  }
+  return result(fmt(vLookInside.cantLookInside, item.desc));
 }
 
 // V-LOOK-UNDER — gverbs.zil:899-900. Unconditional "dust" response.
@@ -764,9 +777,10 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   // V-WAIT — gverbs.zil:1514–1519. "Time passes..." then clock runs; the turn()
   // loop's clock.advance() handles the countdown — no extra repeat needed here.
   'V-WAIT':      () => result('Time passes...'),
-  'V-LOOK-UNDER':  verbLookUnder,   // gverbs.zil:899-900
-  'V-LOOK-BEHIND': verbLookBehind,  // gverbs.zil:862-863
-  'V-LOOK-ON':     verbLookOn,      // gverbs.zil:892-897
+  'V-LOOK-INSIDE': verbLookInsideAction, // gverbs.zil:865-890
+  'V-LOOK-UNDER':  verbLookUnder,        // gverbs.zil:899-900
+  'V-LOOK-BEHIND': verbLookBehind,       // gverbs.zil:862-863
+  'V-LOOK-ON':     verbLookOn,           // gverbs.zil:892-897
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.
