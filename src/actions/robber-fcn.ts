@@ -130,10 +130,10 @@ export function makeRobberFcn(
       if (knife !== undefined) knife.moveTo(ctx.hereId);
 
       if (ctx.rng.prob(10)) {
-        // Flee branch — 1actions.zil:1961–1979
-        ctx.tell("You evidently frightened the robber, though you didn't hit him. He\nflees");
-
-        // Remove LARGE-BAG temporarily, spill contents, then re-pocket bag (+ stiletto)
+        // Flee branch — 1actions.zil:1961–1979.
+        // ZIL builds the whole line from successive TELLs with no CR; emit as
+        // one ctx.tell() so game.ts's newline-join can't insert a spurious "\n"
+        // before the suffix.
         const bag = ctx.getObj('LARGE-BAG');
         bag?.moveTo('__void__');
 
@@ -145,12 +145,14 @@ export function makeRobberFcn(
         }
 
         const hasContents = ctx.childrenOf('THIEF').length > 0;
-        if (hasContents) {
-          ctx.moveAll('THIEF', ctx.hereId);
-          ctx.tell(', but the contents of his bag fall on the floor.');
-        } else {
-          ctx.tell('.');
-        }
+        const suffix = hasContents
+          ? ', but the contents of his bag fall on the floor.'
+          : '.';
+        if (hasContents) ctx.moveAll('THIEF', ctx.hereId);
+
+        ctx.tell(
+          "You evidently frightened the robber, though you didn't hit him. He\nflees" + suffix,
+        );
 
         bag?.moveTo('THIEF');
         if (hadStiletto) stiletto?.moveTo('THIEF');
@@ -301,7 +303,9 @@ function handleFcode(fcode: number, ctx: RobberFcnCtx): boolean {
       // 1actions.zil:2040–2059: SET X = FIRST?(HERE), loop via NEXT?
       let announced = false;
       for (const childId of ctx.childrenOf(ctx.hereId)) {
-        if (childId === 'CHALICE' || childId === 'THIEF' || childId === 'ADVENTURER') continue;
+        // ZIL excludes CHALICE/THIEF/ADVENTURER (1actions.zil:2046); add PLAYER
+        // because bootstrap.ts:58 places the player as a room child with id 'PLAYER'.
+        if (childId === 'CHALICE' || childId === 'THIEF' || childId === 'ADVENTURER' || childId === 'PLAYER') continue;
         const child = ctx.getObj(childId);
         if (child === undefined) continue;
         child.clearFlag(Flag.Invisible);

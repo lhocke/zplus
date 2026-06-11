@@ -322,6 +322,27 @@ describe('ROBBER-FUNCTION — F_DEAD PRINT-CONTENTS (1actions.zil:2054–2057)',
 });
 
 describe('ROBBER-FUNCTION — F_DEAD (1actions.zil:2035–2062)', () => {
+  // ZIL 1actions.zil:2046 excludes CHALICE, THIEF, and ADVENTURER from the reveal loop.
+  // In this engine the player object id is 'PLAYER' (bootstrap.ts:58, desc='cretin'),
+  // and it lives as a room child — so PLAYER must also be excluded, or the reveal
+  // prints "  A cretin" for the player.
+  it('dead in TREASURE-ROOM with PLAYER present → no "cretin" line in reveal', () => {
+    const player = makeObj('PLAYER', 'TREASURE-ROOM', { tvalue: 0 });
+    const gem    = makeObj('GEM',    'TREASURE-ROOM', { tvalue: 3, flags: [Flag.Invisible] });
+    const { ctx, emitted } = makeCtx({
+      hereId: 'TREASURE-ROOM',
+      objs: [player, gem],
+    });
+    const fn = makeRobberFcn(ctx);
+    fn(F_DEAD);
+    const out = emitted.join('\n');
+    // GEM is revealed; player ('cretin') must NOT appear
+    expect(out).toContain('treasures reappear');
+    expect(out).toContain('  A gem');
+    expect(out).not.toContain('cretin');
+    expect(out).not.toContain('  A player');
+  });
+
   it('stiletto dropped to HERE, NDESCBIT cleared, depositBooty called, I-THIEF disabled', () => {
     const { ctx, iThiefEnabled, stilettoMoved } = makeCtx({
       hereId: 'DUNGEON',
@@ -522,6 +543,45 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
       fn(undefined, { verb: 'THROW', prsoId: 'KNIFE', fighting: false });
       expect(thiefFlags.has(Flag.Invisible)).toBe(true);
       expect(emitted.join('')).toContain('frightened the robber');
+    });
+
+    // BYTE-EXACT: ZIL 1actions.zil:1961–1975 — successive TELLs with no CR form
+    // ONE logical line. The port must emit a single ctx.tell() so game.ts's
+    // newline-join can't insert a spurious "\n, but..." or "\n.".
+    it('flee with contents → single tell, exact text (no spurious newline before suffix)', () => {
+      // draw=0.05 → flee; junk is a non-tvalue child so it spills
+      const junk = makeObj('JUNK', 'THIEF', { tvalue: 0 });
+      const { ctx, emitted } = makeCtx({
+        hereId: 'HERE',
+        rngDraws: [0.05],
+        objs: [junk, makeObj('KNIFE', 'PLAYER')],
+        stiletto: { parentId: 'THIEF' },
+      });
+      const fn = makeRobberFcn(ctx);
+      fn(undefined, { verb: 'THROW', prsoId: 'KNIFE', fighting: false });
+      // The entire flee+contents message must be ONE entry in emitted (one ctx.tell()).
+      const fleeIdx = emitted.findIndex(s => s.includes('evidently frightened'));
+      expect(fleeIdx).toBeGreaterThanOrEqual(0);
+      expect(emitted[fleeIdx]).toBe(
+        "You evidently frightened the robber, though you didn't hit him. He\nflees, but the contents of his bag fall on the floor.",
+      );
+    });
+
+    it('flee with empty bag → single tell ending with period (no spurious newline before ".")', () => {
+      // draw=0.05 → flee; thief has no non-bag/stiletto children → empty bag path
+      const { ctx, emitted } = makeCtx({
+        hereId: 'HERE',
+        rngDraws: [0.05],
+        objs: [makeObj('KNIFE', 'PLAYER')],
+        stiletto: { parentId: 'THIEF' },
+      });
+      const fn = makeRobberFcn(ctx);
+      fn(undefined, { verb: 'THROW', prsoId: 'KNIFE', fighting: false });
+      const fleeIdx = emitted.findIndex(s => s.includes('evidently frightened'));
+      expect(fleeIdx).toBeGreaterThanOrEqual(0);
+      expect(emitted[fleeIdx]).toBe(
+        "You evidently frightened the robber, though you didn't hit him. He\nflees.",
+      );
     });
 
     it('prob(10) false → knife missed, angered, FIGHTBIT set', () => {
