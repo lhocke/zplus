@@ -301,17 +301,15 @@ describe('NM-F — inflate messages: pump inflates; lungs and other tools distin
     expect(out).toContain('seaworthy');
   });
 
-  it('inflate with lungs → "lung power" (NM-F: distinct, not a fall-through)', () => {
+  it('blow in boat → "lung power" (NM-F: BREATHE path, distinct from pump)', () => {
+    // ZIL: BREATHE → <PERFORM V?INFLATE PRSO LUNGS> (gverbs.zil:231, 1actions.zil:2817).
+    // "blow in boat" routes V-BREATHE → lung-power message without inflating.
+    // "inflate boat with lungs" is NOT a valid ZIL command (INFLATE syntax requires
+    // TOOLBIT on iobj; LUNGS has only NDESCBIT); the canonical path is V-BREATHE.
     const g = newGameAt('DAM-BASE');
-    // LUNGS is the implicit "with your breath" iobj when the player says "blow up boat"
-    // Test via the BREATHE-mapped inflate path; give player a lungs object if present.
-    // Directly move inflatable to player and call the action context.
     const inflatable = g.world.get('INFLATABLE-BOAT')!;
-    const lungs = g.world.get('LUNGS');
-    if (!lungs) return;  // skip if no LUNGS object in world
-    lungs.moveTo(g.player);
-    inflatable.moveTo(g.player.parent!);  // same room as player
-    const out = g.turn('inflate boat with lungs').output;
+    inflatable.moveTo(g.world.get('DAM-BASE')!);
+    const out = g.turn('blow in boat').output;
     expect(out).toContain('lung power');
   });
 

@@ -923,6 +923,25 @@ function verbLookUnder(_ctx: VerbContext): VerbResult {
   return result("There's nothing of interest under there.");
 }
 
+// V-BREATHE — BLOW IN OBJECT (gsyntax.zil:108).
+// ZIL: <PERFORM V?INFLATE PRSO LUNGS> (gverbs.zil:231, 1actions.zil:2817–2818).
+// Re-performs inflate on dobj with LUNGS as implicit iobj, bypassing syntax TOOLBIT check.
+function verbBreathe(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result("You can't see any boat here!");
+  const inflatable = ctx.world.get('INFLATABLE-BOAT');
+  const inflated   = ctx.world.get('INFLATED-BOAT');
+  // Inflatable pile of plastic: apply IBOAT-FUNCTION lungs branch
+  if (dobj === inflatable) {
+    if (dobj.parent !== ctx.here) return result('The boat must be on the ground to be inflated.');
+    return result("You don't have enough lung power to inflate it.");
+  }
+  // Already-inflated boat: RBOAT-FUNCTION inflate fall-through
+  if (dobj === inflated) return result('Inflating it further would probably burst it.');
+  // Non-boat: lung power message (ZIL IBOAT-FUNCTION :2835 is the only non-pump branch)
+  return result("You don't have enough lung power to inflate it.");
+}
+
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
 // Primary dispatch on V-* action id (ZIL PERFORM dispatches on PRSA, gmain.zil:283–284).
@@ -950,6 +969,7 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
 
   // Phase-3 dam/river verbs — thin shells; object handlers (IBOAT-FUNCTION etc.)
   // short-circuit before these in the PERFORM chain.
+  'V-BREATHE':   verbBreathe, // BLOW IN OBJECT → PERFORM V?INFLATE PRSO LUNGS
   'V-INFLATE':   verbInflate,
   'V-DEFLATE':   verbDeflate,
   'V-BOARD':     verbBoard,
