@@ -55,6 +55,10 @@ export interface ActionContext {
   recomputeTrophy(trophyCase: GameObject): void;
   enableClock(id: string): void;
   disableClock(id: string): void;
+  /** Query whether a clock entry is currently enabled.  Optional; absent → false. */
+  isClockEnabled?(id: string): boolean;
+  /** Whether the player is currently dead (ghost mode).  Optional; absent → false. */
+  isDead?(): boolean;
   /** Signal fatal outcome — ZIL M-FATAL; stops the PERFORM chain. */
   fatal(): void;
   /**
