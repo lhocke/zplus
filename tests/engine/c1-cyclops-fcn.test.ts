@@ -23,7 +23,7 @@
  *   CYCLOMAD          1actions.zil:1644–1652
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Flag } from '../../src/domain/flags.js';
 import { M_LOOK, M_ENTER } from '../../src/engine/messages.js';
 import {
@@ -31,6 +31,11 @@ import {
   cyclopsRoomFcn,
   type CyclopsCtx,
 } from '../../src/actions/cyclops.js';
+import { createGame } from '../../src/engine/bootstrap.js';
+import { setCyclowrath } from '../../src/actions/thief-state.js';
+
+// Minimal type shim so we can poke the private FlagStore in tests.
+type Flags = { set(k: string, v: boolean): void };
 
 // ---------------------------------------------------------------------------
 // Minimal object stub
@@ -631,5 +636,59 @@ describe('CYCLOPS-ROOM-FCN: other rargs', () => {
   it('returns false for non-M-LOOK/M-ENTER rarg', () => {
     const { ctx } = makeCtx({ rarg: 99 });
     expect(cyclopsRoomFcn(ctx)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// End-to-end look through game.turn('look') — exercises the full look path.
+//
+// This is the regression guard for the H2-interim ldesc bug: CYCLOPS-ROOM had
+// a static ldesc that short-circuited the mlookRunner (verbs/index.ts:259).
+// With the ldesc removed, look falls through to CYCLOPS-ROOM-FCN, which owns
+// the description for all five states (ZIL 1actions.zil:1616–1642).
+// ---------------------------------------------------------------------------
+
+// Minimal type shim for world object access in setup callbacks.
+type WorldHandle = { get(id: string): { set(f: unknown): void; moveTo(d: unknown): void } | undefined };
+
+/** Light the lamp and put it in the player's hand so underground rooms aren't dark. */
+function litLamp(g: ReturnType<typeof createGame>): void {
+  const w = (g as unknown as { world: WorldHandle }).world;
+  const player = w.get('PLAYER') as never;
+  const lamp = w.get('LAMP');
+  lamp?.moveTo(player);
+  lamp?.set(Flag.OnFire);
+  lamp?.set(Flag.Light);
+}
+
+describe('CYCLOPS-ROOM-FCN: end-to-end look via game.turn', () => {
+  // Reset cyclowrath module state between cases so tests are independent.
+  beforeEach(() => setCyclowrath(0));
+
+  it('default awake look (wrath=0): shows "eat horses" staircase text', () => {
+    const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
+    g.start();
+    litLamp(g);
+    const r = g.turn('look');
+    expect(r.output).toContain('eat horses');
+    expect(r.output).toContain('blocks the staircase');
+  });
+
+  it('CYCLOPS-FLAG=true → "sleeping blissfully" via game.turn', () => {
+    const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
+    g.start();
+    litLamp(g);
+    (g as unknown as { flags: Flags }).flags.set('CYCLOPS-FLAG', true);
+    const r = g.turn('look');
+    expect(r.output).toContain('sleeping blissfully');
+  });
+
+  it('MAGIC-FLAG=true → "cyclops-sized opening" via game.turn', () => {
+    const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
+    g.start();
+    litLamp(g);
+    (g as unknown as { flags: Flags }).flags.set('MAGIC-FLAG', true);
+    const r = g.turn('look');
+    expect(r.output).toContain('cyclops-sized opening');
   });
 });

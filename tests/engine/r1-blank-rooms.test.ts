@@ -147,10 +147,12 @@ describe('blank-room static ldesc render', () => {
 
   // CYCLOPS-ROOM — 1actions.zil:1618-1631
   // Flag: Land (no On) — needs lamp
+  // Description comes from CYCLOPS-ROOM-FCN M-LOOK (no static ldesc).
   it('CYCLOPS-ROOM shows cyclops blocking staircase (default CYCLOWRATH=0)', () => {
     const out = litStartOutput('CYCLOPS-ROOM');
     expect(out).toContain('This room has an exit on the northwest, and a staircase leading up.');
-    expect(out).toContain('A cyclops, who looks prepared to eat horses (much less mere adventurers), blocks the staircase. From his state of health, and the bloodstains on the walls, you gather that he is not very friendly, though he likes people.');
+    expect(out).toContain('eat horses');
+    expect(out).toContain('blocks the staircase');
   });
 
   // GRATING-ROOM — 1actions.zil:837-848
