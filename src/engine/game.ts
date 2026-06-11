@@ -910,6 +910,9 @@ export class Game {
       },
       thisIsIt: (obj) => { this.parser.setItRef(obj.id); },
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
+      jigsUp: (msg: string) => {
+        jigsUp(msg, this.jigsUpMsgs(), this.makeJigsUpCallbacks(tell, onFatal ?? (() => {})));
+      },
       finish: () => { this.doFinish(tell); },
     };
   }

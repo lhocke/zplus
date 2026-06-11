@@ -64,6 +64,12 @@ export interface ActionContext {
   /** Signal fatal outcome — ZIL M-FATAL; stops the PERFORM chain. */
   fatal(): void;
   /**
+   * Full JIGS-UP death machinery — 1actions.zil:4046–4099.
+   * Emits the death/resurrection sequence and signals fatal abort.
+   * Optional so unit-test stubs that don't wire the death machinery can omit it.
+   */
+  jigsUp?(deathMessage: string): void;
+  /**
    * FINISH — gverbs.zil:33–53.  Web-shell form: render V-SCORE, set gameOver.
    * Optional so action contexts that don't need it can omit it.
    */

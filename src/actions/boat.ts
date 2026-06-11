@@ -346,19 +346,17 @@ function rboatMBeg(ctx: Parameters<ActionHandler>[0]): boolean {
     );
     const inWater = punctureBoat(ctx);
     if (inWater) {
-      // :2774–2783 — on water: drown. Reservoir/stream vs river.
+      // :2774–2783 — on water: drown via JIGS-UP. Reservoir/stream vs river.
       const hereId = ctx.here.id;
       const isFalls = hereId !== 'RESERVOIR' && hereId !== 'IN-STREAM';
       if (isFalls) {
-        ctx.fatal();
-        ctx.tell(
+        ctx.jigsUp?.(
           'In other words, fighting the fierce currents of the Frigid River. You\n' +
           'manage to hold your own for a bit, but then you are carried over a\n' +
           'waterfall and into some nasty rocks. Ouch!',
         );
       } else {
-        ctx.fatal();
-        ctx.tell('Another pathetic sputter, this time from you, heralds your drowning.');
+        ctx.jigsUp?.('Another pathetic sputter, this time from you, heralds your drowning.');
       }
     }
     return true;

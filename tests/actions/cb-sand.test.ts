@@ -127,6 +127,37 @@ describe('CB-SAND — dig #5 fatal collapse (1actions.zil:2858)', () => {
     expect(out).toContain('smothering');
   });
 
+  // JIGS-UP verification: the full death sequence must fire, not just the message.
+  // Reference: dfrotz golden tests/golden/v2-death-shell.txt — JIGS-UP emits
+  // '****  You have died  ****', applies -10 score, increments DEATHS, relocates player.
+  it('dig #5 emits the death banner (JIGS-UP, not bare fatal)', () => {
+    const g = setupCave(3);
+    const out = g.turn('dig sand with shovel').output;
+    expect(out).toContain('You have died');
+  });
+
+  it('dig #5 increments DEATHS counter (JIGS-UP machinery)', () => {
+    const g = setupCave(3);
+    const deathsBefore = (g as unknown as { deaths: number }).deaths;
+    g.turn('dig sand with shovel');
+    const deathsAfter = (g as unknown as { deaths: number }).deaths;
+    expect(deathsAfter).toBe(deathsBefore + 1);
+  });
+
+  it('dig #5 applies -10 score penalty (SCORE-UPD in JIGS-UP)', () => {
+    const g = setupCave(3);
+    const scoreBefore = g.view().score;
+    g.turn('dig sand with shovel');
+    expect(g.view().score).toBe(scoreBefore - 10);
+  });
+
+  it('dig #5 relocates player out of SANDY-CAVE (resurrection)', () => {
+    const g = setupCave(3);
+    g.turn('dig sand with shovel');
+    // Player must have been moved by the resurrection path (FOREST-1 or Hades)
+    expect(g.player.parent?.id).not.toBe('SANDY-CAVE');
+  });
+
   it('BEACH-DIG resets to -1 after fatal collapse', () => {
     const g = setupCave(3);
     g.turn('dig sand with shovel');

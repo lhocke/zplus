@@ -39,16 +39,15 @@ export const sandFunction: ActionHandler = (ctx) => {
   ctx.setIntGlobal?.('BEACH-DIG', next);
 
   if (next > 3) {
-    // :2858–2861 — fatal collapse
-    // Reset counter first (before jigsUp, per NM-L ordering principle)
+    // :2858–2861 — fatal collapse via JIGS-UP
+    // State mutations before jigsUp (NM-L: must not be rolled back by fatal abort)
     ctx.setIntGlobal?.('BEACH-DIG', -1);
     // Re-hide scarab only if it's still in HERE — :2860 <IN? ,SCARAB ,HERE>
     const scarab = ctx.world.get('SCARAB');
     if (scarab !== undefined && scarab.parent === ctx.here) {
       ctx.setFlag(scarab, Flag.Invisible);
     }
-    ctx.fatal();
-    ctx.tell('The hole collapses, smothering you.');
+    ctx.jigsUp?.('The hole collapses, smothering you.');
     return true;
   }
 
