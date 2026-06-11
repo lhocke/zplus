@@ -237,6 +237,25 @@ export function makeRobberFcn(
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+// formatContents — PRINT-CONTENTS for the F_DEAD treasure reveal.
+// 1actions.zil:2054–2057 (ZIL PRINT-CONTENTS, gverbs.zil:1730–1748).
+// Formats direct children of containerId as "a X, a Y, and a Z".
+function formatContents(childIds: string[], ctx: RobberFcnCtx): string {
+  const parts: string[] = [];
+  for (const id of childIds) {
+    const obj = ctx.getObj(id);
+    if (obj !== undefined) parts.push('a ' + obj.desc);
+  }
+  if (parts.length === 0) return '';
+  if (parts.length === 1) return parts[0]!;
+  // "a X, a Y, and a Z" (Oxford comma style per ZIL PRINT-CONTENTS: ", " + "and " before last)
+  return parts.slice(0, -1).join(', ') + ', and ' + parts[parts.length - 1]!;
+}
+
+// ---------------------------------------------------------------------------
 // F-code handlers
 // ---------------------------------------------------------------------------
 
@@ -278,7 +297,8 @@ function handleFcode(fcode: number, ctx: RobberFcnCtx): boolean {
     const deposited = ctx.depositBooty(ctx.hereId);
 
     if (ctx.isTreasureRoom(ctx.hereId)) {
-      // Walk TREASURE-ROOM children, reveal each non-CHALICE/THIEF/ADVENTURER child
+      // Walk TREASURE-ROOM children, reveal each non-CHALICE/THIEF/ADVENTURER child.
+      // 1actions.zil:2040–2059: SET X = FIRST?(HERE), loop via NEXT?
       let announced = false;
       for (const childId of ctx.childrenOf(ctx.hereId)) {
         if (childId === 'CHALICE' || childId === 'THIEF' || childId === 'ADVENTURER') continue;
@@ -292,7 +312,18 @@ function handleFcode(fcode: number, ctx: RobberFcnCtx): boolean {
             'treasures reappear:',
           );
         }
-        ctx.tell('  A ' + child.desc);
+        // 1actions.zil:2053–2057: TELL "  A " D .X; then if <AND <FIRST? .X> <SEE-INSIDE? .X>>
+        // tell ", with " + PRINT-CONTENTS .X.
+        // SEE-INSIDE?: !INVISIBLE(X) && (OPENBIT || TRANSBIT) — checked AFTER FCLEAR INVISIBLE.
+        let line = '  A ' + child.desc;
+        const contents = ctx.childrenOf(childId);
+        if (
+          contents.length > 0 &&
+          (child.hasFlag(Flag.Open) || child.hasFlag(Flag.Transparent))
+        ) {
+          line += ', with ' + formatContents(contents, ctx);
+        }
+        ctx.tell(line);
       }
       ctx.tell('The chalice is now safe to take.');
     } else if (deposited) {

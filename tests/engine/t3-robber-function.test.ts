@@ -261,6 +261,66 @@ describe('ROBBER-FUNCTION — F_BUSY (1actions.zil:2025–2034)', () => {
   });
 });
 
+describe('ROBBER-FUNCTION — F_DEAD PRINT-CONTENTS (1actions.zil:2054–2057)', () => {
+  // ZIL: after revealing .X in TREASURE-ROOM, if <AND <FIRST? .X> <SEE-INSIDE? .X>>
+  // then tell ", with " + <PRINT-CONTENTS .X>.
+  // SEE-INSIDE? = !INVISIBLE(X) && (OPENBIT || TRANSBIT).
+  // FCLEAR INVISIBLE on .X happens BEFORE the SEE-INSIDE check, so a just-revealed
+  // OPENBIT/TRANSBIT container with contents qualifies.
+
+  it('revealed OPEN container with contents → "  A <desc>, with a <child-desc>" line', () => {
+    // BROKEN-EGG: Open+Invisible, tvalue>0 (so depositBooty deposits it to TREASURE-ROOM)
+    // BROKEN-CANARY inside BROKEN-EGG
+    const brokenCanary = makeObj('BROKEN-CANARY', 'BROKEN-EGG', { tvalue: 0 });
+    const brokenEgg = makeObj('BROKEN-EGG', 'TREASURE-ROOM', {
+      tvalue: 2,
+      flags: [Flag.Invisible, Flag.Open],
+    });
+    const { ctx, emitted } = makeCtx({
+      hereId: 'TREASURE-ROOM',
+      objs: [brokenEgg, brokenCanary],
+    });
+    const fn = makeRobberFcn(ctx);
+    fn(F_DEAD);
+    const out = emitted.join('\n');
+    // Must include the container line with its contents
+    expect(out).toContain('  A broken egg, with a broken canary');
+  });
+
+  it('revealed closed (no OPEN/TRANS) container with contents → no ", with" clause', () => {
+    const gem = makeObj('GEM', 'BOX', { tvalue: 0 });
+    const box = makeObj('BOX', 'TREASURE-ROOM', {
+      tvalue: 3,
+      flags: [Flag.Invisible],  // no OPEN, no Transparent
+    });
+    const { ctx, emitted } = makeCtx({
+      hereId: 'TREASURE-ROOM',
+      objs: [box, gem],
+    });
+    const fn = makeRobberFcn(ctx);
+    fn(F_DEAD);
+    const out = emitted.join('\n');
+    expect(out).toContain('  A box');
+    expect(out).not.toContain(', with');
+  });
+
+  it('revealed OPEN container with NO contents → no ", with" clause', () => {
+    const emptyBox = makeObj('EMPTY-BOX', 'TREASURE-ROOM', {
+      tvalue: 3,
+      flags: [Flag.Invisible, Flag.Open],
+    });
+    const { ctx, emitted } = makeCtx({
+      hereId: 'TREASURE-ROOM',
+      objs: [emptyBox],
+    });
+    const fn = makeRobberFcn(ctx);
+    fn(F_DEAD);
+    const out = emitted.join('\n');
+    expect(out).toContain('  A empty box');
+    expect(out).not.toContain(', with');
+  });
+});
+
 describe('ROBBER-FUNCTION — F_DEAD (1actions.zil:2035–2062)', () => {
   it('stiletto dropped to HERE, NDESCBIT cleared, depositBooty called, I-THIEF disabled', () => {
     const { ctx, iThiefEnabled, stilettoMoved } = makeCtx({
