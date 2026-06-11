@@ -894,6 +894,7 @@ export class Game {
         const room = this.world.get(roomId);
         if (room !== undefined) room.ldesc = desc;
       },
+      thisIsIt: (obj) => { this.parser.setItRef(obj.id); },
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
       finish: () => { this.doFinish(tell); },
     };

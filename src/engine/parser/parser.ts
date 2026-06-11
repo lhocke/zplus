@@ -1178,6 +1178,13 @@ export class Parser {
       this.itRef = dobjId;
     }
   }
+
+  // ZIL THIS-IS-IT: action routines that swap objects (inflate/deflate/puncture)
+  // re-point the pronoun so the next command's "it" tracks the new object.
+  // Called via ActionContext.thisIsIt() wired in Game.makeContext().
+  setItRef(id: ObjectId): void {
+    this.itRef = id;
+  }
 }
 
 export function parse(

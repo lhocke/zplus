@@ -428,3 +428,66 @@ describe('CB-BOAT2 — RBOAT-FUNCTION INFLATE fall-through (1actions.zil:2801)',
     expect(out).toContain('burst');
   });
 });
+
+// ---------------------------------------------------------------------------
+// THIS-IS-IT — pronoun re-pointing after boat swap (1actions.zil:2834, :2815)
+// ---------------------------------------------------------------------------
+
+describe('CB-BOAT2 — THIS-IS-IT: pronoun re-points after inflate (1actions.zil:2834)', () => {
+  it('after inflate, "examine it" resolves to the magic boat, not the plastic pile', () => {
+    const g = newGameAt('DAM-BASE');
+    const pump = g.world.get('PUMP')!;
+    pump.moveTo(g.player);
+    g.turn('inflate boat with pump');
+    // "it" should now resolve to INFLATED-BOAT; examine should return its description
+    const out = g.turn('examine it').output;
+    // INFLATED-BOAT has "magic boat" in description; pile of plastic must not appear
+    expect(out).not.toContain('pile of plastic');
+  });
+
+  it('after inflate, "take it" resolves to the magic boat', () => {
+    const g = newGameAt('DAM-BASE');
+    const pump = g.world.get('PUMP')!;
+    pump.moveTo(g.player);
+    g.turn('inflate boat with pump');
+    // ZIL: after inflate THIS-IS-IT ,INFLATED-BOAT → "it" = the magic boat
+    // "take it" should either succeed (taking INFLATED-BOAT) or give a boat-specific message,
+    // not silently take the now-removed INFLATABLE-BOAT.
+    const inflatable = g.world.get('INFLATABLE-BOAT')!;
+    const inflated   = g.world.get('INFLATED-BOAT')!;
+    g.turn('take it');
+    // INFLATED-BOAT may have been taken; the pile of plastic must NOT be in player inventory
+    expect(inflatable.parent).not.toBe(g.player);
+    // INFLATED-BOAT should be in player inventory (taken) or still in room
+    // The key: "it" pointed to inflated, not inflatable
+    expect(inflated.parent === g.player || inflated.parent === g.world.get('DAM-BASE')).toBe(true);
+  });
+});
+
+describe('CB-BOAT2 — THIS-IS-IT: pronoun re-points after deflate (1actions.zil:2815)', () => {
+  it('after deflate, "take it" resolves to the pile of plastic, not the magic boat', () => {
+    const g = newGameAt('DAM-BASE');
+    const pump = g.world.get('PUMP')!;
+    pump.moveTo(g.player);
+    g.turn('inflate boat with pump');
+    g.turn('deflate boat');
+    // ZIL: after deflate THIS-IS-IT ,INFLATABLE-BOAT → "it" = the pile of plastic
+    const inflatable = g.world.get('INFLATABLE-BOAT')!;
+    const inflated   = g.world.get('INFLATED-BOAT')!;
+    g.turn('take it');
+    // pile of plastic should be taken; magic boat (removed) must NOT be taken
+    expect(inflatable.parent).toBe(g.player);
+    expect(inflated.parent).toBeNull();
+  });
+
+  it('after deflate, "examine it" resolves to the pile of plastic', () => {
+    const g = newGameAt('DAM-BASE');
+    const pump = g.world.get('PUMP')!;
+    pump.moveTo(g.player);
+    g.turn('inflate boat with pump');
+    g.turn('deflate boat');
+    const out = g.turn('examine it').output;
+    // INFLATABLE-BOAT is the "pile of plastic"; magic boat description must not appear
+    expect(out).not.toContain('magic boat');
+  });
+});

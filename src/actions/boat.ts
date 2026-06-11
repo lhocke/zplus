@@ -79,9 +79,10 @@ export const iboatFcn: ActionHandler = (ctx) => {
     // :2831 — DEFLATE = false (boat freshly inflated, not deflatable-flagged)
     ctx.setGlobal?.('DEFLATE', false);
 
-    // :2832–2834 — swap: remove inflatable, place inflated in room
+    // :2832–2834 — swap: remove inflatable, place inflated in room; re-point "it"
     inflatable.moveTo(null);
     inflated.moveTo(ctx.here);
+    ctx.thisIsIt?.(inflated);
     return true;
   }
 
@@ -126,11 +127,12 @@ export const rboatDeflate: ActionHandler = (ctx) => {
     return true;
   }
 
-  // :2810 — deflate
+  // :2810 — deflate; re-point "it" to the pile of plastic now in room
   ctx.tell('The boat deflates.');
   ctx.setGlobal?.('DEFLATE', true);
   inflated.moveTo(null);
   inflatable.moveTo(ctx.here);
+  ctx.thisIsIt?.(inflatable);
   return true;
 };
 

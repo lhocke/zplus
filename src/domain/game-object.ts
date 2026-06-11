@@ -90,6 +90,14 @@ export interface ActionContext {
    * 1actions.zil:1349 / gverbs.zil:2183–2189.
    */
   mungRoom?(roomId: string, desc: string): void;
+  /**
+   * ZIL THIS-IS-IT: re-point the pronoun referent ("it") to the given object.
+   * Used by routines that swap objects (IBOAT-FUNCTION, RBOAT-FUNCTION DEFLATE,
+   * etc.) so the next command's "it" tracks the newly-placed object.
+   * Optional so unit-test stubs that don't need pronoun tracking can omit it.
+   * 1actions.zil:2834 (inflate), :2815 (deflate).
+   */
+  thisIsIt?(obj: GameObject): void;
 }
 
 export type ActionHandler = (ctx: ActionContext) => HandlerResult;
