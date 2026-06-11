@@ -20,7 +20,7 @@
 
 import type { ActionHandler } from '../domain/game-object.js';
 import { Flag } from '../domain/flags.js';
-import { M_LOOK, M_END } from '../engine/messages.js';
+import { M_LOOK, M_END, M_ENTER } from '../engine/messages.js';
 
 // ---------------------------------------------------------------------------
 // INTEGRAL-PART — 1actions.zil:1223
@@ -584,6 +584,86 @@ export const deepCanyonF: ActionHandler = (ctx) => {
   return true;
 };
 
+// ---------------------------------------------------------------------------
+// LOUD-ROOM-FCN — 1actions.zil:1660–1728
+//
+// M-LOOK: base room paragraph + quiet or loud suffix.
+//   Quiet when: LOUD-FLAG || (!GATES-OPEN && LOW-TIDE).
+//   Otherwise: deafeningly loud.
+//
+// M-END: when loud (GATES-OPEN && !LOW-TIDE): panic scramble to LOUD-RUNS dest.
+//   1actions.zil:1674–1680 — print the scramble message, GOTO pickOne(LOUD-RUNS),
+//   RFALSE (M-END handlers return false per spec §3.7 / reservoir-fcn pattern).
+//
+// M-ENTER: clear continuation ("rest of commands lost in noise") when entering
+//   loud. The ZIL captive READ loop is replaced by the loudRoomMode predicate
+//   in turn() (OQ-1 ratified). M-ENTER's job in the port is only to drop P-CONT.
+//
+// 1actions.zil:1261 LOUD-RUNS = [DAMP-CAVE, ROUND-ROOM, DEEP-CANYON]
+// ---------------------------------------------------------------------------
+
+const LOUD_RUNS: readonly string[] = ['DAMP-CAVE', 'ROUND-ROOM', 'DEEP-CANYON'];
+
+/** True when the loud room is in its quiet state. */
+function isLoudRoomQuiet(ctx: Parameters<ActionHandler>[0]): boolean {
+  const loudFlag = ctx.getGlobal?.('LOUD-FLAG') ?? false;
+  const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
+  const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
+  return loudFlag || (!gatesOpen && lowTide);
+}
+
+export const loudRoomFcn: ActionHandler = (ctx) => {
+  if (ctx.rarg === M_LOOK) {
+    // Base paragraph — 1actions.zil:1662–1665
+    ctx.tell(
+      'This is a large room with a ceiling which cannot be detected from\n' +
+      'the ground. There is a narrow passage from east to west and a stone\n' +
+      'stairway leading upward.',
+    );
+
+    if (isLoudRoomQuiet(ctx)) {
+      // :1668 — quiet suffix
+      ctx.tell(' The room is eerie in its quietness.');
+    } else {
+      // :1670 — loud suffix
+      ctx.tell(
+        ' The room is deafeningly loud with an\n' +
+        'undetermined rushing sound. The sound seems to reverberate from all\n' +
+        'of the walls, making it difficult even to think.',
+      );
+    }
+    return true;
+  }
+
+  if (ctx.rarg === M_END) {
+    const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
+    const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
+    // :1674 — only when loud: GATES-OPEN && !LOW-TIDE
+    if (gatesOpen && !lowTide) {
+      ctx.tell(
+        'It is unbearably loud here, with an ear-splitting roar seeming to\n' +
+        'come from all around you. There is a pounding in your head which won\'t\n' +
+        'stop. With a tremendous effort, you scramble out of the room.',
+      );
+      // :1679 — GOTO pickOne(LOUD-RUNS) — RNG draw on game's rng
+      const idx = Math.floor((ctx.rng?.next() ?? Math.random()) * LOUD_RUNS.length);
+      const destId = LOUD_RUNS[idx] ?? LOUD_RUNS[0]!;
+      const dest = ctx.world.get(destId);
+      if (dest !== undefined) ctx.moveTo(ctx.actor, dest);
+    }
+    // M-END always returns false (continue; non-blocking)
+    return false;
+  }
+
+  if (ctx.rarg === M_ENTER) {
+    // Port: the ZIL synchronous READ loop is replaced by loudRoomMode in turn().
+    // Normal M-ENTER pass-through — no special action needed here.
+    return false;
+  }
+
+  return false;
+};
+
 export const damActions: Record<string, ActionHandler> = {
   'BOLT-F':               boltF,
   'DAM-ROOM-FCN':         damRoomFcn,
@@ -598,4 +678,5 @@ export const damActions: Record<string, ActionHandler> = {
   'RESERVOIR-FCN':        reservoirFcn,
   'RESERVOIR-NORTH-FCN':  reservoirNorthFcn,
   'DEEP-CANYON-F':        deepCanyonF,
+  'LOUD-ROOM-FCN':        loudRoomFcn,
 };

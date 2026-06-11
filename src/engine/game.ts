@@ -1,7 +1,7 @@
 import type { ObjectId, Dir, GameObject, ActionContext } from '../domain/game-object.js';
 import type { World } from '../domain/world.js';
 import { Flag } from '../domain/flags.js';
-import type { Room } from '../domain/room.js';
+import { Room } from '../domain/room.js';
 import type { Actor } from '../domain/actor.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
@@ -391,6 +391,96 @@ export class Game {
     return { output: "You can't even do that.", moved: false };
   }
 
+  /**
+   * LOUD-ROOM input mode (OQ-1 ratified, 1actions.zil:1660–1728).
+   *
+   * True when the player is in LOUD-ROOM and the room is loud (not yet solved
+   * by ECHO and not in the quiet dam state).  Mirrors the dead-ghost dispatch
+   * seam: turn() checks this before normal action dispatch.
+   */
+  private isLoudRoomActive(): boolean {
+    if (this.here.id !== 'LOUD-ROOM') return false;
+    const loudFlag  = this.flags.get('LOUD-FLAG');
+    const gatesOpen = this.flags.get('GATES-OPEN');
+    const lowTide   = this.flags.get('LOW-TIDE');
+    // Quiet when: LOUD-FLAG || (!GATES-OPEN && LOW-TIDE)
+    return !loudFlag && !(!gatesOpen && lowTide);
+  }
+
+  /**
+   * Loud-room command interceptor — 1actions.zil:1693–1728.
+   *
+   * Routes the parsed command through the whitelist gate:
+   *   - V-WALK (movement): pass-through (return undefined → normal processing)
+   *   - META_ACTIONS (SAVE/RESTORE/QUIT/BRIEF/etc.): pass-through
+   *   - V-ECHO: solve — set LOUD-FLAG, clear BAR.SACREDBIT, print message
+   *   - everything else: V-ECHO fallback ("echo echo ..."), consume the turn
+   *
+   * M-END fires after every intercepted command (same as the normal turn loop)
+   * so the LOUD-ROOM-FCN M-END panic scramble can eject the player.
+   *
+   * Returns a TurnResult for intercepted commands; undefined for pass-throughs.
+   */
+  private loudRoomDispatch(input: string): TurnResult | undefined {
+    const pr = this.parser.parseSegment(input, this.here, this.player, this.world);
+
+    if (pr.kind !== 'ok') {
+      return { output: pr.message, moved: false };
+    }
+    const action = pr.command.action;
+
+    // V-WALK: movement exits pass through (W/E/U are the whitelist exits).
+    if (action === 'V-WALK') return undefined;
+
+    // META_ACTIONS (SAVE/RESTORE/QUIT/BRIEF/VERBOSE/etc.): pass through.
+    if (META_ACTIONS.has(action)) return undefined;
+
+    const outputs: string[] = [];
+    const tell = (s: string): void => { outputs.push(s); };
+
+    // V-ECHO: solve the ECHO puzzle — 1actions.zil:1719–1725.
+    if (action === 'V-ECHO') {
+      this.flags.set('LOUD-FLAG', true);
+      const bar = this.world.get('BAR');
+      if (bar !== undefined) bar.clear(Flag.Sacred);
+      this.parser.clearContinuation();
+      tell('The acoustics of the room change subtly.');
+    } else {
+      // All other input → V-ECHO fallback ("echo echo ...").
+      // ZIL: non-whitelist input routes to V-ECHO. gverbs.zil:546.
+      this.parser.clearContinuation();
+      tell('echo echo ...');
+    }
+
+    // M-END fires each turn even in the captive loop (1actions.zil:1674–1680).
+    // LOUD-ROOM-FCN M-END scrambles the player out when GATES-OPEN && !LOW-TIDE.
+    const mEndPrevHere = this.here;
+    const mEndOut = this.runMEnd(this.here);
+    if (mEndOut.length > 0) outputs.push(mEndOut);
+
+    // Post-M-END move: if M-END scrambled the player, fire onRoomEntered + describe.
+    // Guard: new parent must be a Room (not a vehicle/container).
+    const mEndNewParent = this.player.parent;
+    const mEndNewRoom = mEndNewParent instanceof Room ? mEndNewParent : null;
+    if (mEndNewRoom !== null && mEndNewRoom !== mEndPrevHere) {
+      const enterOut = this.onRoomEntered(mEndNewRoom);
+      const roomDesc = this.describeCurrentRoom();
+      const parts = [enterOut, roomDesc].filter(s => s.length > 0);
+      if (parts.length > 0) outputs.push(parts.join('\n'));
+    }
+
+    // Clock tick — each intercepted command consumes a turn.
+    this.moveCount += 1;
+    const clockLines = this.clock.advance();
+    if (clockLines.length > 0) outputs.push(clockLines.join('\n'));
+    this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+    if (this.fatalPending) {
+      this.fatalPending = false;
+    }
+    const playerMoved = mEndNewRoom !== null && mEndNewRoom !== mEndPrevHere;
+    return { output: outputs.filter(s => s.length > 0).join('\n'), moved: playerMoved };
+  }
+
   /** Execute one command line (may contain chained commands via "then" / "."). */
   turn(input: string): TurnResult {
     if (this.gameOver) return { output: '', moved: false };
@@ -406,6 +496,18 @@ export class Game {
         return ghostResult;
       }
       // undefined → pass-through (movement or meta verbs); fall into normal parse
+    }
+
+    // Loud-room input mode (OQ-1 ratified, CB-LOUD, 1actions.zil:1693–1728).
+    // While in LOUD-ROOM and the room is loud, route every command through the
+    // whitelist gate (exits/meta pass; ECHO solves; everything else → "echo echo...").
+    // Mirrors the B8 dead-ghost dispatch seam.
+    if (this.isLoudRoomActive()) {
+      const loudResult = this.loudRoomDispatch(input);
+      if (loudResult !== undefined) {
+        return loudResult;
+      }
+      // undefined → pass-through (V-WALK exits, meta); fall into normal parse
     }
 
     const outputs: string[] = [];
@@ -620,6 +722,7 @@ export class Game {
       // M-END (gmain.zil:151–161): unconditional post-turn room callback on the
       // current room (post-GOTO). Passes stashed verb/dobj/iobj/prep so handlers
       // like LIVING-ROOM-FCN can read VERB?/PRSO/PRSI.
+      const mEndPrevHere = this.here;
       const mEndOut = this.runMEnd(this.here);
       if (mEndOut.length > 0) {
         const idx = outputs.length - 1;
@@ -627,6 +730,28 @@ export class Game {
           outputs[idx] = [outputs[idx], mEndOut].filter(s => s.length > 0).join('\n');
         } else {
           outputs.push(mEndOut);
+        }
+      }
+
+      // Post-M-END move detection: some M-END handlers (e.g. LOUD-ROOM-FCN panic
+      // scramble) call ctx.moveTo to GOTO a new room.  Fire onRoomEntered +
+      // describeCurrentRoom so this.here is updated and the new room is described.
+      // Guard: new parent must be a Room (not a vehicle/container) and must differ
+      // from the pre-M-END room to avoid false triggers for players inside vehicles.
+      const mEndNewParent = this.player.parent;
+      const mEndNewRoom = mEndNewParent instanceof Room ? mEndNewParent : null;
+      if (mEndNewRoom !== null && mEndNewRoom !== mEndPrevHere) {
+        moved = true;
+        const enterOut = this.onRoomEntered(mEndNewRoom);
+        const roomDesc = this.describeCurrentRoom();
+        const parts = [enterOut, roomDesc].filter(s => s.length > 0);
+        if (parts.length > 0) {
+          const idx = outputs.length - 1;
+          if (idx >= 0) {
+            outputs[idx] = [outputs[idx], ...parts].filter(s => s.length > 0).join('\n');
+          } else {
+            outputs.push(parts.join('\n'));
+          }
         }
       }
 

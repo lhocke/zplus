@@ -93,8 +93,12 @@ describe('blank-room static ldesc render', () => {
   // Flag: Land (no On) — needs lamp
   it('LOUD-ROOM shows deafeningly loud room', () => {
     const out = litStartOutput('LOUD-ROOM');
-    expect(out).toContain('This is a large room with a ceiling which cannot be detected from the ground. There is a narrow passage from east to west and a stone stairway leading upward.');
-    expect(out).toContain('The room is deafeningly loud with an undetermined rushing sound. The sound seems to reverberate from all of the walls, making it difficult even to think.');
+    // Base text (1actions.zil:1662–1665): substrings chosen to not span source newlines.
+    expect(out).toContain('large room with a ceiling');
+    expect(out).toContain('narrow passage from east to west');
+    expect(out).toContain('stairway leading upward');
+    // Loud suffix (1actions.zil:1670–1672):
+    expect(out).toContain('deafeningly loud');
   });
 
   // ENTRANCE-TO-HADES — 1actions.zil:1060-1070

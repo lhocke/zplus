@@ -810,6 +810,13 @@ function verbWave(ctx: VerbContext): VerbResult {
   return result(`Waving the ${name}${suffix}`);
 }
 
+// V-ECHO (gverbs.zil:526) — the "echo echo ..." fallback.
+// In the LOUD-ROOM captive mode, non-whitelist input routes here.
+// Outside loud mode it fires from normal PERFORM dispatch on the ECHO verb.
+function verbEcho(_ctx: VerbContext): VerbResult {
+  return result('echo echo ...');
+}
+
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
 // Primary dispatch on V-* action id (ZIL PERFORM dispatches on PRSA, gmain.zil:283–284).
@@ -845,6 +852,7 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LAND':      verbLand,
   'V-DIG':       verbDig,
   'V-WAVE':      verbWave,
+  'V-ECHO':      verbEcho,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.
