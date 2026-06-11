@@ -1,7 +1,7 @@
 import type { ObjectId, Dir, GameObject, ActionContext } from '../domain/game-object.js';
 import type { World } from '../domain/world.js';
 import { Flag } from '../domain/flags.js';
-import type { Room } from '../domain/room.js';
+import { Room } from '../domain/room.js';
 import type { Actor } from '../domain/actor.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
@@ -27,6 +27,15 @@ import { makeTrollFcn } from '../actions/troll-fcn.js';
 import { makeRobberFcn, type RobberFcnCtx, type VerbDispatch } from '../actions/robber-fcn.js';
 import { thiefEngrossed, setThiefEngrossed, setEggSolve, cyclowrath, setCyclowrath } from '../actions/thief-state.js';
 import { iCyclops, type ICyclopsCtx } from '../actions/cyclops.js';
+import { iThief, type IThiefCtx } from '../actions/i-thief.js';
+import {
+  rob as thiefRob, robMaze as thiefRobMaze, stealJunk as thiefStealJunk,
+  dropJunk as thiefDropJunk, depositBooty as thiefDepositBooty,
+  hackTreasures as thiefHackTreasures, recoverStiletto as thiefRecoverStiletto,
+  stoleLight as thiefStoleLight, winning as thiefWinning,
+  type ThiefCtx,
+} from '../actions/thief.js';
+import { fightStrength } from './combat.js';
 
 export interface TurnResult {
   readonly output: string;
@@ -192,6 +201,10 @@ export class Game {
     // I-FIGHT: per-turn demon (1actions.zil:3810–3841, turnsLeft=-1 fires every advance).
     // I-CURE: queued countdown (1actions.zil:3593–3602, CURE_WAIT=30); starts parked (0).
     this.clock.schedule(this.makeIFightEntry());
+    // I-THIEF: standing demon (enabled at world start).  Must be registered AFTER I-FIGHT
+    // so advance() fires it second — ZIL DEMONS order: I-FIGHT then I-THIEF (§6).
+    // 1actions.zil:1756, 3890–3931.
+    this.clock.schedule(this.makeIThiefEntry());
     this.clock.schedule(this.makeICureEntry());
 
     // I-CYCLOPS: on-demand demon (turnsLeft=-1); starts disabled.
@@ -1403,6 +1416,120 @@ export class Game {
         };
         iCure(cb);
         return true;  // stays registered (disable() marks it inactive when done)
+      },
+    };
+  }
+
+  // I-THIEF clock entry — standing demon (turnsLeft=-1, enabled at world start).
+  // Registered AFTER I-FIGHT so advance() fires I-FIGHT first each tick (§6).
+  // 1actions.zil:3890–3931.
+  private makeIThiefEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-THIEF',
+      turnsLeft: -1,
+      enabled: true,
+      tick: (ctx) => {
+        const tell = ctx.tell;
+
+        // Build the ThiefCtx that booty helpers need.
+        // prevLit is captured before any steal so stoleLight() can compare.
+        const isRoomLitNow = (): boolean =>
+          this.here.has(Flag.On) ||
+          this.world.all().some(
+            (o) => o.parent === this.player && (o.has(Flag.Light) || o.has(Flag.OnFire)),
+          );
+        const prevLit = isRoomLitNow();
+
+        const getObjHandle = (id: string) => {
+          const obj = this.world.get(id);
+          if (obj === undefined) return undefined;
+          return {
+            get id()       { return obj.id; },
+            get desc()     { return obj.desc; },
+            get parentId() { return obj.parent?.id ?? null; },
+            get tvalue()   { return (obj.props.get('TVALUE') ?? 0) as number; },
+            hasFlag:  (f: Flag) => obj.has(f),
+            setFlag:  (f: Flag) => obj.set(f),
+            clearFlag:(f: Flag) => obj.clear(f),
+            moveTo: (destId: string) => {
+              const dest = this.world.get(destId);
+              if (dest !== undefined) obj.moveTo(dest);
+            },
+          };
+        };
+
+        const thCtx: ThiefCtx = {
+          hereId: this.here.id,
+          rng: {
+            prob:  (base) => this.rng.prob(base),
+            zprob: (base, denom) => this.rng.zprob?.(base, denom) ?? this.rng.prob(base),
+          },
+          getLucky: () => this.lucky,
+          getObj: getObjHandle,
+          childrenOf: (id) => this.world.contents(id).map(o => o.id),
+          isRoomLit: isRoomLitNow,
+          getPrevLit: () => prevLit,
+          tell,
+          getThiefStrength: () =>
+            (this.world.get('THIEF') as unknown as { pStrength: number })?.pStrength ?? 0,
+          getScore: () => this.scoring.score,
+          fightStrength: () => fightStrength(true, this.scoring.score, this.player.pStrength),
+        };
+
+        const thiefObj = this.world.get('THIEF');
+        // `game` captures the Game instance for closures inside the ctx2 object literal.
+        const game = this;
+        const ctx2: IThiefCtx = {
+          get hereId() { return game.here.id; },
+          getThiefRoomId: () => this.world.get('THIEF')?.parent?.id ?? '',
+          isDead: () => this.dead,
+          isThiefInvisible: () => thiefObj?.has(Flag.Invisible) ?? true,
+          setThiefInvisible: () => { thiefObj?.set(Flag.Invisible); },
+          clearThiefInvisible: () => { thiefObj?.clear(Flag.Invisible); },
+          isThiefFightBit: () => thiefObj?.has(Flag.Fight) ?? false,
+          clearThiefFightBit: () => { thiefObj?.clear(Flag.Fight); },
+          isRoomLit: (roomId) => this.world.get(roomId)?.has(Flag.On) ?? false,
+          isTrollInHere: () => {
+            const troll = this.world.get('TROLL');
+            return troll !== undefined &&
+              troll.parent?.id === this.here.id &&
+              !troll.has(Flag.Invisible);
+          },
+          isTreasureRoom: (roomId) => roomId === 'TREASURE-ROOM',
+          moveThiefTo: (roomId) => {
+            const dest = this.world.get(roomId);
+            if (dest !== undefined) thiefObj?.moveTo(dest);
+          },
+          getRooms: () =>
+            this.world.all()
+              .filter(o => o instanceof Room)
+              .map(o => o.id),
+          isRoomSacred:  (id) => this.world.get(id)?.has(Flag.Sacred) ?? false,
+          isRoomLand:    (id) => this.world.get(id)?.has(Flag.Land) ?? false,
+          isRoomTouched: (id) => this.world.get(id)?.has(Flag.Touched) ?? false,
+          isRoomMaze:    (id) => this.world.get(id)?.has(Flag.Maze) ?? false,
+          rng: thCtx.rng,
+          getLucky: () => this.lucky,
+          getObj: getObjHandle,
+          childrenOf: thCtx.childrenOf,
+          tell,
+          hackTreasures: () => { thiefHackTreasures(thCtx, 'THIEF', 'TREASURE-ROOM'); },
+          depositBooty:  (rmId) => thiefDepositBooty(thCtx, rmId),
+          rob:           (whatId, whereId, prob) => thiefRob(thCtx, whatId, whereId, prob),
+          robMaze:       (rmId) => thiefRobMaze(thCtx, rmId),
+          stealJunk:     (rmId) => thiefStealJunk(thCtx, rmId),
+          dropJunk:      (rmId) => { thiefDropJunk(thCtx, rmId); },
+          recoverStiletto: () => { thiefRecoverStiletto(thCtx, 'THIEF'); },
+          stoleLight:    () => thiefStoleLight(thCtx),
+          getThiefPStrength: () =>
+            (this.world.get('THIEF') as unknown as { pStrength: number })?.pStrength ?? 0,
+          fightStrength: () => fightStrength(true, this.scoring.score, this.player.pStrength),
+          isWinning: () => thiefWinning(thCtx,
+            (this.world.get('THIEF') as unknown as { pStrength: number })?.pStrength ?? 0),
+        };
+
+        iThief(ctx2);
+        return true;  // demon stays registered
       },
     };
   }
