@@ -222,11 +222,13 @@ export function createGame(opts: {
     },
   });
 
-  // DAM-ROOM has a static ldesc in rooms.json (the S0 sealed description).
-  // DAM-ROOM-FCN handles all 4 water-level states via M-LOOK, so clear the
-  // static ldesc to let the dynamic handler fire.
-  const damRoom = world.get('DAM-ROOM');
-  if (damRoom !== undefined) damRoom.ldesc = undefined;
+  // Several dam rooms carry a static ldesc in rooms.json (the H2 hotfix S0 baseline).
+  // Their FCNs handle all water-level states via M-LOOK, so clear the static ldescs
+  // so the dynamic handlers fire instead.
+  for (const id of ['DAM-ROOM', 'RESERVOIR-SOUTH', 'RESERVOIR', 'RESERVOIR-NORTH', 'DEEP-CANYON']) {
+    const room = world.get(id);
+    if (room !== undefined) room.ldesc = undefined;
+  }
 
   const rng = opts.rng ?? new Rng(seed);
   // Separate RNG stream for combat — same seed, independent state.

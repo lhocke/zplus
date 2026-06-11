@@ -37,19 +37,24 @@ function startOutput(roomId: string): string {
 }
 
 describe('blank-room static ldesc render', () => {
-  // RESERVOIR-SOUTH — 1actions.zil:1434-1442
+  // RESERVOIR-SOUTH — 1actions.zil:1434-1442 (now via RESERVOIR-SOUTH-FCN, CB-DAM4)
   // Flag: Land (no On) — needs lamp
   it('RESERVOIR-SOUTH shows default lake description', () => {
     const out = litStartOutput('RESERVOIR-SOUTH');
-    expect(out).toContain('You are in a long room on the south shore of a large lake, far too deep and wide for crossing.');
-    expect(out).toContain('There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.');
+    // S0 sealed: south shore, lake too deep. FCN wraps tells across multiple lines.
+    expect(out).toContain('south shore of a large lake');
+    expect(out).toContain('too deep and wide for crossing');
+    expect(out).toContain('path along the stream to the east or west');
+    expect(out).toContain('canyon to the southeast');
   });
 
-  // RESERVOIR — 1actions.zil:1457-1461
+  // RESERVOIR — 1actions.zil:1457-1461 (now via RESERVOIR-FCN, CB-DAM4)
   // Flag: NonLand (no On) — needs lamp
   it('RESERVOIR shows lake description', () => {
     const out = litStartOutput('RESERVOIR');
-    expect(out).toContain('You are on the lake. Beaches can be seen north and south. Upstream a small stream enters the lake through a narrow cleft in the rocks. The dam can be seen downstream.');
+    // S0/filled: lake description. FCN wraps tells across multiple lines.
+    expect(out).toContain('You are on the lake');
+    expect(out).toContain('dam can be seen downstream');
   });
 
   // RESERVOIR-NORTH — 1actions.zil:1480-1485
@@ -74,12 +79,14 @@ describe('blank-room static ldesc render', () => {
     expect(out).toContain('You are in a large square room with tall ceilings. On the south wall is an enormous mirror which fills the entire wall. There are exits on the other three sides of the room.');
   });
 
-  // DEEP-CANYON — 1actions.zil:1732-1744
+  // DEEP-CANYON — 1actions.zil:1732-1744 (now via DEEP-CANYON-F, CB-DAM4)
   // Flag: Land (no On) — needs lamp
   it('DEEP-CANYON shows canyon edge with flowing water', () => {
     const out = litStartOutput('DEEP-CANYON');
-    expect(out).toContain('You are on the south edge of a deep canyon. Passages lead off to the east, northwest and southwest. A stairway leads down.');
-    expect(out).toContain('You can hear the sound of flowing water from below.');
+    // Base text + default water-sound suffix (gates closed). FCN wraps across lines.
+    expect(out).toContain('south edge of a deep canyon');
+    expect(out).toContain('stairway leads down');
+    expect(out).toContain('sound of flowing water from below');
   });
 
   // LOUD-ROOM — 1actions.zil:1661-1672

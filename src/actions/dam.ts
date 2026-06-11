@@ -1,23 +1,26 @@
 /**
- * Dam subsystem action routines — Phase 3b CB-DAM1.
+ * Dam subsystem action routines — Phase 3b CB-DAM1 through CB-DAM4.
  *
  * Hand-translations of ZIL routines from 1actions.zil (dam/reservoir section).
  *
  * CB-DAM1 scope: BOLT-F, DAM-ROOM-FCN, DAM-FUNCTION, BUBBLE-F.
- * Clock entries I-RFILL and I-REMPTY are registered (parked) in bootstrap.ts
- * and armed here by BOLT-F.
+ * CB-DAM4 scope: RESERVOIR-SOUTH-FCN, RESERVOIR-FCN, RESERVOIR-NORTH-FCN, DEEP-CANYON-F.
  *
  * ZIL source refs:
- *   BOLT-F         1actions.zil:1187–1217
- *   DAM-ROOM-FCN   1actions.zil:1156–1185
- *   DAM-FUNCTION   1actions.zil:1400–1410
- *   BUBBLE-F       1actions.zil:1219–1221
- *   INTEGRAL-PART  1actions.zil:1223–1224
+ *   BOLT-F               1actions.zil:1187–1217
+ *   DAM-ROOM-FCN         1actions.zil:1156–1185
+ *   DAM-FUNCTION         1actions.zil:1400–1410
+ *   BUBBLE-F             1actions.zil:1219–1221
+ *   INTEGRAL-PART        1actions.zil:1223–1224
+ *   RESERVOIR-SOUTH-FCN  1actions.zil:1415–1442
+ *   RESERVOIR-FCN        1actions.zil:1444–1462
+ *   RESERVOIR-NORTH-FCN  1actions.zil:1464–1485
+ *   DEEP-CANYON-F        1actions.zil:1730–1745
  */
 
 import type { ActionHandler } from '../domain/game-object.js';
 import { Flag } from '../domain/flags.js';
-import { M_LOOK } from '../engine/messages.js';
+import { M_LOOK, M_END } from '../engine/messages.js';
 
 // ---------------------------------------------------------------------------
 // INTEGRAL-PART — 1actions.zil:1223
@@ -401,14 +404,198 @@ export const toolChestFcn: ActionHandler = (ctx) => {
   return false;
 };
 
+// ---------------------------------------------------------------------------
+// RESERVOIR-SOUTH-FCN — 1actions.zil:1415–1442
+//
+// M-LOOK: one of 4 water-level descriptions, then the fixed exit paragraph.
+// ---------------------------------------------------------------------------
+
+export const reservoirSouthFcn: ActionHandler = (ctx) => {
+  if (ctx.rarg !== M_LOOK) return false;
+
+  const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
+  const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
+
+  if (lowTide && gatesOpen) {
+    // :1417 — S3 drained
+    ctx.tell(
+      'You are in a long room, to the north of which was formerly a lake.\n' +
+      'However, with the water level lowered, there is merely a wide stream\n' +
+      'running through the center of the room.',
+    );
+  } else if (gatesOpen) {
+    // :1422 — S2 draining
+    ctx.tell(
+      'You are in a long room. To the north is a large lake, too deep\n' +
+      'to cross. You notice, however, that the water level appears to be\n' +
+      'dropping at a rapid rate. Before long, it might be possible to cross\n' +
+      'to the other side from here.',
+    );
+  } else if (lowTide) {
+    // :1428 — S4 refilling
+    ctx.tell(
+      'You are in a long room, to the north of which is a wide area which\n' +
+      'was formerly a reservoir, but now is merely a stream. You notice,\n' +
+      'however, that the level of the stream is rising quickly and that\n' +
+      'before long it will be impossible to cross here.',
+    );
+  } else {
+    // :1434 — S0 sealed (default)
+    ctx.tell(
+      'You are in a long room on the south shore of a large lake, far\n' +
+      'too deep and wide for crossing.',
+    );
+  }
+
+  // Fixed exit paragraph — :1439
+  ctx.tell(
+    'There is a path along the stream to the east or west, a steep pathway\n' +
+    'climbing southwest along the edge of a chasm, and a path leading into a\n' +
+    'canyon to the southeast.',
+  );
+
+  return true;
+};
+
+// ---------------------------------------------------------------------------
+// RESERVOIR-FCN — 1actions.zil:1444–1462
+//
+// M-END: peril nag when player is on-foot, gates sealed, reservoir drained.
+// M-LOOK: mud-pile (drained) or lake (full) description.
+// ---------------------------------------------------------------------------
+
+export const reservoirFcn: ActionHandler = (ctx) => {
+  if (ctx.rarg === M_END) {
+    // :1445 — fire if: winner not in a VEHBIT vehicle AND !GATES-OPEN AND LOW-TIDE
+    const inVehicle = ctx.actor.parent !== null && ctx.actor.parent.has(Flag.Vehicle);
+    const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
+    const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
+    if (!inVehicle && !gatesOpen && lowTide) {
+      ctx.tell(
+        'You notice that the water level here is rising rapidly. The currents\n' +
+        'are also becoming stronger. Staying here seems quite perilous!',
+      );
+    }
+    return false;  // M-END handlers return false to continue the chain
+  }
+
+  if (ctx.rarg === M_LOOK) {
+    const lowTide = ctx.getGlobal?.('LOW-TIDE') ?? false;
+    if (lowTide) {
+      // :1453 — drained: mud pile
+      ctx.tell(
+        'You are on what used to be a large lake, but which is now a large\n' +
+        'mud pile. There are "shores" to the north and south.',
+      );
+    } else {
+      // :1457 — filled: lake
+      ctx.tell(
+        'You are on the lake. Beaches can be seen north and south.\n' +
+        'Upstream a small stream enters the lake through a narrow cleft\n' +
+        'in the rocks. The dam can be seen downstream.',
+      );
+    }
+    return true;
+  }
+
+  return false;
+};
+
+// ---------------------------------------------------------------------------
+// RESERVOIR-NORTH-FCN — 1actions.zil:1464–1485
+//
+// M-LOOK: one of 4 water-level descriptions, then the fixed stairway line.
+// ---------------------------------------------------------------------------
+
+export const reservoirNorthFcn: ActionHandler = (ctx) => {
+  if (ctx.rarg !== M_LOOK) return false;
+
+  const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
+  const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
+
+  if (lowTide && gatesOpen) {
+    // :1466 — S3 drained
+    ctx.tell(
+      'You are in a large cavernous room, the south of which was formerly\n' +
+      'a lake. However, with the water level lowered, there is merely\n' +
+      'a wide stream running through there.',
+    );
+  } else if (gatesOpen) {
+    // :1471 — S2 draining
+    ctx.tell(
+      'You are in a large cavernous area. To the south is a wide lake,\n' +
+      'whose water level appears to be falling rapidly.',
+    );
+  } else if (lowTide) {
+    // :1475 — S4 refilling
+    ctx.tell(
+      'You are in a cavernous area, to the south of which is a very wide\n' +
+      'stream. The level of the stream is rising rapidly, and it appears\n' +
+      'that before long it will be impossible to cross to the other side.',
+    );
+  } else {
+    // :1480 — S0 sealed (default)
+    ctx.tell(
+      'You are in a large cavernous room, north of a large lake.',
+    );
+  }
+
+  // Fixed exit line — :1483
+  ctx.tell('There is a slimy stairway leaving the room to the north.');
+
+  return true;
+};
+
+// ---------------------------------------------------------------------------
+// DEEP-CANYON-F — 1actions.zil:1730–1745
+//
+// M-LOOK: base text + water-sound suffix determined by the gate/tide flags.
+//   GATES-OPEN && !LOW-TIDE  → "loud roaring sound, like that of rushing water"
+//   !GATES-OPEN && LOW-TIDE  → no suffix (gates sealed, reservoir drained = quiet)
+//   else                     → "sound of flowing water from below"
+// ---------------------------------------------------------------------------
+
+export const deepCanyonF: ActionHandler = (ctx) => {
+  if (ctx.rarg !== M_LOOK) return false;
+
+  // Base text — :1732
+  ctx.tell(
+    'You are on the south edge of a deep canyon. Passages lead off to the\n' +
+    'east, northwest and southwest. A stairway leads down.',
+  );
+
+  const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
+  const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
+
+  if (gatesOpen && !lowTide) {
+    // :1735 — gates open, water rushing = loud roar
+    ctx.tell(
+      ' You can hear a loud roaring sound, like that of rushing water, from\n' +
+      'below.',
+    );
+  } else if (!gatesOpen && lowTide) {
+    // :1739 — gates sealed, reservoir drained = quiet (no suffix)
+    return true;
+  } else {
+    // :1742 — default: soft flow sound
+    ctx.tell(' You can hear the sound of flowing water from below.');
+  }
+
+  return true;
+};
+
 export const damActions: Record<string, ActionHandler> = {
-  'BOLT-F':          boltF,
-  'DAM-ROOM-FCN':    damRoomFcn,
-  'DAM-FUNCTION':    damFunction,
-  'BUBBLE-F':        bubbleFcn,
-  'BUTTON-F':        buttonF,
-  'LEAK-FUNCTION':   leakFunction,
-  'PUTTY-FCN':       puttyFcn,
-  'TUBE-FUNCTION':   tubeFunction,
-  'TOOL-CHEST-FCN':  toolChestFcn,
+  'BOLT-F':               boltF,
+  'DAM-ROOM-FCN':         damRoomFcn,
+  'DAM-FUNCTION':         damFunction,
+  'BUBBLE-F':             bubbleFcn,
+  'BUTTON-F':             buttonF,
+  'LEAK-FUNCTION':        leakFunction,
+  'PUTTY-FCN':            puttyFcn,
+  'TUBE-FUNCTION':        tubeFunction,
+  'TOOL-CHEST-FCN':       toolChestFcn,
+  'RESERVOIR-SOUTH-FCN':  reservoirSouthFcn,
+  'RESERVOIR-FCN':        reservoirFcn,
+  'RESERVOIR-NORTH-FCN':  reservoirNorthFcn,
+  'DEEP-CANYON-F':        deepCanyonF,
 };
