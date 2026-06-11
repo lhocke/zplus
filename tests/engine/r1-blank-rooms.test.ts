@@ -137,10 +137,12 @@ describe('blank-room static ldesc render', () => {
   });
 
   // ARAGAIN-FALLS — 1actions.zil:2622-2631
-  // Flag: Land, Sacred, On — always lit
+  // Flag: Land, Sacred, On — always lit.
+  // FALLS-ROOM M-LOOK produces multi-line output; check by substring, not full line.
   it('ARAGAIN-FALLS shows waterfall and rainbow', () => {
     const out = startOutput('ARAGAIN-FALLS');
-    expect(out).toContain('You are at the top of Aragain Falls, an enormous waterfall with a drop of about 450 feet. The only path here is on the north end.');
+    expect(out).toContain('Aragain Falls');
+    expect(out).toContain('450 feet');
     expect(out).toContain('A beautiful rainbow can be seen over the falls and to the west.');
   });
 

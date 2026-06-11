@@ -237,7 +237,7 @@ export function createGame(opts: {
   // Several dam rooms carry a static ldesc in rooms.json (the H2 hotfix S0 baseline).
   // Their FCNs handle all water-level states via M-LOOK, so clear the static ldescs
   // so the dynamic handlers fire instead.
-  for (const id of ['DAM-ROOM', 'RESERVOIR-SOUTH', 'RESERVOIR', 'RESERVOIR-NORTH', 'DEEP-CANYON', 'LOUD-ROOM']) {
+  for (const id of ['DAM-ROOM', 'RESERVOIR-SOUTH', 'RESERVOIR', 'RESERVOIR-NORTH', 'DEEP-CANYON', 'LOUD-ROOM', 'ARAGAIN-FALLS']) {
     const room = world.get(id);
     if (room !== undefined) room.ldesc = undefined;
   }
