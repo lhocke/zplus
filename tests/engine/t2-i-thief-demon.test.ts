@@ -89,6 +89,10 @@ function makeCtx(opts: {
   /** Whether the troll is visible in HERE. */
   trollHere?: boolean;
   dead?: boolean;
+  /** Whether any room is considered touched (TOUCHBIT). Default false. */
+  roomTouched?: boolean;
+  /** Whether any room is considered maze (MAZEBIT). Default false. */
+  roomMaze?: boolean;
 }): {
   ctx: IThiefCtx;
   emitted: string[];
@@ -169,6 +173,8 @@ function makeCtx(opts: {
       const rm = rooms.find(r => r.id === roomId);
       return rm?.flags.has(Flag.Land) ?? true;
     },
+    isRoomTouched: (_roomId: string) => opts.roomTouched ?? false,
+    isRoomMaze: (_roomId: string) => opts.roomMaze ?? false,
 
     rng,
     getLucky: () => true,
@@ -540,5 +546,165 @@ describe('I-THIEF demon contract', () => {
     const result = iThief(ctx);
     // iThief always returns true (it's a standing demon)
     expect(result).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Branch 3 faithfulness — TOUCHBIT gate + MAZEBIT dispatch
+//
+// ZIL 1actions.zil:3903–3914:
+//   (T
+//     <COND (<AND <IN? ,THIEF .RM> <NOT <FSET? ,THIEF ,INVISIBLE>>>
+//            <FSET ,THIEF ,INVISIBLE> <SET HERE? <>>)>
+//     <COND (<FSET? .RM ,TOUCHBIT>      ; only if room has been touched
+//            <ROB .RM ,THIEF 75>
+//            <SET FLG
+//              <COND (<AND <FSET? .RM ,MAZEBIT> <FSET? ,HERE ,MAZEBIT>>
+//                     <ROB-MAZE .RM>)
+//                    (T <STEAL-JUNK .RM>)>>)>)>
+//
+// Two observable defects in the prior port:
+//   1. rob+steal fired unconditionally — untouched rooms got robbed.
+//   2. stealJunk was ALWAYS called; robMaze was dead code.
+// ---------------------------------------------------------------------------
+
+describe('Branch 3 faithfulness: TOUCHBIT gate + MAZEBIT dispatch', () => {
+  beforeEach(() => { resetThiefState(); });
+
+  // Helper: build a context where the thief is NOT in HERE and NOT in TREASURE-ROOM
+  // (so we land in branch 3), with the player room tracked separately.
+  function makeBranch3Ctx(opts: {
+    thiefRoomId: string;
+    hereId: string;
+    roomTouched: boolean;
+    thiefRoomMaze?: boolean;
+    hereRoomMaze?: boolean;
+  }) {
+    const helperCalls: string[] = [];
+
+    const rooms = [
+      makeRoom(opts.thiefRoomId, { land: true }),
+      makeRoom(opts.hereId, { land: true }),
+    ];
+
+    const ctx: IThiefCtx = {
+      hereId: opts.hereId,
+      getThiefRoomId: () => opts.thiefRoomId,
+      isDead: () => false,
+      isThiefInvisible: () => true,    // thief invisible → skip "victim left" sub-branch
+      setThiefInvisible: () => {},
+      clearThiefInvisible: () => {},
+      isThiefFightBit: () => false,
+      clearThiefFightBit: () => {},
+      isRoomLit: (_id: string) => false,
+      isTrollInHere: () => false,
+      isTreasureRoom: (id: string) => id === 'TREASURE-ROOM',
+      isRoomTouched: (_id: string) => opts.roomTouched,
+      isRoomMaze: (id: string) => {
+        if (id === opts.thiefRoomId) return opts.thiefRoomMaze ?? false;
+        if (id === opts.hereId)      return opts.hereRoomMaze  ?? false;
+        return false;
+      },
+      moveThiefTo: () => {},
+      getRooms: () => rooms.map(r => r.id),
+      isRoomSacred: (_id: string) => false,
+      isRoomLand: (_id: string) => true,
+      rng: new ScriptedRng([0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]),
+      getLucky: () => true,
+      getObj: (_id: string) => undefined,
+      childrenOf: (_id: string) => [],
+      tell: (_s: string) => {},
+      hackTreasures: () => {},
+      depositBooty: (_rmId: string) => false,
+      rob: (whatId: string, whereId: string, prob?: number) => {
+        helperCalls.push(`rob:${whatId}/${whereId}/${prob ?? 'undef'}`);
+        return false;
+      },
+      robMaze: (rmId: string) => {
+        helperCalls.push(`robMaze:${rmId}`);
+        return false;
+      },
+      stealJunk: (rmId: string) => {
+        helperCalls.push(`stealJunk:${rmId}`);
+        return false;
+      },
+      dropJunk: (_rmId: string) => {},
+      recoverStiletto: () => {},
+      stoleLight: () => false,
+      getThiefPStrength: () => 5,
+      fightStrength: () => 2,
+      isWinning: () => false,
+    };
+
+    return { ctx, helperCalls };
+  }
+
+  // TOUCHBIT gate: an untouched room — rob, robMaze, stealJunk must NOT be called.
+  it('untouched room: rob and steal helpers are not called (TOUCHBIT gate)', () => {
+    const { ctx, helperCalls } = makeBranch3Ctx({
+      thiefRoomId: 'MAZE-RM',
+      hereId: 'OTHER-ROOM',
+      roomTouched: false,
+    });
+
+    iThief(ctx);
+
+    const booty = helperCalls.filter(c =>
+      c.startsWith('rob:') || c.startsWith('robMaze:') || c.startsWith('stealJunk:'),
+    );
+    expect(booty).toHaveLength(0);
+  });
+
+  // TOUCHBIT gate: a touched, non-maze room → rob then stealJunk (no robMaze).
+  it('touched non-maze room: rob called then stealJunk (no robMaze)', () => {
+    const { ctx, helperCalls } = makeBranch3Ctx({
+      thiefRoomId: 'WEST-OF-HOUSE',
+      hereId: 'OTHER-ROOM',
+      roomTouched: true,
+      thiefRoomMaze: false,
+      hereRoomMaze: false,
+    });
+
+    iThief(ctx);
+
+    expect(helperCalls.some(c => c.startsWith('rob:WEST-OF-HOUSE'))).toBe(true);
+    expect(helperCalls.some(c => c.startsWith('stealJunk:WEST-OF-HOUSE'))).toBe(true);
+    expect(helperCalls.some(c => c.startsWith('robMaze:'))).toBe(false);
+  });
+
+  // MAZEBIT dispatch: touched maze room where BOTH RM and HERE have MAZEBIT
+  // → rob then robMaze (no stealJunk).
+  it('touched maze room (RM and HERE both maze): rob then robMaze, not stealJunk', () => {
+    const { ctx, helperCalls } = makeBranch3Ctx({
+      thiefRoomId: 'MAZE-RM',
+      hereId: 'MAZE-HERE',
+      roomTouched: true,
+      thiefRoomMaze: true,
+      hereRoomMaze: true,
+    });
+
+    iThief(ctx);
+
+    expect(helperCalls.some(c => c.startsWith('rob:MAZE-RM'))).toBe(true);
+    expect(helperCalls.some(c => c.startsWith('robMaze:MAZE-RM'))).toBe(true);
+    expect(helperCalls.some(c => c.startsWith('stealJunk:'))).toBe(false);
+  });
+
+  // MAZEBIT dispatch: touched maze room where only RM has MAZEBIT (HERE does not)
+  // → stealJunk (not robMaze — AND condition fails).
+  it('touched maze room (only RM is maze, HERE is not): rob then stealJunk', () => {
+    const { ctx, helperCalls } = makeBranch3Ctx({
+      thiefRoomId: 'MAZE-RM',
+      hereId: 'NON-MAZE-HERE',
+      roomTouched: true,
+      thiefRoomMaze: true,
+      hereRoomMaze: false,
+    });
+
+    iThief(ctx);
+
+    expect(helperCalls.some(c => c.startsWith('rob:MAZE-RM'))).toBe(true);
+    expect(helperCalls.some(c => c.startsWith('stealJunk:MAZE-RM'))).toBe(true);
+    expect(helperCalls.some(c => c.startsWith('robMaze:'))).toBe(false);
   });
 });

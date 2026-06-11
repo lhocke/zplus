@@ -73,6 +73,12 @@ export interface IThiefCtx {
   /** Whether a room has RLANDBIT (is a land room). */
   isRoomLand(roomId: string): boolean;
 
+  /** Whether a room has TOUCHBIT (player has visited it). */
+  isRoomTouched(roomId: string): boolean;
+
+  /** Whether a room has MAZEBIT (maze area). */
+  isRoomMaze(roomId: string): boolean;
+
   // ----- RNG -----
   rng: {
     prob(base: number): boolean;
@@ -313,23 +319,24 @@ export function iThief(ctx: IThiefCtx): boolean {
     // -----------------------------------------------------------------------
     else {
       if (playerInRoom && !ctx.isThiefInvisible()) {
-        // Victim left — hide the thief
+        // Victim left — hide the thief  (1actions.zil:3904–3907)
         ctx.setThiefInvisible();
         hereQ = false;
       }
-      // Hack the room's belongings if TOUCHBIT is set
-      // (In the full game, TOUCHBIT marks rooms the thief has visited.
-      //  The rob/maze/junk helpers are called here; tests stub them out.)
-      // We do a simplified TOUCHBIT check — the thief's rob/steal runs
-      // unconditionally here since the TOUCHBIT flag is tracked in the
-      // full Game object; the stubbed ctx just delegates.
-      // Branch: rob at 75%, then maze vs junk based on room flags
-      // Full TOUCHBIT gate: only activate if the room has been touched.
-      // For T2, we call the helpers and let the ctx stubs decide.
-      ctx.rob(rmId, 'THIEF', 75);
-      // Maze rooms get robMaze; others get stealJunk
-      // (MAZEBIT check deferred to the ctx — ctx can override stealJunk/robMaze)
-      ctx.stealJunk(rmId);
+      // 1actions.zil:3908–3914: only hack belongings if the room has been touched.
+      // <COND (<FSET? .RM ,TOUCHBIT>
+      //        <ROB .RM ,THIEF 75>
+      //        <SET FLG <COND (<AND <FSET? .RM ,MAZEBIT> <FSET? ,HERE ,MAZEBIT>>
+      //                        <ROB-MAZE .RM>)
+      //                       (T <STEAL-JUNK .RM>)>>)>
+      if (ctx.isRoomTouched(rmId)) {
+        ctx.rob(rmId, 'THIEF', 75);
+        if (ctx.isRoomMaze(rmId) && ctx.isRoomMaze(hereId)) {
+          ctx.robMaze(rmId);
+        } else {
+          ctx.stealJunk(rmId);
+        }
+      }
     }
 
     // -----------------------------------------------------------------------
