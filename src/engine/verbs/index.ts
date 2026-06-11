@@ -96,6 +96,8 @@ export interface VerbContext {
    * pointless/staggered/unarmed paths inside heroBlow).
    */
   readonly heroBlow?: (targetId: string, weaponId: string | null) => VerbResult;
+  /** DISABLE <INT id> — used by V-ODYSSEUS to stop the wrath timer. */
+  readonly disableClock?: (id: string) => void;
 }
 
 export interface VerbResult {
@@ -756,6 +758,41 @@ export function verbAttack(ctx: VerbContext): VerbResult {
 
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
+// V-ODYSSEUS — gverbs.zil:945–961.
+//
+// "odysseus" / "ulysses" (gsyntax.zil:334–335): if in CYCLOPS-ROOM with an
+// awake cyclops, the name of his father's nemesis drives him through the east
+// wall.  Anywhere else: "Wasn't he a sailor?"
+//
+// REMOVE-CAREFULLY (gverbs.zil:610–618): removes the object, recomputes LIT,
+// prints "You are left in the dark..." if the room just went dark.  Here the
+// cyclops isn't a light source so the dark-check is a no-op; we just remove.
+function verbOdysseus(ctx: VerbContext): VerbResult {
+  const here = ctx.here;
+  const cyclops = ctx.world.get('CYCLOPS');
+  const cyclopsFlag = ctx.getGlobal?.('CYCLOPS-FLAG') ?? false;
+
+  if (
+    here.id === 'CYCLOPS-ROOM' &&
+    cyclops !== undefined &&
+    cyclops.parent !== null &&
+    cyclops.parent === here &&
+    !cyclopsFlag
+  ) {
+    ctx.disableClock?.('I-CYCLOPS');
+    ctx.setGlobal?.('CYCLOPS-FLAG', true);
+    const out =
+      "The cyclops, hearing the name of his father's deadly nemesis, flees the room\n" +
+      'by knocking down the wall on the east of the room.';
+    ctx.setGlobal?.('MAGIC-FLAG', true);
+    cyclops.clear(Flag.Fight);
+    cyclops.moveTo(null);   // REMOVE-CAREFULLY — no light-source side-effects
+    return result(out);
+  }
+
+  return result("Wasn't he a sailor?");
+}
+
 // Primary dispatch on V-* action id (ZIL PERFORM dispatches on PRSA, gmain.zil:283–284).
 const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LOOK':      verbLook,
@@ -783,6 +820,8 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LOOK-ON':     verbLookOn,           // gverbs.zil:892-897
   // gverbs.zil:1471 — default when no object handler claims V-TIE-UP.
   'V-TIE-UP': () => result(vTieUp.response),
+  // gverbs.zil:945–961 — ODYSSEUS / ULYSSES (gsyntax.zil:334–335).
+  'V-ODYSSEUS': verbOdysseus,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.
