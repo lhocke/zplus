@@ -59,6 +59,7 @@ import { ScriptedRng } from '../helpers/scripted-rng.js';
 
 interface StubItem {
   id: string;
+  desc: string;
   parentId: string | null;
   flags: Set<Flag>;
   tvalue: number;
@@ -72,10 +73,12 @@ function makeItem(
     tvalue?: number;
     flags?: Flag[];
     children?: StubItem[];
+    desc?: string;
   } = {},
 ): StubItem {
   return {
     id,
+    desc: opts.desc ?? id.toLowerCase().replace(/-/g, ' '),
     parentId,
     flags: new Set(opts.flags ?? []),
     tvalue: opts.tvalue ?? 0,
@@ -125,6 +128,7 @@ function makeCtx(opts: {
       if (!item) return undefined;
       return {
         id: item.id,
+        desc: item.desc,
         parentId: item.parentId,
         tvalue: item.tvalue,
         hasFlag: (f: Flag) => item.flags.has(f),
@@ -745,12 +749,13 @@ describe('stoleLight()', () => {
 describe('robMaze()', () => {
   beforeEach(() => { resetThiefState(); });
 
-  it('at PROB(40) true, steals first TAKEBIT !INVISIBLE item at zprob(60,80)', () => {
+  it('at PROB(40) true, steals first TAKEBIT !INVISIBLE item at zprob(60) LUCKY denom=100', () => {
+    // ZIL <PROB 60 80> → macro expands to <ZPROB 60> discarding 80 → LUCKY denom is 100
     const map = makeItem('MAP', 'MAZE', { tvalue: 0, flags: [Flag.Takeable] });
     const maze = makeItem('MAZE', null, { children: [map] });
     const thief = makeItem('THIEF', 'MAZE', { flags: [Flag.Actor] });
-    // Two draws: PROB(40) = 0.1*100=10 < 40 → true; zprob(60,80) = 0.1*80=8 < 60 → true
-    const { ctx, emitted } = makeCtx({ items: [map, maze, thief], hereId: 'HERE', rngDraws: [0.1, 0.1] });
+    // Two draws: PROB(40) = 0.1*100=10 < 40 → true; zprob(60,100) = 0.1*100=10 < 60 → true
+    const { ctx, emitted } = makeCtx({ items: [map, maze, thief], hereId: 'HERE', rngDraws: [0.1, 0.1], lucky: true });
 
     robMaze(ctx, 'MAZE');
     expect(map.parentId).toBe('THIEF');
@@ -759,16 +764,30 @@ describe('robMaze()', () => {
     expect(emitted.some(m => m.includes('wonder'))).toBe(true);
   });
 
-  it('at PROB(40) true but zprob(60,80) false, item stays (only announce)', () => {
+  it('at PROB(40) true but zprob(60) LUCKY denom=100 false, item stays (only announce)', () => {
+    // ZIL <PROB 60 80> → ZPROB 60 → LUCKY ? 60>RANDOM(100). Draw 0.9 → 90 >= 60 → false.
     const map = makeItem('MAP', 'MAZE', { tvalue: 0, flags: [Flag.Takeable] });
     const maze = makeItem('MAZE', null, { children: [map] });
     const thief = makeItem('THIEF', 'MAZE', { flags: [Flag.Actor] });
-    // PROB(40) = 0.1 → true; zprob(60,80) = 0.9*80=72 >= 60 → false
-    const { ctx, emitted } = makeCtx({ items: [map, maze, thief], hereId: 'HERE', rngDraws: [0.1, 0.9] });
+    // PROB(40) = 0.1 → true; zprob(60,100) = 0.9*100=90 >= 60 → false
+    const { ctx, emitted } = makeCtx({ items: [map, maze, thief], hereId: 'HERE', rngDraws: [0.1, 0.9], lucky: true });
 
     robMaze(ctx, 'MAZE');
     expect(map.parentId).toBe('MAZE');  // not stolen
     expect(emitted.some(m => m.includes('wonder'))).toBe(true);  // but announced
+  });
+
+  // Faithfulness: r in [0.60, 0.75) → LUCKY denom=100 does NOT steal; denom=80 WOULD steal.
+  // This is the 14.96%-of-seeds divergence the verifier flagged.
+  it('LUCKY denom=100 faithfulness: draw in [0.60,0.75) does NOT steal (ZIL nominal P=60/100)', () => {
+    const map = makeItem('MAP', 'MAZE', { tvalue: 0, flags: [Flag.Takeable] });
+    const maze = makeItem('MAZE', null, { children: [map] });
+    const thief = makeItem('THIEF', 'MAZE', { flags: [Flag.Actor] });
+    // PROB(40)=0.1→true; zprob second draw=0.65: 0.65*100=65 >= 60 → false (should NOT steal)
+    const { ctx } = makeCtx({ items: [map, maze, thief], hereId: 'HERE', rngDraws: [0.1, 0.65], lucky: true });
+
+    robMaze(ctx, 'MAZE');
+    expect(map.parentId).toBe('MAZE');  // NOT stolen at r=0.65 with denom=100
   });
 
   it('at PROB(40) false, skips entirely', () => {
@@ -801,5 +820,42 @@ describe('robMaze()', () => {
 
     const result = robMaze(ctx, 'MAZE');
     expect(result).toBe(false);
+  });
+
+  // ZIL "D .X" emits the DESC string, not the lowercased atom.
+  // Hyphenated ids like BRASS-LANTERN → desc "brass lantern", not "brass-lantern".
+  it('announce uses obj.desc not id.toLowerCase() (ZIL D .X operator)', () => {
+    // desc defaults to id with hyphens replaced by spaces in our stub
+    const lantern = makeItem('BRASS-LANTERN', 'MAZE', { tvalue: 0, flags: [Flag.Takeable] });
+    const maze = makeItem('MAZE', null, { children: [lantern] });
+    const thief = makeItem('THIEF', 'MAZE', { flags: [Flag.Actor] });
+    // PROB(40)=0.1→true; zprob denom=100, 0.1→steal; checks announce text
+    const { ctx, emitted } = makeCtx({ items: [lantern, maze, thief], hereId: 'HERE', rngDraws: [0.1, 0.1], lucky: true });
+
+    robMaze(ctx, 'MAZE');
+    // Must use desc "brass lantern", not atom "brass-lantern"
+    expect(emitted.some(m => m.includes('brass lantern'))).toBe(true);
+    expect(emitted.some(m => m.includes('brass-lantern'))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// STEAL-JUNK — obj.desc in vanish announcement
+// ---------------------------------------------------------------------------
+
+describe('stealJunk() — object name via desc', () => {
+  // ZIL STEAL-JUNK :3970 "You suddenly notice that the " D .X " vanished."
+  // D .X emits DESC, e.g. "large bag" not "large-bag".
+  it('vanish message uses obj.desc not id.toLowerCase()', () => {
+    const bag = makeItem('LARGE-BAG', 'HERE', { tvalue: 0, flags: [Flag.Takeable], desc: 'large bag' });
+    const here = makeItem('HERE', null, { children: [bag] });
+    const thief = makeItem('THIEF', null);
+    // zprob(10,100): draw=0.0 → 0 < 10 → true
+    const { ctx, emitted } = makeCtx({ items: [bag, here, thief], hereId: 'HERE', rngDraws: [0.0], lucky: true });
+
+    stealJunk(ctx, 'HERE');
+    // desc "large bag" must appear, not "large-bag"
+    expect(emitted.some(m => m.includes('large bag'))).toBe(true);
+    expect(emitted.some(m => m.includes('large-bag'))).toBe(false);
   });
 });

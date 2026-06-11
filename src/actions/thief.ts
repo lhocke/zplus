@@ -3,8 +3,9 @@
 // Transcription of the ZIL routines from 1actions.zil that implement the
 // thief's wander/steal/deposit state machine.  Phase-3 T1 task.
 //
-// All two-arg PROB calls (zprob) route through ctx.rng.zprob(base, denom)
-// where denom = getLucky() ? 100 : 300.  One-arg PROB calls use prob(base).
+// Two-arg PROB calls (stealJunk, dropJunk, robMaze) all expand via the PROB
+// macro to ZPROB(base), discarding the second arg.  ZPROB uses denom=100
+// when LUCKY, 300 otherwise.  One-arg PROB calls use prob(base) directly.
 //
 // ZIL citations:
 //   ROB              1actions.zil:3976–3989
@@ -24,6 +25,8 @@ import { setEggSolve } from './thief-state.js';
 // Minimal object handle ThiefCtx needs to manipulate an in-world object.
 export interface ThiefObjHandle {
   readonly id: string;
+  /** ZIL DESC string — what "D .X" prints (e.g. "brass lantern", not "brass-lantern"). */
+  readonly desc: string;
   readonly parentId: string | null;
   readonly tvalue: number;
   hasFlag(f: Flag): boolean;
@@ -101,7 +104,13 @@ export function rob(
 // ROB-MAZE — 1actions.zil:1917–1933
 //
 // Finds the first TAKEBIT !INVISIBLE child of `rm` at PROB(40); announces
-// it; then at ZPROB(60,80) moves it into the thief (TOUCHBIT + INVISIBLE).
+// it; then at ZPROB(60) moves it into the thief (TOUCHBIT + INVISIBLE).
+//
+// ZIL source uses <PROB 60 80>, but the PROB macro (gmacros.zil:115–117)
+// with a second arg expands to <FORM ZPROB .BASE?> — dropping the second
+// literal entirely.  ZPROB(60) uses LUCKY ? RANDOM(100) : RANDOM(300),
+// so the LUCKY denom is 100, not 80.  Faithful steal P = 60/100 = 0.60.
+//
 // Returns false when no eligible item found (or the room is empty).
 // ---------------------------------------------------------------------------
 
@@ -115,10 +124,12 @@ export function robMaze(ctx: ThiefCtx, rmId: string): boolean {
     if (!ctx.rng.prob(40)) continue;
 
     ctx.tell(
-      `You hear, off in the distance, someone saying "My, I wonder what\nthis fine ${child.id.toLowerCase()} is doing here."`,
+      `You hear, off in the distance, someone saying "My, I wonder what\nthis fine ${child.desc} is doing here."`,
     );
 
-    const denom = ctx.getLucky() ? 80 : 300;
+    // ZIL <PROB 60 80>: macro expands to <ZPROB 60> (drops the second arg).
+    // ZPROB(60) → LUCKY ? 60>RANDOM(100) : 60>RANDOM(300). Faithful denom=100.
+    const denom = ctx.getLucky() ? 100 : 300;
     if (ctx.rng.zprob(60, denom)) {
       child.moveTo('THIEF');
       child.setFlag(Flag.Touched);
@@ -161,7 +172,7 @@ export function stealJunk(ctx: ThiefCtx, rmId: string): boolean {
     }
 
     if (rmId === ctx.hereId) {
-      ctx.tell(`You suddenly notice that the ${child.id.toLowerCase()} vanished.`);
+      ctx.tell(`You suddenly notice that the ${child.desc} vanished.`);
       return true;
     }
     return false;
