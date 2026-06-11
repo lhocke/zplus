@@ -19,7 +19,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
 // globals the live engine writes (grep flag-store writes before extending)
-const SETTABLE_GLOBALS = new Set(['TROLL-FLAG', 'WON-FLAG']);
+// CYCLOPS-FLAG/MAGIC-FLAG settable since the thief/cyclops merge (V-ODYSSEUS, give-water)
+const SETTABLE_GLOBALS = new Set(['TROLL-FLAG', 'WON-FLAG', 'CYCLOPS-FLAG', 'MAGIC-FLAG']);
 
 // reachable-but-inescapable rooms we know about, each tied to the wave that fixes it
 const KNOWN_TRAPS: Record<string, string> = {
