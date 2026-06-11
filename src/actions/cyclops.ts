@@ -30,7 +30,9 @@ export interface CyclopsObjHandle {
 export interface CyclopsCtx {
   /** ZIL HERE. */
   readonly hereId: string;
-  /** Canonical parsed verb (ZIL PRSA). */
+  /** ZIL PRSA — the parsed action, e.g. 'V-ATTACK', 'V-EXAMINE'. */
+  readonly action: string;
+  /** Surface verb word (e.g. 'kill', 'look') — use `action` for VERB? comparisons. */
   readonly verb: string;
   /** Direct object id (ZIL PRSO). */
   readonly prsoId?: string;
@@ -68,7 +70,7 @@ export function cyclopsFcn(ctx: CyclopsCtx): boolean {
   if (ctx.winner === 'CYCLOPS') {
     if (ctx.getCyclopsFlag()) {
       ctx.tell("No use talking to him. He's fast asleep.");
-    } else if (ctx.verb === 'odysseus' || ctx.verb === 'ODYSSEUS') {
+    } else if (ctx.action === 'V-ODYSSEUS') {
       // V-ODYSSEUS is C3; dispatch deferred — fall through (return false) so
       // the engine can route to V-ODYSSEUS via the verb table.
       return false;
@@ -79,17 +81,18 @@ export function cyclopsFcn(ctx: CyclopsCtx): boolean {
   }
 
   // ZIL branch 2: sleeping cyclops — :1527–1539
+  // ZIL: <VERB? EXAMINE> and <VERB? ALARM KICK ATTACK BURN MUNG> test PRSA.
   if (ctx.getCyclopsFlag()) {
-    if (ctx.verb === 'examine') {
+    if (ctx.action === 'V-EXAMINE') {
       ctx.tell('The cyclops is sleeping like a baby, albeit a very ugly one.');
       return true;
     }
     if (
-      ctx.verb === 'alarm' ||
-      ctx.verb === 'kick'   ||
-      ctx.verb === 'attack' ||
-      ctx.verb === 'burn'   ||
-      ctx.verb === 'mung'
+      ctx.action === 'V-ALARM'  ||  // wake/awake/surprise/startle
+      ctx.action === 'V-KICK'   ||  // kick/taunt
+      ctx.action === 'V-ATTACK' ||  // attack/kill/stab/strike/knock-down
+      ctx.action === 'V-BURN'   ||  // burn/incinerate/ignite
+      ctx.action === 'V-MUNG'       // destroy/poke/puncture/damage/break/smash
     ) {
       ctx.tell('The cyclops yawns and stares at the thing that woke him up.');
       ctx.setCyclopsFlag(false);
@@ -108,13 +111,14 @@ export function cyclopsFcn(ctx: CyclopsCtx): boolean {
   }
 
   // ZIL branch 3: EXAMINE (awake) — :1540–1542
-  if (ctx.verb === 'examine') {
+  // ZIL <VERB? EXAMINE>: V-EXAMINE covers both "examine X" and "look at X".
+  if (ctx.action === 'V-EXAMINE') {
     ctx.tell('A hungry cyclops is standing at the foot of the stairs.');
     return true;
   }
 
   // ZIL branch 4: GIVE with PRSI == CYCLOPS — :1543–1574
-  if (ctx.verb === 'give' && ctx.prsiId === 'CYCLOPS') {
+  if (ctx.action === 'V-GIVE' && ctx.prsiId === 'CYCLOPS') {
     if (ctx.prsoId === 'LUNCH') {
       // Eat peppers only when count >= 0 (not yet thirsty)
       if (count >= 0) {
@@ -166,33 +170,41 @@ export function cyclopsFcn(ctx: CyclopsCtx): boolean {
   }
 
   // ZIL branch 5: THROW / ATTACK / MUNG — :1575–1585
-  if (ctx.verb === 'throw' || ctx.verb === 'attack' || ctx.verb === 'mung') {
+  // ZIL <VERB? THROW ATTACK MUNG> tests PRSA.
+  //   V-THROW  covers "throw X at cyclops"
+  //   V-ATTACK covers attack/kill/stab/strike/knock-down
+  //   V-MUNG   covers destroy/poke/puncture/damage/break/smash
+  if (
+    ctx.action === 'V-THROW'  ||
+    ctx.action === 'V-ATTACK' ||
+    ctx.action === 'V-MUNG'
+  ) {
     ctx.enableClock('I-CYCLOPS');
-    if (ctx.verb === 'mung') {
+    if (ctx.action === 'V-MUNG') {
       ctx.tell('"Do you think I\'m as stupid as my father was?", he says, dodging.');
       return true;
     }
     ctx.tell('The cyclops shrugs but otherwise ignores your pitiful attempt.');
-    if (ctx.verb === 'throw' && ctx.prsoId !== undefined) {
+    if (ctx.action === 'V-THROW' && ctx.prsoId !== undefined) {
       ctx.getObj(ctx.prsoId)?.moveTo(ctx.hereId);
     }
     return true;
   }
 
   // ZIL branch 6: TAKE — :1586–1588
-  if (ctx.verb === 'take') {
+  if (ctx.action === 'V-TAKE') {
     ctx.tell("The cyclops doesn't take kindly to being grabbed.");
     return true;
   }
 
   // ZIL branch 7: TIE — :1589–1591
-  if (ctx.verb === 'tie') {
+  if (ctx.action === 'V-TIE' || ctx.action === 'V-TIE-UP') {
     ctx.tell('You cannot tie the cyclops, though he is fit to be tied.');
     return true;
   }
 
   // ZIL branch 8: LISTEN — :1592–1594
-  if (ctx.verb === 'listen') {
+  if (ctx.action === 'V-LISTEN') {
     ctx.tell('You can hear his stomach rumbling.');
     return true;
   }
@@ -263,6 +275,7 @@ export function cyclopsRoomFcn(ctx: CyclopsCtx): boolean {
 function makeCtxFromAction(ac: ActionContext): CyclopsCtx {
   return {
     hereId:  ac.here.id,
+    action:  ac.action ?? ac.verb,   // ZIL PRSA; fall back to verb word when absent
     verb:    ac.verb,
     prsoId:  ac.dobj?.id,
     prsiId:  ac.iobj?.id,

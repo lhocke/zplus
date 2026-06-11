@@ -27,8 +27,15 @@ export interface ActionContext {
   readonly self: GameObject;
   /** Acting creature — normally the player (ZIL WINNER). */
   readonly actor: GameObject;
-  /** Canonical parsed verb, e.g. 'take', 'read', 'walk' (ZIL PRSA). */
+  /** Canonical parsed verb word, e.g. 'take', 'kill', 'look' (surface form). */
   readonly verb: string;
+  /**
+   * ZIL PRSA — the parsed action, e.g. 'V-ATTACK', 'V-EXAMINE'.
+   * Multiple verb words can map to the same action (kill/stab/strike → V-ATTACK).
+   * Handlers that need ZIL VERB? semantics must compare this, not `verb`.
+   * Optional for backwards compat; absent → treat as unknown action.
+   */
+  readonly action?: string;
   /** Direct object, if any (ZIL PRSO). */
   readonly dobj?: GameObject;
   /** Indirect object, if any (ZIL PRSI). */

@@ -50,9 +50,32 @@ function makeObj(id: string, parent: string | null, flags: Flag[] = []): StubObj
 // Context factory
 // ---------------------------------------------------------------------------
 
+// Derive default action from verb word when not explicitly supplied.
+// Mirrors the syntax.json mapping for the verbs used in tests.
+function defaultAction(verb: string): string {
+  const map: Record<string, string> = {
+    examine: 'V-EXAMINE', look: 'V-EXAMINE',
+    attack: 'V-ATTACK', kill: 'V-ATTACK', stab: 'V-ATTACK',
+    strike: 'V-ATTACK', knock: 'V-ATTACK',
+    throw: 'V-THROW',
+    mung: 'V-MUNG', destroy: 'V-MUNG', poke: 'V-MUNG', puncture: 'V-MUNG',
+    alarm: 'V-ALARM', wake: 'V-ALARM',
+    kick: 'V-KICK',
+    burn: 'V-BURN',
+    give: 'V-GIVE',
+    take: 'V-TAKE',
+    tie: 'V-TIE',
+    listen: 'V-LISTEN',
+    odysseus: 'V-ODYSSEUS',
+  };
+  return map[verb] ?? verb.toUpperCase();
+}
+
 function makeCtx(opts: {
   hereId?: string;
   verb?: string;
+  /** ZIL PRSA — defaults to the action implied by verb. */
+  action?: string;
   prsoId?: string;
   prsiId?: string;
   rarg?: number;
@@ -73,9 +96,13 @@ function makeCtx(opts: {
   let magicFlag = opts.magicFlag ?? false;
   let _cyclowrath = opts.cyclowrath ?? 0;
 
+  const verbWord = opts.verb ?? 'examine';
+  const action = opts.action ?? defaultAction(verbWord);
+
   const ctx: CyclopsCtx = {
     hereId,
-    verb: opts.verb ?? 'examine',
+    action,
+    verb: verbWord,
     prsoId: opts.prsoId,
     prsiId: opts.prsiId,
     rarg: opts.rarg,
@@ -265,6 +292,14 @@ describe('CYCLOPS-FCN: sleeping cyclops (CYCLOPS-FLAG=true)', () => {
     expect(output.join('\n')).toContain('sleeping like a baby');
   });
 
+  // LOOK AT → V-EXAMINE (same action); ZIL <VERB? EXAMINE> catches both.
+  it('LOOK AT sleeping: "sleeping like a baby" (V-EXAMINE covers look-at)', () => {
+    const { ctx, output } = makeCtx({ verb: 'look', action: 'V-EXAMINE', cyclopsFlag: true });
+    const r = cyclopsFcn(ctx);
+    expect(r).toBe(true);
+    expect(output.join('\n')).toContain('sleeping like a baby');
+  });
+
   it('KICK sleeping: wakes, FIGHTBIT set, CYCLOPS-FLAG cleared', () => {
     const cyclops = makeObj('CYCLOPS', 'CYCLOPS-ROOM');
     const { ctx, output } = makeCtx({
@@ -276,11 +311,24 @@ describe('CYCLOPS-FCN: sleeping cyclops (CYCLOPS-FLAG=true)', () => {
     expect(cyclops.flags.has(Flag.Fight)).toBe(true);
   });
 
+  // V-ALARM covers wake/awake/surprise/startle (gsyntax.zil:527-529).
+  // Original code compared ctx.verb === 'alarm' which never matched a player command.
+  it('WAKE sleeping (V-ALARM): wakes the cyclops', () => {
+    const cyclops = makeObj('CYCLOPS', 'CYCLOPS-ROOM');
+    const { ctx, output } = makeCtx({
+      verb: 'wake', action: 'V-ALARM', cyclopsFlag: true, cyclowrath: 0, objs: [cyclops],
+    });
+    cyclopsFcn(ctx);
+    expect(output.join('\n')).toContain('yawns');
+    expect(ctx.getCyclopsFlag()).toBe(false);
+    expect(cyclops.flags.has(Flag.Fight)).toBe(true);
+  });
+
   it('ALARM sleeping: wakes (preserves magnitude from negative count)', () => {
     const cyclops = makeObj('CYCLOPS', 'CYCLOPS-ROOM');
-    // count was -3 before sleeping
+    // count was -3 before sleeping; test with canonical V-ALARM action
     const { ctx } = makeCtx({
-      verb: 'alarm', cyclopsFlag: true, cyclowrath: -3, objs: [cyclops],
+      verb: 'wake', action: 'V-ALARM', cyclopsFlag: true, cyclowrath: -3, objs: [cyclops],
     });
     cyclopsFcn(ctx);
     // ZIL: if COUNT < 0 → CYCLOWRATH = -COUNT → 3
@@ -297,6 +345,29 @@ describe('CYCLOPS-FCN: sleeping cyclops (CYCLOPS-FLAG=true)', () => {
     expect(ctx.getCyclowrath()).toBe(2);
   });
 
+  // KILL → V-ATTACK (same action as ATTACK); sleeping cyclops must wake.
+  it('KILL sleeping (V-ATTACK): wakes the cyclops', () => {
+    const cyclops = makeObj('CYCLOPS', 'CYCLOPS-ROOM');
+    const { ctx, output } = makeCtx({
+      verb: 'kill', action: 'V-ATTACK', cyclopsFlag: true, cyclowrath: 0, objs: [cyclops],
+    });
+    cyclopsFcn(ctx);
+    expect(output.join('\n')).toContain('yawns');
+    expect(ctx.getCyclopsFlag()).toBe(false);
+  });
+
+  // DESTROY → V-MUNG (gsyntax.zil:158-163; synonym: damage/break/block/smash).
+  // Original code compared ctx.verb === 'mung' which never matched any player command.
+  it('DESTROY sleeping (V-MUNG): wakes the cyclops', () => {
+    const cyclops = makeObj('CYCLOPS', 'CYCLOPS-ROOM');
+    const { ctx, output } = makeCtx({
+      verb: 'destroy', action: 'V-MUNG', cyclopsFlag: true, cyclowrath: 0, objs: [cyclops],
+    });
+    cyclopsFcn(ctx);
+    expect(output.join('\n')).toContain('yawns');
+    expect(ctx.getCyclopsFlag()).toBe(false);
+  });
+
   it('BURN sleeping: wakes', () => {
     const cyclops = makeObj('CYCLOPS', 'CYCLOPS-ROOM');
     const { ctx, output } = makeCtx({
@@ -307,10 +378,10 @@ describe('CYCLOPS-FCN: sleeping cyclops (CYCLOPS-FLAG=true)', () => {
     expect(ctx.getCyclopsFlag()).toBe(false);
   });
 
-  it('MUNG sleeping: wakes', () => {
+  it('MUNG (direct V-MUNG action): wakes sleeping cyclops', () => {
     const cyclops = makeObj('CYCLOPS', 'CYCLOPS-ROOM');
     const { ctx, output } = makeCtx({
-      verb: 'mung', cyclopsFlag: true, cyclowrath: 0, objs: [cyclops],
+      verb: 'destroy', action: 'V-MUNG', cyclopsFlag: true, cyclowrath: 0, objs: [cyclops],
     });
     cyclopsFcn(ctx);
     expect(output.join('\n')).toContain('yawns');
@@ -348,6 +419,15 @@ describe('CYCLOPS-FCN: EXAMINE awake cyclops', () => {
     expect(output.join('\n')).toContain('hungry cyclops');
     expect(output.join('\n')).toContain('foot of the stairs');
   });
+
+  // "look at cyclops" → V-EXAMINE (gsyntax.zil:301); ZIL <VERB? EXAMINE> catches both.
+  it('LOOK AT (V-EXAMINE): shows hungry cyclops at foot of stairs', () => {
+    const { ctx, output } = makeCtx({ verb: 'look', action: 'V-EXAMINE', cyclopsFlag: false });
+    const r = cyclopsFcn(ctx);
+    expect(r).toBe(true);
+    expect(output.join('\n')).toContain('hungry cyclops');
+    expect(output.join('\n')).toContain('foot of the stairs');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -355,15 +435,56 @@ describe('CYCLOPS-FCN: EXAMINE awake cyclops', () => {
 // ---------------------------------------------------------------------------
 
 describe('CYCLOPS-FCN: THROW/ATTACK/MUNG awake', () => {
-  it('MUNG: dodge message + I-CYCLOPS enabled', () => {
-    const { ctx, output, clockCalls } = makeCtx({ verb: 'mung', cyclopsFlag: false });
+  it('MUNG (V-MUNG via destroy): dodge message + I-CYCLOPS enabled', () => {
+    const { ctx, output, clockCalls } = makeCtx({
+      verb: 'destroy', action: 'V-MUNG', cyclopsFlag: false,
+    });
     cyclopsFcn(ctx);
     expect(output.join('\n')).toContain("stupid as my father");
     expect(clockCalls.enable).toContain('I-CYCLOPS');
   });
 
-  it('ATTACK: shrugs message + I-CYCLOPS enabled', () => {
+  it('POKE (V-MUNG): dodge message + I-CYCLOPS enabled', () => {
+    const { ctx, output, clockCalls } = makeCtx({
+      verb: 'poke', action: 'V-MUNG', cyclopsFlag: false,
+    });
+    cyclopsFcn(ctx);
+    expect(output.join('\n')).toContain("stupid as my father");
+    expect(clockCalls.enable).toContain('I-CYCLOPS');
+  });
+
+  it('ATTACK (V-ATTACK): shrugs message + I-CYCLOPS enabled', () => {
     const { ctx, output, clockCalls } = makeCtx({ verb: 'attack', cyclopsFlag: false });
+    cyclopsFcn(ctx);
+    expect(output.join('\n')).toContain('shrugs');
+    expect(clockCalls.enable).toContain('I-CYCLOPS');
+  });
+
+  // KILL → V-ATTACK; ZIL <VERB? ATTACK> matches all synonyms via PRSA.
+  it('KILL (V-ATTACK): shrugs message + I-CYCLOPS enabled', () => {
+    const { ctx, output, clockCalls } = makeCtx({
+      verb: 'kill', action: 'V-ATTACK', cyclopsFlag: false,
+    });
+    cyclopsFcn(ctx);
+    expect(output.join('\n')).toContain('shrugs');
+    expect(clockCalls.enable).toContain('I-CYCLOPS');
+  });
+
+  // STAB X WITH WEAPON → V-ATTACK (gsyntax.zil:269-270).
+  it('STAB (V-ATTACK): shrugs message + I-CYCLOPS enabled', () => {
+    const { ctx, output, clockCalls } = makeCtx({
+      verb: 'stab', action: 'V-ATTACK', cyclopsFlag: false,
+    });
+    cyclopsFcn(ctx);
+    expect(output.join('\n')).toContain('shrugs');
+    expect(clockCalls.enable).toContain('I-CYCLOPS');
+  });
+
+  // STRIKE X WITH WEAPON → V-ATTACK (gsyntax.zil:455-456).
+  it('STRIKE (V-ATTACK): shrugs message + I-CYCLOPS enabled', () => {
+    const { ctx, output, clockCalls } = makeCtx({
+      verb: 'strike', action: 'V-ATTACK', cyclopsFlag: false,
+    });
     cyclopsFcn(ctx);
     expect(output.join('\n')).toContain('shrugs');
     expect(clockCalls.enable).toContain('I-CYCLOPS');
