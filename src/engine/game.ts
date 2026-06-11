@@ -25,7 +25,8 @@ import type { HeroBlowCallbacks } from './combat.js';
 import type { VillainEntry } from '../domain/villain-entry.js';
 import { makeTrollFcn } from '../actions/troll-fcn.js';
 import { makeRobberFcn, type RobberFcnCtx, type VerbDispatch } from '../actions/robber-fcn.js';
-import { thiefEngrossed, setThiefEngrossed, setEggSolve } from '../actions/thief-state.js';
+import { thiefEngrossed, setThiefEngrossed, setEggSolve, cyclowrath, setCyclowrath } from '../actions/thief-state.js';
+import { iCyclops, type ICyclopsCtx } from '../actions/cyclops.js';
 
 export interface TurnResult {
   readonly output: string;
@@ -192,6 +193,11 @@ export class Game {
     // I-CURE: queued countdown (1actions.zil:3593–3602, CURE_WAIT=30); starts parked (0).
     this.clock.schedule(this.makeIFightEntry());
     this.clock.schedule(this.makeICureEntry());
+
+    // I-CYCLOPS: on-demand demon (turnsLeft=-1); starts disabled.
+    // Enabled by cyclopsFcn (give/attack/mung) and CYCLOPS-ROOM-FCN M-ENTER.
+    // 1actions.zil:1596–1614.
+    this.clock.schedule(this.makeICyclopsEntry());
 
     // THIEF object-action handler (ROBBER-FUNCTION verb-dispatch path).
     // Wired here because the handler needs live game state (this.*) to build
@@ -1396,6 +1402,35 @@ export class Game {
         };
         iCure(cb);
         return true;  // stays registered (disable() marks it inactive when done)
+      },
+    };
+  }
+
+  // I-CYCLOPS clock entry — on-demand demon (turnsLeft=-1, starts disabled).
+  // 1actions.zil:1596–1614.
+  private makeICyclopsEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-CYCLOPS',
+      turnsLeft: -1,
+      enabled: false,
+      tick: (ctx) => {
+        const clockFatal = (): void => { this.fatalPending = true; };
+        const hereId = this.here.id;
+        const icCtx: ICyclopsCtx = {
+          hereId,
+          getCyclopsFlag: () => this.flags.get('CYCLOPS-FLAG'),
+          isDead: () => this.dead,
+          getCyclowrath: () => cyclowrath(),
+          setCyclowrath: (v) => { setCyclowrath(v); },
+          disableSelf: () => { this.clock.disable('I-CYCLOPS'); },
+          jigsUp: (msg) => {
+            jigsUp(msg, this.jigsUpMsgs(), this.makeJigsUpCallbacks(ctx.tell, clockFatal));
+          },
+          tell: ctx.tell,
+        };
+        iCyclops(icCtx);
+        // Demon always stays registered (clock.disable() marks it inactive without removing).
+        return true;
       },
     };
   }

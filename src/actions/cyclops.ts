@@ -1,11 +1,10 @@
-// cyclops.ts — CYCLOPS-FCN + CYCLOPS-ROOM-FCN.
+// cyclops.ts — CYCLOPS-FCN + CYCLOPS-ROOM-FCN + I-CYCLOPS wrath timer.
 //
 // Transcription of:
-//   CYCLOPS-FCN       1actions.zil:1515–1594
-//   CYCLOPS-ROOM-FCN  1actions.zil:1616–1642
-//
-// C1 scope: the dispatch handlers + M-LOOK state branches + M-ENTER wrath enable.
-// I-CYCLOPS wrath timer (C2) and V-ODYSSEUS (C3) are separate tasks.
+//   CYCLOPS-FCN       1actions.zil:1515–1594   (C1)
+//   CYCLOPS-ROOM-FCN  1actions.zil:1616–1642   (C1)
+//   CYCLOMAD          1actions.zil:1644–1652   (C2)
+//   I-CYCLOPS         1actions.zil:1596–1614   (C2)
 //
 // CYCLOPS-FLAG and MAGIC-FLAG are FlagStore keys (booleans gating exits);
 // they are passed via the ctx getters/setters, consistent with the F1 decision.
@@ -320,3 +319,91 @@ export const cyclopsFcnAction: ActionHandler = (ac) =>
 /** CYCLOPS-ROOM-FCN ActionHandler — registered in ACTIONS. */
 export const cyclopsRoomFcnAction: ActionHandler = (ac) =>
   cyclopsRoomFcn(makeCtxFromAction(ac));
+
+// ---------------------------------------------------------------------------
+// CYCLOMAD — 1actions.zil:1644–1652
+//
+// Six escalating messages indexed 0-based.  I-CYCLOPS uses index abs(CYCLOWRATH)-1
+// after each increment (so wrath 1→2 uses index 1, etc.).
+// ---------------------------------------------------------------------------
+
+export const CYCLOMAD: readonly string[] = [
+  'The cyclops seems somewhat agitated.',
+  'The cyclops appears to be getting more agitated.',
+  'The cyclops is moving about the room, looking for something.',
+  'The cyclops was looking for salt and pepper. No doubt they are\ncondiments for his upcoming snack.',
+  'The cyclops is moving toward you in an unfriendly manner.',
+  'You have two choices: 1. Leave  2. Become dinner.',
+];
+
+// ---------------------------------------------------------------------------
+// I-CYCLOPS context — everything the wrath-timer tick needs from the game.
+//
+// Kept lean so tests can stub it without bootstrapping the full game.
+// jigsUp routes through the clock-context B3 M-FATAL path (game.ts fatalPending).
+// ---------------------------------------------------------------------------
+
+export interface ICyclopsCtx {
+  /** ZIL HERE — the player's current room. */
+  readonly hereId: string;
+  getCyclopsFlag(): boolean;
+  isDead(): boolean;
+  getCyclowrath(): number;
+  setCyclowrath(v: number): void;
+  /** DISABLE <INT I-CYCLOPS> — the tick returns false to self-remove from clock. */
+  disableSelf(): void;
+  /** Clock-context jigsUp (B3 M-FATAL extension). */
+  jigsUp(msg: string): void;
+  tell(s: string): void;
+}
+
+// Death message — 1actions.zil:1603–1606.
+const CYCLOPS_DEATH_MSG =
+  'The cyclops, tired of all of your games and trickery, grabs you firmly.\n' +
+  'As he licks his chops, he says "Mmm. Just like Mom used to make \'em."\n' +
+  "It's nice to be appreciated.";
+
+// ---------------------------------------------------------------------------
+// I-CYCLOPS — 1actions.zil:1596–1614
+//
+// On-demand demon (turnsLeft=-1) enabled by cyclopsFcn give/attack/mung branches
+// and by CYCLOPS-ROOM-FCN M-ENTER.  Self-disables when the player leaves
+// CYCLOPS-ROOM or when CYCLOPS-FLAG (asleep) / DEAD are set.
+//
+// ZIL control flow:
+//   1. CYCLOPS-FLAG || DEAD → RTRUE (no-op; demon stays enabled)
+//   2. HERE != CYCLOPS-ROOM → DISABLE
+//   3. abs(CYCLOWRATH) > 5 → DISABLE + JIGS-UP   (check BEFORE increment)
+//   4. else: increment wrath magnitude; if !CYCLOPS-FLAG tell CYCLOMAD[abs(new)-1]
+// ---------------------------------------------------------------------------
+
+export function iCyclops(ctx: ICyclopsCtx): void {
+  // Branch 1 — sleeping or ghost mode: no-op.
+  if (ctx.getCyclopsFlag() || ctx.isDead()) return;
+
+  // Branch 2 — player left the room: self-disable.
+  if (ctx.hereId !== 'CYCLOPS-ROOM') {
+    ctx.disableSelf();
+    return;
+  }
+
+  const wrath = ctx.getCyclowrath();
+
+  // Branch 3 — abs(wrath) > 5 BEFORE increment: the cyclops eats the player.
+  if (Math.abs(wrath) > 5) {
+    ctx.disableSelf();
+    ctx.jigsUp(CYCLOPS_DEATH_MSG);
+    return;
+  }
+
+  // Branch 4 — escalate magnitude and print the appropriate CYCLOMAD entry.
+  const newWrath = wrath < 0 ? wrath - 1 : wrath + 1;
+  ctx.setCyclowrath(newWrath);
+
+  // ZIL <COND (<NOT ,CYCLOPS-FLAG> <TELL ...>)>
+  // We already returned early if CYCLOPS-FLAG is true (branch 1), so this is
+  // always reached with CYCLOPS-FLAG false.
+  const idx = Math.abs(newWrath) - 1;
+  const msg = CYCLOMAD[idx];
+  if (msg !== undefined) ctx.tell(msg);
+}
