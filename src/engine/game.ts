@@ -464,9 +464,11 @@ export class Game {
       if (bar !== undefined) bar.clear(Flag.Sacred);
       this.parser.clearContinuation();
       tell('The acoustics of the room change subtly.');
-      // ZIL <RETURN> exits the REPEAT; normal turn resumes → room re-described
-      // because LOUD-FLAG is now set and the game fires M-LOOK as if room entered.
-      tell(this.describeCurrentRoom());
+      // <RETURN> exits the REPEAT without re-firing M-LOOK (1actions.zil:1725).
+      // Player sees the normal already-TOUCHED room-entry: blank line + name + objects.
+      const briefLines: string[] = ['', this.here.desc];
+      describeRoomObjects(this.here, this.player, (s) => briefLines.push(s));
+      tell(briefLines.join('\n'));
     } else if (action === 'V-BUG') {
       // 1actions.zil:1717–1718 — W?BUG is a named special case.
       this.parser.clearContinuation();

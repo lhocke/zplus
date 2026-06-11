@@ -377,25 +377,27 @@ describe('CB-LOUD — V-BUG whitelist branch (1actions.zil:1717–1718)', () => 
   });
 });
 
-describe('CB-LOUD — ECHO solve: room re-description follows (1actions.zil:1719–1728)', () => {
-  // After <RETURN> from the ZIL REPEAT loop, M-ENTER finishes and the game
-  // fires a normal turn: LOUD-FLAG is set → room is now quiet → M-LOOK fires,
-  // producing the "eerie in its quietness" description.
-  it('ECHO solve output includes the room re-description', () => {
+describe('CB-LOUD — ECHO solve: room re-description follows (1actions.zil:1719–1725)', () => {
+  // ZIL <RETURN> at 1actions.zil:1725 exits the REPEAT loop; it does NOT
+  // re-fire M-LOOK.  The player sees the normal already-TOUCHED room-entry
+  // display: blank line + room name header + object listing only.
+  it('ECHO solve output includes acoustics message + room name header', () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
     const out = g.turn('echo').output;
-    // Message first, then blank line, then room name / description
+    // Message first, then blank line, then room name — no body, no suffix
     expect(out).toContain('acoustics of the room change subtly');
     expect(out).toContain('Loud Room');
+    expect(out).toContain('large platinum bar');
   });
 
-  it('ECHO solve room description shows quiet suffix', () => {
+  it('ECHO solve room description omits M-LOOK body and quiet suffix', () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
     const out = g.turn('echo').output;
-    expect(out).toContain('eerie in its quietness');
+    expect(out).not.toContain('eerie in its quietness');
+    expect(out).not.toContain('large room with a ceiling');
   });
 });
