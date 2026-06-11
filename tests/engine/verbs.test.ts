@@ -409,3 +409,93 @@ describe('verb: put X in Y', () => {
     expect(fix.lantern.parent?.id).not.toBe('CHEST');
   });
 });
+
+// ---------------------------------------------------------------------------
+// V-LOOK-UNDER / V-LOOK-BEHIND / V-LOOK-ON — gverbs.zil:862-900
+// These actions come from the syntax table:
+//   LOOK UNDER X → action=V-LOOK-UNDER  (gsyntax.zil:304)
+//   LOOK BEHIND X → action=V-LOOK-BEHIND (gsyntax.zil:305)
+//   LOOK ON X    → action=V-LOOK-ON     (gsyntax.zil:302)
+// Without dedicated ACTION_HANDLERS entries they fall through to verbLook,
+// which re-describes the room — wrong in all three cases.
+// ---------------------------------------------------------------------------
+
+describe('V-LOOK-UNDER (action)', () => {
+  it('always emits "There is nothing but dust there." (gverbs.zil:900)', () => {
+    const fix = makeFixture();
+    const result = executeVerb(
+      ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'UNDER' }),
+      'V-LOOK-UNDER',
+    );
+    expect(result.output).toBe('There is nothing but dust there.');
+    expect(result.moved).toBe(false);
+  });
+
+  it('does NOT re-describe the room', () => {
+    const fix = makeFixture();
+    const result = executeVerb(
+      ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'UNDER' }),
+      'V-LOOK-UNDER',
+    );
+    expect(result.output).not.toContain('Clearing');
+  });
+});
+
+describe('V-LOOK-BEHIND (action)', () => {
+  it('emits "There is nothing behind the <desc>." (gverbs.zil:863)', () => {
+    const fix = makeFixture();
+    const result = executeVerb(
+      ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'BEHIND' }),
+      'V-LOOK-BEHIND',
+    );
+    expect(result.output).toBe('There is nothing behind the brass lantern.');
+    expect(result.moved).toBe(false);
+  });
+
+  it('does NOT re-describe the room', () => {
+    const fix = makeFixture();
+    const result = executeVerb(
+      ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'BEHIND' }),
+      'V-LOOK-BEHIND',
+    );
+    expect(result.output).not.toContain('Clearing');
+  });
+});
+
+describe('V-LOOK-ON (action)', () => {
+  it('emits "Look on a <desc>???" when PRSO lacks SURFACEBIT (gverbs.zil:897)', () => {
+    const fix = makeFixture();
+    // Lantern has no SURFACEBIT — the non-surface branch.
+    const result = executeVerb(
+      ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'ON' }),
+      'V-LOOK-ON',
+    );
+    expect(result.output).toBe('Look on a brass lantern???');
+    expect(result.moved).toBe(false);
+  });
+
+  it('delegates to LOOK-INSIDE when PRSO has SURFACEBIT (gverbs.zil:893-894)', () => {
+    const fix = makeFixture();
+    // Give the lantern SURFACEBIT and add something on it.
+    fix.lantern.set(Flag.Surface);
+    fix.lantern.set(Flag.Container);
+    fix.lantern.set(Flag.Open);
+    fix.sword.moveTo(fix.lantern);
+    const result = executeVerb(
+      ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'ON' }),
+      'V-LOOK-ON',
+    );
+    // Should list contents (sword on the surface), not the "???" message.
+    expect(result.output).not.toContain('Look on a');
+    expect(result.output).toContain('sword');
+  });
+
+  it('does NOT re-describe the room', () => {
+    const fix = makeFixture();
+    const result = executeVerb(
+      ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'ON' }),
+      'V-LOOK-ON',
+    );
+    expect(result.output).not.toContain('Clearing');
+  });
+});

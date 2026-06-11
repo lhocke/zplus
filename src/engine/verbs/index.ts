@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vPut, preTake, preGive, yuks, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, preTake, preGive, yuks, goto, vTieUp, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { CURE_WAIT } from '../combat.js';
 
@@ -96,6 +96,8 @@ export interface VerbContext {
    * pointless/staggered/unarmed paths inside heroBlow).
    */
   readonly heroBlow?: (targetId: string, weaponId: string | null) => VerbResult;
+  /** DISABLE <INT id> — used by V-ODYSSEUS to stop the wrath timer. */
+  readonly disableClock?: (id: string) => void;
 }
 
 export interface VerbResult {
@@ -526,6 +528,27 @@ function verbInventory(ctx: VerbContext): VerbResult {
   return result(`You are carrying:\n${list}`);
 }
 
+// V-LOOK-INSIDE core — gverbs.zil:865-890.
+// Shared by verbExamine (container/door branch), verbLookOn (SURFACEBIT),
+// and verbLookInsideAction (V-LOOK-INSIDE dispatch).
+function verbLookInsideImpl(item: GameObject, ctx: VerbContext): VerbResult {
+  if (item.has(Flag.Door)) {
+    return item.has(Flag.Open)
+      ? result(fmt(vLookInside.doorOpen, item.desc))
+      : result(fmt(vLookInside.doorClosed, item.desc));
+  }
+  if (item.has(Flag.Actor)) return result(vLookInside.nothingSpecialInside);
+  if (seeInside(item)) {
+    const lines: string[] = [];
+    // Surfaces sit at room depth → level -1 matches DESCRIBE-OBJECTS indentation.
+    const level = item.has(Flag.Surface) ? -1 : 0;
+    printCont(item, ctx.player, level, (s) => lines.push(s));
+    if (lines.length === 0) return result(fmt(vLookInside.containerEmpty, item.desc));
+    return result(lines.join('\n'));
+  }
+  return result(fmt(vLookInside.containerClosed, item.desc));
+}
+
 function verbExamine(ctx: VerbContext): VerbResult {
   const item = ctx.dobj;
   if (item === undefined) return result("Examine what?");
@@ -535,25 +558,8 @@ function verbExamine(ctx: VerbContext): VerbResult {
   if (typeof text === 'string') return result(text);
   if (item.ldesc !== undefined) return result(item.ldesc);
 
-  // Containers and doors report open/closed state (gverbs.zil:626-628, 865-890).
   if (item.has(Flag.Container) || item.has(Flag.Door)) {
-    if (item.has(Flag.Door)) {
-      return item.has(Flag.Open)
-        ? result(fmt(vLookInside.doorOpen, item.desc))
-        : result(fmt(vLookInside.doorClosed, item.desc));
-    }
-    if (item.has(Flag.Actor)) return result(vLookInside.nothingSpecialInside);
-    if (seeInside(item)) {
-      const lines: string[] = [];
-      // Surfaces (SURFACEBIT) sit at room depth, so their contents are listed
-      // at level -1 — identical to DESCRIBE-OBJECTS — keeping the same indentation
-      // as the room look. Regular containers use level 0 (gverbs.zil:876-886).
-      const level = item.has(Flag.Surface) ? -1 : 0;
-      printCont(item, ctx.player, level, (s) => lines.push(s));
-      if (lines.length === 0) return result(fmt(vLookInside.containerEmpty, item.desc));
-      return result(lines.join('\n'));
-    }
-    return result(fmt(vLookInside.containerClosed, item.desc));
+    return verbLookInsideImpl(item, ctx);
   }
 
   return result(fmt(vExamine.nothingSpecial, item.desc));
@@ -567,6 +573,40 @@ function verbAdvent(_ctx: VerbContext): VerbResult {
 // V-FROBOZZ — frobozz easter egg (gverbs.zil:704–706)
 function verbFrobozz(_ctx: VerbContext): VerbResult {
   return result(vFrobozz.response);
+}
+
+// V-LOOK-INSIDE — gverbs.zil:865-890.
+// Full dispatch: door / container / else "You can't look inside a <x>."
+// Called when no object action handler intercepts the V-LOOK-INSIDE action.
+function verbLookInsideAction(ctx: VerbContext): VerbResult {
+  const item = ctx.dobj;
+  if (item === undefined) return result("Look inside what?");
+  if (item.has(Flag.Door) || item.has(Flag.Container)) {
+    return verbLookInsideImpl(item, ctx);
+  }
+  return result(fmt(vLookInside.cantLookInside, item.desc));
+}
+
+// V-LOOK-UNDER — gverbs.zil:899-900. Unconditional "dust" response.
+function verbLookUnder(_ctx: VerbContext): VerbResult {
+  return result(vLookUnder.response);
+}
+
+// V-LOOK-BEHIND — gverbs.zil:862-863. Names the direct object.
+function verbLookBehind(ctx: VerbContext): VerbResult {
+  const desc = ctx.dobj?.desc ?? 'that';
+  return result(fmt(vLookBehind.response, desc));
+}
+
+// V-LOOK-ON — gverbs.zil:892-897.
+// SURFACEBIT → delegate to look-inside; else "Look on a <desc>???".
+function verbLookOn(ctx: VerbContext): VerbResult {
+  const item = ctx.dobj;
+  if (item !== undefined && item.has(Flag.Surface)) {
+    return verbLookInsideImpl(item, ctx);
+  }
+  const desc = item?.desc ?? 'that';
+  return result(fmt(vLookOn.notASurface, desc));
 }
 
 function verbPut(ctx: VerbContext): VerbResult {
@@ -718,6 +758,41 @@ export function verbAttack(ctx: VerbContext): VerbResult {
 
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
+// V-ODYSSEUS — gverbs.zil:945–961.
+//
+// "odysseus" / "ulysses" (gsyntax.zil:334–335): if in CYCLOPS-ROOM with an
+// awake cyclops, the name of his father's nemesis drives him through the east
+// wall.  Anywhere else: "Wasn't he a sailor?"
+//
+// REMOVE-CAREFULLY (gverbs.zil:610–618): removes the object, recomputes LIT,
+// prints "You are left in the dark..." if the room just went dark.  Here the
+// cyclops isn't a light source so the dark-check is a no-op; we just remove.
+function verbOdysseus(ctx: VerbContext): VerbResult {
+  const here = ctx.here;
+  const cyclops = ctx.world.get('CYCLOPS');
+  const cyclopsFlag = ctx.getGlobal?.('CYCLOPS-FLAG') ?? false;
+
+  if (
+    here.id === 'CYCLOPS-ROOM' &&
+    cyclops !== undefined &&
+    cyclops.parent !== null &&
+    cyclops.parent === here &&
+    !cyclopsFlag
+  ) {
+    ctx.disableClock?.('I-CYCLOPS');
+    ctx.setGlobal?.('CYCLOPS-FLAG', true);
+    const out =
+      "The cyclops, hearing the name of his father's deadly nemesis, flees the room\n" +
+      'by knocking down the wall on the east of the room.';
+    ctx.setGlobal?.('MAGIC-FLAG', true);
+    cyclops.clear(Flag.Fight);
+    cyclops.moveTo(null);   // REMOVE-CAREFULLY — no light-source side-effects
+    return result(out);
+  }
+
+  return result("Wasn't he a sailor?");
+}
+
 // Primary dispatch on V-* action id (ZIL PERFORM dispatches on PRSA, gmain.zil:283–284).
 const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LOOK':      verbLook,
@@ -739,6 +814,14 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   // V-WAIT — gverbs.zil:1514–1519. "Time passes..." then clock runs; the turn()
   // loop's clock.advance() handles the countdown — no extra repeat needed here.
   'V-WAIT':      () => result('Time passes...'),
+  'V-LOOK-INSIDE': verbLookInsideAction, // gverbs.zil:865-890
+  'V-LOOK-UNDER':  verbLookUnder,        // gverbs.zil:899-900
+  'V-LOOK-BEHIND': verbLookBehind,       // gverbs.zil:862-863
+  'V-LOOK-ON':     verbLookOn,           // gverbs.zil:892-897
+  // gverbs.zil:1471 — default when no object handler claims V-TIE-UP.
+  'V-TIE-UP': () => result(vTieUp.response),
+  // gverbs.zil:945–961 — ODYSSEUS / ULYSSES (gsyntax.zil:334–335).
+  'V-ODYSSEUS': verbOdysseus,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.

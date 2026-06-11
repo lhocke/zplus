@@ -1,0 +1,32 @@
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> odysseus
+The cyclops, hearing the name of his father's deadly nemesis, flees the room
+by knocking down the wall on the east of the room.
+
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> odysseus
+Wasn't he a sailor?
+
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> look
+Cyclops Room
+This room has an exit on the northwest, and a staircase leading up.
+The east wall, previously solid, now has a cyclops-sized opening in it.

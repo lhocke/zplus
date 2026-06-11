@@ -73,15 +73,19 @@ export class Scoring {
   }
 
   // OTVAL-FROB — 1actions.zil:496–502
-  // Recursive TVALUE sum over container and all descendants.
+  // Sums TVALUE of direct children only. The ZIL routine does call itself
+  // recursively on line 501 (<COND (<FIRST? .F> <OTVAL-FROB .F>)>) but
+  // discards the return value — the SCORE accumulator is never updated by
+  // the inner call. So nested container TVALUEs do NOT contribute.
+  // dfrotz ground truth: depositing intact EGG (containing CANARY, TVALUE=4)
+  // scores +5, not +9 (dfrotz R119 delta 15→20, n/n/climb/take egg/d/s/s/e/
+  // open window/enter/w/open trophy case/put egg in trophy case).
   otvalFrob(container: GameObject): number {
     let score = 0;
     for (const child of container.children) {
       const tv = child.props.get('TVALUE');
       score += (typeof tv === 'number' ? tv : 0);
-      if (child.children.size > 0) {
-        score += this.otvalFrob(child);
-      }
+      // ZIL recurses here but discards the result — we skip the call entirely.
     }
     return score;
   }

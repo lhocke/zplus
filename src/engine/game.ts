@@ -1,7 +1,7 @@
 import type { ObjectId, Dir, GameObject, ActionContext } from '../domain/game-object.js';
 import type { World } from '../domain/world.js';
 import { Flag } from '../domain/flags.js';
-import type { Room } from '../domain/room.js';
+import { Room } from '../domain/room.js';
 import type { Actor } from '../domain/actor.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
@@ -16,7 +16,7 @@ import { M_BEG, M_ENTER, M_LOOK, M_END } from './messages.js';
 import { jigsUp as jigsUpMsgsFn } from './game-messages.js';
 import { jigsUp, type JigsUpCallbacks, type JigsUpMsgs } from './death.js';
 import {
-  heroBlow as combatHeroBlow, findWeapon, TROLL_MELEE,
+  heroBlow as combatHeroBlow, findWeapon, TROLL_MELEE, THIEF_MELEE,
   iFight, iCure, doFight,
   type CombatRng,
   type IFightCallbacks, type ICureCallbacks, type VillainBlowCallbacks, type VillainTableEntry,
@@ -24,6 +24,18 @@ import {
 import type { HeroBlowCallbacks } from './combat.js';
 import type { VillainEntry } from '../domain/villain-entry.js';
 import { makeTrollFcn } from '../actions/troll-fcn.js';
+import { makeRobberFcn, type RobberFcnCtx, type VerbDispatch } from '../actions/robber-fcn.js';
+import { thiefEngrossed, setThiefEngrossed, setEggSolve, cyclowrath, setCyclowrath } from '../actions/thief-state.js';
+import { iCyclops, type ICyclopsCtx } from '../actions/cyclops.js';
+import { iThief, type IThiefCtx } from '../actions/i-thief.js';
+import {
+  rob as thiefRob, robMaze as thiefRobMaze, stealJunk as thiefStealJunk,
+  dropJunk as thiefDropJunk, depositBooty as thiefDepositBooty,
+  hackTreasures as thiefHackTreasures, recoverStiletto as thiefRecoverStiletto,
+  stoleLight as thiefStoleLight, winning as thiefWinning,
+  type ThiefCtx,
+} from '../actions/thief.js';
+import { fightStrength } from './combat.js';
 
 export interface TurnResult {
   readonly output: string;
@@ -143,6 +155,7 @@ export class Game {
   // LIVING-ROOM-FCN's M-END branch reads VERB?/PRSO/PRSI (1actions.zil:478–482)
   // to detect a treasure deposit, so M-END needs the just-executed command's values.
   private lastVerb: string = 'look';
+  private lastAction: string = 'V-LOOK';
   private lastDobj: GameObject | undefined = undefined;
   private lastIobj: GameObject | undefined = undefined;
   private lastPrep: string | undefined = undefined;
@@ -188,7 +201,42 @@ export class Game {
     // I-FIGHT: per-turn demon (1actions.zil:3810–3841, turnsLeft=-1 fires every advance).
     // I-CURE: queued countdown (1actions.zil:3593–3602, CURE_WAIT=30); starts parked (0).
     this.clock.schedule(this.makeIFightEntry());
+    // I-THIEF: standing demon (enabled at world start).  Must be registered AFTER I-FIGHT
+    // so advance() fires it second — ZIL DEMONS order: I-FIGHT then I-THIEF (§6).
+    // 1actions.zil:1756, 3890–3931.
+    this.clock.schedule(this.makeIThiefEntry());
     this.clock.schedule(this.makeICureEntry());
+
+    // I-CYCLOPS: on-demand demon (turnsLeft=-1); starts disabled.
+    // Enabled by cyclopsFcn (give/attack/mung) and CYCLOPS-ROOM-FCN M-ENTER.
+    // 1actions.zil:1596–1614.
+    this.clock.schedule(this.makeICyclopsEntry());
+
+    // THIEF object-action handler (ROBBER-FUNCTION verb-dispatch path).
+    // Wired here because the handler needs live game state (this.*) to build
+    // RobberFcnCtx on each call. Bootstrap's lookupAction cannot wire this —
+    // ROBBER-FUNCTION is not a stateless registry entry.
+    // 1actions.zil:1947–2024 (verb branches: TELL/HELLO/THROW/GIVE/TAKE/EXAMINE/LISTEN)
+    const thief = this.world.get('THIEF');
+    if (thief !== undefined) {
+      thief.handler = (actCtx) => {
+        const outBuf: string[] = [];
+        const tell = (s: string) => outBuf.push(s);
+        const ctx = this.buildRobberFcnCtx(this.here.id, tell);
+        const vd: VerbDispatch = {
+          verb:     actCtx.verb.toUpperCase(),
+          prep:     actCtx.prep,
+          prsoId:   actCtx.dobj?.id,
+          prsiId:   actCtx.iobj?.id,
+          fighting: this.world.get('THIEF')?.has(Flag.Fight) ?? false,
+        };
+        const fn = makeRobberFcn(ctx);
+        const handled = fn(undefined, vd);
+        // Route collected output through the action context's tell.
+        for (const line of outBuf) actCtx.tell(line);
+        return handled;
+      };
+    }
   }
 
   /** Print the intro banner and describe the initial room. */
@@ -417,6 +465,7 @@ export class Game {
 
       // Stash for M-END (gmain.zil:151–161) — LIVING-ROOM-FCN reads these.
       this.lastVerb = cmd.verb;
+      this.lastAction = cmd.action;
       this.lastDobj = dobj;
       this.lastIobj = iobj;
       this.lastPrep = cmd.prep;
@@ -510,6 +559,7 @@ export class Game {
           playerPStrength: this.player.pStrength,
           iCureEnabled: this.clock.getEntry('I-CURE')?.enabled ?? false,
           iCureTick: this.clock.getEntry('I-CURE')?.turnsLeft ?? 0,
+          disableClock: (id) => this.clock.disable(id),
           heroBlow: (targetId, weaponId) => {
             const out: string[] = [];
             const entry = this.getVillainEntry(targetId, (s) => out.push(s));
@@ -672,6 +722,7 @@ export class Game {
   private makeContext(
     self: GameObject,
     verb: string,
+    action: string,
     dobj: GameObject | undefined,
     iobj: GameObject | undefined,
     prep: string | undefined,
@@ -683,6 +734,7 @@ export class Game {
       self,
       actor: this.player,
       verb,
+      action,
       dobj,
       iobj,
       prep,
@@ -700,6 +752,8 @@ export class Game {
       recomputeTrophy: (trophyCase) => this.scoring.recomputeTrophy(trophyCase, tell),
       enableClock: (id) => this.clock.enable(id),
       disableClock: (id) => this.clock.disable(id),
+      isClockEnabled: (id) => this.clock.getEntry(id)?.enabled ?? false,
+      isDead: () => this.dead,
       getGlobal: (n) => this.flags.get(n),
       setGlobal: (n, v = true) => this.flags.set(n, v),
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
@@ -727,7 +781,7 @@ export class Game {
     const onFatal = (): void => { fatal = true; };
 
     const ctx = (self: GameObject, rarg?: number): ActionContext =>
-      this.makeContext(self, verb, dobj, iobj, prep, rarg, tell, onFatal);
+      this.makeContext(self, verb, action, dobj, iobj, prep, rarg, tell, onFatal);
 
     // WINNER (actor) P?ACTION — gmain.zil:211
     if (this.player.handler !== undefined) {
@@ -792,7 +846,7 @@ export class Game {
   ): ObjectId | undefined {
     const per = lookupPer(routineName);
     if (per === undefined) return undefined;
-    const ctx = this.makeContext(here, 'walk', undefined, undefined, undefined, undefined, tell);
+    const ctx = this.makeContext(here, 'walk', 'V-WALK', undefined, undefined, undefined, undefined, tell);
     return per(ctx);
   }
 
@@ -806,7 +860,7 @@ export class Game {
     const enterBuf: string[] = [];
     if (room.handler !== undefined) {
       const ctx = this.makeContext(
-        room, 'walk', undefined, undefined, undefined, M_ENTER,
+        room, 'walk', 'V-WALK', undefined, undefined, undefined, M_ENTER,
         (text) => enterBuf.push(text),
       );
       room.handler(ctx);
@@ -830,7 +884,7 @@ export class Game {
     } else if (this.here.handler !== undefined) {
       const buf: string[] = [];
       const ctx = this.makeContext(
-        this.here, 'look', undefined, undefined, undefined, M_LOOK,
+        this.here, 'look', 'V-LOOK', undefined, undefined, undefined, M_LOOK,
         (text) => buf.push(text),
       );
       this.here.handler(ctx);
@@ -847,7 +901,7 @@ export class Game {
     if (room.handler === undefined) return '';
     const buf: string[] = [];
     const ctx = this.makeContext(
-      room, 'look', undefined, undefined, undefined, M_LOOK,
+      room, 'look', 'V-LOOK', undefined, undefined, undefined, M_LOOK,
       (text) => buf.push(text),
     );
     room.handler(ctx);
@@ -866,6 +920,7 @@ export class Game {
     const ctx = this.makeContext(
       room,
       this.lastVerb,
+      this.lastAction,
       this.lastDobj,
       this.lastIobj,
       this.lastPrep,
@@ -896,9 +951,95 @@ export class Game {
     return jigsUpMsgsFn;
   }
 
+  // buildRobberFcnCtx — assemble RobberFcnCtx from live game state.
+  // hereId and tell are injected per-call so the same builder is reused for
+  // both the VillainEntry (F-code path) and the THIEF object handler (verb path).
+  private buildRobberFcnCtx(hereId: string, tell: (s: string) => void): RobberFcnCtx {
+    return {
+      hereId,
+      getObj: (id: string) => {
+        const obj = this.world.get(id);
+        if (obj === undefined) return undefined;
+        return {
+          get id()       { return obj.id; },
+          get parentId() { return obj.parent?.id ?? null; },
+          get tvalue()   { return (obj.props.get('TVALUE') ?? 0) as number; },
+          get desc()     { return obj.desc; },
+          hasFlag:  (f: Flag) => obj.has(f),
+          setFlag:  (f: Flag) => obj.set(f),
+          clearFlag:(f: Flag) => obj.clear(f),
+          moveTo: (destId: string) => {
+            if (destId === '__void__') { obj.moveTo(null); return; }
+            const dest = this.world.get(destId);
+            if (dest !== undefined) obj.moveTo(dest);
+          },
+          setLdesc: (s: string) => { (obj as { ldesc?: string }).ldesc = s; },
+        };
+      },
+      childrenOf: (containerId: string) =>
+        this.world.contents(containerId).map(o => o.id),
+      getThiefPStrength: () => {
+        const t = this.world.get('THIEF');
+        return (t as unknown as { pStrength: number })?.pStrength ?? 0;
+      },
+      setThiefPStrength: (v: number) => {
+        const t = this.world.get('THIEF');
+        if (t !== undefined) (t as unknown as { pStrength: number }).pStrength = v;
+      },
+      enableIThief:  () => { this.clock.enable('I-THIEF'); },
+      disableIThief: () => { this.clock.disable('I-THIEF'); },
+      isThiefInvisible: () => this.world.get('THIEF')?.has(Flag.Invisible) ?? true,
+      setThiefInvisible: () => { this.world.get('THIEF')?.set(Flag.Invisible); },
+      isTreasureRoom: (roomId: string) => roomId === 'TREASURE-ROOM',
+      recoverStiletto: () => {
+        // RECOVER-STILETTO: if STILETTO in LOC(THIEF), move to THIEF + FSET NDESCBIT.
+        // 1actions.zil:3949–3952
+        const thief    = this.world.get('THIEF');
+        const stiletto = this.world.get('STILETTO');
+        if (thief === undefined || stiletto === undefined) return;
+        const thiefLoc = thief.parent;
+        if (thiefLoc !== null && stiletto.parent === thiefLoc) {
+          stiletto.set(Flag.NonDescript);
+          stiletto.moveTo(thief);
+        }
+      },
+      depositBooty: (rmId: string): boolean => {
+        // DEPOSIT-BOOTY: move TVALUE>0 thief children (excl. STILETTO/LARGE-BAG) to rm.
+        // 1actions.zil:1897–1909
+        const rm = this.world.get(rmId);
+        if (rm === undefined) return false;
+        let deposited = false;
+        for (const child of this.world.contents('THIEF')) {
+          if (child.id === 'STILETTO' || child.id === 'LARGE-BAG') continue;
+          const tv = (child.props.get('TVALUE') ?? 0) as number;
+          if (tv <= 0) continue;
+          child.moveTo(rm);
+          deposited = true;
+          if (child.id === 'EGG') {
+            setEggSolve(true);
+            child.set(Flag.Open);
+          }
+        }
+        return deposited;
+      },
+      moveAll: (fromId: string, toId: string) => {
+        // MOVE-ALL: FCLEAR INVISIBLE + MOVE every child of from to to.
+        // 1actions.zil:2114–2121
+        const dest = this.world.get(toId);
+        if (dest === undefined) return;
+        for (const child of this.world.contents(fromId)) {
+          child.clear(Flag.Invisible);
+          child.moveTo(dest);
+        }
+      },
+      rng: { prob: (base: number) => this.combatRng.prob(base) },
+      tell,
+      clearContinuation: () => { this.parser.clearContinuation(); },
+    };
+  }
+
   // getVillainEntry — look up the VillainEntry for a given villain object id.
   // Returns undefined for non-villains (triggers graceful "Violence isn't the answer").
-  // Currently only TROLL is wired; Thief/Cyclops are built but deferred (spec §1).
   private getVillainEntry(villainId: string, tell: (s: string) => void): VillainEntry | undefined {
     if (villainId === 'TROLL') {
       const hereId = this.here.id;
@@ -935,6 +1076,16 @@ export class Game {
         vProb: 0,
         vMsgs: TROLL_MELEE,
         action: makeTrollFcn(trollFcnCtx),
+      };
+    }
+    if (villainId === 'THIEF') {
+      const ctx = this.buildRobberFcnCtx(this.here.id, tell);
+      return {
+        vBest: 'KNIFE',
+        vBestAdv: 1,
+        vProb: 0,
+        vMsgs: THIEF_MELEE,
+        action: makeRobberFcn(ctx),
       };
     }
     return undefined;
@@ -1117,8 +1268,8 @@ export class Game {
       },
 
       isThief: (idx: number) => VILLAIN_IDS[idx] === 'THIEF',
-      isThiefEngrossed: () => false,  // thief deferred — always false
-      setThiefEngrossed: (_v: boolean) => {},
+      isThiefEngrossed: () => thiefEngrossed(),
+      setThiefEngrossed: (v: boolean) => { setThiefEngrossed(v); },
 
       callVillainAction: (idx: number, fcode: number): boolean => {
         const id = VILLAIN_IDS[idx];
@@ -1265,6 +1416,149 @@ export class Game {
         };
         iCure(cb);
         return true;  // stays registered (disable() marks it inactive when done)
+      },
+    };
+  }
+
+  // I-THIEF clock entry — standing demon (turnsLeft=-1, enabled at world start).
+  // Registered AFTER I-FIGHT so advance() fires I-FIGHT first each tick (§6).
+  // 1actions.zil:3890–3931.
+  private makeIThiefEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-THIEF',
+      turnsLeft: -1,
+      enabled: true,
+      tick: (ctx) => {
+        const tell = ctx.tell;
+
+        // Build the ThiefCtx that booty helpers need.
+        // prevLit is captured before any steal so stoleLight() can compare.
+        const isRoomLitNow = (): boolean =>
+          this.here.has(Flag.On) ||
+          this.world.all().some(
+            (o) => o.parent === this.player && (o.has(Flag.Light) || o.has(Flag.OnFire)),
+          );
+        const prevLit = isRoomLitNow();
+
+        const getObjHandle = (id: string) => {
+          const obj = this.world.get(id);
+          if (obj === undefined) return undefined;
+          return {
+            get id()       { return obj.id; },
+            get desc()     { return obj.desc; },
+            get parentId() { return obj.parent?.id ?? null; },
+            get tvalue()   { return (obj.props.get('TVALUE') ?? 0) as number; },
+            hasFlag:  (f: Flag) => obj.has(f),
+            setFlag:  (f: Flag) => obj.set(f),
+            clearFlag:(f: Flag) => obj.clear(f),
+            moveTo: (destId: string) => {
+              const dest = this.world.get(destId);
+              if (dest !== undefined) obj.moveTo(dest);
+            },
+          };
+        };
+
+        const thCtx: ThiefCtx = {
+          hereId: this.here.id,
+          rng: {
+            prob:  (base) => this.rng.prob(base),
+            zprob: (base, denom) => this.rng.zprob?.(base, denom) ?? this.rng.prob(base),
+          },
+          getLucky: () => this.lucky,
+          getObj: getObjHandle,
+          childrenOf: (id) => this.world.contents(id).map(o => o.id),
+          isRoomLit: isRoomLitNow,
+          getPrevLit: () => prevLit,
+          tell,
+          getThiefStrength: () =>
+            (this.world.get('THIEF') as unknown as { pStrength: number })?.pStrength ?? 0,
+          getScore: () => this.scoring.score,
+          fightStrength: () => fightStrength(true, this.scoring.score, this.player.pStrength),
+        };
+
+        const thiefObj = this.world.get('THIEF');
+        // `game` captures the Game instance for closures inside the ctx2 object literal.
+        const game = this;
+        const ctx2: IThiefCtx = {
+          get hereId() { return game.here.id; },
+          getThiefRoomId: () => this.world.get('THIEF')?.parent?.id ?? '',
+          isDead: () => this.dead,
+          isThiefInvisible: () => thiefObj?.has(Flag.Invisible) ?? true,
+          setThiefInvisible: () => { thiefObj?.set(Flag.Invisible); },
+          clearThiefInvisible: () => { thiefObj?.clear(Flag.Invisible); },
+          isThiefFightBit: () => thiefObj?.has(Flag.Fight) ?? false,
+          clearThiefFightBit: () => { thiefObj?.clear(Flag.Fight); },
+          isRoomLit: (roomId) => this.world.get(roomId)?.has(Flag.On) ?? false,
+          isTrollInHere: () => {
+            const troll = this.world.get('TROLL');
+            return troll !== undefined &&
+              troll.parent?.id === this.here.id &&
+              !troll.has(Flag.Invisible);
+          },
+          isTreasureRoom: (roomId) => roomId === 'TREASURE-ROOM',
+          moveThiefTo: (roomId) => {
+            const dest = this.world.get(roomId);
+            if (dest !== undefined) thiefObj?.moveTo(dest);
+          },
+          getRooms: () =>
+            this.world.all()
+              .filter(o => o instanceof Room)
+              .map(o => o.id),
+          isRoomSacred:  (id) => this.world.get(id)?.has(Flag.Sacred) ?? false,
+          isRoomLand:    (id) => this.world.get(id)?.has(Flag.Land) ?? false,
+          isRoomTouched: (id) => this.world.get(id)?.has(Flag.Touched) ?? false,
+          isRoomMaze:    (id) => this.world.get(id)?.has(Flag.Maze) ?? false,
+          rng: thCtx.rng,
+          getLucky: () => this.lucky,
+          getObj: getObjHandle,
+          childrenOf: thCtx.childrenOf,
+          tell,
+          hackTreasures: () => { thiefHackTreasures(thCtx, 'THIEF', 'TREASURE-ROOM'); },
+          depositBooty:  (rmId) => thiefDepositBooty(thCtx, rmId),
+          rob:           (whatId, whereId, prob) => thiefRob(thCtx, whatId, whereId, prob),
+          robMaze:       (rmId) => thiefRobMaze(thCtx, rmId),
+          stealJunk:     (rmId) => thiefStealJunk(thCtx, rmId),
+          dropJunk:      (rmId) => { thiefDropJunk(thCtx, rmId); },
+          recoverStiletto: () => { thiefRecoverStiletto(thCtx, 'THIEF'); },
+          stoleLight:    () => thiefStoleLight(thCtx),
+          getThiefPStrength: () =>
+            (this.world.get('THIEF') as unknown as { pStrength: number })?.pStrength ?? 0,
+          fightStrength: () => fightStrength(true, this.scoring.score, this.player.pStrength),
+          isWinning: () => thiefWinning(thCtx,
+            (this.world.get('THIEF') as unknown as { pStrength: number })?.pStrength ?? 0),
+        };
+
+        iThief(ctx2);
+        return true;  // demon stays registered
+      },
+    };
+  }
+
+  // I-CYCLOPS clock entry — on-demand demon (turnsLeft=-1, starts disabled).
+  // 1actions.zil:1596–1614.
+  private makeICyclopsEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-CYCLOPS',
+      turnsLeft: -1,
+      enabled: false,
+      tick: (ctx) => {
+        const clockFatal = (): void => { this.fatalPending = true; };
+        const hereId = this.here.id;
+        const icCtx: ICyclopsCtx = {
+          hereId,
+          getCyclopsFlag: () => this.flags.get('CYCLOPS-FLAG'),
+          isDead: () => this.dead,
+          getCyclowrath: () => cyclowrath(),
+          setCyclowrath: (v) => { setCyclowrath(v); },
+          disableSelf: () => { this.clock.disable('I-CYCLOPS'); },
+          jigsUp: (msg) => {
+            jigsUp(msg, this.jigsUpMsgs(), this.makeJigsUpCallbacks(ctx.tell, clockFatal));
+          },
+          tell: ctx.tell,
+        };
+        iCyclops(icCtx);
+        // Demon always stays registered (clock.disable() marks it inactive without removing).
+        return true;
       },
     };
   }

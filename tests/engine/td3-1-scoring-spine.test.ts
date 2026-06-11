@@ -7,7 +7,7 @@
  * Sections:
  *   A. Data integrity — VALUE/TVALUE sums vs spec constants.
  *   B. scoreUpd / scoreObj — BASE-SCORE accumulation, idempotency.
- *   C. otvalFrob — recursive TVALUE sum, nested container (EGG slot).
+ *   C. otvalFrob — direct-children TVALUE sum only (non-recursive, ZIL faithful).
  *   D. recomputeTrophy — direct-assign, no BASE-SCORE double-count.
  *   E. wonFlag — 350 trigger (exact, not >350).
  *   F. 8-rank table boundaries.
@@ -162,7 +162,11 @@ describe('TD3-1-B: scoreUpd and scoreObj', () => {
 // C. otvalFrob — recursive TVALUE sum
 // ---------------------------------------------------------------------------
 
-describe('TD3-1-C: otvalFrob recursive TVALUE sum', () => {
+// Updated for OQ-2 ratification (2026-06-10): otvalFrob is NON-RECURSIVE.
+// ZIL OTVAL-FROB (1actions.zil:501) calls itself on nested containers but
+// discards the return value — nested TVALUEs do NOT contribute.
+// dfrotz ground truth: depositing EGG (containing CANARY, TVALUE=4) = +5, not +9.
+describe('TD3-1-C: otvalFrob direct-children TVALUE sum (non-recursive)', () => {
   it('returns 0 for an empty container', () => {
     const s = makeScoring();
     const container = new Thing('CASE', 'trophy case', {});
@@ -179,10 +183,10 @@ describe('TD3-1-C: otvalFrob recursive TVALUE sum', () => {
     expect(s.otvalFrob(container)).toBe(15);
   });
 
-  it('recurses into nested containers (intact EGG slot == 10)', () => {
-    // Intact EGG in trophy case: EGG(TVALUE=5) contains CANARY(4) + BAUBLE(1)
-    // otvalFrob(CASE) = EGG(5) + otvalFrob(EGG) = 5 + CANARY(4) + BAUBLE(1) = 10
-    // (td3-scoring-death-SPEC.md §5)
+  it('intact EGG (with CANARY+BAUBLE nested inside) scores only EGG.TVALUE = 5', () => {
+    // OQ-2 fix: OTVAL-FROB discards nested result.
+    // dfrotz R119 confirmed: put egg (containing canary) in trophy case → delta +5 not +10.
+    // ZIL 1actions.zil:501: <COND (<FIRST? .F> <OTVAL-FROB .F>)> — result discarded.
     const s = makeScoring();
     const trophyCase = new Thing('TROPHY-CASE', 'trophy case', {});
     const egg = new Thing('EGG', 'jewel-encrusted egg', {});
@@ -192,17 +196,17 @@ describe('TD3-1-C: otvalFrob recursive TVALUE sum', () => {
     const bauble = new Thing('BAUBLE', 'brass bauble', {});
     bauble.props.set('TVALUE', 1);
 
-    // EGG is in trophy case; CANARY and BAUBLE are inside EGG
     egg.moveTo(trophyCase);
     canary.moveTo(egg);
     bauble.moveTo(egg);
 
     const result = s.otvalFrob(trophyCase);
-    expect(result).toBe(10); // 5 + 4 + 1
+    expect(result).toBe(5); // only EGG.TVALUE; CANARY and BAUBLE nested inside are not counted
   });
 
-  it('does NOT double-count: each container\'s TVALUE added by its parent loop only', () => {
-    // Verify that the recursion does not double-add the EGG's own TVALUE
+  it('nested items do NOT contribute (each container scores only its own TVALUE)', () => {
+    // EGG(5) containing ITEM(3): only EGG(5) counts. ITEM(3) is ignored.
+    // To score both, they must both be direct children of the trophy case.
     const s = makeScoring();
     const trophyCase = new Thing('CASE', 'case', {});
     const egg = new Thing('EGG', 'egg', {});
@@ -213,9 +217,8 @@ describe('TD3-1-C: otvalFrob recursive TVALUE sum', () => {
     egg.moveTo(trophyCase);
     item.moveTo(egg);
 
-    // Expected: trophyCase gets EGG(5); recurse into EGG gets ITEM(3) → total 8.
-    // Wrong (double-count) would be: 5 + 5 + 3 = 13.
-    expect(s.otvalFrob(trophyCase)).toBe(8);
+    // Non-recursive: only EGG(5) counted; nested ITEM(3) ignored.
+    expect(s.otvalFrob(trophyCase)).toBe(5);
   });
 
   it('handles objects with no TVALUE prop (treats as 0)', () => {

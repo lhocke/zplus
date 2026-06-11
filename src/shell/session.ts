@@ -13,6 +13,7 @@ import {
   resetSingSong,
 } from '../actions/above-ground.js';
 import { resetMatchCount } from '../actions/light-sources.js';
+import { resetThiefState } from '../actions/thief-state.js';
 import type { PlaytestSink, SessionStart, TurnEvent } from './sink.js';
 
 const DEFAULT_SEED = 42;
@@ -47,6 +48,7 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number }): Game
   resetGrunlock();
   resetSingSong();
   resetMatchCount();
+  resetThiefState();
 
   const game = createGame({ seed: opts.seed ?? DEFAULT_SEED });
   const sink = opts.sink;
