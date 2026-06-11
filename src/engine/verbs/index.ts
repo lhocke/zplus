@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vPut, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { CURE_WAIT } from '../combat.js';
 
@@ -595,6 +595,31 @@ function verbPut(ctx: VerbContext): VerbResult {
   return result(vPut.done);
 }
 
+// V-PUT-ON (gverbs.zil:1120–1128) — "put X on Y".
+// Requires PRSI to have SURFACEBIT; otherwise "There's no good surface on the <obj>."
+function verbPutOn(ctx: VerbContext): VerbResult {
+  const item = ctx.dobj;
+  const surface = ctx.iobj;
+
+  if (item === undefined) return result("Put what?");
+  if (surface === undefined) return result("Put it where?");
+
+  if (item.parent !== ctx.player) {
+    return result(fmt(preGive.notHoldingIt, item.desc));
+  }
+
+  if (!surface.has(Flag.Surface)) {
+    return result(fmt(vPutOn.noSurface, surface.desc));
+  }
+
+  if (!surface.has(Flag.Open)) {
+    return result(fmt(vPut.notOpen, surface.desc));
+  }
+
+  item.moveTo(surface);
+  return result(vPut.done);
+}
+
 // V-SCORE (1actions.zil:4026–4044)
 // Plural rule (1actions.zil:4032): MOVES==1 → "move", else "moves".
 function verbScore(ctx: VerbContext): VerbResult {
@@ -799,6 +824,7 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-INVENTORY': verbInventory,
   'V-EXAMINE':   verbExamine,
   'V-PUT':       verbPut,
+  'V-PUT-ON':    verbPutOn,
   'V-SCORE':     verbScore,
   'V-DIAGNOSE':  verbDiagnose,
   'V-PRAY':      verbPray,

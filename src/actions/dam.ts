@@ -227,14 +227,15 @@ export const buttonF: ActionHandler = (ctx) => {
   }
 
   if (id === 'RED-BUTTON') {
-    // :1315 — toggle ONBIT on HERE (lights)
-    ctx.tell('The lights within the room ');
+    // :1315 — toggle ONBIT on HERE (lights).
+    // ZIL uses two no-CR TELLs that concatenate inline; port merges into one call
+    // so the joined-output path doesn't insert a newline between the two halves.
     if (ctx.hasFlag(ctx.here, Flag.On)) {
       ctx.clearFlag(ctx.here, Flag.On);
-      ctx.tell('shut off.');
+      ctx.tell('The lights within the room shut off.');
     } else {
       ctx.setFlag(ctx.here, Flag.On);
-      ctx.tell('come on.');
+      ctx.tell('The lights within the room come on.');
     }
     return true;
   }
@@ -343,8 +344,10 @@ export const puttyFcn: ActionHandler = (ctx) => {
 export const tubeFunction: ActionHandler = (ctx) => {
   const tube = ctx.self;
 
-  // :1387 — PUT <x> IN TUBE (tube is iobj)
-  if (ctx.verb === 'put' && ctx.iobj === tube) {
+  // :1387 — <VERB? PUT> matches only the PUT action (put X in Y), not PUT-ON (put X on Y).
+  // In the port both share verb='put'; distinguish by prep: 'IN' = V-PUT, 'ON' = V-PUT-ON.
+  // Let PUT-ON fall through to verbPutOn (no-surface message).
+  if (ctx.verb === 'put' && ctx.prep !== 'ON' && ctx.iobj === tube) {
     ctx.tell('The tube refuses to accept anything.');
     return true;
   }

@@ -287,18 +287,20 @@ describe('CB-DAM3 — I-MAINT-ROOM: player in boat near dam drowns', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — LEAK-FUNCTION: putty repairs the leak', () => {
-  it('PUT PUTTY ON LEAK → "miracle" + WATER-LEVEL = -1', () => {
+  // ZIL: PUTTY object has SYNONYM MATERIAL GUNK — the word "putty" is NOT in the
+  // dictionary. Tests use "material" (the canonical noun) to match reference behavior.
+  it('PUT MATERIAL ON LEAK → "miracle" + WATER-LEVEL = -1', () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     g.turn('push blue button');  // WL=1, arms demon, makes LEAK visible
     const putty = g.world.get('PUTTY')!;
     putty.moveTo(g.player);
 
-    const out = g.turn('put putty on leak').output;
+    const out = g.turn('put material on leak').output;
     expect(out).toMatch(/miracle|stop the leak/i);
     expect(getWaterLevel(g)).toBe(-1);
   });
 
-  it('PLUG LEAK WITH PUTTY also repairs', () => {
+  it('PLUG LEAK WITH MATERIAL also repairs', () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     g.turn('push blue button');
     const putty = g.world.get('PUTTY')!;
@@ -307,7 +309,7 @@ describe('CB-DAM3 — LEAK-FUNCTION: putty repairs the leak', () => {
     const leak = g.world.get('LEAK')!;
     leak.clear(Flag.Invisible);
 
-    const out = g.turn('plug leak with putty').output;
+    const out = g.turn('plug leak with material').output;
     expect(out).toMatch(/miracle|stop the leak/i);
     expect(getWaterLevel(g)).toBe(-1);
   });
@@ -317,7 +319,7 @@ describe('CB-DAM3 — LEAK-FUNCTION: putty repairs the leak', () => {
     g.turn('push blue button');
     const putty = g.world.get('PUTTY')!;
     putty.moveTo(g.player);
-    g.turn('put putty on leak');
+    g.turn('put material on leak');
 
     const entry = clockEntry(g, 'I-MAINT-ROOM');
     expect(entry).toBeDefined();
@@ -330,7 +332,7 @@ describe('CB-DAM3 — LEAK-FUNCTION: putty repairs the leak', () => {
     g.turn('push blue button');
     const putty = g.world.get('PUTTY')!;
     putty.moveTo(g.player);
-    g.turn('put putty on leak');
+    g.turn('put material on leak');
 
     const out = g.turn('push blue button').output;
     expect(out).toMatch(/jammed/i);
@@ -359,7 +361,7 @@ describe('CB-DAM3 — LEAK-FUNCTION: putty repairs the leak', () => {
     const leak = g.world.get('LEAK')!;
     leak.clear(Flag.Invisible);
 
-    const out = g.turn('put putty on leak').output;
+    const out = g.turn('put material on leak').output;
     expect(out).not.toMatch(/miracle|stop the leak/i);
     // WL stays 0
     expect(getWaterLevel(g)).toBe(0);
@@ -504,6 +506,125 @@ describe('CB-DAM3 — TUBE-FUNCTION', () => {
 
     const out = g.turn('squeeze tube').output;
     expect(out).toMatch(/tube is closed/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BUTTON-F — red button: single-line output (no spurious newline)
+// ZIL 1actions.zil:1316-1322: two no-CR TELLs concatenate into one line.
+// ---------------------------------------------------------------------------
+
+describe('CB-DAM3 — BUTTON-F: red button output is a single line (no spurious newline)', () => {
+  it('PUSH RED-BUTTON (room lit) → single-line "The lights within the room shut off."', () => {
+    const g = newLitGameAt('MAINTENANCE-ROOM');
+    const mroom = g.world.get('MAINTENANCE-ROOM')!;
+    mroom.set(Flag.On);
+
+    const out = g.turn('push red button').output;
+    // Must be ONE line — no embedded newline between "room" and "shut off."
+    expect(out).not.toMatch(/room\s*\nshut/);
+    expect(out).toContain('The lights within the room shut off.');
+  });
+
+  it('PUSH RED-BUTTON (room dark) → single-line "The lights within the room come on."', () => {
+    const g = newLitGameAt('MAINTENANCE-ROOM');
+    const mroom = g.world.get('MAINTENANCE-ROOM')!;
+    mroom.clear(Flag.On);
+
+    const out = g.turn('push red button').output;
+    expect(out).not.toMatch(/room\s*\ncome/);
+    expect(out).toContain('The lights within the room come on.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TUBE-FUNCTION — V-PUT-ON (put X ON tube) must NOT intercept; falls through
+// to default surface check → "There's no good surface on the tube."
+// ZIL 1actions.zil:1387: <VERB? PUT> matches V-PUT only; PUT-ON is distinct.
+// ---------------------------------------------------------------------------
+
+describe('CB-DAM3 — TUBE-FUNCTION: PUT ON tube gives surface error (not tube refusal)', () => {
+  it('PUT screwdriver ON tube → "no good surface on the tube" (not "refuses")', () => {
+    const g = newLitGameAt('MAINTENANCE-ROOM');
+    const tube = g.world.get('TUBE')!;
+    tube.moveTo(g.player);
+    const screwdriver = g.world.get('SCREWDRIVER');
+    if (screwdriver === undefined) {
+      // No SCREWDRIVER object — use wrench as stand-in
+      const wrench = g.world.get('WRENCH')!;
+      wrench.moveTo(g.player);
+      const out = g.turn('put wrench on tube').output;
+      expect(out).not.toMatch(/refuses to accept/i);
+      expect(out).toMatch(/no good surface/i);
+    } else {
+      screwdriver.moveTo(g.player);
+      const out = g.turn('put screwdriver on tube').output;
+      expect(out).not.toMatch(/refuses to accept/i);
+      expect(out).toMatch(/no good surface/i);
+    }
+  });
+
+  it('PUT screwdriver IN tube still gives "refuses to accept" (V-PUT unchanged)', () => {
+    const g = newLitGameAt('MAINTENANCE-ROOM');
+    const tube = g.world.get('TUBE')!;
+    tube.moveTo(g.player);
+    tube.set(Flag.Open);
+    const wrench = g.world.get('WRENCH')!;
+    wrench.moveTo(g.player);
+
+    const out = g.turn('put wrench in tube').output;
+    expect(out).toMatch(/refuses to accept/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PUTTY synonym — "putty" must NOT be a recognized word (ZIL: SYNONYM MATERIAL GUNK).
+// Input "plug leak with putty" must be rejected as unknown word, NOT repair the leak.
+// ---------------------------------------------------------------------------
+
+describe('CB-DAM3 — PUTTY: word "putty" is not in dictionary (only MATERIAL/GUNK)', () => {
+  it('"plug leak with putty" → unknown word, leak not repaired', () => {
+    const g = newLitGameAt('MAINTENANCE-ROOM');
+    // Set up an active leak
+    g.turn('push blue button');
+    const putty = g.world.get('PUTTY')!;
+    putty.moveTo(g.player);
+    const leak = g.world.get('LEAK')!;
+    leak.clear(Flag.Invisible);
+
+    const out = g.turn('plug leak with putty').output;
+    // Must NOT repair the leak
+    expect(out).not.toMatch(/miracle|stop the leak/i);
+    // Must reject "putty" as unknown word
+    expect(out).toMatch(/don't know the word|unknown word/i);
+    // Leak still active
+    expect(getWaterLevel(g)).toBeGreaterThan(0);
+  });
+
+  it('"plug leak with gunk" → repairs the leak (GUNK is a valid synonym)', () => {
+    const g = newLitGameAt('MAINTENANCE-ROOM');
+    g.turn('push blue button');
+    const putty = g.world.get('PUTTY')!;
+    putty.moveTo(g.player);
+    const leak = g.world.get('LEAK')!;
+    leak.clear(Flag.Invisible);
+
+    const out = g.turn('plug leak with gunk').output;
+    expect(out).toMatch(/miracle|stop the leak/i);
+    expect(getWaterLevel(g)).toBe(-1);
+  });
+
+  it('"plug leak with material" → repairs the leak (MATERIAL is a valid synonym)', () => {
+    const g = newLitGameAt('MAINTENANCE-ROOM');
+    g.turn('push blue button');
+    const putty = g.world.get('PUTTY')!;
+    putty.moveTo(g.player);
+    const leak = g.world.get('LEAK')!;
+    leak.clear(Flag.Invisible);
+
+    const out = g.turn('plug leak with material').output;
+    expect(out).toMatch(/miracle|stop the leak/i);
+    expect(getWaterLevel(g)).toBe(-1);
   });
 });
 
