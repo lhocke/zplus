@@ -411,3 +411,47 @@ describe('CB-BOAT3 — I-RIVER: downstream message (1actions.zil:2713)', () => {
     expect(out).toContain('downstream');
   });
 });
+
+// ---------------------------------------------------------------------------
+// ZIL 1actions.zil:2775 <CRLF> — blank line before drowning messages
+//
+// The ZIL deflate path emits:
+//   "...leaving you without." CR
+//   <CRLF>                          ← explicit blank line
+//   JIGS-UP "Another pathetic sputter..."  or  JIGS-UP "In other words..."
+//
+// Without the leading \n on the JIGS-UP message the chain-join produces only
+// one \n between the deflate tell and the death message (toContain on the
+// message text alone is a false-green that cannot catch this gap).
+// ---------------------------------------------------------------------------
+
+describe('CB-BOAT3 — boat-puncture DROWNING blank line (1actions.zil:2775)', () => {
+  it('RESERVOIR puncture: blank line between deflate message and drowning (1actions.zil:2778)', () => {
+    // Set up: inflate, board, manually place boat in RESERVOIR (NonLand)
+    const g = newGameAt('RESERVOIR');
+    inflateAt(g);
+    const inflated   = g.world.get('INFLATED-BOAT')!;
+    const reservoir  = g.world.get('RESERVOIR')!;
+    reservoir.set(Flag.NonLand);
+    reservoir.set(Flag.On);
+    inflated.moveTo(reservoir);
+    g.player.moveTo(inflated);
+    const sword = g.world.get('SWORD')!;
+    sword.moveTo(g.player);
+    const out = g.turn('drop sword').output;
+    // The ZIL <CRLF> at :2775 produces a blank line — "\n\n" in the chain-joined output.
+    expect(out).toContain('leaving you without.\n\n');
+  });
+
+  it('falls puncture: blank line between deflate message and drowning (1actions.zil:2781)', () => {
+    // Set up: inflate, board, launch onto RIVER-1 (already NonLand)
+    const g = newGameAt('DAM-BASE');
+    inflateAndBoard(g);
+    g.turn('launch');  // now on RIVER-1 (NonLand, not RESERVOIR/IN-STREAM)
+    const sword = g.world.get('SWORD')!;
+    sword.moveTo(g.player);
+    const out = g.turn('drop sword').output;
+    // Same <CRLF> at :2775 — blank line before the falls death message.
+    expect(out).toContain('leaving you without.\n\n');
+  });
+});

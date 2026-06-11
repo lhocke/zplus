@@ -346,17 +346,19 @@ function rboatMBeg(ctx: Parameters<ActionHandler>[0]): boolean {
     );
     const inWater = punctureBoat(ctx);
     if (inWater) {
-      // :2774–2783 — on water: drown via JIGS-UP. Reservoir/stream vs river.
+      // :2774–2783 — on water: drown via JIGS-UP. ZIL emits <CRLF> at :2775
+      // before JIGS-UP, producing a blank line after the deflate tell.
+      // The leading \n mirrors that blank line in the chain-joined output.
       const hereId = ctx.here.id;
       const isFalls = hereId !== 'RESERVOIR' && hereId !== 'IN-STREAM';
       if (isFalls) {
         ctx.jigsUp?.(
-          'In other words, fighting the fierce currents of the Frigid River. You\n' +
+          '\nIn other words, fighting the fierce currents of the Frigid River. You\n' +
           'manage to hold your own for a bit, but then you are carried over a\n' +
           'waterfall and into some nasty rocks. Ouch!',
         );
       } else {
-        ctx.jigsUp?.('Another pathetic sputter, this time from you, heralds your drowning.');
+        ctx.jigsUp?.('\nAnother pathetic sputter, this time from you, heralds your drowning.');
       }
     }
     return true;
