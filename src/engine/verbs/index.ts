@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vPut, preTake, preGive, yuks, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vPut, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { CURE_WAIT } from '../combat.js';
 
@@ -726,14 +726,14 @@ export function verbAttack(ctx: VerbContext): VerbResult {
 // fallback; the object handlers in later tasks short-circuit before these fire.
 // ---------------------------------------------------------------------------
 
-// V-INFLATE (gverbs.zil) — fall-through when no object handler claims inflate.
+// V-INFLATE (gverbs.zil:757-758) — fall-through when no object handler claims inflate.
 function verbInflate(_ctx: VerbContext): VerbResult {
-  return result("That's not something you can inflate.");
+  return result(vInflate.response);
 }
 
-// V-DEFLATE — fall-through.
+// V-DEFLATE (gverbs.zil:402-403) — fall-through.
 function verbDeflate(_ctx: VerbContext): VerbResult {
-  return result("That's not something you can deflate.");
+  return result(vDeflate.response);
 }
 
 // V-BOARD — fall-through when BOARD isn't handled by the vehicle object.
@@ -748,9 +748,11 @@ function verbDisembark(_ctx: VerbContext): VerbResult {
   return result("You're not in anything you can disembark from.");
 }
 
-// V-LAUNCH — fall-through when no boat handler claims launch.
-function verbLaunch(_ctx: VerbContext): VerbResult {
-  return result("You can't launch that here.");
+// V-LAUNCH (gverbs.zil:804-808) — fall-through when no boat handler claims launch.
+// Vehicle: "You can't launch that by saying \"launch\"!"  Non-vehicle: "That's pretty weird."
+function verbLaunch(ctx: VerbContext): VerbResult {
+  if (ctx.dobj?.has(Flag.Vehicle)) return result(vLaunch.vehicle);
+  return result(vLaunch.nonVehicle);
 }
 
 // V-LAND — the boat lands automatically via GOTO into an RLANDBIT room;
@@ -759,14 +761,28 @@ function verbLand(_ctx: VerbContext): VerbResult {
   return result("You're not in anything that can land.");
 }
 
-// V-DIG (gverbs.zil:405–416) — fall-through when not in SANDY-BEACH context.
-function verbDig(_ctx: VerbContext): VerbResult {
-  return result("Digging here would be futile.");
+// V-DIG (gverbs.zil:405-416) — fall-through when not in SANDY-BEACH context.
+// No iobj → ZIL defaults to HANDS (TOOLBIT, desc "pair of hands").
+function verbDig(ctx: VerbContext): VerbResult {
+  const inst = ctx.iobj;
+  if (inst?.id === 'SHOVEL') return result(vDig.shovel);
+  if (inst?.has(Flag.Tool) ?? true) {
+    // ZIL HANDS has TOOLBIT; engine no-iobj → same branch.
+    const name = inst?.desc ?? 'pair of hands';
+    return result(fmt(vDig.withTool, name));
+  }
+  return result(fmt(vDig.withNonTool, inst!.desc));
 }
 
-// V-WAVE — fall-through when no sceptre handler claims the verb.
-function verbWave(_ctx: VerbContext): VerbResult {
-  return result("Nothing happens.");
+// V-WAVE (gverbs.zil:1594-1595) — fall-through via HACK-HACK "Waving the ".
+// HACK-HACK: "Waving the " + D(PRSO) + PICK-ONE(HO-HUM). gverbs.zil:2024-2036.
+// (The global-object "isn't here" branch of HACK-HACK is unreachable here:
+//  parser scoping only surfaces a global object when it passes GWIM's WAVE check,
+//  and globally-scoped wave targets will be intercepted by their ACTION handlers.)
+function verbWave(ctx: VerbContext): VerbResult {
+  const name = ctx.dobj?.desc ?? '';
+  const suffix = ctx.rng !== undefined ? pick(hoHum, ctx.rng) : hoHum.entries[0]!;
+  return result(`Waving the ${name}${suffix}`);
 }
 
 type VerbHandler = (ctx: VerbContext) => VerbResult;

@@ -28,6 +28,7 @@ import type { ClockEntry } from '../../src/engine/clock.js';
 import { executeVerb, type VerbContext } from '../../src/engine/verbs/index.js';
 import { World } from '../../src/domain/world.js';
 import { Room } from '../../src/domain/room.js';
+import { Thing } from '../../src/domain/thing.js';
 import { Actor } from '../../src/domain/actor.js';
 import { Flag } from '../../src/domain/flags.js';
 import { newGameAt } from '../helpers/new-game.js';
@@ -258,5 +259,91 @@ describe('D-A — data audit: boat + reservoir exits + key object flags', () => 
     expect(emerald).toBeDefined();
     expect(emerald!.parent?.id).toBe('BUOY');
     expect(emerald!.has(Flag.Invisible)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. Verb fall-through messages — ZIL fidelity (gverbs.zil HACK-HACK / V-* routines)
+//
+// Each V-* fall-through must emit the ZIL-canonical message, not a fabricated
+// string.  "Nothing happens." is the classic fabricated tell: it appears nowhere
+// in V-WAVE's ZIL path (HACK-HACK → "Waving the " + D PRSO + PICK-ONE HO-HUM).
+// ---------------------------------------------------------------------------
+
+function makeVerbCtx(verb: string, _action: string, dobj?: Thing, iobj?: Thing): VerbContext {
+  const room = new Room('HERE', 'Here', { ldesc: 'A room.' });
+  room.set(Flag.On);
+  const player = new Actor('PLAYER', 'yourself');
+  player.moveTo(room);
+  const objs: (Room | Actor | Thing)[] = [room, player];
+  if (dobj) { dobj.moveTo(player); objs.push(dobj); }
+  if (iobj) { iobj.moveTo(player); objs.push(iobj); }
+  const world = World.fromObjects(objs);
+  return { verb, player, here: room, world, dobj, iobj };
+}
+
+describe('F0 — verb fall-through ZIL fidelity', () => {
+  // V-WAVE: HACK-HACK "Waving the " → "Waving the <name> <HO-HUM suffix>"
+  // gverbs.zil:1594-1595, HACK-HACK gverbs.zil:2024-2029, HO-HUM gverbs.zil:2031-2036.
+  it('wave <held object>: output starts with "Waving the" (not "Nothing happens.")', () => {
+    const leaflet = new Thing('LEAFLET', 'leaflet', { synonyms: ['leaflet'] });
+    const ctx = makeVerbCtx('wave', 'V-WAVE', leaflet);
+    const out = executeVerb(ctx, 'V-WAVE').output;
+    expect(out).toMatch(/^Waving the leaflet/);
+    expect(out).not.toBe('Nothing happens.');
+  });
+
+  it('wave <held object>: suffix is one of the HO-HUM set (gverbs.zil:2031-2036)', () => {
+    const leaflet = new Thing('LEAFLET', 'leaflet', { synonyms: ['leaflet'] });
+    const hoHumSuffixes = [" doesn't seem to work.", " isn't notably helpful.", " has no effect."];
+    // Seed each rng outcome to exercise all three entries.
+    for (let i = 0; i < 3; i++) {
+      const idx = i;
+      const ctx = makeVerbCtx('wave', 'V-WAVE', leaflet);
+      (ctx as unknown as { rng: { next(): number } }).rng = { next: () => idx / 3 };
+      const out = executeVerb(ctx, 'V-WAVE').output;
+      expect(hoHumSuffixes.some(s => out.endsWith(s))).toBe(true);
+    }
+  });
+
+  // V-INFLATE fall-through: "How can you inflate that?" (gverbs.zil:758)
+  it('inflate fall-through: "How can you inflate that?"', () => {
+    const leaflet = new Thing('LEAFLET', 'leaflet', { synonyms: ['leaflet'] });
+    const ctx = makeVerbCtx('inflate', 'V-INFLATE', leaflet);
+    const out = executeVerb(ctx, 'V-INFLATE').output;
+    expect(out).toBe('How can you inflate that?');
+  });
+
+  // V-DEFLATE fall-through: "Come on, now!" (gverbs.zil:403)
+  it('deflate fall-through: "Come on, now!"', () => {
+    const leaflet = new Thing('LEAFLET', 'leaflet', { synonyms: ['leaflet'] });
+    const ctx = makeVerbCtx('deflate', 'V-DEFLATE', leaflet);
+    const out = executeVerb(ctx, 'V-DEFLATE').output;
+    expect(out).toBe('Come on, now!');
+  });
+
+  // V-LAUNCH non-vehicle: "That's pretty weird." (gverbs.zil:808)
+  it('launch non-vehicle fall-through: "That\'s pretty weird."', () => {
+    const leaflet = new Thing('LEAFLET', 'leaflet', { synonyms: ['leaflet'] });
+    const ctx = makeVerbCtx('launch', 'V-LAUNCH', leaflet);
+    const out = executeVerb(ctx, 'V-LAUNCH').output;
+    expect(out).toBe("That's pretty weird.");
+  });
+
+  // V-LAUNCH vehicle: "You can't launch that by saying \"launch\"!" (gverbs.zil:806)
+  it('launch vehicle fall-through: "You can\'t launch that by saying \\"launch\\"!"', () => {
+    const boat = new Thing('BOAT', 'rubber boat', { synonyms: ['boat'] });
+    boat.set(Flag.Vehicle);
+    const ctx = makeVerbCtx('launch', 'V-LAUNCH', boat);
+    const out = executeVerb(ctx, 'V-LAUNCH').output;
+    expect(out).toBe('You can\'t launch that by saying "launch"!');
+  });
+
+  // V-DIG with shovel iobj: "There's no reason to be digging here." (gverbs.zil:411)
+  it('dig with shovel fall-through: "There\'s no reason to be digging here."', () => {
+    const shovel = new Thing('SHOVEL', 'shovel', { synonyms: ['shovel'] });
+    const ctx = makeVerbCtx('dig', 'V-DIG', undefined, shovel);
+    const out = executeVerb(ctx, 'V-DIG').output;
+    expect(out).toBe("There's no reason to be digging here.");
   });
 });
