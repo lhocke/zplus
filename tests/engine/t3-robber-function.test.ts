@@ -26,6 +26,34 @@ import {
   setThiefLdesc,
 } from '../../src/actions/thief-state.js';
 import { ScriptedRng } from '../helpers/scripted-rng.js';
+import type { VerbDispatch } from '../../src/actions/robber-fcn.js';
+
+// ---------------------------------------------------------------------------
+// VerbDispatch helper — maps verb+prep to the ZIL PRSA action id.
+// ---------------------------------------------------------------------------
+
+function vd(verb: string, opts: Omit<VerbDispatch, 'verb' | 'action'> = {}): VerbDispatch {
+  const p = opts.prep?.toUpperCase();
+  let action: string;
+  switch (verb) {
+    case 'TELL':    action = 'V-TELL';    break;
+    case 'HELLO':   action = 'V-HELLO';   break;
+    case 'THROW':   action = 'V-THROW';   break;
+    case 'GIVE':    action = 'V-GIVE';    break;
+    case 'TAKE':    action = 'V-TAKE';    break;
+    case 'LISTEN':  action = 'V-LISTEN';  break;
+    case 'EXAMINE': action = 'V-EXAMINE'; break;
+    case 'LOOK':
+      if (p === 'AT')     { action = 'V-EXAMINE';     break; }
+      if (p === 'IN' || p === 'WITH') { action = 'V-LOOK-INSIDE'; break; }
+      if (p === 'UNDER')  { action = 'V-LOOK-UNDER';  break; }
+      if (p === 'BEHIND') { action = 'V-LOOK-BEHIND'; break; }
+      if (p === 'ON')     { action = 'V-LOOK-ON';     break; }
+      action = 'V-LOOK'; break;
+    default: action = 'V-' + verb; break;
+  }
+  return { action, verb, ...opts };
+}
 
 // ---------------------------------------------------------------------------
 // Stub objects
@@ -480,7 +508,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
   it('TELL → "strong, silent type", clear P-CONT', () => {
     const { ctx, emitted, contCleared } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    fn(undefined, { verb: 'TELL' });
+    fn(undefined, vd('TELL'));
     expect(emitted.join('')).toContain('strong, silent type');
     expect(contCleared.value).toBe(true);
   });
@@ -489,7 +517,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
     setThiefLdesc(ROBBER_U_DESC);
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    fn(undefined, { verb: 'HELLO' });
+    fn(undefined, vd('HELLO'));
     expect(emitted.join('')).toContain('incapacitated');
   });
 
@@ -497,21 +525,21 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
     setThiefLdesc(ROBBER_C_DESC);
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    fn(undefined, { verb: 'HELLO' });
+    fn(undefined, vd('HELLO'));
     expect(emitted.join('')).not.toContain('incapacitated');
   });
 
   it('TAKE → "what would you do with him?"', () => {
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    fn(undefined, { verb: 'TAKE' });
+    fn(undefined, vd('TAKE'));
     expect(emitted.join('')).toContain('what would you do with him');
   });
 
   it('EXAMINE → beady-eyes desc', () => {
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    fn(undefined, { verb: 'EXAMINE' });
+    fn(undefined, vd('EXAMINE'));
     expect(emitted.join('')).toContain('beady eyes');
   });
 
@@ -519,7 +547,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
     // "look at thief" → verb='LOOK', prep='AT' → V-EXAMINE → ZIL VERB? EXAMINE LOOK-INSIDE
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    fn(undefined, { verb: 'LOOK', prep: 'AT' });
+    fn(undefined, vd('LOOK', { prep: 'AT' }));
     expect(emitted.join('')).toContain('beady eyes');
   });
 
@@ -527,7 +555,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
     // "look in thief" → verb='LOOK', prep='IN' → V-LOOK-INSIDE → ZIL VERB? EXAMINE LOOK-INSIDE
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    fn(undefined, { verb: 'LOOK', prep: 'IN' });
+    fn(undefined, vd('LOOK', { prep: 'IN' }));
     expect(emitted.join('')).toContain('beady eyes');
   });
 
@@ -536,7 +564,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
   it('LOOK UNDER thief falls through (returns false) — not ZIL VERB? EXAMINE LOOK-INSIDE', () => {
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    const handled = fn(undefined, { verb: 'LOOK', prep: 'UNDER' });
+    const handled = fn(undefined, vd('LOOK', { prep: 'UNDER' }));
     expect(handled).toBe(false);
     expect(emitted).toHaveLength(0);
   });
@@ -544,7 +572,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
   it('LOOK BEHIND thief falls through (returns false) — not ZIL VERB? EXAMINE LOOK-INSIDE', () => {
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    const handled = fn(undefined, { verb: 'LOOK', prep: 'BEHIND' });
+    const handled = fn(undefined, vd('LOOK', { prep: 'BEHIND' }));
     expect(handled).toBe(false);
     expect(emitted).toHaveLength(0);
   });
@@ -552,7 +580,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
   it('LOOK ON thief falls through (returns false) — not ZIL VERB? EXAMINE LOOK-INSIDE', () => {
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    const handled = fn(undefined, { verb: 'LOOK', prep: 'ON' });
+    const handled = fn(undefined, vd('LOOK', { prep: 'ON' }));
     expect(handled).toBe(false);
     expect(emitted).toHaveLength(0);
   });
@@ -560,7 +588,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
   it('LISTEN → not been formally introduced', () => {
     const { ctx, emitted } = makeCtx();
     const fn = makeRobberFcn(ctx);
-    fn(undefined, { verb: 'LISTEN' });
+    fn(undefined, vd('LISTEN'));
     expect(emitted.join('')).toContain('formally introduced');
   });
 
@@ -575,7 +603,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
         stiletto: { parentId: 'THIEF' },
       });
       const fn = makeRobberFcn(ctx);
-      fn(undefined, { verb: 'THROW', prsoId: 'KNIFE', fighting: false });
+      fn(undefined, vd('THROW', { prsoId: 'KNIFE', fighting: false }));
       expect(thiefFlags.has(Flag.Invisible)).toBe(true);
       expect(emitted.join('')).toContain('frightened the robber');
     });
@@ -593,7 +621,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
         stiletto: { parentId: 'THIEF' },
       });
       const fn = makeRobberFcn(ctx);
-      fn(undefined, { verb: 'THROW', prsoId: 'KNIFE', fighting: false });
+      fn(undefined, vd('THROW', { prsoId: 'KNIFE', fighting: false }));
       // The entire flee+contents message must be ONE entry in emitted (one ctx.tell()).
       const fleeIdx = emitted.findIndex(s => s.includes('evidently frightened'));
       expect(fleeIdx).toBeGreaterThanOrEqual(0);
@@ -611,7 +639,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
         stiletto: { parentId: 'THIEF' },
       });
       const fn = makeRobberFcn(ctx);
-      fn(undefined, { verb: 'THROW', prsoId: 'KNIFE', fighting: false });
+      fn(undefined, vd('THROW', { prsoId: 'KNIFE', fighting: false }));
       const fleeIdx = emitted.findIndex(s => s.includes('evidently frightened'));
       expect(fleeIdx).toBeGreaterThanOrEqual(0);
       expect(emitted[fleeIdx]).toBe(
@@ -626,7 +654,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
         objs: [makeObj('KNIFE', 'PLAYER')],
       });
       const fn = makeRobberFcn(ctx);
-      fn(undefined, { verb: 'THROW', prsoId: 'KNIFE', fighting: false });
+      fn(undefined, vd('THROW', { prsoId: 'KNIFE', fighting: false }));
       expect(thiefFlags.has(Flag.Fight)).toBe(true);
       expect(emitted.join('')).toContain('angered');
     });
@@ -639,7 +667,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
         objs: [treasure],
       });
       const fn = makeRobberFcn(ctx);
-      fn(undefined, { verb: 'GIVE', prsoId: 'CHALICE', prsiId: 'THIEF' });
+      fn(undefined, vd('GIVE', { prsoId: 'CHALICE', prsiId: 'THIEF' }));
       expect(thiefEngrossed()).toBe(true);  // TS-I: engrossed flag set
       expect(emitted.join('')).toContain('taken aback by your unexpected generosity');
       expect(emitted.join('')).toContain('stops to admire its beauty');
@@ -651,7 +679,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
         objs: [junk],
       });
       const fn = makeRobberFcn(ctx);
-      fn(undefined, { verb: 'GIVE', prsoId: 'ROPE', prsiId: 'THIEF' });
+      fn(undefined, vd('GIVE', { prsoId: 'ROPE', prsiId: 'THIEF' }));
       expect(thiefEngrossed()).toBe(false);  // NOT engrossed
       expect(emitted.join('')).toContain('places the');
       expect(emitted.join('')).toContain('in his bag and thanks');
@@ -665,7 +693,7 @@ describe('ROBBER-FUNCTION — verb dispatch (1actions.zil:1947–2024)', () => {
         objs: [junk],
       });
       const fn = makeRobberFcn(ctx);
-      fn(undefined, { verb: 'GIVE', prsoId: 'ROPE', prsiId: 'THIEF' });
+      fn(undefined, vd('GIVE', { prsoId: 'ROPE', prsiId: 'THIEF' }));
       expect(emitted.join('')).toContain('recovers consciousness');
       expect(iThiefEnabled.value).toBe(true);
       expect(thiefLdesc()).toBe(ROBBER_C_DESC);

@@ -58,7 +58,7 @@ function robToWall(ctx: Parameters<ActionHandler>[0]): void {
 // ---------------------------------------------------------------------------
 
 export const scepFcn: ActionHandler = (ctx) => {
-  if (ctx.verb !== 'wave' && ctx.verb !== 'raise') return false;
+  if (ctx.action !== 'V-WAVE' && ctx.action !== 'V-RAISE') return false;
 
   const hereId = ctx.here.id;
 
@@ -133,7 +133,7 @@ export const scepFcn: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const rainbowFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'cross' || ctx.verb === 'through') {
+  if (ctx.action === 'V-CROSS' || ctx.action === 'V-THROUGH') {
     const hereId = ctx.here.id;
 
     // :2636–2638 — CANYON-VIEW is a scenic dead-end
@@ -166,8 +166,8 @@ export const rainbowFcn: ActionHandler = (ctx) => {
     return true;
   }
 
-  // :2649–2650 — VERB? LOOK-UNDER (parser sets verb='look', prep='UNDER' uppercase)
-  if (ctx.verb === 'look' && ctx.prep?.toUpperCase() === 'UNDER') {
+  // :2649–2650 — VERB? LOOK-UNDER
+  if (ctx.action === 'V-LOOK-UNDER') {
     ctx.tell('The Frigid River flows under the rainbow.');
     return true;
   }

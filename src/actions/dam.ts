@@ -37,7 +37,7 @@ function integralPart(ctx: Parameters<ActionHandler>[0]): ReturnType<ActionHandl
 // ---------------------------------------------------------------------------
 
 export const bubbleFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'take') return integralPart(ctx);
+  if (ctx.action === 'V-TAKE') return integralPart(ctx);
   return false;
 };
 
@@ -46,7 +46,7 @@ export const bubbleFcn: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const boltF: ActionHandler = (ctx) => {
-  if (ctx.verb === 'turn') {
+  if (ctx.action === 'V-TURN') {
     const wrench = ctx.world.get('WRENCH');
     if (ctx.iobj !== wrench) {
       // "The bolt won't turn using the <prsi>." — :1210
@@ -85,10 +85,10 @@ export const boltF: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'take') return integralPart(ctx);
+  if (ctx.action === 'V-TAKE') return integralPart(ctx);
 
-  // ZIL <VERB? OIL> — "oil" canonicalises to "lubricate" in the port's verb table.
-  if (ctx.verb === 'lubricate') {
+  // ZIL <VERB? OIL> — lubricate/oil canonicalize to V-OIL action.
+  if (ctx.action === 'V-OIL') {
     // :1215 — "Hmm. It appears the tube contained glue, not oil."
     ctx.tell(
       "Hmm. It appears the tube contained glue, not oil. Turning the bolt won't get any easier....",
@@ -157,12 +157,12 @@ export const damRoomFcn: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const damFunction: ActionHandler = (ctx) => {
-  if (ctx.verb === 'open' || ctx.verb === 'close') {
+  if (ctx.action === 'V-OPEN' || ctx.action === 'V-CLOSE') {
     ctx.tell("Sounds reasonable, but this isn't how.");
     return true;
   }
 
-  if (ctx.verb === 'plug') {
+  if (ctx.action === 'V-PLUG') {
     const hands = ctx.world.get('HANDS');
     if (ctx.iobj === undefined || ctx.iobj === hands) {
       // :1404
@@ -192,12 +192,12 @@ export const damFunction: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const buttonF: ActionHandler = (ctx) => {
-  if (ctx.verb === 'read') {
+  if (ctx.action === 'V-READ' || ctx.action === 'V-READ-PAGE') {
     ctx.tell("They're greek to you.");
     return true;
   }
 
-  if (ctx.verb !== 'push') return false;
+  if (ctx.action !== 'V-PUSH') return false;
 
   const id = ctx.self.id;
 
@@ -279,13 +279,13 @@ export const leakFunction: ActionHandler = (ctx) => {
   const putty = ctx.world.get('PUTTY');
 
   // PUT PUTTY [ON LEAK] or PUT-ON PUTTY → PRSO==PUTTY check (:1364)
-  if ((ctx.verb === 'put' || ctx.verb === 'put-on') && ctx.dobj === putty) {
+  if ((ctx.action === 'V-PUT' || ctx.action === 'V-PUT-ON') && ctx.dobj === putty) {
     fixMaintLeak(ctx);
     return true;
   }
 
   // PLUG [LEAK] WITH <PRSI> (:1367)
-  if (ctx.verb === 'plug') {
+  if (ctx.action === 'V-PLUG') {
     if (ctx.iobj === putty) {
       fixMaintLeak(ctx);
       return true;
@@ -309,14 +309,14 @@ export const leakFunction: ActionHandler = (ctx) => {
 export const puttyFcn: ActionHandler = (ctx) => {
   const putty = ctx.self;
 
-  // OIL <something> WITH PUTTY — putty as iobj
-  if (ctx.verb === 'lubricate' && ctx.iobj === putty) {
+  // OIL <something> WITH PUTTY — putty as iobj (lubricate/oil → V-OIL)
+  if (ctx.action === 'V-OIL' && ctx.iobj === putty) {
     ctx.tell("The all-purpose gunk isn't a lubricant.");
     return true;
   }
 
   // PUT PUTTY (bare put, putty is dobj) — not the normal use; reject
-  if (ctx.verb === 'put' && ctx.dobj === putty && ctx.iobj === undefined) {
+  if (ctx.action === 'V-PUT' && ctx.dobj === putty && ctx.iobj === undefined) {
     ctx.tell("The all-purpose gunk isn't a lubricant.");
     return true;
   }
@@ -337,16 +337,14 @@ export const puttyFcn: ActionHandler = (ctx) => {
 export const tubeFunction: ActionHandler = (ctx) => {
   const tube = ctx.self;
 
-  // :1387 — <VERB? PUT> matches only the PUT action (put X in Y), not PUT-ON (put X on Y).
-  // In the port both share verb='put'; distinguish by prep: 'IN' = V-PUT, 'ON' = V-PUT-ON.
-  // Let PUT-ON fall through to verbPutOn (no-surface message).
-  if (ctx.verb === 'put' && ctx.prep !== 'ON' && ctx.iobj === tube) {
+  // :1387 — <VERB? PUT> matches only V-PUT (put X in Y), not V-PUT-ON (put X on Y).
+  if (ctx.action === 'V-PUT' && ctx.iobj === tube) {
     ctx.tell('The tube refuses to accept anything.');
     return true;
   }
 
   // :1390 — SQUEEZE TUBE
-  if (ctx.verb === 'squeeze') {
+  if (ctx.action === 'V-SQUEEZE') {
     const isOpen = ctx.hasFlag(tube, Flag.Open);
     if (isOpen) {
       // Find putty inside the tube
@@ -377,12 +375,12 @@ export const tubeFunction: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const toolChestFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'examine') {
+  if (ctx.action === 'V-EXAMINE') {
     ctx.tell('The chests are all empty.');
     return true;
   }
 
-  if (ctx.verb === 'take' || ctx.verb === 'open' || ctx.verb === 'put') {
+  if (ctx.action === 'V-TAKE' || ctx.action === 'V-OPEN' || ctx.action === 'V-PUT') {
     ctx.self.moveTo(null);   // REMOVE-CAREFULLY — chest crumbles
     ctx.tell(
       'The chests are so rusty and corroded that they crumble when you touch them.',

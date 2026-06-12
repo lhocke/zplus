@@ -235,6 +235,7 @@ export class Game {
         const tell = (s: string) => outBuf.push(s);
         const ctx = this.buildRobberFcnCtx(this.here.id, tell);
         const vd: VerbDispatch = {
+          action:   actCtx.action,
           verb:     actCtx.verb.toUpperCase(),
           prep:     actCtx.prep,
           prsoId:   actCtx.dobj?.id,
@@ -723,6 +724,7 @@ export class Game {
         // Dispatch on cmd.action (ZIL PRSA), not cmd.verb (verb word) — gmain.zil:283–284.
         const verbResult = executeVerb({
           verb: cmd.verb,
+          action: cmd.action,
           dobj,
           iobj,
           prep: cmd.prep,

@@ -20,6 +20,13 @@ import { CURE_WAIT } from '../combat.js';
 
 export interface VerbContext {
   readonly verb: string;
+  /**
+   * ZIL PRSA — parsed action id, e.g. 'V-ATTACK', 'V-LAMP-ON'.
+   * Multiple verb words map to the same action (kill/stab/strike → V-ATTACK;
+   * turn-ON/activate/light → V-LAMP-ON). Handlers must compare this, not `verb`.
+   * Populated at every dispatch site; never absent when called from game.ts.
+   */
+  readonly action?: string;
   readonly dobj?: GameObject;
   readonly iobj?: GameObject;
   readonly prep?: string;

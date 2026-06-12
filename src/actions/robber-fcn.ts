@@ -20,7 +20,6 @@ import {
   ROBBER_C_DESC,
   ROBBER_U_DESC,
 } from './thief-state.js';
-import { isExamineDispatch, isLookInsideDispatch } from './treasure-room.js';
 
 /** Minimal handle for an in-world object that ROBBER-FUNCTION touches. */
 export interface RobberObj {
@@ -37,7 +36,13 @@ export interface RobberObj {
 
 /** Verb dispatch payload — mirrors the action context fields ROBBER-FUNCTION reads. */
 export interface VerbDispatch {
-  /** ZIL PRSA — action name, e.g. 'TELL', 'GIVE', 'THROW', 'EXAMINE'. */
+  /**
+   * ZIL PRSA action id, e.g. 'V-TELL', 'V-GIVE', 'V-THROW', 'V-EXAMINE'.
+   * Populated at every call site from ActionContext.action; handlers must
+   * compare this, not the canonical verb word.
+   */
+  action?: string;
+  /** Canonical verb word (UPPERCASE). Kept for the THROW-KNIFE prsoId check. */
   verb: string;
   /** Preposition from the parsed command (UPPERCASE — matches syntax.json). */
   prep?: string;
@@ -109,18 +114,17 @@ export function makeRobberFcn(
     // -----------------------------------------------------------------------
     // Verb-dispatch path (MODE absent in ZIL — 1actions.zil:1951–2024)
     // -----------------------------------------------------------------------
-    const verb = vd?.verb ?? '';
-    const prep = vd?.prep;
+    const action = vd?.action ?? '';
 
     // TELL — 1actions.zil:1948–1950
-    if (verb === 'TELL') {
+    if (action === 'V-TELL') {
       ctx.tell('The thief is a strong, silent type.');
       ctx.clearContinuation();
       return true;
     }
 
     // HELLO while unconscious — 1actions.zil:1952–1956
-    if (verb === 'HELLO' && thiefLdesc() === ROBBER_U_DESC) {
+    if (action === 'V-HELLO' && thiefLdesc() === ROBBER_U_DESC) {
       ctx.tell(
         'The thief, being temporarily incapacitated, is unable to acknowledge\n' +
         'your greeting with his usual graciousness.',
@@ -129,7 +133,7 @@ export function makeRobberFcn(
     }
 
     // THROW KNIFE while not fighting — 1actions.zil:1957–1985
-    if (verb === 'THROW' && vd?.prsoId === 'KNIFE' && !vd.fighting) {
+    if (action === 'V-THROW' && vd?.prsoId === 'KNIFE' && !vd.fighting) {
       const knife = ctx.getObj('KNIFE');
       if (knife !== undefined) knife.moveTo(ctx.hereId);
 
@@ -177,7 +181,7 @@ export function makeRobberFcn(
 
     // GIVE or THROW <X> to THIEF — 1actions.zil:1986–2012
     if (
-      (verb === 'THROW' || verb === 'GIVE') &&
+      (action === 'V-THROW' || action === 'V-GIVE' || action === 'V-SGIVE') &&
       vd?.prsoId !== undefined &&
       vd.prsoId !== 'THIEF' &&
       vd.prsiId === 'THIEF'
@@ -216,15 +220,14 @@ export function makeRobberFcn(
     }
 
     // TAKE — 1actions.zil:2013–2015
-    if (verb === 'TAKE') {
+    if (action === 'V-TAKE') {
       ctx.tell('Once you got him, what would you do with him?');
       return true;
     }
 
     // EXAMINE / LOOK-INSIDE — 1actions.zil:2016–2021
     // ZIL VERB? EXAMINE LOOK-INSIDE — only those two actions, not look-under/behind/on.
-    // Use prep-aware predicates (shared with dumbContainer) to gate correctly.
-    if (isExamineDispatch(verb.toLowerCase(), prep) || isLookInsideDispatch(verb.toLowerCase(), prep)) {
+    if (action === 'V-EXAMINE' || action === 'V-LOOK-INSIDE') {
       ctx.tell(
         'The thief is a slippery character with beady eyes that flit back\n' +
         'and forth. He carries, along with an unmistakable arrogance, a large bag\n' +
@@ -235,7 +238,7 @@ export function makeRobberFcn(
     }
 
     // LISTEN — 1actions.zil:2022–2024
-    if (verb === 'LISTEN') {
+    if (action === 'V-LISTEN') {
       ctx.tell('The thief says nothing, as you have not been formally introduced.');
       return true;
     }
