@@ -5,16 +5,22 @@
 #
 # CASE 1 (commands 1-8): plain wait with no pending interrupt.
 #   Setup: navigate to Living Room, take lantern, turn on (Moves 7).
-#   wait → Moves 10 (+3 ticks). No clock output (lamp warning is 199 turns away).
+#   wait → Moves 10 (+3 ticks). No clock output (lamp warning is 196 turns away).
 #   dfrotz output: "Time passes..." then Moves: 10.
 #
-# CASE 2 (commands 9-207): wait after a lamp warning already fired on a look.
-#   After 198 looks (Moves 10→208), the lamp warning fires on look #196 (Moves 206).
-#   The CASE 2 wait at Moves 208 sees no pending interrupt (lamp re-queued 100
-#   turns out), so it runs the full +3 ticks: Moves 208→211.
+# CASE 2 (commands 9-204): warning fires on wait tick 1 (the contested edge).
+#   195 looks (Moves 10→205) position the lamp 1 advance before its first warning.
+#   wait: tick 1 (Moves 206) fires the lamp warning — I-LANTERN returns true, so
+#   CLOCKER returns true and V-WAIT stops early: Moves 205→206 (+1).
+#   dfrotz: Moves 205→206, delta +1 (confirmed live dfrotz R119, 2026-06-12).
+#   OQ-8 resolved: WARNING is a stop condition; only BURNOUT is not.
+#
+# CASE 3 (commands 205-207): wait after lamp warning already fired on a look.
+#   2 looks (Moves 206→208). The CASE 3 wait sees no pending interrupt (lamp
+#   re-queued 100 turns out), so it runs the full +3 ticks: Moves 208→211.
 #   dfrotz output: "Time passes..." then Moves: 211.
 #
-# CASE 3 (commands 208-385): wait with lamp burnout on tick 3.
+# CASE 4 (commands 208-385): wait with lamp burnout on tick 3.
 #   After 177 more looks (Moves 211→388), the lamp is 2 turns before burnout.
 #   wait: tick 1 (Moves 389): no interrupt; tick 2 (Moves 390): no interrupt;
 #   tick 3 (Moves 391): burnout fires — I-LANTERN returns false (no stop), but
@@ -38,12 +44,9 @@ take lantern
 turn on lantern
 wait
 
-# --- CASE 2: wait after lamp warning fired on a look (no interrupt during wait) ---
-# 198 looks: warning fires on look #196 (Moves 206), lamp re-queues for 100 turns.
-# The subsequent wait sees no pending clock event and runs the full 3 ticks.
-look
-look
-look
+# --- CASE 2: warning fires on wait tick 1 (dfrotz: Moves 205->206, +1) ---
+# 195 looks advance the lamp to 1 tick before its first warning.
+# wait fires the warning on tick 1 and stops — interrupted flag set.
 look
 look
 look
@@ -241,7 +244,13 @@ look
 look
 wait
 
-# --- CASE 3: wait with burnout on tick 3 (Moves 388→391) ---
+# --- CASE 3: wait after lamp warning fired (no interrupt during wait) ---
+# 2 looks (Moves 206->208). Lamp re-queued 100 turns; no interrupt during wait.
+look
+look
+wait
+
+# --- CASE 4: wait with burnout on tick 3 (Moves 388->391) ---
 # 177 more looks advance the lamp timer to 2 turns before burnout.
 # At Moves 388, the lamp has 2 ticks remaining before the burnout sentinel fires.
 # Wait: tick 1 (Moves 389): no interrupt; tick 2 (Moves 390): no interrupt;

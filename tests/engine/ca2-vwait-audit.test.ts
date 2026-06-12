@@ -11,19 +11,20 @@
  *   then set so the main loop's own CLOCKER call skips — no double-tick.
  *
  * Engine mapping:
- *   runSegmentTick(action='V-WAIT') → maxClocks=3; break when clockLines.length>0
- *   (any clock entry that fires via ctx.tell() = CLOCKER returned true in ZIL).
+ *   runSegmentTick(action='V-WAIT') → maxClocks=3; break when clock.advance()
+ *   returns interrupted=true (tick() returned true AND ctx.tell() was called).
  *   V-WAIT is NOT in META_ACTIONS → the turn loop also calls runSegmentTick, but
  *   that is THE tick — there is no second tick after it.
  *
  * dfrotz R119 anchor (wait.txt, see tools/oracle/corpus/wait.txt):
  *   - plain wait (no pending interrupt): Moves +3.
  *   - wait across a lamp-warning tick: stops early; total ticks < 3.
- *   - wait with burnout: does NOT stop early (I-LANTERN returns false; no text
- *     via ctx.tell → engine sees clockLines=[] → loop completes all 3 ticks).
+ *   - wait with burnout: does NOT stop early (I-LANTERN returns false → interrupted
+ *     stays false → loop completes all 3 ticks; burnout message still appears).
  *
  * Spec §3.2 (AMENDED), §10.3 bullet "V-WAIT no-double-tick (CA2)".
- * OQ-8 ruling: keep loop-driven form; stop condition clockLines.length>0 correct.
+ * OQ-8 ruling: keep loop-driven form; interrupted-flag stop condition (clock.ts:111–150 +
+ * game.ts:941) is dfrotz-faithful across all seven edges (252877a).
  */
 
 import { describe, it, expect } from 'vitest';
