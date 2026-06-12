@@ -672,6 +672,126 @@ function buildKnownIssuesDialog(): { open: () => void; element: HTMLElement } {
   return { open, element: overlay };
 }
 
+// ── Credits dialog ───────────────────────────────────────────────────────────
+
+// Same div+classList pattern as buildKnownIssuesDialog.
+function buildCreditsDialog(): { open: () => void; element: HTMLElement } {
+  const MIT_LICENSE =
+    'MIT License\n\nCopyright (c) 2025 Microsoft\n\n' +
+    'Permission is hereby granted, free of charge, to any person obtaining a copy\n' +
+    'of this software and associated documentation files (the "Software"), to deal\n' +
+    'in the Software without restriction, including without limitation the rights\n' +
+    'to use, copy, modify, merge, publish, distribute, sublicense, and/or sell\n' +
+    'copies of the Software, and to permit persons to whom the Software is\n' +
+    'furnished to do so, subject to the following conditions:\n\n' +
+    'The above copyright notice and this permission notice shall be included in all\n' +
+    'copies or substantial portions of the Software.\n\n' +
+    'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n' +
+    'IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n' +
+    'FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n' +
+    'AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\n' +
+    'LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\n' +
+    'OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n' +
+    'SOFTWARE.';
+
+  // Outer overlay — backdrop + centering shell. Hidden until open().
+  const overlay = el('div', [
+    'hidden fixed inset-0 z-50 overflow-y-auto',
+    'bg-black/70',
+  ].join(' '), { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'credits-dialog-title' });
+  overlay.id = 'credits-dialog';
+
+  const outer = el('div', 'flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0');
+
+  const panel = el('div', [
+    'relative transform overflow-hidden rounded-lg px-4 pt-5 pb-4 text-left shadow-xl',
+    'sm:my-8 sm:w-full sm:max-w-lg sm:p-6',
+    'bg-[var(--zork-bg)] border border-[var(--zork-accent)]',
+    'text-[var(--zork-fg)] font-mono text-sm overflow-y-auto max-h-[80vh]',
+  ].join(' '));
+
+  // Close button — top-right (Plus pattern).
+  const closeBtnWrap = el('div', 'absolute top-0 right-0 hidden pt-4 pr-4 sm:block');
+  const closeBtn = el('button', [
+    'rounded-md text-[var(--zork-accent)] hover:opacity-75',
+    'focus:outline-2 focus:outline-offset-2',
+  ].join(' '), { type: 'button' });
+  const closeSr = el('span', 'sr-only');
+  closeSr.textContent = 'Close';
+  const closeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  closeIcon.setAttribute('viewBox', '0 0 24 24');
+  closeIcon.setAttribute('fill', 'none');
+  closeIcon.setAttribute('stroke', 'currentColor');
+  closeIcon.setAttribute('stroke-width', '1.5');
+  closeIcon.setAttribute('aria-hidden', 'true');
+  closeIcon.setAttribute('class', 'size-6');
+  const closePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  closePath.setAttribute('d', 'M6 18 18 6M6 6l12 12');
+  closePath.setAttribute('stroke-linecap', 'round');
+  closePath.setAttribute('stroke-linejoin', 'round');
+  closeIcon.appendChild(closePath);
+  closeBtn.appendChild(closeSr);
+  closeBtn.appendChild(closeIcon);
+  closeBtnWrap.appendChild(closeBtn);
+
+  const title = el('h2', 'text-base font-bold mb-4 text-[var(--zork-accent)]');
+  title.id = 'credits-dialog-title';
+  title.textContent = 'About & Credits';
+
+  const p1 = el('p', 'text-xs mb-2');
+  p1.textContent = 'A fan-made re-creation of ZORK I: The Great Underground Empire, rebuilt for the web from the original Infocom source code.';
+
+  const p2 = el('p', 'text-xs mb-2');
+  p2.textContent = 'Zork I was written by Marc Blank, Dave Lebling, Bruce Daniels, and Tim Anderson, and published by Infocom in 1981.';
+
+  const p3 = el('p', 'text-xs mb-2');
+  p3.textContent = 'In 2025, Microsoft released the original ZIL source code as open source under the MIT License. This project\'s game text and behavior derive from that release:';
+
+  const sourceLink = el('a', 'block text-xs mb-2 underline text-[var(--zork-accent)]', {
+    href: 'https://github.com/historicalsource/zork1',
+    target: '_blank',
+    rel: 'noopener noreferrer',
+  });
+  sourceLink.textContent = 'github.com/historicalsource/zork1';
+
+  const p4 = el('p', 'text-xs mb-2 opacity-75');
+  p4.textContent = 'The Infocom copyright notice shown in the terminal is part of the original game\'s opening text, reproduced faithfully.';
+
+  const licenseHeading = el('p', 'text-xs font-bold mt-4 mb-2 text-[var(--zork-accent)]');
+  licenseHeading.textContent = 'MIT License (original Zork I source)';
+
+  const licensePre = el('pre', 'm-0 text-[10px] whitespace-pre-wrap break-words border-l-2 border-[var(--zork-accent)] pl-2 opacity-75');
+  licensePre.textContent = MIT_LICENSE;
+
+  const trademark = el('p', 'text-[10px] opacity-60 mt-3');
+  trademark.textContent = 'This project is not affiliated with, or endorsed by, Microsoft, Activision, or Infocom. ZORK is a trademark of its respective owner.';
+
+  function closeDialog() { overlay.classList.add('hidden'); }
+
+  closeBtn.addEventListener('click', closeDialog);
+  // Backdrop click (outside the panel) closes.
+  overlay.addEventListener('click', (e) => { if (e.target === overlay || e.target === outer) closeDialog(); });
+  // Escape key closes.
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeDialog(); });
+
+  panel.appendChild(closeBtnWrap);
+  panel.appendChild(title);
+  panel.appendChild(p1);
+  panel.appendChild(p2);
+  panel.appendChild(p3);
+  panel.appendChild(sourceLink);
+  panel.appendChild(p4);
+  panel.appendChild(licenseHeading);
+  panel.appendChild(licensePre);
+  panel.appendChild(trademark);
+  outer.appendChild(panel);
+  overlay.appendChild(outer);
+
+  function open() { overlay.classList.remove('hidden'); }
+
+  return { open, element: overlay };
+}
+
 // ── Feedback form dialog ──────────────────────────────────────────────────────
 
 // Tailwind Plus: modal dialog with dismiss button (04-simple-with-dismiss-button.html)
@@ -1126,6 +1246,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
     void map.refresh();
   });
   const { open: openIssues, element: issuesDialog } = buildKnownIssuesDialog();
+  const { open: openCredits, element: creditsDialog } = buildCreditsDialog();
   const { open: openFeedback, element: feedbackDialog } = buildFeedbackDialog(
     () => sessionIdRef,
     () => activeTheme,
@@ -1152,6 +1273,11 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   issuesBtn.textContent = 'Known Issues & Limitations';
   issuesBtn.addEventListener('click', openIssues);
 
+  // Credits button.
+  const creditsBtn = el('button', 'text-xs text-[var(--zork-accent)] underline text-left', { 'data-open-credits': '' });
+  creditsBtn.textContent = 'About & Credits';
+  creditsBtn.addEventListener('click', openCredits);
+
   // Feedback button.
   const feedbackBtn = el('button', 'text-xs text-[var(--zork-accent)] underline text-left');
   feedbackBtn.textContent = 'Send Feedback';
@@ -1161,6 +1287,10 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   const notice = el('p', 'text-[10px] text-[var(--zork-fg)] opacity-60 mt-auto pt-4');
   notice.textContent =
     'Gameplay in this playtest may be recorded and reviewed to help debug the game during development. Sessions are anonymous.';
+
+  // License line — always-visible provenance notice.
+  const licenseLine = el('p', 'text-[10px] text-[var(--zork-fg)] opacity-60 pt-1');
+  licenseLine.textContent = 'Based on Infocom\'s ZORK I. Original source open-sourced by Microsoft under the MIT License (2025).';
 
   // Ko-fi / Patreon links (§7). GitHub Sponsors is NOT included (deferred — §7).
   // Inline SVG logos — no external scripts or trackers (§4).
@@ -1198,8 +1328,10 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   sidebar.appendChild(mapLabel);
   sidebar.appendChild(pathsPanel.element);
   sidebar.appendChild(issuesBtn);
+  sidebar.appendChild(creditsBtn);
   sidebar.appendChild(feedbackBtn);
   sidebar.appendChild(notice);
+  sidebar.appendChild(licenseLine);
   sidebar.appendChild(supportLinks);
 
   // ── Mobile drawer ───────────────────────────────────────────────────────
@@ -1210,6 +1342,9 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
     const target = btn.getAttribute('data-theme-target') as ThemeName;
     btn.addEventListener('click', () => applyTheme(target));
   }
+  // Re-wire credits button in the cloned node.
+  const drawerCreditsBtn = drawerContent.querySelector<HTMLElement>('[data-open-credits]');
+  if (drawerCreditsBtn) drawerCreditsBtn.addEventListener('click', openCredits);
 
   const { overlay: drawerOverlay, toggle: drawerToggle } = buildDrawer(drawerContent);
 
@@ -1244,6 +1379,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   app.appendChild(drawerOverlay);
   app.appendChild(drawerToggle);
   app.appendChild(issuesDialog);
+  app.appendChild(creditsDialog);
   app.appendChild(feedbackDialog);
   app.appendChild(mapModal.element);
 
