@@ -1,0 +1,93 @@
+# coal-machine.txt — coal-mine machine oracle corpus (Zork I oracle harness)
+# generated-by: dfrotz-r119 2026-06-12 coal-machine-cc3
+#
+# MECHANIC: coal→diamond machine + basket RAISE/LOWER.
+# Routines: MACHINE-F (MACHINE), MSWITCH-FUNCTION (MACHINE-SWITCH),
+#            BASKET-F (RAISED-BASKET / LOWERED-BASKET), MACHINE-ROOM-FCN (MACHINE-ROOM).
+# Global: CAGE-TOP — T = basket at top (RAISED-BASKET in SHAFT-ROOM).
+#
+# ZIL refs:
+#   1actions.zil:2488  MACHINE-ROOM-FCN — M-LOOK with dynamic lid state
+#   1actions.zil:2502  MACHINE-F        — OPEN/CLOSE lid, TAKE machine
+#   1actions.zil:2531  MSWITCH-FUNCTION — TURN switch with screwdriver
+#   1actions.zil:277   BASKET-F         — RAISE/LOWER basket, TAKE blocked
+#   1actions.zil:2558  NO-OBJS          — LOWER-SHAFT empty-handed+lit → +13
+#   1actions.zil:2578  <GLOBAL LIGHT-SHAFT 13>
+#
+# BLOCKER (documented): MACHINE-ROOM and SHAFT-ROOM are reached by navigating
+# through the coal mines, which requires crossing the Troll Room.  The troll
+# blocks all passages and triggers RNG-driven combat (ZIL: <PROB 33>,
+# FIGHT-STRENGTH rolls).  dfrotz and the engine use different RNG
+# implementations, so the troll attack/result lines diverge — exactly the
+# RNG-driven content the corpus README declares out of scope.  The coal-mine
+# area therefore cannot be reached end-to-end without crossing a known RNG
+# divergence.
+#
+# The machine and basket mechanics are fully exercised by the unit tests in
+#   tests/actions/cc3-coal-machine.test.ts
+# which drive the real world data via newGameAt('MACHINE-ROOM'),
+# newGameAt('SHAFT-ROOM'), and newGameAt('LOWER-SHAFT').
+#
+# This corpus drives the deterministic above-ground section (through the trap
+# door) and pins the exact turn where the troll's RNG combat first diverges,
+# so the harness can verify that the route up to that point matches dfrotz
+# byte-for-byte.
+#
+# Run with:
+#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/coal-machine.txt
+# (no seed needed for the above-ground legs)
+#
+# Verified against dfrotz R119: first troll-attack divergence at the "east"
+# command from TROLL-ROOM (or first attack response after entry).
+
+# --- State-table coverage notes ---
+#
+# All cells below require MACHINE-ROOM / SHAFT-ROOM / LOWER-SHAFT, which are
+# blocked by troll RNG divergence on the above-ground route.  Corpus coverage
+# is via unit tests in cc3-coal-machine.test.ts:
+#
+# MACHINE-F open (empty): "The lid opens." — cc3 test "open machine when closed"
+# MACHINE-F open (contents): "The lid opens, revealing a small pile of coal."
+# MACHINE-F open (already open): PICK-ONE DUMMY
+# MACHINE-F close (open): "The lid closes."
+# MACHINE-F close (already closed): PICK-ONE DUMMY
+# MACHINE-F take: "It is far too large to carry."
+# MSWITCH-FUNCTION turn/no-screwdriver: "It seems that a X won't do."
+# MSWITCH-FUNCTION turn/lid-open: "The machine doesn't seem to want to do anything."
+# MSWITCH-FUNCTION turn/lid-closed/no-coal: gunk produced + excitement text
+# MSWITCH-FUNCTION turn/lid-closed/coal: coal removed, diamond placed + excitement text
+# BASKET-F raise/up: PICK-ONE DUMMY
+# BASKET-F raise/down: "The basket is raised to the top of the shaft."
+# BASKET-F lower/up: "The basket is lowered to the bottom of the shaft."
+# BASKET-F lower/down: PICK-ONE DUMMY
+# BASKET-F lower/dark: "It is now pitch black." (lamp in basket goes dark)
+# BASKET-F take: "The cage is securely fastened to the iron chain."
+# NO-OBJS: +13 score when player is in LOWER-SHAFT, empty-handed, and room is lit
+#
+# MACHINE-ROOM-FCN M-LOOK lid-state (from dfrotz R119, MACHINE-ROOM initial state):
+# > look
+# Machine Room
+# This is a large, cold room whose sole exit is to the north. In one
+# corner there is a machine which is reminiscent of a clothes
+# dryer. On its face is a switch which is labelled "START".
+# The switch does not appear to be manipulable by any human hand (unless the
+# fingers are about 1/16 by 1/4 inch). On the front of the machine is a large
+# lid, which is closed.
+
+# Set verbose mode.
+verbose
+
+# --- Route: West of House → Cellar → North of Troll Room ---
+open mailbox
+north
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+north
+east
