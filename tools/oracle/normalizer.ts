@@ -254,17 +254,28 @@ function rejoinWrapped(lines: string[]): string {
     paragraphs.push(current.trimEnd());
   }
 
-  return paragraphs.join('\n');
+  // dfrotz collapses double-spaces-after-period (two-space sentence gap from
+  // ZIL source) to a single space in output.  Apply the same collapse here so
+  // engine and dfrotz transcripts agree on inter-sentence spacing.
+  return paragraphs.map((p) => p.replace(/([.!?])\s{2,}/g, '$1 ')).join('\n');
 }
 
 /**
  * Returns true if the line was likely cut mid-sentence by a hard wrap.
  * Lines ending with terminal punctuation or closing delimiters are assumed
  * to end a logical unit; others are treated as wrapped.
+ *
+ * Exception: lines ending with '...' (ellipsis) are treated as wrapped -- ZIL
+ * string literals use '...' as a mid-sentence pause (not a sentence boundary),
+ * and dfrotz renders the following ZIL newline as a space.  Without this
+ * exception the normalizer splits dfrotz and engine outputs at every '...'
+ * boundary when the engine preserves the newline from the message string.
  */
 function looksLikeWrapped(line: string): boolean {
   const trimmed = line.trimEnd();
   if (trimmed.length === 0) return false;
+  // Ellipsis: mid-sentence pause in ZIL, not a terminal stop.
+  if (trimmed.endsWith('...')) return true;
   const last = trimmed[trimmed.length - 1];
   const sentenceEnders = new Set(['.', '!', '?', '"', ')', '-', ':', ';', "'", '”']);
   return !sentenceEnders.has(last);

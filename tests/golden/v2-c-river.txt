@@ -85,7 +85,8 @@ the rocks and boulders one meets at the bottom of waterfalls. Including this one
 
     ****  You have died  ****
 
-Now, let's take a look here... Well, you probably deserve another chance. I can't quite fix you
+Now, let's take a look here...
+Well, you probably deserve another chance.  I can't quite fix you
 up completely, but you can't have everything.
 Forest
 This is a forest, with trees in all directions. To the east, there appears to be sunlight.
