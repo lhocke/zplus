@@ -1,0 +1,59 @@
+# verb-defaults.txt — CB1 verb-default corpus (Zork I dfrotz R119)
+# generated-by: dfrotz-r119 2026-06-12 CB1-climb-enter-exit-lock
+#
+# Anchors the CB1 default-verb strings against dfrotz R119.
+# Verbs covered: V-CLIMB family (gverbs.zil:279–335),
+#   V-ENTER (gverbs.zil:620–621), V-EXIT (gverbs.zil:632–641),
+#   V-LOCK (gverbs.zil:855–856), V-UNLOCK (gverbs.zil:1508–1509).
+#
+# Navigation uses only first-visit rooms to avoid the pre-existing BD9
+# brief-mode revisit divergence (dfrotz suppresses ldesc on revisit;
+# engine always prints — CB5 / spec §4.6 fix, not CB1).
+#
+# CASE 1 (commands 1-2): navigate to PATH — all first visits.
+#   Route: north → NORTH-OF-HOUSE; north → PATH.
+#   NORTH-OF-HOUSE has a north exit directly to PATH (Forest Path).
+#
+# CASE 2 (command 3): "enter" from PATH → no 'in' exit → "You can't go that way."
+#   V-ENTER calls DO-WALK 'in'; PATH has no 'in' exit → blocked.
+#   gverbs.zil:620–621.
+#   dfrotz output: "You can't go that way."
+#
+# CASE 3 (command 4): "exit" from PATH → no 'out' exit → "You can't go that way."
+#   V-EXIT (no vehicle) calls DO-WALK 'out'; PATH has no 'out' exit.
+#   gverbs.zil:632–641.
+#   dfrotz output: "You can't go that way."
+#
+# CASE 4 (command 5): "climb tree" from PATH → UP-A-TREE
+#   V-CLIMB-UP resolves 'up' exit → DO-WALK 'up' → UP-A-TREE (first visit).
+#   gverbs.zil:300–318.
+#   dfrotz output: "Up a Tree\n<ldesc>" + Score/Moves.
+#
+# CASE 5 (command 6): "climb down" from UP-A-TREE → PATH (revisited room)
+#   PATH was visited at step 2; dfrotz brief-mode suppresses ldesc on revisit.
+#   Engine always shows ldesc (pre-existing BD9 gap, not introduced by CB1).
+#   Marked ~RNG-variable to compare only structural landmarks (room header).
+#   gverbs.zil:279–280.
+#
+# LOCK/UNLOCK: tested via CB1 unit tests only. The LOCK syntax requires a
+# TOOLBIT indirect object; orchestrating that deterministically in a corpus
+# without parser orphan-slot complexity is deferred. Corpus rows will be
+# added (extending this file) when a clear setup is confirmed against dfrotz.
+#
+# ZIL refs: gverbs.zil:279–335 (climb), :620–621 (enter), :632–641 (exit).
+
+# --- Setup: WEST-OF-HOUSE → NORTH-OF-HOUSE → PATH ---
+north
+north
+
+# --- CASE 2: enter from PATH → "You can't go that way." ---
+enter
+
+# --- CASE 3: exit from PATH → "You can't go that way." ---
+exit
+
+# --- CASE 4: climb tree from PATH → UP-A-TREE ---
+climb tree
+
+# --- CASE 5: climb down → PATH (revisit; structural match only) ---
+~climb down

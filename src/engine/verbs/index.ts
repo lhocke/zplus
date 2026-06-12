@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, goto, vTieUp, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, goto, vTieUp, vLock, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { CURE_WAIT } from '../combat.js';
 
@@ -1048,6 +1048,102 @@ function verbBreathe(ctx: VerbContext): VerbResult {
   return result(vInflate.response);
 }
 
+// V-LOCK (gverbs.zil:855–856) — default when no object handler claims it.
+// Object FCNs (grate, dam) override at PERFORM step 6; this is the step-7 fallback.
+function verbLock(_ctx: VerbContext): VerbResult {
+  return result(vLock.response);
+}
+
+// V-UNLOCK (gverbs.zil:1508–1509) — calls V-LOCK.
+const verbUnlock = verbLock;
+
+// DO-WALK helper: run verbGo with a synthesized direction prep.
+// V-ENTER and V-CLIMB-* delegate here rather than re-implementing movement.
+function doWalk(dir: string, ctx: VerbContext): VerbResult {
+  return verbGo({ ...ctx, prep: dir });
+}
+
+// V-ENTER (gverbs.zil:620–621) — DO-WALK P?IN.
+function verbEnter(ctx: VerbContext): VerbResult {
+  return doWalk('in', ctx);
+}
+
+// V-EXIT (gverbs.zil:632–641) — vehicle → V-DISEMBARK; else DO-WALK P?OUT.
+// ZIL: PRSO=<>/ROOMS and WINNER in vehicle → PERFORM V?DISEMBARK; else DO-WALK P?OUT.
+function verbExit(ctx: VerbContext): VerbResult {
+  const wloc = ctx.player.parent;
+  if (wloc !== null && wloc !== undefined && wloc.has(Flag.Vehicle)) {
+    return verbDisembark(ctx);
+  }
+  return doWalk('out', ctx);
+}
+
+// V-CLIMB-ON (gverbs.zil:290–298) — VEHBIT → V?BOARD; else "You can't climb onto the X."
+function verbClimbOn(ctx: VerbContext): VerbResult {
+  if (ctx.dobj?.has(Flag.Vehicle)) {
+    return verbBoard(ctx);
+  }
+  return result(`You can't climb onto the ${ctx.dobj?.desc ?? 'that'}.`);
+}
+
+// V-CLIMB-UP (gverbs.zil:300–334) — core climb logic.
+// DIR defaults to P?UP ('up'); V-CLIMB-DOWN passes 'down'.
+//
+// ZIL logic:
+//   1. If PRSO provided and exit in DIR is NEXIT/blocked → "The X doesn't lead up/downward."
+//   2. If exit exists and passable → DO-WALK DIR
+//   3. If PRSO has WALL synonym → "Climbing the walls is to no avail."
+//   4. [Zork-1] Not at PATH, PRSO is nil-or-TREE global, TREE global is in HERE
+//      → "There are no climbable trees here."
+//   5. PRSO nil or ROOMS → "You can't go that way."
+//   6. Else → "You can't do that!"
+function verbClimbUp(dir: string, ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  const exit = ctx.here.exits.find(e => e.dir === dir);
+
+  if (exit !== undefined) {
+    // Exit exists: check if it's actually traversable.
+    if (dobj !== undefined && exit.to === undefined) {
+      // NEXIT / blocked: "The X doesn't lead up/downward."
+      const dir2 = dir === 'up' ? 'up' : 'down';
+      const doesnt = dobj.id === 'STAIRS' ? "don't" : "doesn't";
+      return result(`The ${dobj.desc} ${doesnt} lead ${dir2}ward.`);
+    }
+    // Passable — DO-WALK.
+    return doWalk(dir, ctx);
+  }
+
+  // No exit in that direction.
+  // Zork-1 tree branch (gverbs.zil:324–330): not at PATH, obj is nil or TREE,
+  // TREE global is present in HERE.
+  const treeGlobal = ctx.here.props.get('GLOBAL') === 'TREE';
+  const objIsNilOrTree = dobj === undefined || dobj.id === 'TREE';
+  if (treeGlobal && objIsNilOrTree) {
+    return result('There are no climbable trees here.');
+  }
+
+  if (dobj === undefined) {
+    return result("You can't go that way.");
+  }
+
+  return result("You can't do that!");
+}
+
+// V-CLIMB-FOO (gverbs.zil:281–288) — bare CLIMB: V-CLIMB-UP P?UP.
+function verbClimbFoo(ctx: VerbContext): VerbResult {
+  return verbClimbUp('up', ctx);
+}
+
+// V-CLIMB-DOWN (gverbs.zil:279–280) — V-CLIMB-UP P?DOWN.
+function verbClimbDown(ctx: VerbContext): VerbResult {
+  return verbClimbUp('down', ctx);
+}
+
+// V-CLIMB-UP entry (gverbs.zil:300) — upward direction.
+function verbClimbUpAction(ctx: VerbContext): VerbResult {
+  return verbClimbUp('up', ctx);
+}
+
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
 // V-ODYSSEUS — gverbs.zil:945–961.
@@ -1131,6 +1227,16 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-ECHO':       verbEcho,
   'V-CROSS':      verbCross,
   'V-RAISE':      verbRaise,
+
+  // CB1 — gverbs.zil:855–856, 1508–1509, 620–621, 632–641, 279–335
+  'V-LOCK':       verbLock,
+  'V-UNLOCK':     verbUnlock,
+  'V-ENTER':      verbEnter,
+  'V-EXIT':       verbExit,
+  'V-CLIMB-UP':   verbClimbUpAction,
+  'V-CLIMB-DOWN': verbClimbDown,
+  'V-CLIMB-FOO':  verbClimbFoo,
+  'V-CLIMB-ON':   verbClimbOn,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.
