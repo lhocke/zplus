@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, vBrief, vSuperBrief, vVersion, vScript, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, vBrief, vSuperBrief, vVersion, vScript, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, vLeap, jumploss, wheeeee, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { ROOM_GLOBAL_IDS } from '../parser/room-globals.js';
 import { CURE_WAIT } from '../combat.js';
@@ -1311,6 +1311,71 @@ function verbCross(_ctx: VerbContext): VerbResult {
   return result("You can't cross that!");
 }
 
+// V-SKIP (gverbs.zil:1269–1270) — safe jump, PICK-ONE from WHEEEEE.
+function verbSkip(ctx: VerbContext): VerbResult {
+  const msg = ctx.rng !== undefined ? pick(wheeeee, ctx.rng) : wheeeee.entries[0]!;
+  return result(msg);
+}
+
+// V-LEAP (gverbs.zil:813–842) — JUMP / LEAP / DIVE.
+//
+// With PRSO (jumping over/in/across/off something):
+//   object in HERE + ACTORBIT → "too big to jump over"
+//   object in HERE, not actor  → V-SKIP
+//   object not in HERE          → "That would be a good trick."
+//
+// Without PRSO (bare jump):
+//   DOWN exit absent or flag-false CEXIT → "not a very safe place" + JIGS-UP(JUMPLOSS)
+//   Zork-1 UP-A-TREE special: text + DO-WALK DOWN
+//   otherwise (passable, not UP-A-TREE) → V-SKIP
+//
+// Dome death/skip emerge from exit structure — no dome-specific code here.
+// (ZIL's DOME-ROOM-FCN M-ENTER VERB?LEAP branch is unreachable in this engine
+// because M-ENTER always fires with action='V-WALK'.)
+function verbLeap(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+
+  if (dobj !== undefined) {
+    // Object present in scope but not in HERE → good trick message.
+    const inHere = dobj.parent === ctx.here || dobj.parent === ctx.player;
+    if (!inHere) return result(vLeap.goodTrick);
+    // Object is in HERE — actor vs non-actor.
+    if (dobj.has(Flag.Actor)) return result(fmt(vLeap.actorTooBig, dobj.desc));
+    return verbSkip(ctx);
+  }
+
+  // No PRSO — inspect the DOWN exit.
+  const downExit = ctx.here.exits.find(e => e.dir === 'down');
+
+  // NEXIT: no exit in this direction.
+  if (downExit === undefined) {
+    ctx.jigsUp?.(pick(jumploss, ctx.rng ?? { next: () => 0 }));
+    return result(vLeap.unsafeJump, false, /*fatal*/true);
+  }
+
+  // CEXIT with false flag — blocked conditional exit.
+  if (downExit.ifFlag !== undefined) {
+    const gateObj = ctx.world.get(downExit.ifFlag);
+    const open = gateObj !== undefined
+      ? gateObj.has(Flag.Open)
+      : (ctx.getGlobal?.(downExit.ifFlag) ?? false);
+    if (!open) {
+      ctx.jigsUp?.(pick(jumploss, ctx.rng ?? { next: () => 0 }));
+      return result(vLeap.unsafeJump, false, /*fatal*/true);
+    }
+  }
+
+  // Zork-1 special: at UP-A-TREE, the passable exit leads safely down.
+  // gverbs.zil:831–837 — "unaccustomed daring" text + DO-WALK DOWN.
+  if (ctx.here.id === 'UP-A-TREE') {
+    const walkResult = doWalk('down', ctx);
+    return result(vLeap.upATreeDaring + (walkResult.output ? '\n' + walkResult.output : ''), walkResult.moved);
+  }
+
+  // Passable exit, not UP-A-TREE → V-SKIP.
+  return verbSkip(ctx);
+}
+
 // V-RAISE (gverbs.zil:1131–1132) — V-LOWER (same HACK-HACK route).
 function verbRaise(ctx: VerbContext): VerbResult {
   return verbLower(ctx);
@@ -1587,6 +1652,7 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-ECHO':       verbEcho,
   'V-CROSS':      verbCross,
   'V-RAISE':      verbRaise,
+  'V-LEAP':       verbLeap,    // gverbs.zil:813–842
 
   // CB1 — gverbs.zil:855–856, 1508–1509, 620–621, 632–641, 279–335
   'V-LOCK':       verbLock,

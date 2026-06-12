@@ -32,6 +32,34 @@
 # Verified against dfrotz R119: first troll-attack divergence at the
 # "east" command from TROLL-ROOM (or first attack response after entry).
 
+# --- State-table coverage notes (cells 13 / 15 / 16) ---
+#
+# These cells require DOME-ROOM, which is blocked by troll RNG divergence on the
+# above-ground route. Corpus coverage is via unit tests in cc2-dome-rope.test.ts:
+#
+# Cell 13 (untied → flag-false CEXIT → death):
+#   DOME-FLAG=false: DOWN exit has ifFlag="DOME-FLAG" and flag is false.
+#   V-LEAP checks → CEXIT flag-false → "This was not a very safe place to try
+#   jumping." + JIGS-UP(PICK-ONE JUMPLOSS).  Death is RNG-text: unit tests assert
+#   branch (jigsUp fires / "You have died" present), not the specific draw.
+#   dfrotz: from DOME-ROOM without rope tied, `jump` kills the player with one of
+#   the three JUMPLOSS strings.  ZIL ref: gverbs.zil:823–830.
+#
+# Cell 15 (tied → passable exit → V-SKIP):
+#   DOME-FLAG=true: DOWN exit is passable.  V-LEAP sees passable exit, not at
+#   UP-A-TREE → V-SKIP → PICK-ONE from WHEEEEE table (4 entries).  Player does
+#   not move (V-SKIP has no DO-WALK).
+#   dfrotz: from DOME-ROOM with rope tied, `jump` prints one of the WHEEEEE strings.
+#   ZIL ref: gverbs.zil:840, 1269–1276.
+#
+# Cell 16 (bare "climb rope" → V-CLIMB-FOO, NOT descent):
+#   1actions.zil:3050 is <VERB? CLIMB-DOWN> ONLY — ROPE-FUNCTION does not match
+#   V-CLIMB-FOO.  Bare "climb rope" falls through to verbClimbFoo default
+#   "You can't do that!"  Engine previously had the fabricated || V-CLIMB-FOO
+#   disjunct; removed in this commit.
+#   dfrotz: from DOME-ROOM with rope tied, `climb rope` produces "You can't do that!"
+#   ZIL ref: 1actions.zil:3050, gverbs.zil:281.
+
 # Set verbose mode.
 verbose
 

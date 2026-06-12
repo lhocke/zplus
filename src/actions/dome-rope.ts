@@ -72,8 +72,10 @@ export const domeRoomFcn: ActionHandler = (ctx) => {
   }
 
   if (ctx.rarg === M_ENTER) {
-    // Dead player: pulled over railing and down to TORCH-ROOM.
-    // 1actions.zil:1041–1047
+    // Dead player: pulled over railing and down to TORCH-ROOM. 1actions.zil:1041–1047
+    // The ZIL M-ENTER also checks <VERB? LEAP> (1actions.zil:1048–1050), but the engine
+    // always fires M-ENTER with action='V-WALK', so that check is unreachable here.
+    // V-LEAP handles the dome jump generically via the DOWN exit structure (no dome-specific code).
     if (ctx.isDead?.()) {
       ctx.tell(
         'As you enter the dome you feel a strong pull as if from a wind ' +
@@ -83,12 +85,6 @@ export const domeRoomFcn: ActionHandler = (ctx) => {
       if (torchRoom !== undefined) {
         ctx.actor.moveTo(torchRoom);
       }
-      return true;
-    }
-
-    // LEAP into the dome → death. 1actions.zil:1048–1050
-    if (ctx.action === 'V-LEAP') {
-      ctx.jigsUp?.('I\'m afraid that the leap you attempted has done you in.');
       return true;
     }
 
@@ -154,7 +150,7 @@ export const ropeFunction: ActionHandler = (ctx) => {
   // Must force the walk directly here; returning false falls through to the
   // V-CLIMB-DOWN default (verbClimbUp), which sees OBJ=ROPE (not ROOMS) and
   // emits "The rope doesn't lead downward." instead of descending.
-  if ((ctx.action === 'V-CLIMB-DOWN' || ctx.action === 'V-CLIMB-FOO') && domeFlag) {
+  if (ctx.action === 'V-CLIMB-DOWN' && domeFlag) {
     const torchRoom = ctx.world.get('TORCH-ROOM') as Room | undefined;
     if (torchRoom !== undefined) {
       ctx.moveTo(ctx.actor, torchRoom);

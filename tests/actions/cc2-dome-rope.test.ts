@@ -396,3 +396,107 @@ describe('CC2 — V-TIE-UP ACTORBIT: struggle and awaken branches (1actions.zil:
     expect(ps).toBeGreaterThan(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Cell 13 — V-LEAP at DOME-ROOM, untied (flag-false CEXIT → death)
+// gverbs.zil:823–830: NEXIT/flag-false-CEXIT → "not a very safe place" + JIGS-UP
+// ---------------------------------------------------------------------------
+
+describe('CC2 cell 13 — jump at dome without rope tied: death (gverbs.zil:823–830)', () => {
+  it('jump at DOME-ROOM with DOME-FLAG=false: emits unsafe-jump message', () => {
+    const g = newGameAt('DOME-ROOM');
+    g.start();
+    giveLantern(g);
+    // DOME-FLAG is false (default): flag-false CEXIT → unsafe
+    expect(flags(g).get('DOME-FLAG')).toBe(false);
+    const out = g.turn('jump').output;
+    expect(out).toContain('not a very safe place to try jumping');
+  });
+
+  it('jump at DOME-ROOM with DOME-FLAG=false: triggers death (You have died)', () => {
+    const g = newGameAt('DOME-ROOM');
+    g.start();
+    giveLantern(g);
+    const out = g.turn('jump').output;
+    // RNG-text death message is seeded/structural — assert branch (jigsUp), not draw.
+    expect(out).toContain('You have died');
+  });
+
+  it('jump at DOME-ROOM with DOME-FLAG=false: fatal (not still alive in DOME-ROOM)', () => {
+    const g = newGameAt('DOME-ROOM');
+    g.start();
+    giveLantern(g);
+    const out = g.turn('jump').output;
+    // jigsUp fires: resurrection moves player to FOREST-1; player is no longer in DOME-ROOM
+    expect(g.view().here).not.toBe('DOME-ROOM');
+    // And the death message is present (branch check — not the specific RNG draw)
+    expect(out).toContain('You have died');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cell 15 — V-LEAP at DOME-ROOM, tied (passable exit → V-SKIP)
+// gverbs.zil:840: passable exit → V-SKIP (PICK-ONE ,WHEEEEE)
+// ---------------------------------------------------------------------------
+
+describe('CC2 cell 15 — jump at dome with rope tied: V-SKIP response (gverbs.zil:840)', () => {
+  it('jump at DOME-ROOM with DOME-FLAG=true: emits a WHEEEEE-table entry', () => {
+    const g = newGameAt('DOME-ROOM');
+    g.start();
+    giveLantern(g);
+    flags(g).set('DOME-FLAG', true);
+    const out = g.turn('jump').output;
+    // V-SKIP PICK-ONE from WHEEEEE (gverbs.zil:1272-1276) — assert one of the four entries
+    const wheeeee = [
+      'Very good. Now you can go to the second grade.',
+      'Are you enjoying yourself?',
+      'Wheeeeeeeeee!!!!!',
+      'Do you expect me to applaud?',
+    ];
+    expect(wheeeee.some(s => out.includes(s))).toBe(true);
+  });
+
+  it('jump at DOME-ROOM with DOME-FLAG=true: player does not move (V-SKIP, no DO-WALK)', () => {
+    const g = newGameAt('DOME-ROOM');
+    g.start();
+    giveLantern(g);
+    flags(g).set('DOME-FLAG', true);
+    g.turn('jump');
+    // V-SKIP does NOT call DO-WALK; player stays in DOME-ROOM
+    expect(g.view().here).toBe('DOME-ROOM');
+  });
+
+  it('jump at DOME-ROOM with DOME-FLAG=true: no death (not fatal)', () => {
+    const g = newGameAt('DOME-ROOM');
+    g.start();
+    giveLantern(g);
+    flags(g).set('DOME-FLAG', true);
+    const out = g.turn('jump').output;
+    expect(out).not.toContain('You have died');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cell 16 — V-CLIMB-FOO (bare "climb rope") at DOME-ROOM: no descent
+// FIX 1: 1actions.zil:3050 is <VERB? CLIMB-DOWN> ONLY — V-CLIMB-FOO must
+// fall through to the verbClimbFoo default ("You can't do that!").
+// ---------------------------------------------------------------------------
+
+describe('CC2 cell 16 — bare "climb rope" at dome does NOT descend (1actions.zil:3050)', () => {
+  it('climb rope in DOME-ROOM with DOME-FLAG=true: player does not move to TORCH-ROOM', () => {
+    const g = gameWithRopeAtDome();
+    g.turn('tie rope to railing');
+    expect(flags(g).get('DOME-FLAG')).toBe(true);
+    g.turn('climb rope');
+    // V-CLIMB-FOO must NOT descend; ZIL 3050 is VERB? CLIMB-DOWN only
+    expect(g.view().here).toBe('DOME-ROOM');
+  });
+
+  it('climb rope in DOME-ROOM with DOME-FLAG=true: emits cannot-do message', () => {
+    const g = gameWithRopeAtDome();
+    g.turn('tie rope to railing');
+    const out = g.turn('climb rope').output;
+    // verbClimbFoo default: "You can't do that!"
+    expect(out).toContain("can't do that");
+  });
+});
