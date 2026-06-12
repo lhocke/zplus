@@ -33,7 +33,9 @@
 # Set verbose mode.
 verbose
 
-# --- Route: West of House → Cellar → North of Troll Room ---
+# --- Route: West of House → Cellar → Troll Room ---
+# Commands through to the trap door are deterministic (no troll); verified exact.
+# The troll room entry and subsequent combat are RNG-variable — marked with ~.
 open mailbox
 north
 east
@@ -45,5 +47,5 @@ move rug
 open trap door
 turn on lantern
 down
-north
-east
+~north
+~east
