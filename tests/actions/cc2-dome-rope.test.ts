@@ -500,3 +500,67 @@ describe('CC2 cell 16 — bare "climb rope" at dome does NOT descend (1actions.z
     expect(out).toContain("can't do that");
   });
 });
+
+// ---------------------------------------------------------------------------
+// V-LEAP algorithm faithfulness — ZIL gverbs.zil:813–842
+//
+// No DOWN property (GETPT=0) → falls to (T <V-SKIP>) — safe jump.
+// NEXIT (elseMessage-only, no to/per) → death.
+// CEXIT flag-false (ifFlag, flag not set) → death.
+// Fatal jump message ORDER: unsafe-jump line FIRST, then JUMPLOSS pick.
+// ---------------------------------------------------------------------------
+
+describe('V-LEAP: no-DOWN-property room → safe V-SKIP (gverbs.zil:839–840)', () => {
+  // ZIL: GETPT HERE P?DOWN = 0 → PTSIZE 0, not 2/4 → falls to (T <V-SKIP>).
+  // WEST-OF-HOUSE has no down exit; jumping there must be safe (not fatal).
+  it('jump at WEST-OF-HOUSE: player survives (no death)', () => {
+    const g = newGameAt('WEST-OF-HOUSE');
+    g.start();
+    const out = g.turn('jump').output;
+    expect(out).not.toContain('You have died');
+  });
+
+  it('jump at WEST-OF-HOUSE: emits a WHEEEEE-table entry', () => {
+    const g = newGameAt('WEST-OF-HOUSE');
+    g.start();
+    const out = g.turn('jump').output;
+    const wheeeeeEntries = [
+      'Very good. Now you can go to the second grade.',
+      'Are you enjoying yourself?',
+      'Wheeeeeeeeee!!!!!',
+      'Do you expect me to applaud?',
+    ];
+    expect(wheeeeeEntries.some(s => out.includes(s))).toBe(true);
+  });
+
+  it('jump at WEST-OF-HOUSE: player stays in WEST-OF-HOUSE', () => {
+    const g = newGameAt('WEST-OF-HOUSE');
+    g.start();
+    g.turn('jump');
+    expect(g.view().here).toBe('WEST-OF-HOUSE');
+  });
+});
+
+describe('V-LEAP: fatal jump message order — unsafe-jump line before JUMPLOSS draw (gverbs.zil:828–830)', () => {
+  // ZIL order: <TELL "This was not a very safe place..."> then <JIGS-UP <PICK-ONE ,JUMPLOSS>>.
+  // Engine must emit unsafeJump BEFORE the JUMPLOSS pick, not after the death block.
+  it('jump at DOME-ROOM with DOME-FLAG=false: unsafe-jump line appears before JUMPLOSS pick', () => {
+    const g = newGameAt('DOME-ROOM');
+    g.start();
+    giveLantern(g);
+    const out = g.turn('jump').output;
+    const unsafeIdx = out.indexOf('not a very safe place to try jumping');
+    // JUMPLOSS entries
+    const jumplossEntries = [
+      'You should have looked before you leaped.',
+      'In the movies, your life would be passing before your eyes.',
+      'Geronimo...',
+    ];
+    const jumplossPick = jumplossEntries.find(s => out.includes(s));
+    // World-state prerequisite: death must have fired (JUMPLOSS pick present)
+    expect(jumplossPick, 'jigsUp must have fired — JUMPLOSS pick must be in output').toBeDefined();
+    const jumplossIdx = out.indexOf(jumplossPick!);
+    // Assert order: unsafeJump comes before the JUMPLOSS pick
+    expect(unsafeIdx).toBeLessThan(jumplossIdx);
+  });
+});

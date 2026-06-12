@@ -1325,9 +1325,14 @@ function verbSkip(ctx: VerbContext): VerbResult {
 //   object not in HERE          → "That would be a good trick."
 //
 // Without PRSO (bare jump):
-//   DOWN exit absent or flag-false CEXIT → "not a very safe place" + JIGS-UP(JUMPLOSS)
+//   No DOWN property (downExit absent) → GETPT=0 → (T <V-SKIP>) — SAFE
+//   NEXIT (elseMessage-only, no to/per/ifFlag) → death
+//   CEXIT flag-false (ifFlag, flag not set) → death
 //   Zork-1 UP-A-TREE special: text + DO-WALK DOWN
 //   otherwise (passable, not UP-A-TREE) → V-SKIP
+//
+// Fatal jump ZIL order (gverbs.zil:828–830): TELL unsafeJump FIRST, then JIGS-UP.
+// Engine: pass unsafeJump as prefix of the deathMessage so jigsUp emits it first.
 //
 // Dome death/skip emerge from exit structure — no dome-specific code here.
 // (ZIL's DOME-ROOM-FCN M-ENTER VERB?LEAP branch is unreachable in this engine
@@ -1347,21 +1352,31 @@ function verbLeap(ctx: VerbContext): VerbResult {
   // No PRSO — inspect the DOWN exit.
   const downExit = ctx.here.exits.find(e => e.dir === 'down');
 
-  // NEXIT: no exit in this direction.
-  if (downExit === undefined) {
-    ctx.jigsUp?.(pick(jumploss, ctx.rng ?? { next: () => 0 }));
-    return result(vLeap.unsafeJump, false, /*fatal*/true);
+  // No DOWN property (GETPT returns 0): falls to (T <V-SKIP>) in ZIL — safe jump.
+  // gverbs.zil:823: <SET TX <GETPT ,HERE ,P?DOWN>> — TX=0 when no property.
+  // The PTSIZE(0) check (S==2 NEXIT or S==4 CEXIT) fails, so V-SKIP runs.
+  if (downExit === undefined) return verbSkip(ctx);
+
+  // NEXIT: a down entry that only carries an elseMessage (PTSIZE==2 in ZIL).
+  // gverbs.zil:825: <EQUAL? .S 2>
+  const isNexit = downExit.to === undefined && downExit.per === undefined && downExit.ifFlag === undefined;
+  if (isNexit) {
+    const jlPick = pick(jumploss, ctx.rng ?? { next: () => 0 });
+    ctx.jigsUp?.(vLeap.unsafeJump + '\n' + jlPick);
+    return result('', false, /*fatal*/true);
   }
 
-  // CEXIT with false flag — blocked conditional exit.
+  // CEXIT with false flag — blocked conditional exit (PTSIZE==4, flag false).
+  // gverbs.zil:826–827: <AND <EQUAL? .S 4> <NOT <VALUE <GETB .TX 1>>>>
   if (downExit.ifFlag !== undefined) {
     const gateObj = ctx.world.get(downExit.ifFlag);
     const open = gateObj !== undefined
       ? gateObj.has(Flag.Open)
       : (ctx.getGlobal?.(downExit.ifFlag) ?? false);
     if (!open) {
-      ctx.jigsUp?.(pick(jumploss, ctx.rng ?? { next: () => 0 }));
-      return result(vLeap.unsafeJump, false, /*fatal*/true);
+      const jlPick = pick(jumploss, ctx.rng ?? { next: () => 0 });
+      ctx.jigsUp?.(vLeap.unsafeJump + '\n' + jlPick);
+      return result('', false, /*fatal*/true);
     }
   }
 
