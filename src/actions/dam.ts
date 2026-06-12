@@ -462,12 +462,11 @@ export const reservoirFcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
     const lowTide = ctx.getGlobal?.('LOW-TIDE') ?? false;
     if (lowTide) {
-      // :1453–1456 — drained: mud pile.  ZIL string has a physical \n after "large"
-      // which dfrotz treats as a word separator; dfrotz wraps "...large mud pile."
-      // as line 1 (76 chars), then "There are..." as line 2.  After normalization:
-      // two paragraphs.  Port: two separate tells to match.
-      ctx.tell('You are on what used to be a large lake, but which is now a large mud pile.');
-      ctx.tell('There are "shores" to the north and south.');
+      // :1453–1456 — drained: mud pile.  The ZIL source newline after "large"
+      // inside the string literal is a word-separator, not a paragraph break
+      // (dfrotz renders it as a space then word-wraps the 118-char string at
+      // col 80).  One tell — normalizer handles the dfrotz width-wrap. (R6.)
+      ctx.tell('You are on what used to be a large lake, but which is now a large mud pile. There are "shores" to the north and south.');
     } else {
       // :1457–1461 — filled: lake.  One <TELL> block; dfrotz word-wraps to one paragraph.
       ctx.tell(

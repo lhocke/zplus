@@ -10,8 +10,7 @@ Click.
 
 > west
 Dam Lobby
-This room appears to have been the waiting room for groups touring the dam.
-There are open doorways here to the north and east marked "Private", and there is a path leading south over the top of the dam.
+This room appears to have been the waiting room for groups touring the dam. There are open doorways here to the north and east marked "Private", and there is a path leading south over the top of the dam.
 Some guidebooks entitled "Flood Control Dam #3" are on the reception desk.
 There is a matchbook whose cover says "Visit Beautiful FCD#3" here.
 
@@ -78,14 +77,12 @@ There is a path along the stream to the east or west, a steep pathway climbing s
 
 > north
 Reservoir
-You are on what used to be a large lake, but which is now a large mud pile.
-There are "shores" to the north and south.
+You are on what used to be a large lake, but which is now a large mud pile. There are "shores" to the north and south.
 Lying half buried in the mud is an old trunk, bulging with jewels.
 
 > look
 Reservoir
-You are on what used to be a large lake, but which is now a large mud pile.
-There are "shores" to the north and south.
+You are on what used to be a large lake, but which is now a large mud pile. There are "shores" to the north and south.
 Lying half buried in the mud is an old trunk, bulging with jewels.
 
 > south

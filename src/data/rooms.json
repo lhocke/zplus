@@ -2334,7 +2334,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This room appears to have been the waiting room for groups touring the dam.\nThere are open doorways here to the north and east marked \"Private\", and there is a path leading south over the top of the dam.",
+    "ldesc": "This room appears to have been the waiting room for groups touring the dam. There are open doorways here to the north and east marked \"Private\", and there is a path leading south over the top of the dam.",
     "exits": [
       {
         "dir": "south",
@@ -2360,7 +2360,7 @@
     "props": {},
     "synonyms": [],
     "adjectives": [],
-    "ldesc": "This is what appears to have been the maintenance room for Flood Control Dam #3.\nApparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south.",
+    "ldesc": "This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south.",
     "exits": [
       {
         "dir": "south",

@@ -166,6 +166,51 @@ describe('normalizer hard-wrap rejoining', () => {
     );
   });
 
+  it('rejoins dfrotz width-80 wrap across sentence-boundary period when line >= 75 chars', () => {
+    // DAM-LOBBY ldesc: dfrotz wraps the single continuous ZIL string at col 80.
+    // Line 1 ends with "." but is 75 chars — not a genuine paragraph break.
+    // The normalizer must rejoin it with the continuation.
+    // (1dungeon.zil:2149-2152 — single LDESC string, break is rendering artifact)
+    const status = ' West of House                                    Score: 0        Moves: 0';
+    const raw = [
+      status,
+      '',
+      'Dam Lobby',
+      'This room appears to have been the waiting room for groups touring the dam.',
+      'There are open doorways here to the north and east marked "Private", and there',
+      'is a path leading south over the top of the dam.',
+      'Some guidebooks here.',
+    ].join('\n');
+
+    const turns = normalizeDfrotz(raw);
+    // Must be rejoined into one paragraph (not split at the 75-char sentence end)
+    expect(turns[0]?.text).toContain(
+      'This room appears to have been the waiting room for groups touring the dam. There are open doorways',
+    );
+    expect(turns[0]?.text).not.toMatch(/touring the dam\.\n/);
+  });
+
+  it('rejoins maintenance-room 80-char sentence-boundary wrap', () => {
+    // MAINTENANCE-ROOM ldesc: first line is exactly 80 chars, ends with ".".
+    // dfrotz width-80 forced wrap — must be rejoined.
+    // (1dungeon.zil:2161-2166 — single LDESC string)
+    const status = ' West of House                                    Score: 0        Moves: 0';
+    const raw = [
+      status,
+      '',
+      'Maintenance Room',
+      'This is what appears to have been the maintenance room for Flood Control Dam #3.',
+      'Apparently, this room has been ransacked recently, for most of the valuable',
+      'equipment is gone.',
+    ].join('\n');
+
+    const turns = normalizeDfrotz(raw);
+    expect(turns[0]?.text).toContain(
+      'This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently',
+    );
+    expect(turns[0]?.text).not.toMatch(/Dam #3\.\n/);
+  });
+
   it('preserves paragraph breaks (blank lines become \\n in output)', () => {
     // The initial status bar produces no text, so the second block (after the
     // second status-bar turn separator) becomes turns[0] after empty-filtering.

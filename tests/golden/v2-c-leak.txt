@@ -7,8 +7,7 @@ It is pitch black. You are likely to be eaten by a grue.
 
 > look
 Maintenance Room
-This is what appears to have been the maintenance room for Flood Control Dam #3.
-Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south.
+This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south.
 There is a wrench here.
 There is an object which looks like a tube of toothpaste here.
 There is a screwdriver here.
@@ -42,8 +41,7 @@ Time passes...
 
 > look
 Maintenance Room
-This is what appears to have been the maintenance room for Flood Control Dam #3.
-Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south.
+This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south.
 There is a wrench here.
 There is an object which looks like a tube of toothpaste here.
 There is a screwdriver here.
