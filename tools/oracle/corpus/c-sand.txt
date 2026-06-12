@@ -1,0 +1,158 @@
+# C-SAND corpus — dig scarab at Sandy Beach (BDIGS progression + reveal)
+#
+# MECHANIC: Shovel is at SANDY-BEACH.  Four digs in SANDY-CAVE (ne of beach):
+#   dig #1 → BDIGS[0]: "You seem to be digging a hole here."
+#   dig #2 → BDIGS[1]: "The hole is getting deeper, but that's about it."
+#   dig #3 → BDIGS[2]: "You are surrounded by a wall of sand on all sides."
+#   dig #4 → scarab revealed ("You can see a scarab here in the sand.")
+# A fifth dig causes the hole to collapse and the scarab is re-hidden.
+#
+# ACCESS: Sandy Beach (SANDY-BEACH) is reachable from SHORE (north).
+# Route: house → cellar → troll → dam drain → pump → boat → drift to RIVER-5
+# → east to SHORE → disembark → north to SANDY-BEACH.
+#
+# RNG NOTE: The route passes through the Troll Room.  With seed -s 1, the troll
+# (fought with sword) dies after ~3 hits.
+#
+# RIVER TIMING: Uses c-river.txt's proven sequence (same look/wait counts).
+# I-RIVER clock speeds: RIVER-1: 4, RIVER-2: 4, RIVER-3: 3, RIVER-4: 2, RIVER-5: 1.
+#   launch → RIVER-1, clock=4→3
+#   look: 3→2 | wait: 2→1 | wait: 1→0 FIRE → RIVER-2 (rearm 4)
+#   look: 4→3 | wait×3: 3→2→1→0 FIRE → RIVER-3 (rearm 3)
+#   wait×3: 3→2→1→0 FIRE → RIVER-4 (rearm 2)
+#   take buoy: 2→1 | wait: 1→0 FIRE → RIVER-5
+#   east: exit to Shore → disembark → north → Sandy Beach
+#
+# Run with:
+#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-sand.txt
+
+# Set verbose mode so dfrotz and engine both use verbose room descriptions.
+verbose
+
+# --- Route: house → cellar → troll room → dam drain → pump → river → beach ---
+north
+east
+open window
+west
+
+# Living Room: take sword and lantern
+west
+take sword
+take lantern
+move rug
+open trap door
+turn on lantern
+
+# Cellar → Troll Room (north from Cellar)
+down
+north
+~kill troll with sword
+~kill troll with sword
+~kill troll with sword
+@resync East-West Passage
+
+# EW-Passage → Round Room → NS-Passage → Deep Canyon → Dam Room
+east
+north
+ne
+east
+
+# Dam Room → Dam Lobby → Maintenance Room → take wrench → unlock panel
+north
+north
+take wrench
+push yellow button
+
+# Maintenance Room → Dam Lobby → Dam Room
+south
+south
+
+# Drain the reservoir: turn bolt (sluice open) then wait 8 turns
+turn bolt with wrench
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+
+# Reservoir drained; navigate to Reservoir North to get pump
+# DAM-ROOM → RESERVOIR-SOUTH → RESERVOIR → RESERVOIR-NORTH
+west
+north
+north
+take pump
+
+# Return: RESERVOIR-NORTH → RESERVOIR → RESERVOIR-SOUTH → DAM-ROOM
+south
+south
+east
+
+# Down to Dam Base; drop sword before boarding (sharp object punctures boat).
+# Also drop pump after inflating (done at DAM-BASE) so it isn't scattered on
+# death by randomizeObjects (pump is non-treasure → random ABOVE-GROUND room).
+down
+drop sword
+
+# --- River section: exact same sequence as c-river.txt ---
+look
+inflate boat with pump
+drop pump
+look
+board boat
+launch
+
+# RIVER-1: look(3→2), wait(2→1), wait(1→0 FIRE→RIVER-2)
+look
+wait
+wait
+
+# RIVER-2: look(4→3), wait×3 (3→2→1→0 FIRE→RIVER-3)
+look
+wait
+wait
+wait
+
+# RIVER-3: wait×3 (3→2→1→0 FIRE→RIVER-4)
+wait
+wait
+wait
+
+# RIVER-4: buoy pickup, then wait(1→0 FIRE→RIVER-5)
+take buoy
+wait
+
+# RIVER-5: exit east to Shore
+east
+
+# --- Arrive at Shore; exit boat ---
+@resync Shore
+disembark
+
+# Shore → Sandy Beach (north)
+north
+
+# C-SAND walkthrough proper: at Sandy Beach
+# Shovel is here at SANDY-BEACH; SAND and SCARAB are in Sandy Cave (northeast)
+look
+take shovel
+
+# Go to Sandy Cave for the dig sequence
+ne
+look
+
+# Dig progression (in Sandy Cave, where SAND object lives):
+#   BDIGS[0]: "You seem to be digging a hole here."
+#   BDIGS[1]: "The hole is getting deeper, but that's about it."
+#   BDIGS[2]: "You are surrounded by a wall of sand on all sides."
+#   dig 4:    scarab revealed ("You can see a scarab here in the sand.")
+dig sand with shovel
+dig sand with shovel
+dig sand with shovel
+dig sand with shovel
+
+# Scarab visible: take it (still in Sandy Cave)
+take scarab
+look

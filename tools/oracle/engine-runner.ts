@@ -7,6 +7,14 @@
  */
 
 import { createGame } from '../../src/engine/bootstrap.js';
+import {
+  resetKitchenWindowFlag,
+  resetRugMoved,
+  resetGrateRevealed,
+  resetGrunlock,
+  resetSingSong,
+} from '../../src/actions/above-ground.js';
+import { resetMatchCount } from '../../src/actions/light-sources.js';
 
 export interface EngineRunOptions {
   /**
@@ -30,6 +38,15 @@ export function runEngine(
   commands: readonly string[],
   opts: EngineRunOptions = {},
 ): string {
+  // Reset module-level ZIL globals so each corpus run starts clean — mirrors
+  // the reset list in src/shell/session.ts (§2 C1).
+  resetKitchenWindowFlag();
+  resetRugMoved();
+  resetGrateRevealed();
+  resetGrunlock();
+  resetSingSong();
+  resetMatchCount();
+
   const game = createGame({ seed: opts.seed ?? 42 });
 
   const lines: string[] = [];

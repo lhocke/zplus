@@ -66,8 +66,20 @@ export interface ActionContext {
   isClockEnabled?(id: string): boolean;
   /** Whether the player is currently dead (ghost mode).  Optional; absent → false. */
   isDead?(): boolean;
+  /**
+   * Re-arm a clock entry: set its turnsLeft and enable/disable it.
+   * Mirrors the ZIL <ENABLE <QUEUE id period>> + <QUEUE id 0> park idiom.
+   * Optional so existing test stubs that don't wire the clock still type-check.
+   */
+  queueClock?(id: string, period: number, enabled: boolean): void;
   /** Signal fatal outcome — ZIL M-FATAL; stops the PERFORM chain. */
   fatal(): void;
+  /**
+   * Full JIGS-UP death machinery — 1actions.zil:4046–4099.
+   * Emits the death/resurrection sequence and signals fatal abort.
+   * Optional so unit-test stubs that don't wire the death machinery can omit it.
+   */
+  jigsUp?(deathMessage: string): void;
   /**
    * FINISH — gverbs.zil:33–53.  Web-shell form: render V-SCORE, set gameOver.
    * Optional so action contexts that don't need it can omit it.
@@ -80,6 +92,29 @@ export interface ActionContext {
   getGlobal?(name: string): boolean;
   /** Write a ZIL global boolean.  Optional; test contexts may omit. */
   setGlobal?(name: string, value?: boolean): void;
+  /**
+   * Read a ZIL integer global by name.
+   * Supports 'WATER-LEVEL' and 'BEACH-DIG' (Phase-3 dam/river integer globals).
+   * Optional; absent → 0.
+   */
+  getIntGlobal?(name: string): number;
+  /** Write a ZIL integer global by name.  Optional; test contexts may omit. */
+  setIntGlobal?(name: string, value: number): void;
+  /**
+   * MUNG-ROOM: replace a room's ldesc with a flooded/destroyed description
+   * and move it out of the live description path.  Used by I-MAINT-ROOM when
+   * the maintenance room fills with water.  Optional; no-op when absent.
+   * 1actions.zil:1349 / gverbs.zil:2183–2189.
+   */
+  mungRoom?(roomId: string, desc: string): void;
+  /**
+   * ZIL THIS-IS-IT: re-point the pronoun referent ("it") to the given object.
+   * Used by routines that swap objects (IBOAT-FUNCTION, RBOAT-FUNCTION DEFLATE,
+   * etc.) so the next command's "it" tracks the newly-placed object.
+   * Optional so unit-test stubs that don't need pronoun tracking can omit it.
+   * 1actions.zil:2834 (inflate), :2815 (deflate).
+   */
+  thisIsIt?(obj: GameObject): void;
 }
 
 export type ActionHandler = (ctx: ActionContext) => HandlerResult;

@@ -1,0 +1,48 @@
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> look
+Maintenance Room
+This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south.
+There is a wrench here.
+There is an object which looks like a tube of toothpaste here.
+There is a screwdriver here.
+There is a group of tool chests here.
+
+> push blue button
+There is a rumbling sound and a stream of water appears to burst from the east wall of the room (apparently, a leak has occurred in a pipe).
+The water level here is now up to your ankles.
+
+> wait
+Time passes...
+The water level here is now up to your shin.
+
+> wait
+Time passes...
+The water level here is now up to your shin.
+
+> wait
+Time passes...
+The water level here is now up to your knees.
+
+> wait
+Time passes...
+The water level here is now up to your knees.
+
+> put gunk on leak
+By some miracle of Zorkian technology, you have managed to stop the leak in the dam.
+
+> wait
+Time passes...
+
+> look
+Maintenance Room
+This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked recently, for most of the valuable equipment is gone. On the wall in front of you is a group of buttons colored blue, yellow, brown, and red. There are doorways to the west and south.
+There is a wrench here.
+There is an object which looks like a tube of toothpaste here.
+There is a screwdriver here.
+There is a group of tool chests here.

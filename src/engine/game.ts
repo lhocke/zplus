@@ -6,6 +6,7 @@ import type { Actor } from '../domain/actor.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
+import { tokenize } from './parser/tokenizer.js';
 import { executeVerb, describeRoomObjects, META_ACTIONS } from './verbs/index.js';
 import { lit } from './parser/scope.js';
 import { describeRoom as describeRoomMsgs } from './game-messages.js';
@@ -146,6 +147,12 @@ export class Game {
   loadAllowed = 100;
   loadMax = 100;
 
+  // Phase-3 dam/river integer globals (not boolean — stored separately from FlagStore).
+  // WATER-LEVEL: maintenance-room leak depth 0–14 (-1 = repaired). 1actions.zil:1295.
+  // BEACH-DIG: sandy-beach dig counter, -1 = reset sentinel. 1actions.zil:2851.
+  waterLevel = 0;
+  beachDig = -1;
+
   // Set by jigsUp when called from clock context (I-FIGHT → winnerResult → jigsUp).
   // Checked by turn() after clock.advance() to abort the remaining turn loop.
   // Cleared at the start of each new turn. (B3)
@@ -173,6 +180,10 @@ export class Game {
     this.events = opts.events;
     this.parser = new Parser();
     this.flags = new FlagStore();
+
+    // Phase-3 dam/river boolean globals — non-default (true) init values.
+    // BUOY-FLAG: buoy hint not yet given. 1actions.zil:2842 <GLOBAL BUOY-FLAG T>.
+    this.flags.set('BUOY-FLAG', true);
 
     // WON-FLAG world effects — gverbs.zil:1858–1862.
     // Fired once when SCORE first reaches 350 inside scoreUpd or recomputeTrophy.
@@ -237,6 +248,23 @@ export class Game {
         return handled;
       };
     }
+    // I-RFILL / I-REMPTY: replace bootstrap stubs with real tick bodies.
+    // Stubs are registered by bootstrap.ts (turnsLeft=0, enabled=false) so BOLT-F can
+    // call queueClock before the Game constructor runs.  We overwrite here with closures
+    // that can reach game state (world, flags, player, jigsUp).
+    // 1actions.zil:1226–1282 (CB-DAM2).
+    this.clock.schedule(this.makeIRfillEntry());
+    this.clock.schedule(this.makeIRemptyEntry());
+
+    // I-MAINT-ROOM: every-turn demon for the maintenance-room leak.
+    // Starts parked (turnsLeft=0, disabled); blue button arms it via queueClock(-1, true).
+    // 1actions.zil:1343–1360 (CB-DAM3).
+    this.clock.schedule(this.makeIMaintRoomEntry());
+
+    // I-RIVER: per-section drift timer (CB-BOAT3).
+    // Starts parked; LAUNCH arms it via queueClock(RIVER-SPEEDS[dest], true).
+    // 1actions.zil:2708–2720.
+    this.clock.schedule(this.makeIRiverEntry());
   }
 
   /** Print the intro banner and describe the initial room. */
@@ -416,6 +444,125 @@ export class Game {
     return { output: "You can't even do that.", moved: false };
   }
 
+  /**
+   * LOUD-ROOM input mode (OQ-1 ratified, 1actions.zil:1660–1728).
+   *
+   * True when the player is in LOUD-ROOM and the room is loud (not yet solved
+   * by ECHO and not in the quiet dam state).  Mirrors the dead-ghost dispatch
+   * seam: turn() checks this before normal action dispatch.
+   */
+  private isLoudRoomActive(): boolean {
+    if (this.here.id !== 'LOUD-ROOM') return false;
+    const loudFlag  = this.flags.get('LOUD-FLAG');
+    const gatesOpen = this.flags.get('GATES-OPEN');
+    const lowTide   = this.flags.get('LOW-TIDE');
+    // Quiet when: LOUD-FLAG || (!GATES-OPEN && LOW-TIDE)
+    return !loudFlag && !(!gatesOpen && lowTide);
+  }
+
+  /**
+   * Extract the last lexed word from raw player input — mirrors ZIL's V-ECHO
+   * which navigates to the last P-LEXV entry and prints its P-INBUF chars
+   * (gverbs.zil:529–545).  Falls back to "echo" when no tokens (empty input).
+   */
+  private loudEchoWord(input: string): string {
+    const tokens = tokenize(input);
+    return tokens.length > 0 ? tokens[tokens.length - 1] : 'echo';
+  }
+
+  /**
+   * Loud-room command interceptor — 1actions.zil:1693–1728.
+   *
+   * ZIL whitelist (exact):
+   *   W?W/W?WEST → ROUND-ROOM, W?E/W?EAST → DAMP-CAVE, W?U/W?UP → DEEP-CANYON
+   *   W?SAVE, W?RESTORE, W?Q/W?QUIT: pass through
+   *   W?BUG: "That's only your opinion."  (1actions.zil:1717–1718)
+   *   W?ECHO: solve — set LOUD-FLAG, clear BAR.SACREDBIT, print message, re-LOOK
+   *   everything else (including parse failures, unknown words, N/S/D movement):
+   *     → V-ECHO fallback — echo last lexed word twice + "..."  (gverbs.zil:529–545)
+   *
+   * Returns a TurnResult for intercepted commands; undefined for pass-throughs.
+   */
+  private loudRoomDispatch(input: string): TurnResult | undefined {
+    // META_ACTIONS (SAVE/RESTORE/QUIT/BRIEF/VERBOSE/etc.): pass through before
+    // attempting parse, so meta verbs always work regardless of parse result.
+    // We still need the parse for ECHO/BUG/direction checks below.
+    const pr = this.parser.parseSegment(input, this.here, this.player, this.world);
+
+    if (pr.kind === 'ok') {
+      const action = pr.command.action;
+
+      // Only W/E/U are whitelist exits (1actions.zil:1711–1716).
+      // N, S, D are not exits of LOUD-ROOM → echo, not pass-through.
+      if (action === 'V-WALK') {
+        const dir = pr.command.prep;
+        if (dir === 'west' || dir === 'east' || dir === 'up') return undefined;
+        // Non-exit direction: falls to echo below.
+      } else if (META_ACTIONS.has(action)) {
+        return undefined;
+      }
+    }
+
+    const outputs: string[] = [];
+    const tell = (s: string): void => { outputs.push(s); };
+
+    // Parse to get action (may be ok or fail); on ok, check named whitelist entries.
+    const action = pr.kind === 'ok' ? pr.command.action : null;
+
+    if (action === 'V-ECHO') {
+      // ECHO solve — 1actions.zil:1719–1725.
+      this.flags.set('LOUD-FLAG', true);
+      const bar = this.world.get('BAR');
+      if (bar !== undefined) bar.clear(Flag.Sacred);
+      this.parser.clearContinuation();
+      tell('The acoustics of the room change subtly.');
+      // <RETURN> exits the REPEAT without re-firing M-LOOK (1actions.zil:1725).
+      // Player sees the normal already-TOUCHED room-entry: blank line + name + objects.
+      const briefLines: string[] = ['', this.here.desc];
+      describeRoomObjects(this.here, this.player, (s) => briefLines.push(s));
+      tell(briefLines.join('\n'));
+    } else if (action === 'V-BUG') {
+      // 1actions.zil:1717–1718 — W?BUG is a named special case.
+      this.parser.clearContinuation();
+      tell("That's only your opinion.");
+    } else {
+      // All other input — parse failures, unknown words, N/S/D, any unwhitelisted
+      // verb — routes to V-ECHO: echo the last lexed word twice + "..."
+      // gverbs.zil:529–545: echoes P-INBUF bytes of the last P-LEXV entry.
+      this.parser.clearContinuation();
+      const w = this.loudEchoWord(input);
+      tell(`${w} ${w} ...`);
+    }
+
+    // M-END fires each turn even in the captive loop (1actions.zil:1674–1680).
+    // LOUD-ROOM-FCN M-END scrambles the player out when GATES-OPEN && !LOW-TIDE.
+    const mEndPrevHere = this.here;
+    const mEndOut = this.runMEnd(this.here);
+    if (mEndOut.length > 0) outputs.push(mEndOut);
+
+    // Post-M-END move: if M-END scrambled the player, fire onRoomEntered + describe.
+    // Guard: new parent must be a Room (not a vehicle/container).
+    const mEndNewParent = this.player.parent;
+    const mEndNewRoom = mEndNewParent instanceof Room ? mEndNewParent : null;
+    if (mEndNewRoom !== null && mEndNewRoom !== mEndPrevHere) {
+      const enterOut = this.onRoomEntered(mEndNewRoom);
+      const roomDesc = this.describeCurrentRoom();
+      const parts = [enterOut, roomDesc].filter(s => s.length > 0);
+      if (parts.length > 0) outputs.push(parts.join('\n'));
+    }
+
+    // Clock tick — each intercepted command consumes a turn.
+    this.moveCount += 1;
+    const clockLines = this.clock.advance();
+    if (clockLines.length > 0) outputs.push(clockLines.join('\n'));
+    this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+    if (this.fatalPending) {
+      this.fatalPending = false;
+    }
+    const playerMoved = mEndNewRoom !== null && mEndNewRoom !== mEndPrevHere;
+    return { output: outputs.filter(s => s.length > 0).join('\n'), moved: playerMoved };
+  }
+
   /** Execute one command line (may contain chained commands via "then" / "."). */
   turn(input: string): TurnResult {
     if (this.gameOver) return { output: '', moved: false };
@@ -431,6 +578,18 @@ export class Game {
         return ghostResult;
       }
       // undefined → pass-through (movement or meta verbs); fall into normal parse
+    }
+
+    // Loud-room input mode (OQ-1 ratified, CB-LOUD, 1actions.zil:1693–1728).
+    // While in LOUD-ROOM and the room is loud, route every command through the
+    // whitelist gate (exits/meta pass; ECHO solves; everything else → "echo echo...").
+    // Mirrors the B8 dead-ghost dispatch seam.
+    if (this.isLoudRoomActive()) {
+      const loudResult = this.loudRoomDispatch(input);
+      if (loudResult !== undefined) {
+        return loudResult;
+      }
+      // undefined → pass-through (V-WALK exits, meta); fall into normal parse
     }
 
     const outputs: string[] = [];
@@ -517,10 +676,19 @@ export class Game {
       this.parser.setLastWon(true);
 
       if (chainResult.handled) {
+        // Detect room change after handler: either the player moved directly,
+        // or the player is in a vehicle that moved (e.g. LAUNCH or GOTO vehicle).
+        // In the vehicle case, player.parent is the boat (not a Room), so we
+        // use currentRoom() which resolves through vehicle containment.
         const newRoomAfterHandler = this.player.parent as Room;
-        if (newRoomAfterHandler !== undefined && newRoomAfterHandler !== prevRoom) {
+        const newCurrentRoom = this.currentRoom();
+        const roomMoved =
+          (newRoomAfterHandler instanceof Room && newRoomAfterHandler !== prevRoom) ||
+          (newCurrentRoom !== null && newCurrentRoom !== this.here);
+        if (roomMoved) {
           moved = true;
-          const enterOut = this.onRoomEntered(newRoomAfterHandler);
+          const targetRoom = newCurrentRoom ?? (newRoomAfterHandler as Room);
+          const enterOut = this.onRoomEntered(targetRoom);
           const roomDesc = this.describeCurrentRoom();
           const parts = [...handled, ...(enterOut ? [enterOut] : []), roomDesc].filter(s => s.length > 0);
           const cmdOut = parts.join('\n');
@@ -593,8 +761,8 @@ export class Game {
           this.parser.clearContinuation();
           if (verbResult.moved) {
             moved = true;
-            const newRoom = this.player.parent as Room;
-            if (newRoom !== undefined && newRoom !== this.here) {
+            const newRoom = this.currentRoom();
+            if (newRoom !== null && newRoom !== this.here) {
               this.here = newRoom;
             }
           }
@@ -608,13 +776,13 @@ export class Game {
 
         if (verbResult.moved) {
           moved = true;
-          const newRoom = this.player.parent as Room;
+          const newRoom = this.currentRoom();
 
           if (verbResult.movedIntoDark) {
             // Dark destination (ZIL GOTO order): darkPlaceEntered notice, then M-ENTER,
             // then describeCurrentRoom() → pitch-black message.
             let enterOut = '';
-            if (newRoom !== undefined && newRoom !== this.here) {
+            if (newRoom !== null && newRoom !== this.here) {
               enterOut = this.onRoomEntered(newRoom);
             }
             const roomDesc = this.describeCurrentRoom();
@@ -629,7 +797,7 @@ export class Game {
             } else {
               outputs.push(mergedParts.join('\n'));
             }
-          } else if (newRoom !== undefined && newRoom !== this.here) {
+          } else if (newRoom !== null && newRoom !== this.here) {
             // Lit destination: fire M-ENTER and prepend its output before room description.
             const enterOut = this.onRoomEntered(newRoom);
             if (enterOut.length > 0) {
@@ -647,6 +815,7 @@ export class Game {
       // M-END (gmain.zil:151–161): unconditional post-turn room callback on the
       // current room (post-GOTO). Passes stashed verb/dobj/iobj/prep so handlers
       // like LIVING-ROOM-FCN can read VERB?/PRSO/PRSI.
+      const mEndPrevHere = this.here;
       const mEndOut = this.runMEnd(this.here);
       if (mEndOut.length > 0) {
         const idx = outputs.length - 1;
@@ -657,27 +826,66 @@ export class Game {
         }
       }
 
-      // CLOCKER tick — once per non-meta executed command (gclock.zil).
-      if (segmentConsumesTime) {
-        this.moveCount += 1;
-        const clockLines = this.clock.advance();
-        if (clockLines.length > 0) {
-          const clockText = clockLines.join('\n');
+      // Post-M-END move detection: some M-END handlers (e.g. LOUD-ROOM-FCN panic
+      // scramble) call ctx.moveTo to GOTO a new room.  Fire onRoomEntered +
+      // describeCurrentRoom so this.here is updated and the new room is described.
+      // Guard: new parent must be a Room (not a vehicle/container) and must differ
+      // from the pre-M-END room to avoid false triggers for players inside vehicles.
+      const mEndNewParent = this.player.parent;
+      const mEndNewRoom = mEndNewParent instanceof Room ? mEndNewParent : null;
+      if (mEndNewRoom !== null && mEndNewRoom !== mEndPrevHere) {
+        moved = true;
+        const enterOut = this.onRoomEntered(mEndNewRoom);
+        const roomDesc = this.describeCurrentRoom();
+        const parts = [enterOut, roomDesc].filter(s => s.length > 0);
+        if (parts.length > 0) {
           const idx = outputs.length - 1;
           if (idx >= 0) {
-            outputs[idx] = [outputs[idx], clockText].filter(s => s.length > 0).join('\n');
+            outputs[idx] = [outputs[idx], ...parts].filter(s => s.length > 0).join('\n');
           } else {
-            outputs.push(clockText);
+            outputs.push(parts.join('\n'));
           }
         }
-        this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+      }
 
-        // B3: I-FIGHT → jigsUp signaled RFATAL from clock context — abort turn.
-        if (this.fatalPending) {
-          this.fatalPending = false;
-          this.parser.clearContinuation();
-          break;
+      // CLOCKER tick — once per non-meta executed command (gclock.zil).
+      // V-WAIT exception (gverbs.zil:1514–1519): ZIL's V-WAIT calls CLOCKER up
+      // to NUM=3 times in a loop, stopping early when an interrupt fires.  The
+      // main GMAIN CLOCKER call is then skipped (CLOCK-WAIT flag).  We mirror
+      // this here: run up to 3 CLOCKER advances for V-WAIT, stop on first fire.
+      if (segmentConsumesTime) {
+        const isWait = cmd.action === 'V-WAIT';
+        const maxClocks = isWait ? 3 : 1;
+        let fatalFromClock = false;
+
+        for (let ci = 0; ci < maxClocks; ci++) {
+          this.moveCount += 1;
+          const clockLines = this.clock.advance();
+          const clockFiredThisTick = clockLines.length > 0;
+          if (clockFiredThisTick) {
+            const clockText = clockLines.join('\n');
+            const idx = outputs.length - 1;
+            if (idx >= 0) {
+              outputs[idx] = [outputs[idx], clockText].filter(s => s.length > 0).join('\n');
+            } else {
+              outputs.push(clockText);
+            }
+          }
+          this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+
+          // B3: I-FIGHT / I-RIVER JIGS-UP → abort turn.
+          if (this.fatalPending) {
+            this.fatalPending = false;
+            this.parser.clearContinuation();
+            fatalFromClock = true;
+            break;
+          }
+
+          // V-WAIT: stop loop when an interrupt fired (mirrors ZIL <CLOCKER> → <RETURN>).
+          if (isWait && clockFiredThisTick) break;
         }
+
+        if (fatalFromClock) break;
       }
 
       if (!this.parser.hasContinuation()) {
@@ -754,9 +962,27 @@ export class Game {
       disableClock: (id) => this.clock.disable(id),
       isClockEnabled: (id) => this.clock.getEntry(id)?.enabled ?? false,
       isDead: () => this.dead,
+      queueClock: (id, period, enabled) => this.clock.queue(id, period, enabled),
       getGlobal: (n) => this.flags.get(n),
       setGlobal: (n, v = true) => this.flags.set(n, v),
+      getIntGlobal: (n) => {
+        if (n === 'WATER-LEVEL') return this.waterLevel;
+        if (n === 'BEACH-DIG')   return this.beachDig;
+        return 0;
+      },
+      setIntGlobal: (n, v) => {
+        if (n === 'WATER-LEVEL') { this.waterLevel = v; return; }
+        if (n === 'BEACH-DIG')   { this.beachDig = v; return; }
+      },
+      mungRoom: (roomId, desc) => {
+        const room = this.world.get(roomId);
+        if (room !== undefined) room.ldesc = desc;
+      },
+      thisIsIt: (obj) => { this.parser.setItRef(obj.id); },
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
+      jigsUp: (msg: string) => {
+        jigsUp(msg, this.jigsUpMsgs(), this.makeJigsUpCallbacks(tell, onFatal ?? (() => {})));
+      },
       finish: () => { this.doFinish(tell); },
     };
   }
@@ -790,9 +1016,17 @@ export class Game {
       }
     }
 
-    // room P?ACTION rarg=M-BEG — gmain.zil:212
-    if (this.here.handler !== undefined) {
-      if (this.here.handler(ctx(this.here, M_BEG))) {
+    // LOC(WINNER).P?ACTION rarg=M-BEG — gmain.zil:212
+    // In ZIL: <APPLY <GETP <LOC ,WINNER> ,P?ACTION> ,M-BEG>
+    // LOC(WINNER) is the player's immediate container: the boat when inside one,
+    // or the room when on foot.  When in a vehicle, the boat's handler gets M-BEG
+    // (so RBOAT-FUNCTION can restrict directions, intercept LAUNCH, etc.).
+    const locWinner = this.player.parent;
+    const mbegTarget = (locWinner !== null && locWinner.has(Flag.Vehicle))
+      ? locWinner   // inside a vehicle: M-BEG → vehicle handler
+      : this.here;  // on foot: M-BEG → room handler
+    if (mbegTarget.handler !== undefined) {
+      if (mbegTarget.handler(ctx(mbegTarget, M_BEG))) {
         return { handled: true, fatal };
       }
     }
@@ -851,6 +1085,22 @@ export class Game {
   }
 
   /**
+   * Resolve the player's current room, accounting for vehicle containment.
+   * When the player is inside a vehicle (player.parent.has(Flag.Vehicle)),
+   * the room is vehicle.parent (the vehicle's parent room).
+   * ZIL equivalent: <SETG HERE .RM> after <MOVE .WLOC .RM>.
+   */
+  private currentRoom(): Room | null {
+    const loc = this.player.parent;
+    if (loc === null) return null;
+    if (loc instanceof Room) return loc;
+    // In a vehicle: loc is the vehicle, loc.parent is the room.
+    if (loc.has(Flag.Vehicle) && loc.parent instanceof Room) return loc.parent;
+    // Fallback for any other non-Room container (should not occur in normal play).
+    return loc instanceof Room ? loc : null;
+  }
+
+  /**
    * Fire room entry: run the room's M-ENTER action, update `here`, emit the
    * room-entered event. Returns any M-ENTER output so the caller can prepend it.
    * Mirrors GOTO in 1dungeon.zil (M-ENTER then M-LOOK description).
@@ -877,7 +1127,20 @@ export class Game {
       return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
     }
 
-    const lines: string[] = [this.here.desc];
+    // ZIL gverbs.zil:1649–1679: when player is in a vehicle, the room title
+    // becomes "<room>, in the <vehicle>" and the vehicle is NOT listed as a room
+    // object; instead the vehicle's contents are shown (PRINT-CONT on the vehicle).
+    const vehicle = (this.player.parent !== null && this.player.parent !== undefined &&
+                     !(this.player.parent instanceof Room) &&
+                     this.player.parent.has(Flag.Vehicle))
+      ? this.player.parent
+      : null;
+
+    const lines: string[] = [
+      vehicle !== null
+        ? `${this.here.desc}, in the ${vehicle.desc}`
+        : this.here.desc,
+    ];
 
     if (this.here.ldesc) {
       lines.push(this.here.ldesc);
@@ -891,6 +1154,9 @@ export class Game {
       if (buf.length > 0) lines.push(buf.join('\n'));
     }
 
+    // ZIL DESCRIBE-OBJECTS (gverbs.zil:1681-1684) — always calls PRINT-CONT on
+    // HERE. When player is in a vehicle, PRINT-CONT internally skips the vehicle
+    // (PV? path :1753-1795), shows room objects first, then vehicle contents.
     describeRoomObjects(this.here, this.player, (s) => lines.push(s));
 
     return lines.join('\n');
@@ -1534,6 +1800,57 @@ export class Game {
     };
   }
 
+  // I-REMPTY — reservoir drains (one-shot, 8 ticks). 1actions.zil:1263–1282.
+  // FSET RESERVOIR RLANDBIT; FCLEAR RESERVOIR NONLANDBIT; clear TOUCHBIT on deep-canyon
+  // and loud-room; reveal TRUNK unconditionally; set LOW-TIDE=true; per-room messages.
+  private makeIRemptyEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-REMPTY',
+      turnsLeft: 0,   // parked — armed by BOLT-F via queueClock('I-REMPTY', 8, true)
+      enabled: false,
+      tick: (ctx): boolean => {
+        const res = this.world.get('RESERVOIR');
+        if (res !== undefined) {
+          res.set(Flag.Land);      // FSET RESERVOIR RLANDBIT
+          res.clear(Flag.NonLand); // FCLEAR RESERVOIR NONLANDBIT
+        }
+        const dc = this.world.get('DEEP-CANYON');
+        if (dc !== undefined) dc.clear(Flag.Touched);   // FCLEAR DEEP-CANYON TOUCHBIT
+        const lr = this.world.get('LOUD-ROOM');
+        if (lr !== undefined) lr.clear(Flag.Touched);   // FCLEAR LOUD-ROOM TOUCHBIT
+
+        const trunk = this.world.get('TRUNK');
+        if (trunk !== undefined) trunk.clear(Flag.Invisible);  // FCLEAR TRUNK INVISIBLE — always
+
+        this.flags.set('LOW-TIDE', true);  // SETG LOW-TIDE T
+
+        // Per-room messages — 1actions.zil:1270–1282.
+        const hereId = this.here.id;
+        if (hereId === 'RESERVOIR') {
+          // :1271 — in vehicle (boat): boat sinks into mud. Otherwise: nothing (on-foot
+          // is now safe because the reservoir drained).
+          if (this.player.parent !== null && this.player.parent.has(Flag.Vehicle)) {
+            ctx.tell(
+              'The water level has dropped to the point at which the boat can no\n' +
+              'longer stay afloat. It sinks into the mud.',
+            );
+          }
+        } else if (hereId === 'DEEP-CANYON') {
+          // :1276
+          ctx.tell('The roar of rushing water is quieter now.');
+        } else if (hereId === 'RESERVOIR-NORTH' || hereId === 'RESERVOIR-SOUTH') {
+          // :1280
+          ctx.tell(
+            'The water level is now quite low here and you could easily cross over\n' +
+            'to the other side.',
+          );
+        }
+
+        return false;  // one-shot: remove after firing
+      },
+    };
+  }
+
   // I-CYCLOPS clock entry — on-demand demon (turnsLeft=-1, starts disabled).
   // 1actions.zil:1596–1614.
   private makeICyclopsEntry(): import('./clock.js').ClockEntry {
@@ -1559,6 +1876,243 @@ export class Game {
         iCyclops(icCtx);
         // Demon always stays registered (clock.disable() marks it inactive without removing).
         return true;
+      },
+    };
+  }
+
+  // I-RFILL — reservoir fills (one-shot, 8 ticks). 1actions.zil:1226–1259.
+  // FSET RESERVOIR NONLANDBIT; FCLEAR RESERVOIR RLANDBIT; clear TOUCHBIT;
+  // re-hide TRUNK only if still in RESERVOIR (NM-B); set LOW-TIDE=false.
+  // Flag mutations complete BEFORE jigsUp call (NM-L).
+  private makeIRfillEntry(): import('./clock.js').ClockEntry {
+    // LOUD-RUNS: the three possible panic-scramble destinations. 1actions.zil:1261.
+    const LOUD_RUNS: readonly string[] = ['DAMP-CAVE', 'ROUND-ROOM', 'DEEP-CANYON'];
+
+    return {
+      id: 'I-RFILL',
+      turnsLeft: 0,   // parked — armed by BOLT-F via queueClock('I-RFILL', 8, true)
+      enabled: false,
+      tick: (ctx): boolean => {
+        const res = this.world.get('RESERVOIR');
+        if (res !== undefined) {
+          res.set(Flag.NonLand); // FSET RESERVOIR NONLANDBIT
+          res.clear(Flag.Land);  // FCLEAR RESERVOIR RLANDBIT
+        }
+        const dc = this.world.get('DEEP-CANYON');
+        if (dc !== undefined) dc.clear(Flag.Touched);
+        const lr = this.world.get('LOUD-ROOM');
+        if (lr !== undefined) lr.clear(Flag.Touched);
+
+        // NM-B: re-hide trunk only if it is still in the reservoir (player may have taken it).
+        // 1actions.zil:1231 <AND <IN? ,TRUNK ,RESERVOIR> <FSET ,TRUNK ,INVISIBLE>>
+        const trunk = this.world.get('TRUNK');
+        if (trunk !== undefined && trunk.parent === res) {
+          trunk.set(Flag.Invisible);
+        }
+
+        // NM-L: LOW-TIDE flip happens BEFORE the switch/jigsUp — must not be rolled back.
+        this.flags.set('LOW-TIDE', false);  // SETG LOW-TIDE <>
+
+        // Per-room messages and conditional jigsUp — 1actions.zil:1237–1257.
+        const clockFatal = (): void => { this.fatalPending = true; };
+        const hereId = this.here.id;
+
+        if (hereId === 'RESERVOIR') {
+          // :1238 — in vehicle: float message. On foot: drown. (NM-L: flag mutations above already done)
+          if (this.player.parent !== null && this.player.parent.has(Flag.Vehicle)) {
+            ctx.tell(
+              'The boat lifts gently out of the mud and is now floating on\n' +
+              'the reservoir.',
+            );
+          } else {
+            jigsUp(
+              'You are lifted up by the rising river! You try to swim, but the\n' +
+              'currents are too strong. You come closer, closer to the awesome\n' +
+              'structure of Flood Control Dam #3. The dam beckons to you.\n' +
+              'The roar of the water nearly deafens you, but you remain conscious\n' +
+              'as you tumble over the dam toward your certain doom among the rocks\n' +
+              'at its base.',
+              this.jigsUpMsgs(),
+              this.makeJigsUpCallbacks(ctx.tell, clockFatal),
+            );
+          }
+        } else if (hereId === 'DEEP-CANYON') {
+          // :1248
+          ctx.tell('A sound, like that of flowing water, starts to come from below.');
+        } else if (hereId === 'LOUD-ROOM') {
+          // :1251 — panic scramble to a random LOUD-RUNS room
+          ctx.tell(
+            'All of a sudden, an alarmingly loud roaring sound fills the room.\n' +
+            'Filled with fear, you scramble away.',
+          );
+          const idx = Math.floor(this.rng.next() * LOUD_RUNS.length);
+          const destId = LOUD_RUNS[idx] ?? LOUD_RUNS[0]!;
+          const dest = this.world.get(destId) as Room;
+          if (dest !== undefined) {
+            this.player.moveTo(dest);  // ZIL GOTO moves the player
+            const enterOut = this.onRoomEntered(dest);
+            if (enterOut) ctx.tell(enterOut);
+            ctx.tell(this.describeCurrentRoom());
+          }
+        } else if (hereId === 'RESERVOIR-NORTH' || hereId === 'RESERVOIR-SOUTH') {
+          // :1255
+          ctx.tell(
+            'You notice that the water level has risen to the point that it\n' +
+            'is impossible to cross.',
+          );
+        }
+
+        return false;  // one-shot: remove after firing
+      },
+    };
+  }
+
+  // I-MAINT-ROOM — maintenance-room leak demon. 1actions.zil:1343–1360.
+  // Every-turn demon (turnsLeft=-1) armed by the blue button pushing;
+  // stops itself (queue 0, disabled) when WATER-LEVEL >= 14.
+  private makeIMaintRoomEntry(): import('./clock.js').ClockEntry {
+    // DROWNINGS table — 1actions.zil:1284–1293 (9 strings, 0-indexed).
+    const DROWNINGS: readonly string[] = [
+      'up to your ankles.',
+      'up to your shin.',
+      'up to your knees.',
+      'up to your hips.',
+      'up to your waist.',
+      'up to your chest.',
+      'up to your neck.',
+      'over your head.',
+      'high in your lungs.',
+    ];
+
+    return {
+      id: 'I-MAINT-ROOM',
+      turnsLeft: 0,   // parked — blue button arms via queueClock(-1, true)
+      enabled: false,
+      tick: (ctx): boolean => {
+        const hereIsMaint = this.here.id === 'MAINTENANCE-ROOM';
+
+        // :1345 — if HERE == MAINTENANCE-ROOM, print drowning level
+        if (hereIsMaint) {
+          const idx = Math.floor(this.waterLevel / 2);
+          const msg = DROWNINGS[idx] ?? DROWNINGS[DROWNINGS.length - 1]!;
+          ctx.tell(`The water level here is now ${msg}`);
+        }
+
+        // :1347 — increment WATER-LEVEL
+        this.waterLevel += 1;
+
+        // :1348 — at or above 14: MUNG-ROOM, stop demon, maybe drown
+        if (this.waterLevel >= 14) {
+          const mroom = this.world.get('MAINTENANCE-ROOM');
+          if (mroom !== undefined) {
+            mroom.ldesc = 'The room is full of water and cannot be entered.';
+          }
+          // :1351 — park the demon
+          this.clock.queue('I-MAINT-ROOM', 0, false);
+
+          // :1352 — if HERE, drown
+          if (hereIsMaint) {
+            const clockFatal = (): void => { this.fatalPending = true; };
+            jigsUp(
+              "I'm afraid you have done drowned yourself.",
+              this.jigsUpMsgs(),
+              this.makeJigsUpCallbacks(ctx.tell, clockFatal),
+            );
+          }
+          return true;  // demon stays registered (disabled by the queue call above)
+        }
+
+        // :1355 — player in inflated boat in dam-adjacent area → drown in boat
+        // "WINNER in INFLATED-BOAT" = player.parent == INFLATED-BOAT
+        const inflatedBoat = this.world.get('INFLATED-BOAT');
+        if (
+          inflatedBoat !== undefined &&
+          this.player.parent === inflatedBoat &&
+          (this.here.id === 'MAINTENANCE-ROOM' ||
+           this.here.id === 'DAM-ROOM' ||
+           this.here.id === 'DAM-LOBBY')
+        ) {
+          const clockFatal = (): void => { this.fatalPending = true; };
+          jigsUp(
+            'The rising water carries the boat over the dam, down the river, and over\n' +
+            'the falls. Tsk, tsk.',
+            this.jigsUpMsgs(),
+            this.makeJigsUpCallbacks(ctx.tell, clockFatal),
+          );
+        }
+
+        return true;  // demon: keep registered
+      },
+    };
+  }
+
+  // I-RIVER — per-section drift timer. 1actions.zil:2708–2720.
+  // Armed by RBOAT-FUNCTION LAUNCH via queueClock(RIVER-SPEEDS[dest], true).
+  // Fires once, moves boat downstream, then re-arms at the new section's speed.
+  // Disables itself when the player leaves the river (not on RIVER-1..5).
+  private makeIRiverEntry(): import('./clock.js').ClockEntry {
+    // RIVER-NEXT: downstream section map. 1actions.zil:2695–2696.
+    const RIVER_NEXT: Readonly<Record<string, string>> = {
+      'RIVER-1': 'RIVER-2',
+      'RIVER-2': 'RIVER-3',
+      'RIVER-3': 'RIVER-4',
+      'RIVER-4': 'RIVER-5',
+    };
+    // RIVER-SPEEDS: per-section drift period. 1actions.zil:2692–2693.
+    const RIVER_SPEEDS: Readonly<Record<string, number>> = {
+      'RIVER-1': 4,
+      'RIVER-2': 4,
+      'RIVER-3': 3,
+      'RIVER-4': 2,
+      'RIVER-5': 1,
+    };
+    const RIVER_ROOMS = new Set(['RIVER-1', 'RIVER-2', 'RIVER-3', 'RIVER-4', 'RIVER-5']);
+
+    return {
+      id: 'I-RIVER',
+      turnsLeft: 0,   // parked — LAUNCH arms it
+      enabled: false,
+      tick: (ctx): boolean => {
+        const hereId = this.here.id;
+
+        // :2709–2711 — if not on RIVER-1..5, disable and return
+        if (!RIVER_ROOMS.has(hereId)) {
+          this.clock.disable('I-RIVER');
+          return true;  // keep entry registered; just disabled
+        }
+
+        const nextId = RIVER_NEXT[hereId];
+        if (nextId !== undefined) {
+          // :2713–2715 — drift one section downstream
+          ctx.tell('The flow of the river carries you downstream.');
+          const dest = this.world.get(nextId) as Room;
+          if (dest !== undefined) {
+            // Move the boat (player is inside it)
+            const inflated = this.world.get('INFLATED-BOAT');
+            if (inflated !== undefined) inflated.moveTo(dest);
+            // Re-describe: fire onRoomEntered for M-ENTER + score
+            const enterOut = this.onRoomEntered(dest);
+            if (enterOut) ctx.tell(enterOut);
+            ctx.tell(this.describeCurrentRoom());
+          }
+          // :2715 — re-arm at new section's speed (NM-H: read speed AFTER the move)
+          const newSpeed = RIVER_SPEEDS[nextId];
+          if (newSpeed !== undefined) {
+            this.clock.queue('I-RIVER', newSpeed, true);
+          }
+        } else {
+          // :2716–2720 — past RIVER-5 (no RIVER-NEXT entry) → waterfall death (NM-I)
+          const clockFatal = (): void => { this.fatalPending = true; };
+          jigsUp(
+            'Unfortunately, the magic boat doesn\'t provide protection from\n' +
+            'the rocks and boulders one meets at the bottom of waterfalls. ' +
+            'Including this one.',
+            this.jigsUpMsgs(),
+            this.makeJigsUpCallbacks(ctx.tell, clockFatal),
+          );
+        }
+
+        return true;  // keep entry registered (re-arm or keep for disable)
       },
     };
   }

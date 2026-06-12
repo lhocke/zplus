@@ -182,6 +182,66 @@ export function createGame(opts: {
   };
   clock.schedule(iSwordEntry);
 
+  // I-RFILL / I-REMPTY — 8-tick one-shot timers that fill/drain the reservoir.
+  // Spec §9 Wave 0: NOT queued at GO (unlike lantern/candles/sword).
+  // Registered parked (turnsLeft=0, enabled=false); BOLT-F arms whichever
+  // is needed via queueClock(id, 8, true) and parks the opposite with (id, 0, false).
+  // 1actions.zil:1197,1204 (tick count exact = 8).
+  //
+  // The tick bodies live in dam.ts (CB-DAM2); these stubs register the slots
+  // so BOLT-F's queueClock calls can find them via clock.getEntry().
+  clock.schedule({
+    id: 'I-RFILL',
+    turnsLeft: 0,   // parked — never fires until BOLT-F arms it
+    enabled: false,
+    tick(_ctx): boolean {
+      // CB-DAM2 will replace this with the full body.
+      // For now: fires (if somehow armed) and self-removes.
+      return false;
+    },
+  });
+
+  clock.schedule({
+    id: 'I-REMPTY',
+    turnsLeft: 0,   // parked
+    enabled: false,
+    tick(_ctx): boolean {
+      return false;
+    },
+  });
+
+  // I-MAINT-ROOM: every-turn demon for the maintenance-room leak (CB-DAM3).
+  // Stub registered here (turnsLeft=0, disabled) so BUTTON-F's queueClock can
+  // find the slot; the real tick body is wired in Game constructor.
+  clock.schedule({
+    id: 'I-MAINT-ROOM',
+    turnsLeft: 0,   // parked — blue button arms via queueClock(-1, true)
+    enabled: false,
+    tick(_ctx): boolean {
+      return true;
+    },
+  });
+
+  // I-RIVER: per-section drift timer (CB-BOAT3).
+  // Stub registered here; real tick body wired in Game constructor.
+  // 1actions.zil:2708–2720.
+  clock.schedule({
+    id: 'I-RIVER',
+    turnsLeft: 0,   // parked — LAUNCH arms via queueClock(speed, true)
+    enabled: false,
+    tick(_ctx): boolean {
+      return true;
+    },
+  });
+
+  // Several dam rooms carry a static ldesc in rooms.json (the H2 hotfix S0 baseline).
+  // Their FCNs handle all water-level states via M-LOOK, so clear the static ldescs
+  // so the dynamic handlers fire instead.
+  for (const id of ['DAM-ROOM', 'RESERVOIR-SOUTH', 'RESERVOIR', 'RESERVOIR-NORTH', 'DEEP-CANYON', 'LOUD-ROOM', 'ARAGAIN-FALLS']) {
+    const room = world.get(id);
+    if (room !== undefined) room.ldesc = undefined;
+  }
+
   const rng = opts.rng ?? new Rng(seed);
   // Separate RNG stream for combat — same seed, independent state.
   // Prevents I-FIGHT draws from shifting the main stream used by grue / randomizeObjects.

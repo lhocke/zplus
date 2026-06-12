@@ -2620,5 +2620,21 @@
     "ldesc": "There's nothing special about the stairs.",
     "parent": null,
     "actionRoutine": "STAIRS-F"
+  },
+  {
+    "id": "LUNGS",
+    "kind": "thing",
+    "desc": "blast of air",
+    "flags": [
+      "NonDescript"
+    ],
+    "props": {},
+    "synonyms": [
+      "LUNGS",
+      "AIR",
+      "MOUTH",
+      "BREATH"
+    ],
+    "adjectives": []
   }
 ]

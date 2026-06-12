@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, preTake, preGive, yuks, goto, vTieUp, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, goto, vTieUp, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { CURE_WAIT } from '../combat.js';
 
@@ -191,9 +191,22 @@ function printCont(
   // JS Set is append-order, so we reverse to match ZIL iteration order.
   const children = Array.from(container.children).reverse();
 
+  // ZIL PRINT-CONT :1753-1755 — AV = LOC(WINNER) if vehicle, else nil.
+  // When player is in a vehicle and we're printing a room (the vehicle's
+  // parent), the vehicle itself is skipped and its contents are shown at
+  // the end via the PV? path (:1793-1795).
+  const playerVehicle = (player.parent !== null &&
+                         player.parent !== undefined &&
+                         player.parent.has(Flag.Vehicle) &&
+                         player.parent.parent === container)
+    ? player.parent
+    : null;
+  let vehicleSeen = false;  // PV? — vehicle was encountered during iteration
+
   // Pass 1: untouched items with an FDESC
   for (const child of children) {
     if (child === player) continue;
+    if (child === playerVehicle) { vehicleSeen = true; continue; }  // :1775 skip AV
     if (child.has(Flag.Invisible)) continue;
     if (!child.has(Flag.Touched) && child.fdesc !== undefined) {
       if (!child.has(Flag.NonDescript)) {
@@ -211,6 +224,7 @@ function printCont(
 
   for (const child of children) {
     if (child === player) continue;
+    if (child === playerVehicle) continue;  // :1797 skip AV
     if (child.has(Flag.Invisible)) continue;
     if (!child.has(Flag.Touched) && child.fdesc !== undefined) continue;
 
@@ -227,6 +241,11 @@ function printCont(
       }
     }
   }
+
+  // ZIL PRINT-CONT :1793-1795 — PV? path: after room items, show vehicle contents.
+  if (vehicleSeen && playerVehicle !== null && playerVehicle.children.size > 0) {
+    printCont(playerVehicle, player, level + 1, tell);
+  }
 }
 
 // DESCRIBE-OBJECTS (gverbs.zil:1681) — calls PRINT-CONT on HERE at level −1.
@@ -238,6 +257,21 @@ export function describeRoomObjects(
 ): void {
   if (Array.from(room.children).some(c => c !== player && !c.has(Flag.Invisible))) {
     printCont(room, player, -1, tell);
+  }
+}
+
+// DESCRIBE-VEHICLE-OBJECTS — show the contents of a vehicle the player is
+// riding in (gverbs.zil:1649-1679 V-LOOK vehicle path).
+// Calls PRINT-CONT at level=0 so items inside the vehicle are indented
+// as "  A <desc>" (level 1) with header "The <vehicle> contains:".
+// Exported so game.ts can call it from describeCurrentRoom().
+export function describeVehicleObjects(
+  vehicle: GameObject,
+  player: GameObject,
+  tell: (s: string) => void,
+): void {
+  if (vehicle.children.size > 0) {
+    printCont(vehicle, player, 0, tell);
   }
 }
 
@@ -255,8 +289,16 @@ function describeRoom(
     return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
   }
 
+  // ZIL gverbs.zil:1649–1679: when player is in a vehicle, the room title
+  // becomes "<room>, in the <vehicle>" and the vehicle is NOT listed as a room
+  // object; instead the vehicle's contents are shown (PRINT-CONT on the vehicle).
+  const vehicle = (player.parent !== null && player.parent !== undefined &&
+                   player.parent.has(Flag.Vehicle))
+    ? player.parent
+    : null;
+
   const lines: string[] = [];
-  lines.push(room.desc);
+  lines.push(vehicle !== null ? `${room.desc}, in the ${vehicle.desc}` : room.desc);
 
   if (room.ldesc) {
     lines.push(room.ldesc);
@@ -265,6 +307,9 @@ function describeRoom(
     if (dynamic.length > 0) lines.push(dynamic);
   }
 
+  // ZIL DESCRIBE-OBJECTS (gverbs.zil:1681-1684) — always calls PRINT-CONT on
+  // HERE. When player is in a vehicle, PRINT-CONT internally skips the vehicle
+  // (PV? path :1753-1795), shows room objects first, then vehicle contents.
   describeRoomObjects(room, player, (s) => lines.push(s));
 
   return lines.join('\n');
@@ -273,6 +318,14 @@ function describeRoom(
 function verbLook(ctx: VerbContext): VerbResult {
   return result(describeRoom(ctx.here, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal));
 }
+
+// Map ZIL VTYPE prop string to the Flag it names.  Only NONLANDBIT is used in
+// Zork I (the magic boat); RLANDBIT would name a land-vehicle (none in Zork I).
+// gverbs.zil:2051 <SET AV <GETP .WLOC ,P?VTYPE>>
+const VTYPE_FLAG: Record<string, Flag> = {
+  NONLANDBIT: Flag.NonLand,
+  RLANDBIT:   Flag.Land,
+};
 
 function verbGo(ctx: VerbContext): VerbResult {
   const dir = ctx.prep;
@@ -288,11 +341,38 @@ function verbGo(ctx: VerbContext): VerbResult {
 
   const prob = ctx.prob ?? (() => false);
 
+  // ZIL GOTO vehicle interlock (gverbs.zil:2045–2088).
+  // WLOC = LOC(WINNER): the player's immediate container (vehicle or room).
+  // AV = WLOC's VTYPE flag, or undefined when on foot.
+  const wloc = ctx.player.parent;
+  const inVehicle = wloc !== null && wloc !== undefined && wloc.has(Flag.Vehicle);
+  const vtypeStr = inVehicle ? (wloc!.props.get('VTYPE') as string | undefined) : undefined;
+  const av: Flag | undefined = vtypeStr !== undefined ? VTYPE_FLAG[vtypeStr] : undefined;
+
   // ZIL GOTO (gverbs.zil:2048-2120): capture OLIT before the move, recompute
   // LIT after. Grue gate fires only on dark→dark (both rooms unlit).
+  //
+  // When in a vehicle: move the vehicle to dest (gverbs.zil:2090 <MOVE .WLOC .RM>),
+  // not the player.  The player stays inside the vehicle.
   const enterDest = (dest: Room): VerbResult => {
     const oldLit = (ctx.alwaysLit ?? false) || lit(ctx.here, ctx.player, ctx.world);
-    ctx.player.moveTo(dest);
+    const fromLand = ctx.here.has(Flag.Land);
+    const toLand   = dest.has(Flag.Land);
+
+    // Landing message: boat leaves water and comes to rest on shore.
+    // gverbs.zil:2071–2077: LB && !HERE.RLANDBIT && !DEAD && WLOC.VEHBIT.
+    let landingMsg = '';
+    if (toLand && !fromLand && inVehicle) {
+      landingMsg = `The ${wloc!.desc} comes to a rest on the shore.`;
+    }
+
+    if (inVehicle) {
+      // Move vehicle (wloc) to destination; player remains inside it.
+      wloc!.moveTo(dest);
+    } else {
+      ctx.player.moveTo(dest);
+    }
+
     const newLit = (ctx.alwaysLit ?? false) || lit(dest, ctx.player, ctx.world);
 
     // Grue gate (gverbs.zil:2095-2116): dark→dark, non-NonLand room, PROB 80.
@@ -311,7 +391,25 @@ function verbGo(ctx: VerbContext): VerbResult {
       return result(goto.darkPlaceEntered, true, false, /*movedIntoDark*/true);
     }
 
-    return result(describeRoom(dest, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal), true);
+    const roomDesc = describeRoom(dest, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal);
+    const parts = [landingMsg, roomDesc].filter(s => s.length > 0);
+    return result(parts.join('\n'), true);
+  };
+
+  // -------------------------------------------------------------------------
+  // Resolve destination first (for vehicle rejection checks we need to know
+  // the dest's flags, which requires the destination object).
+  // per exits are resolved below; for plain exits resolve here for the checks.
+  // -------------------------------------------------------------------------
+
+  // Helper: emit NO-GO-TELL (gverbs.zil:2038–2043).
+  // With AV: "You can't go there in a <vehicle>."
+  // Without: "You can't go there without a vehicle."
+  const noGoTell = (): VerbResult => {
+    const msg = inVehicle && wloc !== null && wloc !== undefined
+      ? `You can't go there in a ${wloc.desc}.`
+      : "You can't go there without a vehicle.";
+    return result(msg, /*moved*/false, /*fatal*/true);
   };
 
   if (exit.per !== undefined) {
@@ -355,7 +453,34 @@ function verbGo(ctx: VerbContext): VerbResult {
     return result("You can't go that way.", /*moved*/false, /*fatal*/true);
   }
 
-  return enterDest(dest as Room);
+  const destRoom = dest as Room;
+  const lb = destRoom.has(Flag.Land);  // dest is RLANDBIT
+  const destIsWater = destRoom.has(Flag.NonLand);  // dest is NONLANDBIT
+
+  // GOTO vehicle rejection clauses (gverbs.zil:2052–2066).
+  // In real Zork I every room has either RLANDBIT or NONLANDBIT; clause 1 is
+  // equivalent to "dest is a water room AND on foot".  Test fixtures may omit
+  // RLANDBIT on synthetic land rooms, so we key on NONLANDBIT directly — the
+  // semantics are identical for any room that matches real-game data.
+  // gverbs.zil:2052–2055: (<AND <NOT .LB> <NOT .AV>> ...)
+  if (destIsWater && av === undefined) return noGoTell();
+
+  // Clause 2: in vehicle, dest not land AND dest lacks the vehicle's terrain type.
+  // gverbs.zil:2056–2058: (<AND <NOT .LB> <NOT <FSET? .RM .AV>>> ...)
+  if (!lb && av !== undefined && !destRoom.has(av)) return noGoTell();
+
+  // Clause 3: in water-vehicle on land, dest is land, dest lacks NONLANDBIT.
+  // Prevents a beached water-vehicle from walking to another land room.
+  // gverbs.zil:2060–2066: HERE.RLANDBIT && LB && AV && AV!=RLANDBIT && !FSET? RM .AV
+  if (
+    ctx.here.has(Flag.Land) && lb &&
+    av !== undefined && av !== Flag.Land &&
+    !destRoom.has(av)
+  ) {
+    return noGoTell();
+  }
+
+  return enterDest(destRoom);
 }
 
 // WEIGHT — gverbs.zil:1988: SIZE(obj) + recursive sum over all children.
@@ -635,6 +760,37 @@ function verbPut(ctx: VerbContext): VerbResult {
   return result(vPut.done);
 }
 
+// V-PUT-ON (gverbs.zil:1120–1128) — "put X on Y".
+// Requires PRSI to have SURFACEBIT; otherwise "There's no good surface on the <obj>."
+function verbPutOn(ctx: VerbContext): VerbResult {
+  const item = ctx.dobj;
+  const surface = ctx.iobj;
+
+  if (item === undefined) return result("Put what?");
+  if (surface === undefined) return result("Put it where?");
+
+  if (item.parent !== ctx.player) {
+    return result(fmt(preGive.notHoldingIt, item.desc));
+  }
+
+  if (!surface.has(Flag.Surface)) {
+    return result(fmt(vPutOn.noSurface, surface.desc));
+  }
+
+  if (!surface.has(Flag.Open)) {
+    return result(fmt(vPut.notOpen, surface.desc));
+  }
+
+  item.moveTo(surface);
+  return result(vPut.done);
+}
+
+// V-VERBOSE (gverbs.zil:13–16) — set VERBOSE=T, clear SUPER-BRIEF, print the string.
+// The engine is always verbose; the state-set is a no-op here but the message is faithful.
+function verbVerbose(_ctx: VerbContext): VerbResult {
+  return result(vVerbose.response);
+}
+
 // V-SCORE (1actions.zil:4026–4044)
 // Plural rule (1actions.zil:4032): MOVES==1 → "move", else "moves".
 function verbScore(ctx: VerbContext): VerbResult {
@@ -756,6 +912,135 @@ export function verbAttack(ctx: VerbContext): VerbResult {
   return result("You can't.");
 }
 
+// ---------------------------------------------------------------------------
+// Phase-3 dam/river verb shells
+//
+// ZIL default verb routines (V-INFLATE, V-DEFLATE, V-DIG, etc.) are mostly
+// fall-throughs — real behavior lives in the object ACTION handlers (IBOAT-FUNCTION,
+// RBOAT-FUNCTION, SAND-FUNCTION, etc.) invoked earlier in the PERFORM chain.
+// These stubs ensure the verbs are routed rather than hitting the unknown-verb
+// fallback; the object handlers in later tasks short-circuit before these fire.
+// ---------------------------------------------------------------------------
+
+// V-INFLATE (gverbs.zil:757-758) — fall-through when no object handler claims inflate.
+function verbInflate(_ctx: VerbContext): VerbResult {
+  return result(vInflate.response);
+}
+
+// V-DEFLATE (gverbs.zil:402-403) — fall-through.
+function verbDeflate(_ctx: VerbContext): VerbResult {
+  return result(vDeflate.response);
+}
+
+// V-BOARD (gverbs.zil:224–228) — board a vehicle.
+// PRE-BOARD (already run) has verified PRSO is a vehicle in the room and
+// the player is not already in one.  V-BOARD moves the player inside.
+// RBOAT-FUNCTION's BOARD branch intercepts first and returns T to abort
+// V-BOARD (sharp-object puncture); returning false here lets V-BOARD run.
+function verbBoard(ctx: VerbContext): VerbResult {
+  const vehicle = ctx.dobj;
+  if (vehicle === undefined || !vehicle.has(Flag.Vehicle)) {
+    return result("You can't board that.");
+  }
+  // :225 <TELL "You are now in the " D ,PRSO "." CR>
+  // :226 <MOVE ,WINNER ,PRSO>
+  ctx.player.moveTo(vehicle);
+  return result(`You are now in the ${vehicle.desc}.`, /*moved*/true);
+}
+
+// V-DISEMBARK (gverbs.zil:418–432) — exit a vehicle.
+// :422 — no vehicle: "You're not in anything you can disembark from."
+// :424 — over water (room lacks RLANDBIT): "Getting out here would be fatal."
+// :430 — on land: move player to room, "You are on your own feet again."
+function verbDisembark(ctx: VerbContext): VerbResult {
+  const wloc = ctx.player.parent;
+  if (wloc === null || wloc === undefined || !wloc.has(Flag.Vehicle)) {
+    return result("You're not in anything you can disembark from.");
+  }
+  if (!ctx.here.has(Flag.Land)) {
+    return result("Getting out here would be fatal.");
+  }
+  ctx.player.moveTo(ctx.here);
+  return result("You are on your own feet again.", /*moved*/true);
+}
+
+// V-LAUNCH (gverbs.zil:804-808) — fall-through when no boat handler claims launch.
+// Vehicle: "You can't launch that by saying \"launch\"!"  Non-vehicle: "That's pretty weird."
+function verbLaunch(ctx: VerbContext): VerbResult {
+  if (ctx.dobj?.has(Flag.Vehicle)) return result(vLaunch.vehicle);
+  return result(vLaunch.nonVehicle);
+}
+
+// V-LAND — the boat lands automatically via GOTO into an RLANDBIT room;
+// this stub handles bare "land" with no applicable object.
+function verbLand(_ctx: VerbContext): VerbResult {
+  return result("You're not in anything that can land.");
+}
+
+// V-DIG (gverbs.zil:405-416) — fall-through when not in SANDY-BEACH context.
+// No iobj → ZIL defaults to HANDS (TOOLBIT, desc "pair of hands").
+function verbDig(ctx: VerbContext): VerbResult {
+  const inst = ctx.iobj;
+  if (inst?.id === 'SHOVEL') return result(vDig.shovel);
+  if (inst?.has(Flag.Tool) ?? true) {
+    // ZIL HANDS has TOOLBIT; engine no-iobj → same branch.
+    const name = inst?.desc ?? 'pair of hands';
+    return result(fmt(vDig.withTool, name));
+  }
+  return result(fmt(vDig.withNonTool, inst!.desc));
+}
+
+// V-WAVE (gverbs.zil:1594-1595) — fall-through via HACK-HACK "Waving the ".
+// HACK-HACK: "Waving the " + D(PRSO) + PICK-ONE(HO-HUM). gverbs.zil:2024-2036.
+// (The global-object "isn't here" branch of HACK-HACK is unreachable here:
+//  parser scoping only surfaces a global object when it passes GWIM's WAVE check,
+//  and globally-scoped wave targets will be intercepted by their ACTION handlers.)
+function verbWave(ctx: VerbContext): VerbResult {
+  const name = ctx.dobj?.desc ?? '';
+  const suffix = ctx.rng !== undefined ? pick(hoHum, ctx.rng) : hoHum.entries[0]!;
+  return result(`Waving the ${name}${suffix}`);
+}
+
+// V-ECHO (gverbs.zil:526) — the "echo echo ..." fallback.
+// In the LOUD-ROOM captive mode, non-whitelist input routes here.
+// Outside loud mode it fires from normal PERFORM dispatch on the ECHO verb.
+function verbEcho(_ctx: VerbContext): VerbResult {
+  return result('echo echo ...');
+}
+
+// V-CROSS (gverbs.zil:371–372) — fall-through when RAINBOW-FCN doesn't handle it.
+function verbCross(_ctx: VerbContext): VerbResult {
+  return result("You can't cross that!");
+}
+
+// V-RAISE (gverbs.zil:1131) — fall-through when object handler doesn't claim it.
+function verbRaise(_ctx: VerbContext): VerbResult {
+  return result("You can't raise that.");
+}
+
+
+// V-BREATHE — BLOW IN OBJECT (gsyntax.zil:108).
+// ZIL: <PERFORM V?INFLATE PRSO LUNGS> (gverbs.zil:231, 1actions.zil:2817–2818).
+// Re-performs inflate on dobj with LUNGS as implicit iobj, bypassing syntax TOOLBIT check.
+function verbBreathe(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result("You can't see any boat here!");
+  const inflatable = ctx.world.get('INFLATABLE-BOAT');
+  const inflated   = ctx.world.get('INFLATED-BOAT');
+  const punctured  = ctx.world.get('PUNCTURED-BOAT');
+  // Inflatable pile of plastic: IBOAT-FUNCTION lungs branch (1actions.zil:2835)
+  if (dobj === inflatable) {
+    if (dobj.parent !== ctx.here) return result('The boat must be on the ground to be inflated.');
+    return result("You don't have enough lung power to inflate it.");
+  }
+  // Already-inflated boat: RBOAT-FUNCTION inflate fall-through (1actions.zil:2801)
+  if (dobj === inflated) return result('Inflating it further would probably burst it.');
+  // Punctured boat: DBOAT-FUNCTION inflate rejection (1actions.zil:2656)
+  if (dobj === punctured) return result('No chance. Some moron punctured it.');
+  // Non-boat: V-INFLATE default (gverbs.zil:757–758)
+  return result(vInflate.response);
+}
+
 type VerbHandler = (ctx: VerbContext) => VerbResult;
 
 // V-ODYSSEUS — gverbs.zil:945–961.
@@ -805,6 +1090,7 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-INVENTORY': verbInventory,
   'V-EXAMINE':   verbExamine,
   'V-PUT':       verbPut,
+  'V-PUT-ON':    verbPutOn,
   'V-SCORE':     verbScore,
   'V-DIAGNOSE':  verbDiagnose,
   'V-PRAY':      verbPray,
@@ -822,6 +1108,22 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-TIE-UP': () => result(vTieUp.response),
   // gverbs.zil:945–961 — ODYSSEUS / ULYSSES (gsyntax.zil:334–335).
   'V-ODYSSEUS': verbOdysseus,
+
+  // Phase-3 dam/river verbs — thin shells; object handlers (IBOAT-FUNCTION etc.)
+  // short-circuit before these in the PERFORM chain.
+  'V-VERBOSE':   verbVerbose,
+  'V-BREATHE':   verbBreathe, // BLOW IN OBJECT → PERFORM V?INFLATE PRSO LUNGS
+  'V-INFLATE':   verbInflate,
+  'V-DEFLATE':   verbDeflate,
+  'V-BOARD':     verbBoard,
+  'V-DISEMBARK': verbDisembark,
+  'V-LAUNCH':    verbLaunch,
+  'V-LAND':      verbLand,
+  'V-DIG':       verbDig,
+  'V-WAVE':       verbWave,
+  'V-ECHO':       verbEcho,
+  'V-CROSS':      verbCross,
+  'V-RAISE':      verbRaise,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.

@@ -114,11 +114,13 @@ describe('LANTERN: fuel interrupt gating', () => {
     g.turn('take brass lantern');
     g.turn('turn on lantern');
 
-    // Advance 100 turns (half-way to first warning) then turn off.
-    wait(g, 100);
+    // Advance 33 wait-commands (~99 clock ticks — just under half-way to first
+    // warning at 200 ticks) then turn off.  With multi-CLOCKER each WAIT fires
+    // up to 3 CLOCKER ticks, so 33 waits < ceil(200/3) = 67 waits.
+    wait(g, 33);
     g.turn('turn off lantern');
 
-    // Advance another 200 turns — no warning fires because the lamp is off.
+    // Advance another 200 wait-commands — no warning fires because the lamp is off.
     wait(g, 200);
 
     expect(fuelEvents).toHaveLength(0);
@@ -134,14 +136,17 @@ describe('LANTERN: fuel interrupt gating', () => {
     g.turn('take brass lantern');
     g.turn('turn on lantern');
 
-    // Burn 100 turns, freeze, wait 500 turns frozen, thaw, finish the 200.
-    wait(g, 100);
+    // Burn 33 wait-commands (~99 clock ticks), freeze, wait 500 frozen, thaw,
+    // finish the 200-tick initial period.  With multi-CLOCKER each WAIT fires
+    // up to 3 CLOCKER ticks; first warning at 200 ticks fires at ~67 waits, so
+    // 33 waits is safely mid-period.
+    wait(g, 33);
     g.turn('turn off lantern');
     wait(g, 500);           // frozen — no events
     expect(fuelEvents).toHaveLength(0);
 
     g.turn('turn on lantern');
-    wait(g, 100);           // completes the original 200-turn initial period
+    wait(g, 34);            // ~102 more ticks → ~201 total → first warning fires
 
     expect(fuelEvents.length).toBeGreaterThanOrEqual(1);
     expect(fuelEvents[0]!.message).toBe('The lamp appears a bit dimmer.');

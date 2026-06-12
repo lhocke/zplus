@@ -1,0 +1,106 @@
+# C-PUNCTURE corpus — board boat with sword → puncture; putty repair
+#
+# MECHANIC: If the player boards the inflatable boat while carrying a sharp
+# object (sword, knife, axe, sceptre, stiletto, rusty-knife), the boat is
+# punctured: "(Your X punctures the boat!)" + boat state → PUNCTURED-BOAT.
+# Apply putty to the punctured boat → repaired (folded plastic again).
+# Re-inflate to confirm seaworthy.
+#
+# Sharp objects: SWORD, KNIFE, AXE, STILETTO, RUSTY-KNIFE, SCEPTRE.
+# This walkthrough uses the sword.
+#
+# RNG NOTE: Path to DAM-BASE passes through the Troll Room.  With seed -s 1,
+# the troll (fought with sword) dies after ~3 hits.  The sword is in the
+# Living Room above ground; pick it up before going underground.  The pump is
+# retrieved from RESERVOIR-NORTH after draining the dam.  The putty tube is
+# in MAINTENANCE-ROOM; we pick it up during the setup phase.
+#
+# Run with:
+#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-puncture.txt
+
+# Set verbose mode so dfrotz and engine both use verbose room descriptions.
+verbose
+
+# --- Setup: get sword + lantern, go underground ---
+north
+east
+open window
+west
+west
+take sword
+take lantern
+move rug
+open trap door
+turn on lantern
+
+# Cellar → Troll Room (north from Cellar)
+down
+north
+# Troll fight with sword (RNG-variable turns)
+~kill troll with sword
+~kill troll with sword
+~kill troll with sword
+@resync East-West Passage
+
+# EW-Passage → Round Room → NS-Passage → Deep Canyon → Dam Room
+east
+north
+ne
+east
+
+# Dam Room → Dam Lobby → Maintenance Room
+north
+north
+
+# Take wrench and putty tube; unlock panel
+take wrench
+take putty
+push yellow button
+
+# Return to Dam Room
+south
+south
+
+# Drain the reservoir (bolt open, wait 8 turns)
+turn bolt with wrench
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+
+# Navigate to Reservoir North for pump
+west
+north
+north
+take pump
+
+# Return to Dam Room
+south
+south
+east
+
+# Down to Dam Base
+down
+
+# --- C-PUNCTURE walkthrough proper (at DAM-BASE) ---
+look
+
+# Inflate boat
+inflate boat with pump
+look
+
+# Board boat with sword in inventory → puncture message
+board boat
+look
+
+# Repair with putty
+put putty on boat
+look
+
+# Re-inflate to confirm boat is seaworthy again
+inflate boat with pump
+look

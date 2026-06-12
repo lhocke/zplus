@@ -1,0 +1,120 @@
+# C-RIVER corpus — inflate boat, board, launch, drift RIVER-1→5, buoy hint
+#
+# MECHANIC: Inflate folded plastic (boat) with pump at DAM-BASE; board boat;
+# launch onto Frigid River; drift section-by-section downstream.  The buoy at
+# RIVER-4 triggers the buoy-hint message on pickup.  Exit east at RIVER-5 to
+# land at Shore/Sandy Beach without dying at the falls.
+#
+# I-RIVER clock speeds: RIVER-1: 4, RIVER-2: 4, RIVER-3: 3, RIVER-4: 2, RIVER-5: 1.
+# Drift fires when the clock counts down to 0 (advance fires at end of each turn).
+#   launch → RIVER-1, clock=4→3
+#   look: 3→2 | wait: 2→1 | wait: 1→0 FIRE → RIVER-2 (rearm 4)
+#   look: 4→3 | wait×3: 3→2→1→0 FIRE → RIVER-3 (rearm 3)
+#   wait×3: 3→2→1→0 FIRE → RIVER-4 (rearm 2)
+#   take buoy: 2→1 | wait: 1→0 FIRE → RIVER-5
+#   east: exit to Shore
+#
+# RNG NOTE: Path to DAM-BASE passes through the Troll Room.  With seed -s 1,
+# the troll (fought with sword) dies after ~3 hits.  The pump is retrieved from
+# RESERVOIR-NORTH after draining the dam.
+#
+# Run with:
+#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-river.txt
+
+# Set verbose mode so dfrotz and engine both use verbose room descriptions.
+verbose
+
+# --- Setup: get to the dam area and retrieve the pump ---
+north
+east
+open window
+west
+
+# Living Room: take sword and lantern
+west
+take sword
+take lantern
+move rug
+open trap door
+turn on lantern
+
+# Cellar → Troll Room (north from Cellar)
+down
+north
+~kill troll with sword
+~kill troll with sword
+~kill troll with sword
+@resync East-West Passage
+
+# EW-Passage → Round Room → NS-Passage → Deep Canyon → Dam Room
+east
+north
+ne
+east
+
+# Dam Room → Dam Lobby → Maintenance Room → take wrench → unlock panel
+north
+north
+take wrench
+push yellow button
+
+# Maintenance Room → Dam Lobby → Dam Room
+south
+south
+
+# Drain the reservoir: turn bolt (sluice open) then wait 8 turns
+turn bolt with wrench
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+
+# Reservoir drained; navigate to Reservoir North to get pump
+# DAM-ROOM → RESERVOIR-SOUTH → RESERVOIR → RESERVOIR-NORTH
+west
+north
+north
+take pump
+
+# Return: RESERVOIR-NORTH → RESERVOIR → RESERVOIR-SOUTH → DAM-ROOM
+south
+south
+east
+
+# --- Navigate to DAM-BASE (down from Dam Room) ---
+down
+
+# --- River walkthrough proper ---
+look
+inflate boat with pump
+look
+board boat
+launch
+
+# RIVER-1: look(3→2), wait(2→1), wait(1→0 FIRE→RIVER-2)
+look
+wait
+wait
+
+# RIVER-2: look(4→3), wait×3 (3→2→1→0 FIRE→RIVER-3)
+look
+wait
+wait
+wait
+
+# RIVER-3: wait×3 (3→2→1→0 FIRE→RIVER-4)
+wait
+wait
+wait
+
+# RIVER-4: buoy pickup, then wait(1→0 FIRE→RIVER-5)
+take buoy
+wait
+
+# RIVER-5: exit east to Shore (Sandy Beach east shore)
+east
+look

@@ -1,0 +1,115 @@
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a folded pile of plastic here which has a small valve attached.
+
+> look
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a folded pile of plastic here which has a small valve attached.
+
+> inflate boat with pump
+The boat inflates and appears seaworthy.
+A tan label is lying inside the boat.
+
+> look
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> board boat
+You are now in the magic boat.
+
+> launch
+(magic boat)
+Frigid River, in the magic boat
+You are on the Frigid River in the vicinity of the Dam. The river flows quietly here. There is a landing on the west shore.
+The magic boat contains:
+  A tan label
+
+> look
+Frigid River, in the magic boat
+You are on the Frigid River in the vicinity of the Dam. The river flows quietly here. There is a landing on the west shore.
+The magic boat contains:
+  A tan label
+
+> wait
+Time passes...
+The flow of the river carries you downstream.
+Frigid River, in the magic boat
+The river turns a corner here making it impossible to see the Dam. The White Cliffs loom on the east bank and large rocks prevent landing on the west.
+The magic boat contains:
+  A tan label
+
+> wait
+Time passes...
+
+> look
+Frigid River, in the magic boat
+The river turns a corner here making it impossible to see the Dam. The White Cliffs loom on the east bank and large rocks prevent landing on the west.
+The magic boat contains:
+  A tan label
+The flow of the river carries you downstream.
+Frigid River, in the magic boat
+The river descends here into a valley. There is a narrow beach on the west shore below the cliffs. In the distance a faint rumbling can be heard.
+The magic boat contains:
+  A tan label
+
+> wait
+Time passes...
+The flow of the river carries you downstream.
+Frigid River, in the magic boat
+The river is running faster here and the sound ahead appears to be that of rushing water. On the east shore is a sandy beach. A small area of beach can also be seen below the cliffs on the west shore.
+There is a red buoy here (probably a warning).
+The magic boat contains:
+  A tan label
+
+> wait
+Time passes...
+The flow of the river carries you downstream.
+Frigid River, in the magic boat
+The sound of rushing water is nearly unbearable here. On the east shore is a large landing area.
+The magic boat contains:
+  A tan label
+
+> wait
+Time passes...
+Unfortunately, the magic boat doesn't provide protection from
+the rocks and boulders one meets at the bottom of waterfalls. Including this one.
+
+    ****  You have died  ****
+
+Now, let's take a look here...
+Well, you probably deserve another chance.  I can't quite fix you
+up completely, but you can't have everything.
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+
+> wait
+Time passes...
+
+> wait
+Time passes...
+
+> wait
+Time passes...
+
+> take buoy
+You can't see any buoy here!
+
+> wait
+Time passes...
+
+> east
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> look
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.

@@ -238,7 +238,7 @@ Your score is 10 (total of 350 points), in 43 moves.
 This gives you the rank of Beginner.
 
 > verbose
-I don't know how to "verbose".
+Maximum verbosity.
 
 > brief
 I don't know how to "brief".

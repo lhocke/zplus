@@ -24,13 +24,15 @@ import { searchList } from './search-list.js';
 import { SRCALL } from './scope-bits.js';
 import { ROOM_GLOBAL_IDS } from './room-globals.js';
 
-// TEETH, WALL, GRANITE-WALL are the only objects declared `(IN GLOBAL-OBJECTS)`
-// in zil/1dungeon.zil. All other parentless objects have parent===null due to
-// extraction gaps and must NOT be treated as universally in-scope.
+// TEETH, WALL, GRANITE-WALL declared `(IN GLOBAL-OBJECTS)` in zil/1dungeon.zil.
+// LUNGS declared in zil/gglobals.zil:208 — universally in-scope for BREATHE/inflate.
+// All other parentless objects have parent===null due to extraction gaps and must
+// NOT be treated as universally in-scope.
 export const GLOBAL_OBJECT_IDS: ReadonlySet<string> = new Set<string>([
   'TEETH',
   'GRANITE-WALL',
   'WALL',
+  'LUNGS',
 ]);
 
 /** Reach tag for a room/inventory-tier candidate. */

@@ -19,13 +19,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
 // globals the live engine writes (grep flag-store writes before extending)
-// CYCLOPS-FLAG/MAGIC-FLAG settable since the thief/cyclops merge (V-ODYSSEUS, give-water)
-const SETTABLE_GLOBALS = new Set(['TROLL-FLAG', 'WON-FLAG', 'CYCLOPS-FLAG', 'MAGIC-FLAG']);
+// CYCLOPS-FLAG/MAGIC-FLAG settable since the thief/cyclops merge (V-ODYSSEUS, give-water);
+// the dam/river merge added the dam machine, boat, loud-room, and rainbow flags
+const SETTABLE_GLOBALS = new Set([
+  'TROLL-FLAG', 'WON-FLAG', 'CYCLOPS-FLAG', 'MAGIC-FLAG',
+  'GATE-FLAG', 'GATES-OPEN', 'LOW-TIDE', 'DEFLATE', 'RAINBOW-FLAG', 'LOUD-FLAG', 'BUOY-FLAG',
+]);
 
 // reachable-but-inescapable rooms we know about, each tied to the wave that fixes it
-const KNOWN_TRAPS: Record<string, string> = {
-  'WHITE-CLIFFS-NORTH': 'phase-3-dam-river (WHITE-CLIFFS-FUNCTION M-END sets DEFLATE)',
-};
+// (WHITE-CLIFFS-NORTH retired 2026-06-12: dam merge landed WHITE-CLIFFS-FUNCTION M-END)
+const KNOWN_TRAPS: Record<string, string> = {};
 
 // FEXIT routines and where they lead when they succeed
 const PER_DEST: Record<string, string> = { 'TRAP-DOOR-EXIT': 'CELLAR' };

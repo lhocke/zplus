@@ -1,0 +1,51 @@
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a folded pile of plastic here which has a small valve attached.
+
+> look
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a folded pile of plastic here which has a small valve attached.
+
+> inflate boat with pump
+The boat inflates and appears seaworthy.
+A tan label is lying inside the boat.
+
+> look
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a magic boat here.
+The magic boat contains:
+  A tan label
+
+> board boat
+Oops! Something sharp seems to have slipped and punctured the boat. The boat deflates to the sounds of hissing, sputtering, and cursing.
+
+> look
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a punctured boat here.
+
+> put gunk on boat
+Well done. The boat is repaired.
+
+> look
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a folded pile of plastic here which has a small valve attached.
+
+> inflate boat with pump
+The boat inflates and appears seaworthy.
+A tan label is lying inside the boat.
+
+> look
+Dam Base
+You are at the base of Flood Control Dam #3, which looms above you and to the north. The river Frigid is flowing by here. Along the river are the White Cliffs which seem to form giant walls stretching from north to south along the shores of the river as it winds its way downstream.
+There is a magic boat here.
+The magic boat contains:
+  A tan label

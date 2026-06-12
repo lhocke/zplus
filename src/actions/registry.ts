@@ -12,6 +12,11 @@ import type { ActionContext, ActionHandler, ObjectId } from '../domain/game-obje
 import { aboveGroundActions, aboveGroundPer } from './above-ground.js';
 import { lightSourcesActions } from './light-sources.js';
 import { coalMineActions } from './coal-mine.js';
+import { damActions } from './dam.js';
+import { boatActions } from './boat.js';
+import { riverObjActions } from './river-obj.js';
+import { beachActions } from './beach.js';
+import { rainbowActions } from './rainbow.js';
 import {
   treasureRoomFcnAction,
   chaliceFcnAction,
@@ -49,6 +54,11 @@ const ACTIONS: Record<string, ActionHandler> = {
   'DUMB-CONTAINER':    dumbContainerAction,
   'CYCLOPS-FCN':       cyclopsFcnAction,
   'CYCLOPS-ROOM-FCN':  cyclopsRoomFcnAction,
+  ...damActions,
+  ...boatActions,
+  ...riverObjActions,
+  ...beachActions,
+  ...rainbowActions,
 };
 
 const PER_ROUTINES: Record<string, PerRoutine> = {

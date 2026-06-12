@@ -1,0 +1,67 @@
+ZORK I: The Great Underground Empire
+Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Revision 88 / Serial number 840726
+
+Aragain Falls
+You are at the top of Aragain Falls, an enormous waterfall with a
+drop of about 450 feet. The only path here is on the north end.
+A beautiful rainbow can be seen over the falls and to the west.
+
+> look
+Aragain Falls
+You are at the top of Aragain Falls, an enormous waterfall with a
+drop of about 450 feet. The only path here is on the north end.
+A beautiful rainbow can be seen over the falls and to the west.
+
+> wave sceptre
+Suddenly, the rainbow appears to become solid and, I venture,
+walkable (I think the giveaway was the stairs and bannister).
+
+> look
+Aragain Falls
+You are at the top of Aragain Falls, an enormous waterfall with a
+drop of about 450 feet. The only path here is on the north end.
+A solid rainbow spans the falls.
+
+> west
+On the Rainbow
+You are on top of a rainbow (I bet you never thought you would walk on a rainbow), with a magnificent view of the Falls. The rainbow travels east-west here.
+
+> west
+End of Rainbow
+You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest.
+At the end of the rainbow is a pot of gold.
+
+> look
+End of Rainbow
+You are on a small, rocky beach on the continuation of the Frigid River past the Falls. The beach is narrow due to the presence of the White Cliffs. The river canyon opens here and sunlight shines in from above. A rainbow crosses over the falls to the east and a narrow path continues to the southwest.
+At the end of the rainbow is a pot of gold.
+
+> take pot
+Taken.
+
+> east
+On the Rainbow
+You are on top of a rainbow (I bet you never thought you would walk on a rainbow), with a magnificent view of the Falls. The rainbow travels east-west here.
+
+> east
+Aragain Falls
+You are at the top of Aragain Falls, an enormous waterfall with a
+drop of about 450 feet. The only path here is on the north end.
+A solid rainbow spans the falls.
+
+> look
+Aragain Falls
+You are at the top of Aragain Falls, an enormous waterfall with a
+drop of about 450 feet. The only path here is on the north end.
+A solid rainbow spans the falls.
+
+> wave sceptre
+The rainbow seems to have become somewhat run-of-the-mill.
+
+> look
+Aragain Falls
+You are at the top of Aragain Falls, an enormous waterfall with a
+drop of about 450 feet. The only path here is on the north end.
+A beautiful rainbow can be seen over the falls and to the west.
