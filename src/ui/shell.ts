@@ -7,6 +7,7 @@
 //   Plain Tailwind throughout; Tailwind Plus components adapted into TS.
 
 import { createSession } from '../shell/session.js';
+import type { GameView } from '../engine/game.js';
 import { HttpSink } from '../shell/http-sink.js';
 import { MapState, type ExitRecord } from './map-state.js';
 import { parseDirection } from './directions.js';
@@ -1055,6 +1056,15 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   // ── Build components ────────────────────────────────────────────────────
   const statusBar = buildStatusBar();
 
+  // Updates the mobile bar plus every sidebar/drawer copy in one pass.
+  function updateStatus(snap: GameView) {
+    statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
+    const line = `${snap.hereName} · ${snap.score}/${snap.maxScore} · moves: ${snap.moves}`;
+    for (const node of document.querySelectorAll<HTMLElement>('[data-status-line]')) {
+      node.textContent = line;
+    }
+  }
+
   const map = buildMap(mapState);
 
   // Paths panel (sidebar replacement for map). Layout is lazy-loaded; swap in
@@ -1099,7 +1109,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
     const output = session.submit(cmd);
     if (output) appendOutput(output);
     const snap = session.snapshot();
-    statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
+    updateStatus(snap);
 
     const parsedDir = parseDirection(cmd);
 
@@ -1124,8 +1134,10 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   // ── Sidebar content ─────────────────────────────────────────────────────
   const sidebar = el('div', 'flex flex-col gap-4 min-w-0');
 
-  // Status (desktop — compact copy in sidebar header).
+  // Status (desktop — compact copy in sidebar header). data attr lets the
+  // drawer's cloned copy receive updates too.
   const sidebarStatus = el('div', 'text-xs font-mono text-[var(--zork-fg)] border-b border-[var(--zork-accent)] pb-2');
+  sidebarStatus.setAttribute('data-status-line', '');
   sidebarStatus.textContent = 'Status';
 
   // (themeLabel and switcherContainer are built above — before applyTheme.)
@@ -1239,7 +1251,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   const banner = session.start();
   appendOutput(banner);
   const snap = session.snapshot();
-  statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
+  updateStatus(snap);
   mapState.update(snap, null);
   void map.refresh();
 
