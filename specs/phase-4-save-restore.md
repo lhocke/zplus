@@ -836,3 +836,51 @@ save/restore text IS a bug.
 - **Death-autosave value** (§6) rests on `randomizeObjects` destroying pre-death state
   (`death.ts:43,284`); confirm the autosave is positioned to capture the *pre-scatter* state.
 - **All eight OQs carry recommended defaults** — the wave should not need to re-derive them.
+
+---
+
+## Appendix: Panel Findings — Amendment B worklist (PENDING; fold in during the post-merge re-measure)
+
+Three-lens panel verdict (2026-06-12, overnight): "Yes with gaps" — serialization reasoning
+strong, but the following MUST be resolved before any build task runs. Full reviews:
+session task output wtt75isiu.
+
+**Schema blockers (all hit SS1, the foundation):**
+1. `Actor.pStrength` is NOT in ObjectDelta — wound state (player + villains) silently resets
+   on restore. Add `pStrength` capture for Actor instances + a mid-combat-save continuation
+   test (a full-strength continuation passes while the hole sits open).
+2. **SS4 (FlagStore) does not exist** — no subsection, no DAG task, no accessor on the
+   private map. Add it. Restore must REPLACE the map, never merge (the fresh ctor sets
+   BUOY-FLAG=true; a save carrying false must win — test exactly that in §10.1(E)).
+3. Rng typing: `Game.rng`/`combatRng` are INTERFACES without getState/setState; bootstrap
+   passes concrete Rng but tests pass ScriptedRng. Decide: serializable-Rng narrowing with a
+   loud snapshot() failure on non-serializable streams (recommended) vs interface extension.
+4. `FuelInterrupt.tableIndex` is unreachable — the instances are locals in createGame().
+   Recommended: extend Clock to carry per-entry aux snapshot data (no Game-ctor or field
+   promotion blast radius). Decide explicitly.
+5. **VerbContext has NO path to snapshot/restore/SavePort** — §4's verb bodies are
+   unimplementable as written. Spec the new context callbacks (saveGame/restoreGame/restart)
+   + their population in game.ts + a dedicated task.
+6. Cross-wave placement resolution (the post-merge re-measure's first job): where did
+   world-verbs actually put VERBOSE/SUPER-BRIEF, XB/XC/LLD-FLAG, DOME-FLAG, CAGE-TOP —
+   FlagStore (auto-covered once SS4 exists) or module globals (each needs an SS6 entry +
+   reset)? Enumerate ALL of them by reading the merged code, not the world-verbs spec.
+
+**Design corrections:**
+7. SS-AUDIT lockstep compares reset-FUNCTION names, not globals — a field added inside
+   resetThiefState() escapes silently. Assert over the actual global list.
+8. Death-autosave semantics, stated plainly: pre-turn snapshot at the START of submit();
+   restoring it = start of the death turn, and replaying the identical command re-kills
+   deterministically (same RNG position → same scatter). The §6 "moment before death"
+   claim overstates; fix the wording and surface the re-death behavior in the affordance.
+9. File placement: the shell UI is src/ui/shell.ts (NOT src/shell/); thief-state/
+   above-ground/light-sources live in src/actions/. Re-verify every new-file home.
+10. GameSession interface: add explicit save(slot)/restore(slot)/restart() methods; resolve
+    the snapshot() name collision with Game.snapshot().
+11. Slot-arg contract: session.submit() pre-processes the raw string (regex), engine verb
+    receives a resolved slot or error signal — write the exact contract.
+12. Refuse save mid-orphan (pending disambiguation) for symmetry with mid-continuation;
+    pin the autosave localStorage key literal; note WON-FLAG FlagStore/Scoring double-write
+    is harmless (plain Map, no listeners) — assert in a test.
+13. Close OQ-2 (rolling pre-turn autosave) and OQ-6 (full snapshot) — the panel judged both
+    effectively settled.
