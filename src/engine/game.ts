@@ -265,6 +265,13 @@ export class Game {
     // Starts parked; LAUNCH arms it via queueClock(RIVER-SPEEDS[dest], true).
     // 1actions.zil:2708–2720.
     this.clock.schedule(this.makeIRiverEntry());
+
+    // I-XB / I-XC / I-XBH — Hades exorcism timers (1actions.zil:1131–1147, CC1).
+    // Stubs registered parked in bootstrap.ts; overwritten here with closures
+    // that can reach game state (flags, world, here).
+    this.clock.schedule(this.makeIXbEntry());
+    this.clock.schedule(this.makeIXcEntry());
+    this.clock.schedule(this.makeIXbhEntry());
   }
 
   /** Print the intro banner and describe the initial room. */
@@ -2147,6 +2154,75 @@ export class Game {
         }
 
         return true;  // keep entry registered (re-arm or keep for disable)
+      },
+    };
+  }
+
+  // I-XB — ceremony timeout (6 ticks). 1actions.zil:1131–1138.
+  // Fires when XC was never set: prints break message if player is at the gate,
+  // then clears XB.  Returns false (one-shot; slot stays registered but parked).
+  private makeIXbEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-XB',
+      turnsLeft: 0,
+      enabled: false,
+      tick: (ctx): boolean => {
+        // :1132 — if XC is already true, skip the break message.
+        if (!this.flags.get('XC') &&
+            this.here.id === 'ENTRANCE-TO-HADES') {
+          ctx.tell(
+            'The tension of this ceremony is broken, and the wraiths, amused but\n' +
+            'shaken at your clumsy attempt, resume their hideous jeering.',
+          );
+        }
+        this.flags.set('XB', false);
+        return false;
+      },
+    };
+  }
+
+  // I-XC — prayer window (3 ticks). 1actions.zil:1139–1141.
+  // Clears XC then calls the I-XB body (which re-checks XC — now false — and breaks).
+  private makeIXcEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-XC',
+      turnsLeft: 0,
+      enabled: false,
+      tick: (ctx): boolean => {
+        this.flags.set('XC', false);
+        // Inline I-XB behaviour: XC is now false, so the break message fires.
+        if (this.here.id === 'ENTRANCE-TO-HADES') {
+          ctx.tell(
+            'The tension of this ceremony is broken, and the wraiths, amused but\n' +
+            'shaken at your clumsy attempt, resume their hideous jeering.',
+          );
+        }
+        this.flags.set('XB', false);
+        return false;
+      },
+    };
+  }
+
+  // I-XBH — bell cooldown (20 ticks). 1actions.zil:1143–1147.
+  // Removes HOT-BELL, moves BELL back to ENTRANCE-TO-HADES.
+  // Prints a message if the player is present.
+  private makeIXbhEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-XBH',
+      turnsLeft: 0,
+      enabled: false,
+      tick: (ctx): boolean => {
+        const hotBell = this.world.get('HOT-BELL');
+        if (hotBell !== undefined) hotBell.moveTo(null);  // REMOVE-CAREFULLY
+
+        const bell = this.world.get('BELL');
+        const hades = this.world.get('ENTRANCE-TO-HADES');
+        if (bell !== undefined && hades !== undefined) bell.moveTo(hades);
+
+        if (this.here.id === 'ENTRANCE-TO-HADES') {
+          ctx.tell('The bell appears to have cooled down.');
+        }
+        return false;
       },
     };
   }

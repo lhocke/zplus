@@ -1,0 +1,48 @@
+# hades-exorcism corpus — Zork I oracle harness
+#
+# MECHANIC: Hades exorcism — bell (ring) → candles (hold lit) → book (read).
+# Global flags: XB (ceremony in progress), XC (ready to read), LLD-FLAG (done).
+# Clock slots: I-XB(6), I-XBH(20), I-XC(3).
+#
+# ZIL refs: 1actions.zil:1058–1150 (LLD-ROOM + timers).
+#
+# BLOCKER (documented): ENTRANCE-TO-HADES is reached by going up from TINY-CAVE,
+# which lies deep in the Great Underground Empire beyond the Troll Room.  The
+# troll blocks all passages and triggers RNG-driven combat (ZIL: <PROB 33>,
+# FIGHT-STRENGTH rolls).  dfrotz and the engine use different RNG implementations,
+# so the troll's attack/result lines diverge — exactly the RNG-driven content the
+# corpus README declares out of scope.  The Hades area therefore cannot be reached
+# end-to-end without crossing a known RNG divergence.
+#
+# The ceremony mechanics are fully exercised by the unit tests in
+#   tests/actions/cc1-hades-exorcism.test.ts
+# which drive the real world data via newGameAt('ENTRANCE-TO-HADES').
+#
+# This corpus drives the deterministic above-ground section (through the trap door)
+# and pins the exact turn where the troll's RNG combat first diverges, so the
+# harness can verify that the route up to that point matches dfrotz byte-for-byte.
+#
+# Run with:
+#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/hades-exorcism.txt
+# (no seed needed for the above-ground legs)
+#
+# Verified against dfrotz R119: first troll-attack divergence at the
+# "east" command from TROLL-ROOM (or first attack response after entry).
+
+# Set verbose mode.
+verbose
+
+# --- Route: West of House → Cellar → North of Troll Room ---
+open mailbox
+north
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+north
+east

@@ -236,6 +236,19 @@ export function createGame(opts: {
     },
   });
 
+  // I-XB / I-XC / I-XBH — Hades exorcism timers (1actions.zil:1131–1147).
+  // Stubs registered parked; LLD-ROOM M-BEG arms them via queueClock.
+  // Real tick bodies wired in the Game constructor.
+  // KILL-INTERRUPTS already lists I-XB/I-XC — once registered they become live.
+  clock.schedule({ id: 'I-XB',  turnsLeft: 0, enabled: false, tick(_ctx): boolean { return false; } });
+  clock.schedule({ id: 'I-XC',  turnsLeft: 0, enabled: false, tick(_ctx): boolean { return false; } });
+  clock.schedule({ id: 'I-XBH', turnsLeft: 0, enabled: false, tick(_ctx): boolean { return false; } });
+
+  // Clear ENTRANCE-TO-HADES static ldesc — LLD-ROOM M-LOOK renders it dynamically
+  // (spirit-bar line is conditional on LLD-FLAG; the ldesc bakes in the pre-exorcism form).
+  const lldRoom = world.get('ENTRANCE-TO-HADES');
+  if (lldRoom !== undefined) lldRoom.ldesc = undefined;
+
   // Several dam rooms carry a static ldesc in rooms.json (the H2 hotfix S0 baseline).
   // Their FCNs handle all water-level states via M-LOOK, so clear the static ldescs
   // so the dynamic handlers fire instead.
