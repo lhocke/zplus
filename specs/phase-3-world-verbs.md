@@ -1,7 +1,7 @@
 # Phase 3 — World Verbs, Puzzle Handlers & the Engine-Behavior Bug Sweep
 
-**Status:** DRAFT 2026-06-09. Implementation-ready for sign-off; NOT locked.
-**Date:** 2026-06-09
+**Status:** AMENDED 2026-06-12 (Amendment A: re-measured at main 230c07a; queued additions folded in — see §14). Locks on review-panel convergence; user review of autonomous ratifications (§13 OQ-7..9) pending.
+**Date:** 2026-06-09 (amended 2026-06-12)
 **Owner:** Dylan
 **Repo:** lhocke/zork-workflow (private)
 
@@ -89,7 +89,46 @@ of the world respond faithfully. Three clusters, in dependency order:
 ## 2. Current-State Reconciliation
 
 Measured against `src/` at the pinned checkout `/Users/lhocke/Code/zork-test-specdraft`
-on 2026-06-09 (code at `zork-test` is mutating tonight — do NOT read it). Trust this section.
+on 2026-06-09. **Superseded where it conflicts with §2-A below** — the thief/cyclops and
+dam/river waves merged after this section was measured.
+
+### 2-A. Re-measurement at main 230c07a (2026-06-12 — Amendment A; trust THIS block)
+
+Line refs at main 230c07a: `ACTION_HANDLERS` declaration `verbs/index.ts:1082` (37 entries);
+`HANDLERS` word-map `:1130` (15 entries); `META_ACTIONS` `:1149` (12 entries); fabricated
+fallback `:1170`; `verbGo` blocked path `:338–339` (still `fatal:true`); turn-loop fatal break
+`game.ts:668–674`; tick block `game.ts:856`; multi-CLOCKER wait branch `game.ts:857–885`.
+
+Drift from the 2026-06-09 baseline — the wave MUST NOT rebuild any of these:
+
+- **Already built since 06-09 (thief/dam waves):** `STILETTO-FUNCTION` (treasure-room.ts:228,
+  registered), `RECOVER-STILETTO` (thief.ts:273 + game.ts:1260), **shared `rob()` /
+  `stealJunk()` / `dropJunk()`** (thief.ts:80–251), `LOUD-ROOM-FCN` (dam.ts:646),
+  `WHITE-CLIFFS-FUNCTION` (river-obj.ts:56), `DEEP-CANYON-F` (dam.ts:526, registered :645).
+  Every §6/§9 clause that defers these "to the thief/dam spec" is OBSOLETE — those waves
+  landed first; the seams inverted into reuse-don't-rebuild constraints.
+- **V-WAIT is already 3-tick** — dam wave (949c37b) drives up to 3 CLOCKER advances from the
+  turn loop (`maxClocks = isWait ? 3 : 1`, early-stop on interrupt), dfrotz-validated by the
+  dam corpora. NOT in META_ACTIONS. CA2 is now an AUDIT/RECONCILE task (§3.2 amended).
+- **V-PRAY has a real body** (verbPray :862–869, SOUTH-TEMPLE teleport + default) — CB3 is
+  verify-plus-seam-test, not build. **V-DIAGNOSE has a full body** (:816–857) — CB6 is
+  audit-against-ZIL, not rewrite.
+- **V-RAISE (:1017–1019) and V-TIE-UP (:1108) are thin shells emitting FABRICATED non-ZIL
+  strings** ("You can't raise that.") — live fidelity bugs. CB4 REPLACES them with HACK-HACK.
+- **Meta verbs BRIEF/SUPER-BRIEF/VERSION/QUIT/SCRIPT are in META_ACTIONS with NO bodies** —
+  they currently emit the fabricated fallback while consuming no time. CB5 builds them.
+- **BD8 (disambiguation Oxford format) is FIXED** (parser-helpers.ts:273–287, matches
+  WHICH-PRINT). **BD6 is substantially fixed** (itRef + bindPronouns, parser.ts:1175–1186);
+  remaining scope = container-reveal rebind audit only.
+- **Clock slots at main:** I-LANTERN, I-CANDLES, I-MATCH, I-SWORD, I-RFILL, I-REMPTY,
+  I-MAINT-ROOM, I-RIVER (bootstrap) + I-FIGHT, I-THIEF, I-CURE, I-CYCLOPS (Game ctor).
+  `queue`/`killAll` live (clock.ts:78–91). KILL-INTERRUPTS = I-XB, I-XC, I-CYCLOPS,
+  I-LANTERN, I-CANDLES, I-SWORD, I-FOREST-ROOM, I-MATCH (death.ts:112–116) — dam/thief/fight
+  slots intentionally absent pending the V3 ZIL-fidelity check (§11 amended).
+- **Golden master** (tests/golden/walkthrough-master.txt, 218 commands) was re-baselined
+  several times since 06-09 and **still encodes the BD3 flat-list inventory bug**. The
+  normalizer trailing-`;` false-diff (normalizer.ts:261) is **unfixed** — V2 precondition stands.
+- **Corpus:** 14 files exist (6 dam c-*, 8 prior); NONE of §10.1's planned files exist yet.
 
 Legend: **NEW** = create; **EXTEND** = add to existing; **REWRITE** = replace body;
 **DONE** = built; **DELTA** = mostly built, listed gaps remain.
@@ -213,6 +252,17 @@ warning fires mid-wait; the loop does not add a 4th tick.
 > document the (a)-implementation's equivalent: V-WAIT in META_ACTIONS + internal advances = no
 > double-tick. Verify against dfrotz `wait` from move 1 (DGC-2, §8).
 
+**AMENDED (2026-06-12, §2-A):** the dam wave already implemented 3-tick wait — the turn loop
+drives `maxClocks = isWait ? 3 : 1` with early-stop on interrupt (game.ts:857–885, commit
+949c37b), dfrotz-validated by the dam corpora. This is a THIRD mechanism, neither (a) nor (b):
+the loop owns all 3 ticks and V-WAIT is NOT in META_ACTIONS. **CA2 is therefore an
+AUDIT/RECONCILE task, not a build:** (1) verify the loop-driven form against the ZIL edge set —
+no-double-tick (the isWait branch must replace, never add to, the normal end-of-turn tick),
+mid-wait interrupt early-stop, mid-wait death, `wait` in the dark; (2) author `wait.txt` vs
+dfrotz; (3) if every edge matches, RATIFY loop-driven-equivalent here (OQ-8) and update OQ-1's
+note — refactor to (a) ONLY if an edge diverges. Do not rip out a dfrotz-validated mechanism
+on mechanism-purity grounds.
+
 ### 3.3 Relit-match burnout re-arm — `light-sources.ts` (I-MATCH) — EXTEND
 
 **Bug (overnight §2):** the shared I-MATCH entry self-removes on burnout; re-lighting a match
@@ -267,6 +317,10 @@ DT2 ghost table, `1actions.zil:3152–3168`); the *living* V-PRAY here is the te
 Coordinate: the ghost-mode branch (Phase 2) takes precedence when `dead`; this V-PRAY is the
 not-dead path.
 
+**AMENDED (2026-06-12, §2-A):** `verbPray` already exists with both branches
+(verbs/index.ts:862–869). CB3 = verify the body against gverbs.zil:1047–1054 + add the
+ghost-precedence seam test; build nothing new unless the audit finds a divergence.
+
 ### 4.3 V-RING / V-TIE / V-UNTIE / V-TIE-UP — exact one-liners
 
 | Verb | ZIL | Default response |
@@ -313,6 +367,11 @@ consumed.``; no BURNBIT → ``You can't burn a <obj>.`` **Death seam:** routes t
 > The full HACK-HACK family (KICK/PUSH/RUB/WAVE/RAISE/LOWER) is built once as the shared helper
 > (CB4); each verb is a one-line call with its prefix string.
 
+**AMENDED (2026-06-12, §2-A):** V-RAISE (verbs/index.ts:1017–1019, "You can't raise that.")
+and V-TIE-UP (:1108) exist as thin shells emitting **fabricated non-ZIL strings** — live
+fidelity bugs, not blanks. CB4 REPLACES these bodies with the HACK-HACK/ZIL forms; done-criteria
+include a grep proving the fabricated strings are gone from src/.
+
 ### 4.6 Meta-verb bodies — `gverbs.zil:13–122`
 
 - **V-VERBOSE** (`:13`): `VERBOSE=T, SUPER-BRIEF=<>`, ``Maximum verbosity.``
@@ -330,6 +389,36 @@ consumed.``; no BURNBIT → ``You can't burn a <obj>.`` **Death seam:** routes t
   this cluster — DESCRIBE-ROOM consults VERBOSE/SUPER-BRIEF (verb-library-defaults.md §5,
   DESCRIBE-ROOM step 4): first visit forces verbose; revisit prints name-only unless VERBOSE.
   Wire the VERBOSE/SUPER-BRIEF globals into the existing room-description path (CB5).
+
+**AMENDED (2026-06-12) — CB5 expanded contract (BRIEF mode + room-description precedence):**
+
+1. **Current reality (§2-A):** BRIEF/SUPER-BRIEF/VERSION/QUIT/SCRIPT sit in META_ACTIONS with
+   no ACTION_HANDLERS bodies — `brief` today prints the fabricated fallback and consumes no
+   time. CB5 builds all five bodies as spec'd above.
+2. **Precedence ratification (OQ-7):** `describeCurrentRoom()` (game.ts:1145–1155) currently
+   renders `ldesc` BEFORE the room handler, permanently shadowing every state-driven M-LOOK —
+   the bug class commit 28bfc98 fixed for CYCLOPS-ROOM by *deleting* the ldesc. CB5 flips the
+   precedence to **handler-wins-with-ldesc-fallback**, which is ZIL's own DESCRIBE-ROOM order
+   (room ACTION gets M-LOOK first; LDESC prints only when the FCN returns false). Transcribe
+   the order from `gverbs.zil` DESCRIBE-ROOM — do not improvise.
+3. **ldesc-retirement contract (supersedes the 28bfc98 pattern):** under handler-wins, a
+   default-state ldesc no longer breaks a maturing FCN — the 16 fallback ldescs from commit
+   5d64188 STAY (they are the FCN-silent fallback), and future FCN tasks no longer carry an
+   ldesc-deletion step. An ldesc is removed only when ZIL itself has none for the room.
+4. **TOUCHBIT-gated revisit (brief mode):** `describeCurrentRoom()`/`describeRoom()` gain a
+   `verbose` param — explicit LOOK always full; movement arrival brief (per gverbs.zil
+   :1650–1678 semantics) when the room is Touched and VERBOSE is off. **Reference, not patch:**
+   `stash@{1}` on phase-3-dam-river holds a correct *diagnosis* of this (param threading,
+   precedence flip, maze-room re-describe, M-ENTER `\n\n` separator, golden deltas) but was an
+   unauthorized half-implementation — re-derive each piece from gverbs.zil and dfrotz; use the
+   stash only to anticipate the blast radius (its test deltas show which goldens move). The
+   maze-room TOUCHBIT-clearing claim and the `\n\n` separator must each be CONFIRMED against
+   ZIL/dfrotz before adoption — if unsupported, drop them.
+5. **DGC-9 (new register row, §8):** every golden/oracle line that shifts under brief-mode
+   revisit (movement arrivals after first visit stop re-printing ldesc) re-baselines against
+   dfrotz R119 per the §8 single-transcript protocol. DGC-7 (chimney) is one instance of this
+   class — keep both rows; BD7 closes as a side effect of CB5 if the chimney arrival passes
+   through the same gated path.
 
 ### 4.7 V-DIAGNOSE — `1actions.zil:3993–4025` (real wound readout) — REWRITE
 
@@ -357,6 +446,11 @@ Done (CB6): healthy player → "perfect health." + survival line off live score;
 (`pStrength=-2`, I-CURE enabled) → "a serious wound, which will be cured after N moves."; the
 cure-moves arithmetic uses the live I-CURE `C-TICK` (verify against Phase-2 I-CURE re-queue).
 
+**AMENDED (2026-06-12, §2-A):** a full `verbDiagnose` body already exists
+(verbs/index.ts:816–857) reading the live pStrength/I-CURE substrate. CB6 = line-by-line audit
+of that body against `1actions.zil:3993–4025`, fixing divergences in place — not a blind
+rewrite. Keep whatever already matches.
+
 ### 4.8 V-LOCK / V-UNLOCK / V-ENTER / V-EXIT — exact
 
 - **V-LOCK** (`:855`) / **V-UNLOCK** (`:1508` → calls V-LOCK): ``It doesn't seem to work.``
@@ -370,12 +464,27 @@ cure-moves arithmetic uses the live I-CURE `C-TICK` (verify against Phase-2 I-CU
 ## 5. Verb-cluster dispatch & registration (how Cluster B lands)
 
 All Cluster B bodies are pure functions of `VerbContext` and register in `ACTION_HANDLERS`
-(`verbs/index.ts:701`, measured at phase-2-combat 4d8c252) + the word-key `HANDLERS` map. Shared helpers (HACK-HACK, the DO-WALK
+(`verbs/index.ts:1082`, re-measured at main 230c07a) + the word-key `HANDLERS` map. Shared helpers (HACK-HACK, the DO-WALK
 delegate for ENTER/EXIT/CLIMB) live alongside. The fabricated fallback
 (``I don't know how to "X".``) stays for verbs outside the cluster — it is narrowed, not
-removed. **No parser/grammar rework** (out of scope). The CLOCKER meta-suppression set
-(`META_ACTIONS`) gains `V-WAIT` (per §3.2 implementation (a)); confirm no other cluster verb is
-mis-classified as meta (CLIMB/PRAY/BURN/THROW/etc. all tick).
+removed. **No parser/grammar rework** (out of scope). META_ACTIONS: V-WAIT's membership is
+governed by the CA2 audit outcome (§3.2 amended — the loop-driven form keeps it OUT); confirm
+no other cluster verb is mis-classified as meta (CLIMB/PRAY/BURN/THROW/etc. all tick).
+
+### 5.1 CB0 — PRSA ratify + unify (NEW, 2026-06-12; prerequisite to all CB tasks)
+
+**RATIFIED:** `ctx.action` (ZIL PRSA, e.g. `'V-ATTACK'`) is the canonical dispatch token in
+every action/object/room handler — never the surface verb word (L38(b): `ctx.verb==='attack'`
+silently missed kill/stab/strike). Two idioms currently coexist: the C1 `ctx.action` checks and
+the T4 prep-predicate dispatch (`verb='look', prep='IN'`); `action` is populated inconsistently
+(cyclops.ts:279 falls back to the verb word). CB0: (1) state the contract in the
+ActionContext/VerbContext interface docs (game-object.ts:33 + verbs/index.ts); (2) make
+`action` reliably populated at every dispatch site (no per-handler fallback); (3) sweep
+existing handlers' `ctx.verb ===` string checks and migrate the action-dispatch ones to
+`ctx.action` (prep-predicates remain for genuine preposition dispatch); (4) done-criteria:
+≥1 test per non-primary synonym for every CB verb (kill/stab/strike-class coverage), and a
+grep showing no remaining `ctx.verb ===` action-dispatch in src/actions + src/engine/verbs.
+Deps: CA1. All CB1–CB6 dep CB0.
 
 ---
 
@@ -449,12 +558,15 @@ BAT-DROPS room; garlic present → bat repelled (no teleport).
 ### 6.5 Skeleton curse — `SKELETON` (`1actions.zil:931`)
 
 Any interaction (TAKE/RUB/MOVE/…) summons the ghost: `ROB HERE LAND-OF-LIVING-DEAD 100` +
-`ROB ADVENTURER LAND-OF-LIVING-DEAD` — all valuables teleport to Land of Living Dead. **ROB
-seam:** ROB is a thief-helper routine (1actions.zil:3976) — but the SKELETON use is a
-self-contained valuables-scatter, not thief AI. Port a minimal `rob(from, to, prob)` helper
-*for SKELETON only*; the thief's full ROB stays in the thief spec. Coordinate: do not build the
-thief's STEAL-JUNK/DROP-JUNK here — only the scatter SKELETON needs. Done (CC5): touch skeleton
-→ carried + room valuables relocate to LAND-OF-LIVING-DEAD.
+`ROB ADVENTURER LAND-OF-LIVING-DEAD` — all valuables teleport to Land of Living Dead.
+
+**AMENDED (2026-06-12, §2-A — supersedes OQ-4):** the thief wave landed first and built the
+shared `rob()` (thief.ts:80–101, plus stealJunk/dropJunk). CC5 **reuses** `rob()` — building a
+second minimal scatter helper is now forbidden duplication. OQ-4's minimal-cut ruling is
+obsolete (its premise — thief wave not yet built — no longer holds; see OQ-9). Verify
+`rob()`'s signature covers the SKELETON call shape (`prob=100` room scatter + unconditional
+player scatter) and extend it there if not. Done (CC5): touch skeleton → carried + room
+valuables relocate to LAND-OF-LIVING-DEAD, via the shared thief.ts `rob()`.
 
 ### 6.6 Mirror — `MIRROR-MIRROR` (`1actions.zil:971`)
 
@@ -483,12 +595,13 @@ candle → extinguished; closed bottle blocks drinking.
 - `RUSTY-KNIFE-FCN` (`:907`): TAKE while carrying sword → sword blue-light pulse (feedback);
   ATTACK/SWING *with* rusty knife as weapon → kills player ("the knife slits your throat") via
   `jigsUp`. Death seam → Phase-2 `jigsUp`.
-- **`STILETTO-FUNCTION` (`:626`) — held-by-thief caveat:** any branch that depends on the thief
-  *holding* the stiletto (RECOVER-STILETTO, thief-drops-stiletto-on-death) **stays in the thief
-  spec**. Phase 3 ports only the stiletto's object responses when it is loose/held-by-player;
-  the thief-possession branches are left as a documented seam (do NOT guess thief state here).
+- **`STILETTO-FUNCTION` — DROPPED from CC8 (AMENDED 2026-06-12, §2-A):** the thief wave built
+  it (treasure-room.ts:228, registered) along with RECOVER-STILETTO (thief.ts:273 +
+  game.ts:1260). Phase 3 does NOT touch the stiletto. CC8 scope = KNIFE-F / AXE-F /
+  RUSTY-KNIFE-FCN only, coordinating with the existing `weaponFunction` helper
+  (treasure-room.ts) rather than a new pattern.
 Done (CC8): rusty-knife attack → death; take rusty-knife with sword → blue pulse, no glow change;
-STILETTO loose-object responses faithful; thief-possession branches explicitly deferred (tracked).
+KNIFE/AXE object responses faithful; stiletto untouched (already live).
 
 ### 6.9 Ambience + scenery — `WHITE-HOUSE-F` / `FOREST-F` / `SONGBIRD-F` / `GRANITE-WALL-F` / cliffs
 
@@ -514,9 +627,11 @@ live from phase-2 hotfix H3 (no Phase-3 action needed).
   carried lit FLAMEBIT/ONBIT objects.
 - `CAVE2-ROOM` (`:2416`): M-END windy-corridor candle-extinguish (50–80% blow-out). Reads/extends
   the candle timer — **depends on Cluster A candle arming (§3.4)**.
-- `DEEP-CANYON-F` (`:1730`) / `CANYON-VIEW-F`: canyon M-LOOK descriptions (CANYON-VIEW-F is the
-  scenic overlook). **River-adjacent text** — port the room description; the river-current
-  arrival stays with the dam/river spec.
+- `DEEP-CANYON-F` — **DROPPED (AMENDED 2026-06-12, §2-A):** built by the dam wave
+  (dam.ts:526, registered :645). `CANYON-VIEW`: only the CROSS verb exists (rainbow.ts:139,
+  "From here?!?"); CC10 ports the M-LOOK description side if ZIL defines one — verify against
+  1actions.zil before building (if ZIL has no CANYON-VIEW FCN beyond CROSS, there is nothing
+  to add and the rooms.json ldesc stands).
 - `SOUTH-TEMPLE-FCN` (`:2573`): the temple M-END / `COFFIN-CURE` exit-gate (carrying the coffin
   blocks the temple exit). **Phase-2 seam:** SOUTH-TEMPLE TOUCHBIT drives the Hades-vs-FOREST
   resurrection branch (Phase-2 §9.1, D4) — the *visit* sets TOUCHBIT; this FCN does the
@@ -524,6 +639,19 @@ live from phase-2 hotfix H3 (no Phase-3 action needed).
 - `MACHINE-ROOM-FCN` (`:2488`): the machine-room M-LOOK/M-ENTER (pairs with §6.3 MACHINE-F).
 Done (CC10): each room's M-code response matches dfrotz; BOOM-ROOM explodes on lit flame;
 CAVE2-ROOM blows out candles probabilistically; SOUTH-TEMPLE coffin-gate blocks the exit.
+
+### 6.11 TROLL-ROOM-F (NEW — CC11, 2026-06-12)
+
+`TROLL-ROOM-F` (`1actions.zil:4175–4178`) is the smallest FCN in the game: on M-ENTER with the
+troll present, `<THIS-IS-IT ,TROLL>` — bind the IT pronoun to the troll so `attack it` works on
+arrival. It is named in rooms.json:651 (`actionRoutine: "TROLL-ROOM-F"`) but never registered,
+so bootstrap silently leaves the handler undefined. CC11: register it (fold into an existing
+region file — no new file for four lines), wiring M-ENTER → `ctx.thisIsIt(TROLL)` via the
+existing parser hook (parser.ts setItRef). **Coordinate with BD6's narrowed audit:** the parser
+already binds pronouns post-parse (parser.ts:1175–1186) — add a test proving entry-binding and
+post-parse binding don't fight (enter troll room → `it` = troll; then `take sword` → `it`
+rebinds to sword per ZIL). Done (CC11): registered; `attack it` on first troll-room entry
+targets the troll; no double-binding regression.
 
 ---
 
@@ -539,9 +667,9 @@ Folded into the DAG from the 2026-06-08 faithfulness audit (fidelity-findings.md
 | BD3 | V-INVENTORY flat list: missing "A " article, "(providing light)", nested recursion | overnight §2; PRINT-CONT gverbs `:1750`, DESCRIBE-OBJECT `:1693` | rewrite to PRINT-CONT recursion + FIRSTER header | DGC-4 (golden encodes the bug) |
 | BD4 | V-PUT missing capacity/self-containment/already-in + TOUCHBIT/SCORE-OBJ on put | overnight §2; V-PUT gverbs `:1085` | add the container checks + FSET TOUCHBIT + SCORE-OBJ | DGC-5 if a golden put-line shifts |
 | BD5 | ~~TOUCHBIT not set on TAKE → FDESC wrongly suppressed/shown~~ **DONE-in-phase-2** (commits 5f88eee + a7dbe5d: `verbTake` sets `Flag.Touched` + clears `Flag.NonDescript` per `gverbs.zil:1948–1950`; regression test `verbtake-touchbit.test.ts`; 11 golden lines dfrotz-re-anchored) | fidelity-findings.md follow-up; ITAKE gverbs `:1900` | ~~FSET TOUCHBIT + FCLEAR NDESCBIT in the take path~~ Fixed | ~~DGC-6~~ golden lines already moved (see §8 note) |
-| BD6 | IT pronoun never initialized (THIS-IS-IT) and not re-bound on container reveal | overnight §2; gmain IT-tracking `:202` | init P-IT-OBJECT, re-bind on reveal | possible |
+| BD6 | ~~IT pronoun never initialized~~ **NARROWED (2026-06-12, §2-A):** itRef init + post-parse bindPronouns live (parser.ts:1175–1186); remaining scope = container-reveal rebind audit + the CC11 entry-binding interaction | overnight §2; gmain IT-tracking `:202` | audit reveal-path `thisIsIt` calls; fix gaps found | possible |
 | BD7 | Chimney-arrival renders verbose (full Kitchen desc) instead of abbreviated revisit | overnight §3; UP-CHIMNEY-FUNCTION `1actions.zil:553` | the chimney→Kitchen arrival uses the already-visited brief view | DGC-7 |
-| BD8 | Disambiguation list not Oxford-comma format | overnight §2 | match ZIL's "the X, the Y, or the Z" form | DGC-8 if a golden disambig line exists |
+| BD8 | ~~Disambiguation list not Oxford-comma format~~ **FIXED at main (2026-06-12, §2-A):** parser-helpers.ts:273–287 matches WHICH-PRINT. No Phase-3 work; DGC-8 moot unless V2's diff disagrees | overnight §2 | ~~match ZIL's form~~ Done | ~~DGC-8~~ |
 
 **BD3 (V-INVENTORY) and BD7 (chimney) and BD1 (lamp-off) and BD6 are the headline
 deliberate golden changes** — see §8. BD2's grue is seeded (Path B fence — never golden-diffed
@@ -567,7 +695,17 @@ was already moved — do not re-schedule it here).
 | **DGC-5** | `put X in Y` lines if capacity/scoring text shifts | BD4 / V-PUT | dfrotz the exact put command; capture full output incl. any "There's no room." |
 | **DGC-6** | ~~The late `examine trophy case` / painting FDESC-vs-DESC line~~ **DONE-in-phase-2**: golden lines 871 + 900 already dfrotz-re-anchored by commits 5f88eee + a7dbe5d (11 total golden lines updated). No Phase-3 action needed. | BD5 / TOUCHBIT on take — fixed | Already applied. |
 | **DGC-7** | Chimney→Kitchen arrival: abbreviated revisit view, not full description | BD7 / chimney | dfrotz climb chimney into already-visited Kitchen; capture the brief arrival. |
-| **DGC-8** | Disambiguation prompt Oxford-comma format | BD8 | dfrotz a genuinely ambiguous command; capture the exact "the X, the Y, or the Z?" line. |
+| **DGC-8** | ~~Disambiguation prompt Oxford-comma format~~ **moot** — BD8 fixed at main (§2-A); row retained so V2's diff audit can still map any disambig delta | BD8 | dfrotz a genuinely ambiguous command; capture the exact "the X, the Y, or the Z?" line. |
+| **DGC-9** | Movement-arrival lines after first visit lose their ldesc re-print (TOUCHBIT-gated brief mode, CB5 §4.6); DGC-7 is one instance of this class | CB5 / gverbs.zil:1650–1678 | Re-run the golden command file through dfrotz R119; every revisit-arrival line re-baselines from that single transcript. The stash@{1} test deltas predict the blast radius (RESERVOIR-SOUTH, DAM room, +more) but are NOT a source — dfrotz is. |
+
+**Provenance contract (L41, added 2026-06-12):** every oracle corpus file and golden baseline
+carries a first-line header naming its generator — `# generated-by: dfrotz-r119 <date> <cmd>`
+vs `# generated-by: engine <commit>` — and every consuming test ASSERTS the expected header
+before comparing a byte. `UPDATE_GOLDEN=1` is BANNED for any file claiming dfrotz provenance
+(it silently flips the anchor to a mirror — the V2-leg incident). The engine-golden
+(walkthrough-master.txt) may regenerate under UPDATE_GOLDEN=1 only when the resulting diff is
+audited line-by-line against the DGC register. Gate criteria that say "proven against dfrotz"
+direct the gate to RUN dfrotz — never to inspect committed artifacts claiming it.
 
 **Procedure invariant:** for every DGC entry, the new golden line is produced by a
 **single `dfrotz R119` run of the pinned command file** — full-transcript capture, output
@@ -641,6 +779,17 @@ timer should fire a second time). Dedicated unit tests, forced/seeded clock:
   timer by exactly 1; a *parse failure* does NOT (clock-main-loop.md §14.1).
 - **V-WAIT no-double-tick (CA2):** `wait` advances exactly 3, the turn loop adds 0.
 
+### 10.4 Test-authoring contract (L40, added 2026-06-12)
+
+A test that can pass without the implementation existing is vacuously green. Binding rules for
+every test this wave ships: (1) **world-state prerequisites assert-and-fail** — a missing
+prerequisite is a setup bug, never an early-return (`if (!lungs) return` shipped a double
+authoring error behind one guard); (2) guard/NM suites ban conditional early-returns outright
+in done-criteria; (3) new task **V4** sweeps existing test files for the
+`if (...) return`-above-an-expect pattern (known sightings: map-integration ×2,
+villain-side-wiring ×3, NM-F) and converts each to assert-and-fail. Reviewers reject any task
+whose tests violate (1)/(2) regardless of green.
+
 ---
 
 ## 11. Build-Task DAG (authored for a pod-wave)
@@ -653,31 +802,36 @@ lists deps / files (verdict) / done-criteria, sized so clusters are independentl
 - **CA1 — Blocked-move CLOCKER tick.** `game.ts` EXTEND: parse-success RFATAL moves tick CLOCKER
   before `break`; parse-failure and meta still don't tick. Deps: none. Done: blocked-move tick
   unit test; `clock-blocked-move.txt` clean vs dfrotz; **DGC-1 golden re-baseline applied**.
-- **CA2 — V-WAIT.** `verbs/index.ts` RECONCILE existing 1-tick implementation (commit
-  93d96cc, phase-2 W1 repair) to the faithful 3-tick form (gverbs `:1514`) + confirm
-  `V-WAIT` in META_ACTIONS (impl (a), §3.2, OQ-1 ratified). Deps: CA1. **Do not build
-  V-WAIT from scratch — audit the existing implementation at 93d96cc first and adjust to
-  3 ticks.** Done: 3-tick advance, mid-wait early stop, no double-tick; `wait.txt` clean;
-  DGC-2 applied (golden/oracle wait lines shift under the 3-tick form).
+- **CA2 — V-WAIT audit/reconcile (AMENDED 2026-06-12).** The dam wave already ships 3-tick
+  loop-driven wait (game.ts:857–885, dfrotz-validated). Audit it against the ZIL edge set
+  (§3.2 amended): no-double-tick, mid-wait early stop, mid-wait death, wait-in-dark; author
+  `wait.txt`; ratify loop-driven-equivalent (OQ-8) or refactor to impl (a) ONLY on a proven
+  edge divergence. Deps: CA1. Done: edge audit documented; `wait.txt` clean; DGC-2 applied
+  only if remaining wait lines shift.
 - **CA3 — Match re-arm + candle first-touch.** `light-sources.ts` EXTEND using Phase-2 `queue`.
   Deps: CA1 (and Phase-2 `queue` landed). Done: match re-arm test; candle first-touch arm test.
 
-### Wave 1 — Verb priority cluster (parallel; deps: CA1)
+### Wave 1 — Verb priority cluster (parallel; deps: CA1 + CB0)
 
+- **CB0 — PRSA ratify+unify (NEW 2026-06-12; §5.1).** The contract-layer prerequisite: canonical
+  `ctx.action` dispatch, populated at every dispatch site; idiom unification (action-checks vs
+  prep-predicates); handler sweep; ≥1 non-primary-synonym test per CB verb. Deps: CA1. Done:
+  §5.1 criteria, incl. the no-`ctx.verb`-action-dispatch grep.
 - **CB1 — Movement verbs.** CLIMB family (§4.1), ENTER/EXIT/LOCK/UNLOCK (§4.8). `verbs/index.ts`
   NEW. Done: `verb-defaults.txt` rows for these; `climb tree` reaches UP-A-TREE.
 - **CB2 — Object verbs.** RING/TIE/UNTIE/TIE-UP (§4.3), BURN+PRE-BURN (§4.4), THROW/GIVE/WEAR/
   MOVE (§4.5). Deps: Phase-2 jigsUp (BURN/THROW death). Done: each default string exact; death
   branches route through jigsUp.
-- **CB3 — PRAY.** §4.2; coordinate ghost-mode precedence (seam §9). Done: SOUTH-TEMPLE teleport;
-  elsewhere default; ghost-mode unaffected.
+- **CB3 — PRAY (AMENDED: verify-only).** Body exists (§4.2 amended). Audit vs gverbs.zil:1047 +
+  ghost-precedence seam test. Done: audit note; seam test green; no rebuild.
 - **CB4 — HACK-HACK family.** Shared helper (§4.5) + RAISE/LOWER/KICK/PUSH/RUB/WAVE one-liners +
   HO-HUM PICK-ONE. Done: GLOBAL-OBJECTS "isn't here!" branch; 3-string PICK-ONE.
 - **CB5 — Meta-verb bodies + brief mode.** VERBOSE/BRIEF/SUPER-BRIEF/VERSION/SCRIPT/QUIT (§4.6) +
   wire VERBOSE/SUPER-BRIEF into DESCRIBE-ROOM revisit. Done: verbosity globals flip; revisit
   brief view; V-QUIT renders score + gameOver (web-shell).
-- **CB6 — V-DIAGNOSE rewrite.** §4.7, reads Phase-2 pStrength + I-CURE. Deps: Phase-2 substrate.
-  Done: healthy/wounded readouts; cure-moves arithmetic vs live I-CURE.
+- **CB6 — V-DIAGNOSE audit (AMENDED: body exists, index.ts:816–857).** Line-by-line vs
+  1actions.zil:3993–4025; fix divergences in place (§4.7 amended). Done: healthy/wounded
+  readouts match ZIL; cure-moves arithmetic vs live I-CURE; divergence list documented.
 
 ### Wave 2 — Puzzle handlers (parallel; deps: CA1, CA3 for timer-touching ones)
 
@@ -689,21 +843,25 @@ lists deps / files (verdict) / done-criteria, sized so clusters are independentl
 - **CC3 — Coal-mine machine.** MACHINE-F/MSWITCH-FUNCTION/BASKET-F + MACHINE-ROOM-FCN. Deps: CB4
   (RAISE/LOWER seam). Done: coal→diamond; basket lower carries the LIGHT-SHAFT load (Phase-2 +13).
 - **CC4 — Bat/garlic.** BAT-F/FLY-ME/GARLIC-F. Done: teleport (seeded structural) / repel.
-- **CC5 — Skeleton.** SKELETON + minimal `rob` helper (SKELETON-only; shared ROB arrives with the
-  thief wave per OQ-4 ratification). Done: valuables scatter.
+- **CC5 — Skeleton (AMENDED: reuse thief.ts `rob()`, OQ-9).** SKELETON via the existing shared
+  rob (§6.5 amended); no new helper. Done: valuables scatter through thief.ts:80.
 - **CC6 — Mirror.** MIRROR-MIRROR. Done: swap+teleport; break sets LUCKY=false (assert Phase-2
   zprob reads it).
 - **CC7 — Bottle/water.** BOTTLE-FUNCTION/WATER-F. Done: drink/pour/closed-gate.
-- **CC8 — Weapons.** KNIFE-F/AXE-F/RUSTY-KNIFE-FCN + STILETTO loose responses (thief seam §9).
-  Deps: Phase-2 jigsUp + Phase-2 TROLL-FCN (AXE). Done: rusty-knife death; STILETTO deferred
-  branches documented.
+- **CC8 — Weapons (AMENDED: stiletto dropped — already live).** KNIFE-F/AXE-F/RUSTY-KNIFE-FCN
+  only, via existing `weaponFunction` (§6.8 amended). Deps: Phase-2 jigsUp + TROLL-FCN (AXE).
+  Done: rusty-knife death; KNIFE/AXE responses; stiletto untouched.
 - **CC9 — Ambience/scenery.** WHITE-HOUSE-F/FOREST-F/SONGBIRD-F + I-FOREST-ROOM register +
   GRANITE-WALL-F + CLIFF/WCLIF-OBJECT scenery (descriptions only, per OQ-3 ratification).
   Done: scenery text; chirp at ~15%; I-FOREST-ROOM dead enableClock resolved; I-SWORD
   confirmed live from phase-2 H3 (no additional work).
-- **CC10 — Misc room FCNs.** BATS-ROOM/BOOM-ROOM/CAVE2-ROOM/DEEP-CANYON-F/SOUTH-TEMPLE-FCN/
-  CANYON-VIEW-F. Deps: CA3 (CAVE2 candle), Phase-2 jigsUp (BOOM). Done: per-room M-codes vs
-  dfrotz; BOOM explosion; CAVE2 blow-out; coffin-gate.
+- **CC10 — Misc room FCNs (AMENDED: DEEP-CANYON-F dropped — dam built it).** BATS-ROOM/
+  BOOM-ROOM/CAVE2-ROOM/SOUTH-TEMPLE-FCN + CANYON-VIEW only-if-ZIL-defines-it (§6.10 amended).
+  Deps: CA3 (CAVE2 candle), Phase-2 jigsUp (BOOM). Done: per-room M-codes vs dfrotz; BOOM
+  explosion; CAVE2 blow-out; coffin-gate.
+- **CC11 — TROLL-ROOM-F (NEW, §6.11).** Register the M-ENTER THIS-IS-IT binding; no-double-
+  binding test with parser bindPronouns. Deps: none (uses existing setItRef hook). Done: §6.11
+  criteria.
 
 ### Wave 3 — Engine-behavior bug worklist (deps: relevant clusters)
 
@@ -712,16 +870,23 @@ lists deps / files (verdict) / done-criteria, sized so clusters are independentl
 - **BD-B — Object-state bugs.** BD4 (V-PUT checks + TOUCHBIT/SCORE-OBJ). *(BD5 DONE-in-phase-2
   — commits 5f88eee + a7dbe5d; DGC-6 already applied to the golden; no work here.)*
   Done: DGC-5 (V-PUT capacity/scoring lines dfrotz-confirmed).
-- **BD-C — Parser/movement bugs.** BD2 (dark-no-exit grue PROB 80 — seeded, fence), BD6 (IT
-  pronoun init/rebind), BD8 (disambiguation Oxford format). Done: grue branch test; IT rebind
-  test; DGC-8 if a golden disambig line exists.
+- **BD-C — Parser/movement bugs (AMENDED).** BD2 (dark-no-exit grue PROB 80 — seeded, fence) +
+  BD6 narrowed (container-reveal rebind audit only; coordinate CC11). BD8 dropped — fixed at
+  main (§2-A). Done: grue branch test; reveal-rebind audit + fixes.
 
 ### Wave 4 — Verification consolidation
 
 - **V1 — Per-cluster oracle corpora.** All §10.1 corpus files clean vs dfrotz R119. Deps: all CB/CC/BD.
 - **V2 — Golden re-baseline + DGC audit.** Diff golden vs dfrotz; every changed line maps to a
-  DGC row; no unregistered diff; normalizer false-diff fixed. Deps: V1.
-- **V3 — Timer re-arm unit suite.** §10.3 — the silent-failure net. Deps: CA3, CC1, CC9.
+  DGC row; no unregistered diff; normalizer trailing-`;` false-diff fixed (normalizer.ts:261 —
+  still unfixed at main, §2-A); **provenance headers (L41/§8) added to every corpus + golden
+  file and asserted by their tests; the gate RUNS dfrotz directly**. Deps: V1.
+- **V3 — Timer re-arm unit suite.** §10.3 — the silent-failure net. PLUS: verify the
+  KILL-INTERRUPTS list (death.ts:112–116) against ZIL's KILL-INTERRUPTS routine in
+  1actions.zil — document why each dam/thief/fight slot is present or absent; fidelity rules.
+  Deps: CA3, CC1, CC9.
+- **V4 — Conditional-guard lint sweep (NEW, §10.4/L40).** Sweep all existing test files for
+  early-return-above-expect guards; convert to assert-and-fail. Deps: none (parallel).
 
 **Sequencing note:** CA1 is the literal first task — it shifts golden timer lines (DGC-1), so all
 timer-touching corpora and the golden re-baseline must run *after* it. The verb and puzzle
@@ -749,9 +914,11 @@ depends on a cluster (BD-A V-INVENTORY is independent; CC10 BOOM needs Phase-2 j
       the coal machine makes a diamond; a verb from the priority cluster gives its ZIL response.
 
 ### G3 — Playtest-Ready
-- [ ] Known-issues updated: priority verbs live, remaining verbs still fall back; thief/cyclops/
-      dam/river/save still deferred; STILETTO thief-possession + LOUD-ROOM noted as cross-spec
-      seams; I-SWORD live (phase-2 H3) — remove from deferred list.
+- [ ] Known-issues updated (AMENDED 2026-06-12 — thief/cyclops/dam/river are LIVE, not
+      deferred): priority verbs live, remaining non-cluster verbs still fall back (tracked);
+      temple/Hades now functional (retire the "puzzles aren't fully wired" line shipped
+      2026-06-12); save/restore still deferred (issue #11); the 2026-06-12 Known-Issues list
+      in shell.ts is the baseline to amend.
 
 ---
 
@@ -803,3 +970,34 @@ depends on a cluster (BD-A V-INVENTORY is independent; CC10 BOOM needs Phase-2 j
    **RATIFIED (2026-06-10):** the existing golden V-INVENTORY line is gated behind DGC-4's dfrotz
    re-baseline (single-transcript protocol per §8); no test may assert the old flat-list form
    until DGC-4 lands.
+
+7. **OQ-7 — Room-description precedence: ldesc-wins (current code) or handler-wins (ZIL)?**
+   **RATIFIED (2026-06-12, autonomous run — user review pending):** handler-wins-with-ldesc-
+   fallback, transcribed from gverbs.zil DESCRIBE-ROOM (§4.6 amended, item 2). Supersedes the
+   28bfc98 ldesc-deletion pattern; the 16 default-state ldescs stay as fallbacks.
+
+8. **OQ-8 — V-WAIT mechanism: keep the dam wave's loop-driven 3-tick form, or refactor to
+   OQ-1's option (a)?** **PROVISIONALLY RATIFIED (2026-06-12, autonomous run):** keep the
+   loop-driven form IF the CA2 edge audit (§3.2 amended) passes all four edges; refactor to (a)
+   only on a proven divergence. Rationale: the form is dfrotz-validated by six dam corpora;
+   mechanism purity does not outrank behavioral anchoring.
+
+9. **OQ-9 — SKELETON rob helper.** **RATIFIED (2026-06-12, autonomous run):** OQ-4 is obsolete —
+   its premise (thief wave unbuilt) inverted when the thief wave merged first. CC5 reuses
+   thief.ts `rob()`; building a parallel minimal helper is forbidden duplication.
+
+---
+
+## 14. Amendment Log
+
+**Amendment A — 2026-06-12 (autonomous overnight run; evidence: two Explore sweeps at main
+230c07a, stash@{1} diff, tooling-lessons L38/L40/L41, commits 5d64188/28bfc98/566b320/949c37b).**
+Changes: §2-A re-measurement block (line refs re-pinned; stale deferrals inverted to
+reuse-constraints); CA2 → audit/reconcile (dam's 3-tick wait); CB0 added (PRSA ratify+unify,
+§5.1); CB3/CB6 → verify/audit (bodies exist); CB4 → replace fabricated V-RAISE/V-TIE-UP shells;
+CB5 expanded (BRIEF mode, OQ-7 precedence flip, ldesc-retirement contract, stash@{1} as
+reference-not-patch, DGC-9); CC5 → reuse shared rob (OQ-9); CC8 → stiletto dropped; CC10 →
+DEEP-CANYON-F dropped, CANYON-VIEW verify-first; CC11 added (TROLL-ROOM-F); BD6 narrowed; BD8
+closed (fixed at main); DGC-8 mooted; DGC-9 added; §8 provenance contract (L41); §10.4
+test-authoring contract (L40); V2/V3 expanded; V4 added; G3 deferral list corrected;
+OQ-7/8/9 ratified (autonomous — user review pending).
