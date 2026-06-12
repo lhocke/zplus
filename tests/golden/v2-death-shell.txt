@@ -89,5 +89,5 @@ You can be killed by a serious wound.
 You have been killed once.
 
 > score
-Your score is 25 (total of 350 points), in 14 moves.
+Your score is 25 (total of 350 points), in 15 moves.
 This gives you the rank of Beginner.
