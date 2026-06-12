@@ -536,6 +536,36 @@ describe('V-LOWER', () => {
     );
     expect(r.output).toBe("The surrounding wall isn't here!");
   });
+
+  // LOCAL-GLOBALS (WHITE-HOUSE, FOREST) are (IN LOCAL-GLOBALS) in ZIL, NOT (IN GLOBAL-OBJECTS).
+  // HACK-HACK: <IN? PRSO GLOBAL-OBJECTS> is false for them → HO-HUM, not "isn't here!".
+  // Verified: dfrotz R119 at WEST-OF-HOUSE → "Playing in this way with the white house has no effect."
+  it('local-global WHITE-HOUSE (null parent, in ROOM_GLOBAL_IDS) → HO-HUM, not "isn\'t here!"', () => {
+    const fix = makeFixture();
+    const whiteHouse = new Thing('WHITE-HOUSE', 'white house', { synonyms: ['house'], adjectives: ['white'], ldesc: '' });
+    // parent stays null — mimics LOCAL-GLOBALS: never placed in a room directly
+    expect(whiteHouse.parent).toBeNull();
+    const world2 = World.fromObjects([fix.room, fix.player, whiteHouse]);
+    const r = executeVerb(
+      { verb: 'lower', action: 'V-LOWER', dobj: whiteHouse, player: fix.player, here: fix.room, world: world2, rng: { next: () => 2 } },
+      'V-LOWER',
+    );
+    expect(r.output).toMatch(/^Playing in this way with the white house/);
+    expect(r.output).not.toContain("isn't here!");
+  });
+
+  it('local-global FOREST (null parent, in ROOM_GLOBAL_IDS) → HO-HUM, not "isn\'t here!"', () => {
+    const fix = makeFixture();
+    const forest = new Thing('FOREST', 'forest', { synonyms: ['forest'], adjectives: [], ldesc: '' });
+    expect(forest.parent).toBeNull();
+    const world2 = World.fromObjects([fix.room, fix.player, forest]);
+    const r = executeVerb(
+      { verb: 'lower', action: 'V-LOWER', dobj: forest, player: fix.player, here: fix.room, world: world2, rng: { next: () => 2 } },
+      'V-LOWER',
+    );
+    expect(r.output).toMatch(/^Playing in this way with the forest/);
+    expect(r.output).not.toContain("isn't here!");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -564,6 +594,20 @@ describe('V-RAISE', () => {
       'V-RAISE',
     );
     expect(r.output).toBe("The surrounding wall isn't here!");
+  });
+
+  // Same LOCAL-GLOBALS fix: raise white house / raise forest → HO-HUM, not "isn't here!"
+  it('local-global WHITE-HOUSE → HO-HUM via HACK-HACK (dfrotz: "has no effect.")', () => {
+    const fix = makeFixture();
+    const whiteHouse = new Thing('WHITE-HOUSE', 'white house', { synonyms: ['house'], adjectives: ['white'], ldesc: '' });
+    expect(whiteHouse.parent).toBeNull();
+    const world2 = World.fromObjects([fix.room, fix.player, whiteHouse]);
+    const r = executeVerb(
+      { verb: 'raise', action: 'V-RAISE', dobj: whiteHouse, player: fix.player, here: fix.room, world: world2, rng: { next: () => 2 } },
+      'V-RAISE',
+    );
+    expect(r.output).toMatch(/^Playing in this way with the white house/);
+    expect(r.output).not.toContain("isn't here!");
   });
 });
 

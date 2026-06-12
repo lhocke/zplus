@@ -19,6 +19,17 @@ import { lit } from '../parser/scope.js';
 import { ROOM_GLOBAL_IDS } from '../parser/room-globals.js';
 import { CURE_WAIT } from '../combat.js';
 
+// All object IDs that appear in any room's LOCAL-GLOBALS list (zil/1dungeon.zil "(IN LOCAL-GLOBALS)").
+// LOCAL-GLOBALS objects are not IN GLOBAL-OBJECTS per ZIL, so HACK-HACK must not fire
+// "isn't here!" for them — they get the HO-HUM suffix instead.
+const LOCAL_GLOBAL_IDS: ReadonlySet<string> = (() => {
+  const s = new Set<string>();
+  for (const ids of ROOM_GLOBAL_IDS.values()) {
+    for (const id of ids) s.add(id);
+  }
+  return s;
+})();
+
 export interface VerbContext {
   readonly verb: string;
   /**
@@ -1135,14 +1146,18 @@ function verbMove(ctx: VerbContext): VerbResult {
 }
 
 // HACK-HACK (gverbs.zil:2024–2029) — shared helper for RAISE/LOWER/WAVE/RUB/etc.
-// Global-objects item (parentless non-room) + verb WAVE/RAISE/LOWER → "isn't here".
-// Otherwise: STR + D(PRSO) + PICK-ONE(HO-HUM).
+// Only true GLOBAL-OBJECTS members (parentless AND not in LOCAL_GLOBAL_IDS) trigger
+// "isn't here!". LOCAL-GLOBALS like WHITE-HOUSE and FOREST are (IN LOCAL-GLOBALS) in
+// ZIL, so <IN? PRSO GLOBAL-OBJECTS> is false for them → they get the HO-HUM suffix.
 function hackHackVerb(prefix: string, ctx: VerbContext): VerbResult {
   const dobj = ctx.dobj;
   const name = dobj?.desc ?? '';
-  // GLOBAL-OBJECTS check: parent === null and not a Room.
-  const isGlobal = dobj !== undefined && dobj.parent === null && !('exits' in dobj);
-  if (isGlobal) return result(fmt(hackHack.notHere, name));
+  // GLOBAL-OBJECTS check: parentless non-room AND not a LOCAL-GLOBALS object.
+  const isGlobalObj = dobj !== undefined
+    && dobj.parent === null
+    && !('exits' in dobj)
+    && !LOCAL_GLOBAL_IDS.has(dobj.id);
+  if (isGlobalObj) return result(fmt(hackHack.notHere, name));
   const suffix = ctx.rng !== undefined ? pick(hoHum, ctx.rng) : hoHum.entries[0]!;
   return result(`${prefix}${name}${suffix}`);
 }
