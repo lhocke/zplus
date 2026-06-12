@@ -1146,47 +1146,50 @@ function verbMove(ctx: VerbContext): VerbResult {
 }
 
 // HACK-HACK (gverbs.zil:2024–2029) — shared helper for RAISE/LOWER/WAVE/RUB/etc.
-// Only true GLOBAL-OBJECTS members (parentless AND not in LOCAL_GLOBAL_IDS) trigger
-// "isn't here!". LOCAL-GLOBALS like WHITE-HOUSE and FOREST are (IN LOCAL-GLOBALS) in
-// ZIL, so <IN? PRSO GLOBAL-OBJECTS> is false for them → they get the HO-HUM suffix.
-function hackHackVerb(prefix: string, ctx: VerbContext): VerbResult {
+// ZIL gates "isn't here!" on <AND <IN? PRSO GLOBAL-OBJECTS> <VERB? WAVE RAISE LOWER>>.
+// Only WAVE/RAISE/LOWER trigger that branch; KICK/PUSH/RUB fall through to HO-HUM even
+// for global objects. LOCAL-GLOBALS (WHITE-HOUSE etc.) are not IN GLOBAL-OBJECTS in ZIL,
+// so they also get HO-HUM regardless.
+function hackHackVerb(prefix: string, ctx: VerbContext, waveRaiseLower: boolean): VerbResult {
   const dobj = ctx.dobj;
   const name = dobj?.desc ?? '';
-  // GLOBAL-OBJECTS check: parentless non-room AND not a LOCAL-GLOBALS object.
+  // GLOBAL-OBJECTS: parentless non-room AND not a LOCAL-GLOBALS object.
   const isGlobalObj = dobj !== undefined
     && dobj.parent === null
     && !('exits' in dobj)
     && !LOCAL_GLOBAL_IDS.has(dobj.id);
-  if (isGlobalObj) return result(fmt(hackHack.notHere, name));
+  if (isGlobalObj && waveRaiseLower) return result(fmt(hackHack.notHere, name));
   const suffix = ctx.rng !== undefined ? pick(hoHum, ctx.rng) : hoHum.entries[0]!;
   return result(`${prefix}${name}${suffix}`);
 }
 
 // V-LOWER (gverbs.zil:902) — HACK-HACK "Playing in this way with the ".
 function verbLower(ctx: VerbContext): VerbResult {
-  return hackHackVerb('Playing in this way with the ', ctx);
+  return hackHackVerb('Playing in this way with the ', ctx, true);
 }
 
 // V-WAVE (gverbs.zil:1594-1595) — HACK-HACK "Waving the ".
-// WAVE is in ZIL's <VERB? WAVE RAISE LOWER> guard, so global-objects items
-// get "isn't here!" just like RAISE/LOWER (gverbs.zil:2025-2027).
+// WAVE is in <VERB? WAVE RAISE LOWER> → global-objects gets "isn't here!".
 function verbWave(ctx: VerbContext): VerbResult {
-  return hackHackVerb('Waving the ', ctx);
+  return hackHackVerb('Waving the ', ctx, true);
 }
 
 // V-KICK (gverbs.zil:760) — HACK-HACK "Kicking the ".
+// KICK not in <VERB? WAVE RAISE LOWER> → global-objects falls to HO-HUM.
 function verbKick(ctx: VerbContext): VerbResult {
-  return hackHackVerb('Kicking the ', ctx);
+  return hackHackVerb('Kicking the ', ctx, false);
 }
 
 // V-PUSH (gverbs.zil:1070) — HACK-HACK "Pushing the ".
+// PUSH not in <VERB? WAVE RAISE LOWER> → global-objects falls to HO-HUM.
 function verbPush(ctx: VerbContext): VerbResult {
-  return hackHackVerb('Pushing the ', ctx);
+  return hackHackVerb('Pushing the ', ctx, false);
 }
 
 // V-RUB (gverbs.zil:1165) — HACK-HACK "Fiddling with the ".
+// RUB not in <VERB? WAVE RAISE LOWER> → global-objects falls to HO-HUM.
 function verbRub(ctx: VerbContext): VerbResult {
-  return hackHackVerb('Fiddling with the ', ctx);
+  return hackHackVerb('Fiddling with the ', ctx, false);
 }
 
 // V-ECHO (gverbs.zil:526) — the "echo echo ..." fallback.
