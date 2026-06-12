@@ -212,3 +212,34 @@ untie leaflet
 # --- CASE 12b: lower mailbox → same HACK-HACK route as V-RAISE ---
 # Same HO-HUM variability; marked ~ (structural/skip).
 ~lower mailbox
+
+# ===========================================================================
+# CB4 cases — V-KICK, V-PUSH, V-RUB, V-WAVE  (gverbs.zil:760, 1070, 1165, 1594)
+# HACK-HACK family: all route through HACK-HACK with distinct prefix strings.
+# HO-HUM PICK-ONE is RNG-seeded; all turns marked ~ (structural match only).
+# State: WEST-OF-HOUSE; leaflet in player's inventory (from CASE 10).
+# Mailbox is in room (not GLOBAL-OBJECTS) — HO-HUM branch fires for all four.
+# authorized data exception: CB4 / spec §11 (verb-defaults.txt rows)
+#
+# CASE 13 (commands 31–34): V-KICK, V-PUSH, V-RUB, V-WAVE defaults
+#   "kick mailbox"  → "Kicking the small mailbox" + HO-HUM suffix
+#   "push mailbox"  → "Pushing the small mailbox" + HO-HUM suffix
+#   "rub mailbox"   → "Fiddling with the small mailbox" + HO-HUM suffix
+#   "wave mailbox"  → "Waving the small mailbox" + HO-HUM suffix
+# ===========================================================================
+
+# --- CASE 13a: kick mailbox → HACK-HACK "Kicking the small mailbox" ---
+# gverbs.zil:760.  HO-HUM suffix varies by seed; marked ~ (structural/skip).
+~kick mailbox
+
+# --- CASE 13b: push mailbox → HACK-HACK "Pushing the small mailbox" ---
+# gverbs.zil:1070.  HO-HUM suffix varies by seed; marked ~ (structural/skip).
+~push mailbox
+
+# --- CASE 13c: rub mailbox → HACK-HACK "Fiddling with the small mailbox" ---
+# gverbs.zil:1165.  HO-HUM suffix varies by seed; marked ~ (structural/skip).
+~rub mailbox
+
+# --- CASE 13d: wave mailbox → HACK-HACK "Waving the small mailbox" ---
+# gverbs.zil:1594-1595.  HO-HUM suffix varies by seed; marked ~ (structural/skip).
+~wave mailbox

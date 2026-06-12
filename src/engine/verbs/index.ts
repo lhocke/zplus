@@ -1167,15 +1167,26 @@ function verbLower(ctx: VerbContext): VerbResult {
   return hackHackVerb('Playing in this way with the ', ctx);
 }
 
-// V-WAVE (gverbs.zil:1594-1595) — fall-through via HACK-HACK "Waving the ".
-// HACK-HACK: "Waving the " + D(PRSO) + PICK-ONE(HO-HUM). gverbs.zil:2024-2036.
-// (The global-object "isn't here" branch of HACK-HACK is unreachable here:
-//  parser scoping only surfaces a global object when it passes GWIM's WAVE check,
-//  and globally-scoped wave targets will be intercepted by their ACTION handlers.)
+// V-WAVE (gverbs.zil:1594-1595) — HACK-HACK "Waving the ".
+// WAVE is in ZIL's <VERB? WAVE RAISE LOWER> guard, so global-objects items
+// get "isn't here!" just like RAISE/LOWER (gverbs.zil:2025-2027).
 function verbWave(ctx: VerbContext): VerbResult {
-  const name = ctx.dobj?.desc ?? '';
-  const suffix = ctx.rng !== undefined ? pick(hoHum, ctx.rng) : hoHum.entries[0]!;
-  return result(`Waving the ${name}${suffix}`);
+  return hackHackVerb('Waving the ', ctx);
+}
+
+// V-KICK (gverbs.zil:760) — HACK-HACK "Kicking the ".
+function verbKick(ctx: VerbContext): VerbResult {
+  return hackHackVerb('Kicking the ', ctx);
+}
+
+// V-PUSH (gverbs.zil:1070) — HACK-HACK "Pushing the ".
+function verbPush(ctx: VerbContext): VerbResult {
+  return hackHackVerb('Pushing the ', ctx);
+}
+
+// V-RUB (gverbs.zil:1165) — HACK-HACK "Fiddling with the ".
+function verbRub(ctx: VerbContext): VerbResult {
+  return hackHackVerb('Fiddling with the ', ctx);
 }
 
 // V-ECHO (gverbs.zil:526) — the "echo echo ..." fallback.
@@ -1453,6 +1464,9 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LAND':      verbLand,
   'V-DIG':       verbDig,
   'V-WAVE':       verbWave,
+  'V-KICK':       verbKick,
+  'V-PUSH':       verbPush,
+  'V-RUB':        verbRub,
   'V-ECHO':       verbEcho,
   'V-CROSS':      verbCross,
   'V-RAISE':      verbRaise,
