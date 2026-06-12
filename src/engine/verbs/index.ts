@@ -929,14 +929,21 @@ function verbScore(ctx: VerbContext): VerbResult {
   return result(`${line1}\n${line2}`);
 }
 
-// V-DIAGNOSE (1actions.zil:3993–4024)
+// V-DIAGNOSE (1actions.zil:3993–4025)
+//
+// CB6 audit result — all lines match ZIL except one documented divergence:
+//   ZIL survival COND: <0? .RS> → "expect death soon"
+//   We use: rs <= 0 → "expect death soon"
+//   ZIL gap: RS < 0 has no COND branch → would emit "You can ." (blank desc).
+//   Intent-faithful fix: treat RS <= 0 as "expect death soon". Not reverted.
+//
 // FIGHT-STRENGTH base = 2 + floor(SCORE/70) (1actions.zil:3375–3381).
 // WD / RS follow the ZIL exactly:
 //   MS = FIGHT-STRENGTH(false) — base only
 //   WD = player pStrength  (raw, still negative at this point)
 //   RS = MS + WD           (so wounds lower RS — ZIL: <+ .MS .WD>)
 //   if !C-ENABLED?: WD = 0   else: WD = -WD  (negate to positive wound depth)
-// Cured-after: CURE_WAIT*(WD-1) + C-TICK  (1actions.zil:4011–4014)
+// Cured-after: CURE_WAIT*(WD-1) + C-TICK  (1actions.zil:4008–4010)
 function verbDiagnose(ctx: VerbContext): VerbResult {
   const deaths = ctx.deaths          ?? 0;
   const score  = ctx.score           ?? 0;
@@ -948,7 +955,7 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
   const rs = ms + rawPs;                      // RS = MS + pStrength (1actions.zil:3994)
 
   // WD: 0 when I-CURE is disabled; positive wound depth when armed.
-  const wd = cureOn ? -rawPs : 0;             // 1actions.zil:3995–3998
+  const wd = cureOn ? -rawPs : 0;             // 1actions.zil:3996–3997
 
   const lines: string[] = [];
 
@@ -960,10 +967,12 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
       wd === 2 ? 'a serious wound,' :
       wd === 3 ? 'several wounds,' :
       /* wd>3 */ 'serious wounds,';
-    const curedAfter = CURE_WAIT * (wd - 1) + cureTick;  // 1actions.zil:4011–4014
+    const curedAfter = CURE_WAIT * (wd - 1) + cureTick;  // 1actions.zil:4008–4010
     lines.push(`You have ${woundDesc} which will be cured after ${curedAfter} moves.`);
   }
 
+  // ZIL: <0? .RS> → "expect death soon"; RS<0 has no branch (gap — emits "You can .").
+  // We guard rs<=0 to cover the RS<0 case faithfully (see CB6 audit note above).
   const survDesc =
     rs <= 0 ? 'expect death soon' :
     rs === 1 ? 'be killed by one more light wound' :
