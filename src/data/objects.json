@@ -1769,7 +1769,8 @@
     "flags": [
       "Takeable",
       "Sacred",
-      "TryTake"
+      "TryTake",
+      "Tool"
     ],
     "props": {
       "SIZE": 10

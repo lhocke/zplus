@@ -300,3 +300,99 @@ describe('CC2 — DOME-ROOM-FCN M-ENTER: dead player falls to TORCH-ROOM', () =>
     expect(g.view().here).toBe('TORCH-ROOM');
   });
 });
+
+// ---------------------------------------------------------------------------
+// NDESCBIT — rope suppressed from room floor listing while tied
+// 1actions.zil:3044 (FSET ROPE NDESCBIT on tie), :3067 (FCLEAR on untie)
+// ---------------------------------------------------------------------------
+
+describe('CC2 — ROPE NDESCBIT: rope hidden from floor listing while tied (1actions.zil:3044/3067)', () => {
+  it('after tie rope to railing: ROPE has NonDescript flag', () => {
+    const g = gameWithRopeAtDome();
+    g.turn('tie rope to railing');
+    const rope = g.world.get('ROPE')!;
+    expect(rope.has(Flag.NonDescript)).toBe(true);
+  });
+
+  it('after tie rope to railing: look does NOT show "There is a rope here."', () => {
+    const g = gameWithRopeAtDome();
+    g.turn('tie rope to railing');
+    const out = g.turn('look').output;
+    expect(out).not.toContain('There is a rope here.');
+  });
+
+  it('after untie rope: ROPE no longer has NonDescript flag', () => {
+    const g = gameWithRopeAtDome();
+    g.turn('tie rope to railing');
+    g.turn('untie rope');
+    const rope = g.world.get('ROPE')!;
+    expect(rope.has(Flag.NonDescript)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// V-CLIMB-DOWN with rope: DO-WALK DOWN (1actions.zil:3050–3051)
+// ---------------------------------------------------------------------------
+
+describe('CC2 — V-CLIMB-DOWN rope: descends to TORCH-ROOM when DOME-FLAG set (1actions.zil:3050–3051)', () => {
+  it('climb down rope after tying: player moves to TORCH-ROOM', () => {
+    const g = gameWithRopeAtDome();
+    g.turn('tie rope to railing');
+    expect(flags(g).get('DOME-FLAG')).toBe(true);
+    g.turn('climb down rope');
+    expect(g.view().here).toBe('TORCH-ROOM');
+  });
+
+  it('climb down rope after tying: output contains Torch Room description', () => {
+    const g = gameWithRopeAtDome();
+    g.turn('tie rope to railing');
+    const out = g.turn('climb down rope').output;
+    expect(out).toContain('large dome');
+  });
+
+  it('plain "down" after tying: also descends to TORCH-ROOM', () => {
+    const g = gameWithRopeAtDome();
+    g.turn('tie rope to railing');
+    g.turn('down');
+    expect(g.view().here).toBe('TORCH-ROOM');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// V-TIE-UP ACTORBIT — struggle/awaken branch (1actions.zil:3052–3063)
+// ---------------------------------------------------------------------------
+
+describe('CC2 — V-TIE-UP ACTORBIT: struggle and awaken branches (1actions.zil:3052–3063)', () => {
+  // Helper: set up DOME-ROOM with rope in inventory, thief present (conscious).
+  function gameWithThiefAtDome() {
+    const g = gameWithRopeAtDome();
+    const thief = g.world.get('THIEF')!;
+    expect(thief, 'THIEF must exist').toBeDefined();
+    // Move thief to DOME-ROOM and make it visible.
+    thief.moveTo(g.world.get('DOME-ROOM')!);
+    thief.clear(Flag.Invisible);
+    return g;
+  }
+
+  it('tie up conscious thief with rope: prints "struggles" message', () => {
+    const g = gameWithThiefAtDome();
+    const out = g.turn('tie up thief with rope').output;
+    expect(out).toContain('struggles and you cannot tie him up');
+  });
+
+  it('tie up unconscious thief with rope: prints "awakens" message', () => {
+    const g = gameWithThiefAtDome();
+    // Set thief pStrength < 0 (unconscious).
+    (g.world.get('THIEF') as unknown as { pStrength: number }).pStrength = -3;
+    const out = g.turn('tie up thief with rope').output;
+    expect(out).toContain('awakens him');
+  });
+
+  it('tie up unconscious thief with rope: pStrength flips positive (awaken)', () => {
+    const g = gameWithThiefAtDome();
+    (g.world.get('THIEF') as unknown as { pStrength: number }).pStrength = -3;
+    g.turn('tie up thief with rope');
+    const ps = (g.world.get('THIEF') as unknown as { pStrength: number }).pStrength;
+    expect(ps).toBeGreaterThan(0);
+  });
+});

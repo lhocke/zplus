@@ -20,6 +20,7 @@
 
 import type { ActionHandler } from '../domain/game-object.js';
 import type { Room } from '../domain/room.js';
+import { Flag } from '../domain/flags.js';
 import { M_ENTER, M_LOOK } from '../engine/messages.js';
 
 // ---------------------------------------------------------------------------
@@ -132,12 +133,13 @@ export const ropeFunction: ActionHandler = (ctx) => {
           'The rope drops over the side and comes within ten feet of the floor.',
         );
         ctx.setGlobal?.('DOME-FLAG', true);
-        // FSET ROPE NDESCBIT: rope becomes non-descript (tied to railing).
-        // Also move rope to DOME-ROOM if it's somewhere else.
-        const rope = ctx.self;
-        const rloc = rope.parent;
+        // FSET ROPE NDESCBIT — rope is now hanging from the railing; suppress
+        // the automatic floor-listing so it doesn't appear as "There is a rope
+        // here." while tied. 1actions.zil:3044.
+        ctx.setFlag(ctx.self, Flag.NonDescript);
+        const rloc = ctx.self.parent;
         if (rloc === null || rloc === undefined || rloc.id === 'PLAYER') {
-          rope.moveTo(ctx.here);
+          ctx.self.moveTo(ctx.here);
         }
       }
     } else {
@@ -146,20 +148,44 @@ export const ropeFunction: ActionHandler = (ctx) => {
     return true;
   }
 
-  // V-CLIMB-DOWN: climb down the rope — DO-WALK DOWN. 1actions.zil:3050–3051
-  if ((ctx.action === 'V-CLIMB-DOWN' || ctx.action === 'V-CLIMB-FOO') &&
-      domeFlag) {
-    // Rope or bare climb-down with DOME-FLAG: descend to TORCH-ROOM.
-    // DO-WALK P?DOWN: verbGo handles the actual descent via the rooms.json ifFlag exit.
-    // The exit already gates on DOME-FLAG — just let V-WALK run by returning false.
-    return false;
+  // V-CLIMB-DOWN / V-CLIMB-FOO with rope + DOME-FLAG — DO-WALK P?DOWN.
+  // 1actions.zil:3050–3051: <AND <VERB? CLIMB-DOWN> <EQUAL? ,PRSO ,ROPE ,ROOMS> ,DOME-FLAG>
+  //   → <DO-WALK ,P?DOWN>
+  // Must force the walk directly here; returning false falls through to the
+  // V-CLIMB-DOWN default (verbClimbUp), which sees OBJ=ROPE (not ROOMS) and
+  // emits "The rope doesn't lead downward." instead of descending.
+  if ((ctx.action === 'V-CLIMB-DOWN' || ctx.action === 'V-CLIMB-FOO') && domeFlag) {
+    const torchRoom = ctx.world.get('TORCH-ROOM') as Room | undefined;
+    if (torchRoom !== undefined) {
+      ctx.moveTo(ctx.actor, torchRoom);
+    }
+    return true;
   }
 
-  // V-TIE-UP: attempt to tie something to the rope. 1actions.zil:3052–3063
-  if (ctx.action === 'V-TIE-UP') {
+  // V-TIE-UP: tie a creature to the rope (PRSI == ROPE).
+  // 1actions.zil:3052–3063: <AND <VERB? TIE-UP> <EQUAL? ,ROPE ,PRSI>>
+  // Syntax ensures PRSO has ACTORBIT, so the non-ACTORBIT branch is a dead
+  // fallback — ZIL includes it; we transcribe faithfully.
+  if (ctx.action === 'V-TIE-UP' && ctx.iobj === ctx.self) {
     const prso = ctx.dobj;
-    if (prso !== undefined) {
-      ctx.tell(`Why would you tie up a ${prso.desc}?`);
+    if (prso !== undefined && ctx.hasFlag(prso, Flag.Actor)) {
+      // GETP PRSO P?STRENGTH: pStrength stored as dynamic property on actor object.
+      const ps = (prso as unknown as { pStrength?: number }).pStrength ?? 0;
+      if (ps < 0) {
+        // Unconscious villain — AWAKEN: flip pStrength positive, print wake message.
+        // 1actions.zil:3057–3058 + AWAKEN at :3843–3847.
+        // Full F_CONSCIOUS dispatch is villain-specific; the observable core is the
+        // pStrength flip. Villain FCN callbacks (TROLL-FCN F_CONSCIOUS etc.) are not
+        // reachable from the rope handler — this matches the ZIL AWAKEN primitive.
+        (prso as unknown as { pStrength: number }).pStrength = -ps;
+        ctx.tell(`Your attempt to tie up the ${prso.desc} awakens him.`);
+      } else {
+        // Conscious villain struggles. 1actions.zil:3060–3061.
+        ctx.tell(`The ${prso.desc} struggles and you cannot tie him up.`);
+      }
+    } else {
+      // Non-ACTORBIT fallback (dead code in normal play per syntax FIND ACTORBIT).
+      ctx.tell(`Why would you tie up a ${prso?.desc ?? 'that'}?`);
     }
     return true;
   }
@@ -168,6 +194,9 @@ export const ropeFunction: ActionHandler = (ctx) => {
   if (ctx.action === 'V-UNTIE') {
     if (domeFlag) {
       ctx.setGlobal?.('DOME-FLAG', false);
+      // FCLEAR ROPE NDESCBIT — rope is free again; restore floor-listing.
+      // 1actions.zil:3067.
+      ctx.clearFlag(ctx.self, Flag.NonDescript);
       ctx.tell('The rope is now untied.');
     } else {
       ctx.tell('It is not tied to anything.');
