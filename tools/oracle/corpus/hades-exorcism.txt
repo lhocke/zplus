@@ -1,4 +1,5 @@
 # hades-exorcism corpus — Zork I oracle harness
+# generated-by: dfrotz-r119 2026-06-12 hades-exorcism-cc1
 #
 # MECHANIC: Hades exorcism — bell (ring) → candles (hold lit) → book (read).
 # Global flags: XB (ceremony in progress), XC (ready to read), LLD-FLAG (done).

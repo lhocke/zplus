@@ -107,8 +107,8 @@ export function randomizeObjects(world: World, player: Actor, rng: DeathRng): vo
 }
 
 // The full ZIL slot list from 1actions.zil:4126–4133.
-// Registered today: I-LANTERN, I-CANDLES, I-MATCH.
-// Unregistered (no-ops this phase): I-XB, I-XC, I-CYCLOPS, I-SWORD, I-FOREST-ROOM.
+// Registered: I-LANTERN, I-CANDLES, I-MATCH, I-XB, I-XC, I-XBH (CC1), I-SWORD (H3).
+// Unregistered (pending): I-CYCLOPS, I-FOREST-ROOM.
 const INTERRUPT_IDS = [
   'I-XB', 'I-XC', 'I-CYCLOPS',
   'I-LANTERN', 'I-CANDLES', 'I-SWORD',
