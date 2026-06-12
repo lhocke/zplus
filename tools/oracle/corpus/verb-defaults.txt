@@ -1,5 +1,6 @@
 # verb-defaults.txt — CB1 verb-default corpus (Zork I dfrotz R119)
 # generated-by: dfrotz-r119 2026-06-12 CB1-climb-enter-exit-lock
+# amended: 2026-06-12 CB1-repair-closeout (add CASES 6–7 for DIV-1/DIV-2)
 #
 # Anchors the CB1 default-verb strings against dfrotz R119.
 # Verbs covered: V-CLIMB family (gverbs.zil:279–335),
@@ -9,6 +10,7 @@
 # Navigation uses only first-visit rooms to avoid the pre-existing BD9
 # brief-mode revisit divergence (dfrotz suppresses ldesc on revisit;
 # engine always prints — CB5 / spec §4.6 fix, not CB1).
+# Revisit nav turns are marked ~ (structural match only).
 #
 # CASE 1 (commands 1-2): navigate to PATH — all first visits.
 #   Route: north → NORTH-OF-HOUSE; north → PATH.
@@ -35,6 +37,21 @@
 #   Marked ~RNG-variable to compare only structural landmarks (room header).
 #   gverbs.zil:279–280.
 #
+# CASE 6 (commands 7-10): climb-tree-at-FOREST-1 — DIV-1 repair
+#   Route from PATH: south → NORTH-OF-HOUSE (revisit ~); west → WEST-OF-HOUSE
+#   (revisit ~); west → FOREST-1 (first visit, exact match).
+#   "climb tree" at FOREST-1: up exit carries elseMessage (not a bare NEXIT)
+#   → V-CLIMB-UP routes through DO-WALK → verbGo surfaces exit.elseMessage.
+#   dfrotz output: "There is no tree here suitable for climbing."
+#   gverbs.zil:303–319 + rooms.json FOREST-1 up exit.
+#
+# CASE 7 (commands 11-12): climb-walls — DIV-2 repair
+#   From FOREST-1, go east → WEST-OF-HOUSE (revisit ~).
+#   WEST-OF-HOUSE has no up exit; WALL is GLOBAL-OBJECTS → accessible.
+#   "climb wall": no up exit, PRSO has WALL synonym → walls branch.
+#   dfrotz output: "Climbing the walls is to no avail."
+#   gverbs.zil:320–323.
+#
 # LOCK/UNLOCK: tested via CB1 unit tests only. The LOCK syntax requires a
 # TOOLBIT indirect object; orchestrating that deterministically in a corpus
 # without parser orphan-slot complexity is deferred. Corpus rows will be
@@ -57,3 +74,22 @@ climb tree
 
 # --- CASE 5: climb down → PATH (revisit; structural match only) ---
 ~climb down
+
+# --- CASE 6 setup: PATH → NORTH-OF-HOUSE (revisit) → WEST-OF-HOUSE (revisit) → FOREST-1 ---
+~south
+~west
+west
+
+# --- CASE 6: climb tree at FOREST-1 → "There is no tree here suitable for climbing." ---
+climb tree
+
+# --- CASE 7 setup: FOREST-1 → PATH (revisit) → NORTH-OF-HOUSE (revisit) → WEST-OF-HOUSE (revisit) ---
+# FOREST-1 east→PATH; PATH south→NORTH-OF-HOUSE; NORTH-OF-HOUSE west→WEST-OF-HOUSE.
+# All three rooms were visited earlier; dfrotz brief-mode: marked ~.
+~east
+~south
+~west
+
+# --- CASE 7: climb wall at WEST-OF-HOUSE → "Climbing the walls is to no avail." ---
+# WEST-OF-HOUSE has no up exit; WALL is GLOBAL-OBJECTS → accessible everywhere.
+climb wall

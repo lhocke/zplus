@@ -1108,11 +1108,15 @@ function globalInDest(objId: string, destRoomId: string, world: World): boolean 
 // DIR defaults to P?UP ('up'); V-CLIMB-DOWN passes 'down'.
 //
 // ZIL logic:
-//   1. If PRSO provided and exit in DIR is NEXIT → "The X doesn't lead up/downward."
-//   2. If PRSO provided and exit exists and passable but PRSO not GLOBAL-IN? dest
-//      → "The X doesn't lead up/downward." (gverbs.zil:306–316)
+//   1. If PRSO provided and exit in DIR is a bare NEXIT (PTSIZE==NEXIT, no
+//      conditional) → "The X doesn't lead up/downward."
+//   2. If PRSO provided and exit exists with CEXIT/DEXIT/UEXIT but PRSO not
+//      GLOBAL-IN? dest → "The X doesn't lead up/downward." (gverbs.zil:306–316)
+//      Conditional exits (elseMessage/ifFlag/per) that lack a dest route through
+//      DO-WALK so verbGo surfaces the exit's own blocked message.
 //   3. If exit exists and passable → DO-WALK DIR
 //   4. If PRSO has WALL synonym → "Climbing the walls is to no avail."
+//      (gverbs.zil:320–323)
 //   5. [Zork-1] Not at PATH, PRSO is nil-or-TREE global, TREE global is in HERE
 //      → "There are no climbable trees here."
 //   6. PRSO nil or ROOMS → "You can't go that way."
@@ -1125,9 +1129,17 @@ function verbClimbUp(dir: string, ctx: VerbContext): VerbResult {
     const dir2 = dir === 'up' ? 'up' : 'down';
     if (dobj !== undefined) {
       if (exit.to === undefined) {
-        // NEXIT / blocked: "The X doesn't lead up/downward."
-        const doesnt = dobj.id === 'STAIRS' ? "don't" : "doesn't";
-        return result(`The ${dobj.desc} ${doesnt} lead ${dir2}ward.`);
+        // Bare NEXIT (no elseMessage/ifFlag/per): "The X doesn't lead up/downward."
+        // Conditional exits (elseMessage/ifFlag/per present) route through doWalk
+        // so verbGo surfaces the exit's own blocked message.
+        // gverbs.zil:306–316: PTSIZE==NEXIT → refusal; CEXIT/DEXIT/UEXIT handled below.
+        if (exit.elseMessage === undefined && exit.ifFlag === undefined && exit.per === undefined) {
+          const doesnt = dobj.id === 'STAIRS' ? "don't" : "doesn't";
+          return result(`The ${dobj.desc} ${doesnt} lead ${dir2}ward.`);
+        }
+        // Conditional exit with no passable destination — let verbGo produce the
+        // room's own message (e.g. FOREST-1 "climb tree" → exit.elseMessage fires).
+        return doWalk(dir, ctx);
       }
       // Passable exit but PRSO not a LOCAL-GLOBAL in dest → same refusal.
       // gverbs.zil:306–316: CEXIT/DEXIT/UEXIT + NOT GLOBAL-IN? PRSO dest.
@@ -1141,6 +1153,11 @@ function verbClimbUp(dir: string, ctx: VerbContext): VerbResult {
   }
 
   // No exit in that direction.
+  // gverbs.zil:320–323: PRSO has WALL as a synonym → "Climbing the walls is to no avail."
+  if (dobj !== undefined && dobj.synonyms.includes('WALL')) {
+    return result('Climbing the walls is to no avail.');
+  }
+
   // Zork-1 tree branch (gverbs.zil:324–330): not at PATH, obj is nil or TREE,
   // TREE global is present in HERE.
   const treeGlobal = ctx.here.props.get('GLOBAL') === 'TREE';

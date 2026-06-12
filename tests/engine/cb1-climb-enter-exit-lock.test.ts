@@ -227,11 +227,12 @@ describe('V-CLIMB-UP', () => {
     expect(fix.player.parent?.id).toBe('TREE-TOP');
   });
 
-  it('climb tree from FOREST: OBJ+blocked-up-exit → "The tree doesn\'t lead upward." — gverbs.zil:309', () => {
+  it('climb tree from FOREST: elseMessage exit → room\'s own blocked message — gverbs.zil:303–319', () => {
+    // DIV-1: FOREST up exit carries elseMessage, so it is NOT a bare NEXIT.
+    // V-CLIMB-UP must call doWalk → verbGo surfaces exit.elseMessage.
+    // dfrotz @ FOREST-1 "climb tree": "There is no tree here suitable for climbing."
     const fix = makeFixture();
     fix.player.moveTo(fix.forest);
-    // FOREST has up exit with only elseMessage (no 'to') — NEXIT in ZIL terms.
-    // V-CLIMB-UP: OBJ set, exit exists but blocked → "The X doesn't lead upward."
     const r = executeVerb(makeCtx(fix, {
       verb: 'climb',
       action: 'V-CLIMB-UP',
@@ -239,7 +240,53 @@ describe('V-CLIMB-UP', () => {
       here: fix.forest,
     }), 'V-CLIMB-UP');
     expect(r.moved).toBe(false);
+    expect(r.output).toBe('There is no tree here suitable for climbing.');
+  });
+
+  it('climb tree from room with bare NEXIT up: still "The X doesn\'t lead upward." — gverbs.zil:306', () => {
+    // DIV-1 control: a genuinely bare NEXIT (no elseMessage/ifFlag/per) still
+    // gets the "doesn't lead upward" refusal, not the room message.
+    const player2 = new Actor('PLAYER2', 'yourself');
+    const bareNexitRoom = new Room('BARE-NEXIT', 'Cave', {
+      ldesc: 'A cave.',
+      exits: [{ dir: 'up' }],  // bare NEXIT: to/elseMessage/ifFlag/per all absent
+    });
+    bareNexitRoom.set(Flag.On);
+    const wallObj = new Thing('WALL2', 'wall', { synonyms: ['WALL'], adjectives: [] });
+    wallObj.moveTo(bareNexitRoom);
+    player2.moveTo(bareNexitRoom);
+    const tree2 = new Thing('TREE2', 'tree', { synonyms: ['TREE'], adjectives: [] });
+    tree2.moveTo(bareNexitRoom);
+    const w2 = World.fromObjects([bareNexitRoom, player2, wallObj, tree2]);
+    const ctx2: VerbContext = { verb: 'climb', player: player2, here: bareNexitRoom, world: w2 };
+    const r = executeVerb({ ...ctx2, dobj: tree2 }, 'V-CLIMB-UP');
+    expect(r.moved).toBe(false);
     expect(r.output).toBe("The tree doesn't lead upward.");
+  });
+
+  it('climb wall in room with no up exit: WALL synonym → "Climbing the walls is to no avail." — gverbs.zil:320–323 (DIV-2)', () => {
+    // DIV-2: no exit in DIR and dobj has WALL in its synonyms → walls branch fires.
+    // ZIL gverbs.zil:320–323 is the ELSE branch of GETPT (no exit found).
+    const player2 = new Actor('PLAYER2WV', 'yourself');
+    const caveRoom = new Room('CAVE-WV', 'Cave', {
+      ldesc: 'A cave with stone walls.',
+      exits: [],  // no up exit — WALL branch can fire
+    });
+    caveRoom.set(Flag.On);
+    const wallObj = new Thing('WALL-WV', 'surrounding wall', { synonyms: ['WALL', 'WALLS'], adjectives: ['SURROUNDING'] });
+    wallObj.moveTo(caveRoom);
+    player2.moveTo(caveRoom);
+    const w2 = World.fromObjects([caveRoom, player2, wallObj]);
+    const r = executeVerb({
+      verb: 'climb',
+      action: 'V-CLIMB-UP',
+      dobj: wallObj,
+      player: player2,
+      here: caveRoom,
+      world: w2,
+    }, 'V-CLIMB-UP');
+    expect(r.moved).toBe(false);
+    expect(r.output).toBe('Climbing the walls is to no avail.');
   });
 
   it('bare climb (no obj) no up exit: Zork-1 tree branch — "There are no climbable trees here." — gverbs.zil:329', () => {
