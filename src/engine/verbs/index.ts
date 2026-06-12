@@ -1129,16 +1129,21 @@ function verbClimbUp(dir: string, ctx: VerbContext): VerbResult {
     const dir2 = dir === 'up' ? 'up' : 'down';
     if (dobj !== undefined) {
       if (exit.to === undefined) {
-        // Bare NEXIT (no elseMessage/ifFlag/per): "The X doesn't lead up/downward."
-        // Conditional exits (elseMessage/ifFlag/per present) route through doWalk
-        // so verbGo surfaces the exit's own blocked message.
-        // gverbs.zil:306–316: PTSIZE==NEXIT → refusal; CEXIT/DEXIT/UEXIT handled below.
+        // Bare NEXIT (no elseMessage/ifFlag/per) → refusal always.
+        // gverbs.zil:306–316: PTSIZE==NEXIT → "The X doesn't lead upward."
         if (exit.elseMessage === undefined && exit.ifFlag === undefined && exit.per === undefined) {
           const doesnt = dobj.id === 'STAIRS' ? "don't" : "doesn't";
           return result(`The ${dobj.desc} ${doesnt} lead ${dir2}ward.`);
         }
-        // Conditional exit with no passable destination — let verbGo produce the
-        // room's own message (e.g. FOREST-1 "climb tree" → exit.elseMessage fires).
+        // ZIL string exit (UP "msg"): encoded as CEXIT-style — GLOBAL-IN? HERE gates routing.
+        // If dobj is a local-global of the current room → DO-WALK (shows elseMessage).
+        // If not → same "doesn't lead" refusal.  gverbs.zil:306–316 CEXIT path.
+        // (e.g. FOREST-1: "climb tree" — TREE is global here → doWalk → elseMessage;
+        //       "climb wall" — WALL not global here → refusal "doesn't lead upward.")
+        if (exit.elseMessage !== undefined && !globalInDest(dobj.id, ctx.here.id, ctx.world)) {
+          const doesnt = dobj.id === 'STAIRS' ? "don't" : "doesn't";
+          return result(`The ${dobj.desc} ${doesnt} lead ${dir2}ward.`);
+        }
         return doWalk(dir, ctx);
       }
       // Passable exit but PRSO not a LOCAL-GLOBAL in dest → same refusal.

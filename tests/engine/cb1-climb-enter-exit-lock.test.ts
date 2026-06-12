@@ -243,6 +243,28 @@ describe('V-CLIMB-UP', () => {
     expect(r.output).toBe('There is no tree here suitable for climbing.');
   });
 
+  it('climb wall from FOREST (elseMessage exit, WALL not global of HERE): refusal — gverbs.zil:306–316', () => {
+    // DIV-1 repair: FOREST up exit has elseMessage but WALL is not a local-global
+    // of FOREST (GLOBAL:TREE only). ZIL CEXIT check: NOT GLOBAL-IN? PRSO HERE →
+    // "The surrounding wall doesn't lead upward."
+    // dfrotz @ FOREST-1 "climb wall": "The surrounding wall doesn't lead upward."
+    const fix = makeFixture();
+    const wallObj = new Thing('WALL', 'surrounding wall', { synonyms: ['WALL', 'WALLS'], adjectives: ['SURROUNDING'] });
+    wallObj.moveTo(fix.forest);
+    fix.player.moveTo(fix.forest);
+    const w = World.fromObjects([fix.path, fix.treeTop, fix.forest, fix.boatRoom, fix.player, fix.tree, fix.mailbox, fix.boat, wallObj]);
+    const r = executeVerb({
+      verb: 'climb',
+      action: 'V-CLIMB-UP',
+      dobj: wallObj,
+      player: fix.player,
+      here: fix.forest,
+      world: w,
+    }, 'V-CLIMB-UP');
+    expect(r.moved).toBe(false);
+    expect(r.output).toBe("The surrounding wall doesn't lead upward.");
+  });
+
   it('climb tree from room with bare NEXIT up: still "The X doesn\'t lead upward." — gverbs.zil:306', () => {
     // DIV-1 control: a genuinely bare NEXIT (no elseMessage/ifFlag/per) still
     // gets the "doesn't lead upward" refusal, not the room message.
