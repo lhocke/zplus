@@ -370,13 +370,13 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
     return true;
   }
 
-  // V-WALK / V-ENTER / V-THROUGH / V-CLIMB-FOO — entering through the window.
+  // V-WALK / V-ENTER / V-THROUGH — entering through the window.
   // "enter window" (ENTER + 1 obj) → V-THROUGH; bare "enter" (ENTER + 0 obj) → V-ENTER.
+  // ZIL: VERB? WALK BOARD THROUGH (1actions.zil:251) — V-CLIMB-FOO not intercepted.
   if (
     ctx.action === 'V-WALK' ||
     ctx.action === 'V-ENTER' ||
-    ctx.action === 'V-THROUGH' ||
-    ctx.action === 'V-CLIMB-FOO'
+    ctx.action === 'V-THROUGH'
   ) {
     const dir = ctx.here.id === 'KITCHEN' ? 'east' : 'west';
     const exit = ctx.here.exits.find((e) => e.dir === dir);

@@ -44,6 +44,11 @@
         "dir": "sw",
         "to": "STONE-BARROW",
         "ifFlag": "WON-FLAG"
+      },
+      {
+        "dir": "in",
+        "to": "STONE-BARROW",
+        "ifFlag": "WON-FLAG"
       }
     ]
   },
@@ -191,6 +196,11 @@
       },
       {
         "dir": "west",
+        "to": "KITCHEN",
+        "ifFlag": "KITCHEN-WINDOW"
+      },
+      {
+        "dir": "in",
         "to": "KITCHEN",
         "ifFlag": "KITCHEN-WINDOW"
       }
@@ -1362,6 +1372,10 @@
         "to": "CYCLOPS-ROOM"
       },
       {
+        "dir": "in",
+        "to": "CYCLOPS-ROOM"
+      },
+      {
         "dir": "east",
         "to": "LIVING-ROOM"
       }
@@ -2062,6 +2076,12 @@
       },
       {
         "dir": "south",
+        "to": "LAND-OF-LIVING-DEAD",
+        "ifFlag": "LLD-FLAG",
+        "elseMessage": "Some invisible force prevents you from passing through the gate."
+      },
+      {
+        "dir": "in",
         "to": "LAND-OF-LIVING-DEAD",
         "ifFlag": "LLD-FLAG",
         "elseMessage": "Some invisible force prevents you from passing through the gate."
@@ -2905,6 +2925,10 @@
       },
       {
         "dir": "west",
+        "to": "SQUEEKY-ROOM"
+      },
+      {
+        "dir": "in",
         "to": "SQUEEKY-ROOM"
       }
     ]

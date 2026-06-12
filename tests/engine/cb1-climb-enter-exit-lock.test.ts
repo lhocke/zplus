@@ -50,6 +50,9 @@ function makeFixture(): Fix {
   const treeTop = new Room('TREE-TOP', 'Up a Tree', { ldesc: 'You are up a tree.', exits: [{ dir: 'down', to: 'PATH' }] });
   treeTop.set(Flag.On);
   treeTop.set(Flag.Sacred);
+  // TREE is a global in UP-A-TREE (zil/1dungeon.zil GLOBAL TREE FOREST ...);
+  // mirrored here so the GLOBAL-IN? check in verbClimbUp passes.
+  treeTop.props.set('GLOBAL', 'TREE');
 
   const path = new Room('PATH', 'Forest Path', {
     ldesc: 'A narrow path. A large tree stands nearby.',
@@ -330,5 +333,64 @@ describe('CB1 integration: climb tree from real PATH room', () => {
     const fix = makeFixture();
     const r = executeVerb(makeCtx(fix, { verb: 'unlock', action: 'V-UNLOCK', dobj: fix.mailbox }), 'V-UNLOCK');
     expect(r.output).toBe("It doesn't seem to work.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REPAIR: V-ENTER resolves the 'in' exit (rooms.json data fix)
+// ZIL 1dungeon.zil:1304 — EAST-OF-HOUSE has (IN TO KITCHEN IF KITCHEN-WINDOW IS OPEN)
+// ---------------------------------------------------------------------------
+
+describe('CB1 repair: V-ENTER resolves "in" exit at EAST-OF-HOUSE', () => {
+  it('enter at EAST-OF-HOUSE with window open moves player to KITCHEN', () => {
+    const g = newGameAt('EAST-OF-HOUSE');
+    g.start();
+    // Open the kitchen window first.
+    g.turn('open window');
+    expect(g.view().here).toBe('EAST-OF-HOUSE');
+    const r = g.turn('enter');
+    expect(r.moved).toBe(true);
+    expect(g.view().here).toBe('KITCHEN');
+  });
+
+  it('enter at EAST-OF-HOUSE with window closed: blocked (no open in exit)', () => {
+    const g = newGameAt('EAST-OF-HOUSE');
+    g.start();
+    // Window is closed by default — in exit is gated by KITCHEN-WINDOW.
+    const r = g.turn('enter');
+    expect(r.moved).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REPAIR: V-CLIMB-UP GLOBAL-IN? check (gverbs.zil:305–316)
+// Chimney/window at Kitchen are not globals in ATTIC → "doesn't lead upward."
+// Stairs ARE a global in ATTIC → DO-WALK succeeds.
+// ---------------------------------------------------------------------------
+
+describe('CB1 repair: V-CLIMB-UP GLOBAL-IN? for destination room', () => {
+  it('climb chimney at Kitchen: chimney not global in ATTIC → "The chimney doesn\'t lead upward."', () => {
+    // gverbs.zil:309–316: exit exists (up→ATTIC) but CHIMNEY not in ATTIC globals.
+    const g = newGameAt('KITCHEN');
+    g.start();
+    const r = g.turn('climb chimney');
+    expect(r.moved).toBe(false);
+    expect(r.output).toBe("The chimney doesn't lead upward.");
+  });
+
+  it('climb window at Kitchen: window not global in ATTIC → "The kitchen window doesn\'t lead upward."', () => {
+    const g = newGameAt('KITCHEN');
+    g.start();
+    const r = g.turn('climb window');
+    expect(r.moved).toBe(false);
+    expect(r.output).toBe("The kitchen window doesn't lead upward.");
+  });
+
+  it('climb stairs at Kitchen: STAIRS is global in ATTIC → moves to ATTIC (control)', () => {
+    const g = newGameAt('KITCHEN');
+    g.start();
+    const r = g.turn('climb stairs');
+    expect(r.moved).toBe(true);
+    expect(g.view().here).toBe('ATTIC');
   });
 });

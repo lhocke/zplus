@@ -16,6 +16,7 @@ import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
 import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, goto, vTieUp, vLock, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
+import { ROOM_GLOBAL_IDS } from '../parser/room-globals.js';
 import { CURE_WAIT } from '../combat.js';
 
 export interface VerbContext {
@@ -1086,30 +1087,56 @@ function verbClimbOn(ctx: VerbContext): VerbResult {
   return result(`You can't climb onto the ${ctx.dobj?.desc ?? 'that'}.`);
 }
 
+// GLOBAL-IN? port (gverbs.zil:305–316): is obj a LOCAL-GLOBAL in destRoomId?
+// ZIL checks this for CEXIT/DEXIT/UEXIT exits — if the object the player names
+// is not a global in the destination room, it "doesn't lead that way."
+// Falls back to the room's GLOBAL prop (unit-test rooms not in ROOM_GLOBAL_IDS).
+function globalInDest(objId: string, destRoomId: string, world: World): boolean {
+  const tableIds = ROOM_GLOBAL_IDS.get(destRoomId);
+  if (tableIds !== undefined) return tableIds.includes(objId);
+  // Fallback for test rooms not in the compile-time table.
+  const destRoom = world.get(destRoomId);
+  if (destRoom !== undefined) {
+    const gProp = destRoom.props.get('GLOBAL');
+    if (typeof gProp === 'string') return gProp === objId;
+    if (Array.isArray(gProp)) return (gProp as string[]).includes(objId);
+  }
+  return false;
+}
+
 // V-CLIMB-UP (gverbs.zil:300–334) — core climb logic.
 // DIR defaults to P?UP ('up'); V-CLIMB-DOWN passes 'down'.
 //
 // ZIL logic:
-//   1. If PRSO provided and exit in DIR is NEXIT/blocked → "The X doesn't lead up/downward."
-//   2. If exit exists and passable → DO-WALK DIR
-//   3. If PRSO has WALL synonym → "Climbing the walls is to no avail."
-//   4. [Zork-1] Not at PATH, PRSO is nil-or-TREE global, TREE global is in HERE
+//   1. If PRSO provided and exit in DIR is NEXIT → "The X doesn't lead up/downward."
+//   2. If PRSO provided and exit exists and passable but PRSO not GLOBAL-IN? dest
+//      → "The X doesn't lead up/downward." (gverbs.zil:306–316)
+//   3. If exit exists and passable → DO-WALK DIR
+//   4. If PRSO has WALL synonym → "Climbing the walls is to no avail."
+//   5. [Zork-1] Not at PATH, PRSO is nil-or-TREE global, TREE global is in HERE
 //      → "There are no climbable trees here."
-//   5. PRSO nil or ROOMS → "You can't go that way."
-//   6. Else → "You can't do that!"
+//   6. PRSO nil or ROOMS → "You can't go that way."
+//   7. Else → "You can't do that!"
 function verbClimbUp(dir: string, ctx: VerbContext): VerbResult {
   const dobj = ctx.dobj;
   const exit = ctx.here.exits.find(e => e.dir === dir);
 
   if (exit !== undefined) {
-    // Exit exists: check if it's actually traversable.
-    if (dobj !== undefined && exit.to === undefined) {
-      // NEXIT / blocked: "The X doesn't lead up/downward."
-      const dir2 = dir === 'up' ? 'up' : 'down';
-      const doesnt = dobj.id === 'STAIRS' ? "don't" : "doesn't";
-      return result(`The ${dobj.desc} ${doesnt} lead ${dir2}ward.`);
+    const dir2 = dir === 'up' ? 'up' : 'down';
+    if (dobj !== undefined) {
+      if (exit.to === undefined) {
+        // NEXIT / blocked: "The X doesn't lead up/downward."
+        const doesnt = dobj.id === 'STAIRS' ? "don't" : "doesn't";
+        return result(`The ${dobj.desc} ${doesnt} lead ${dir2}ward.`);
+      }
+      // Passable exit but PRSO not a LOCAL-GLOBAL in dest → same refusal.
+      // gverbs.zil:306–316: CEXIT/DEXIT/UEXIT + NOT GLOBAL-IN? PRSO dest.
+      if (!globalInDest(dobj.id, exit.to, ctx.world)) {
+        const doesnt = dobj.id === 'STAIRS' ? "don't" : "doesn't";
+        return result(`The ${dobj.desc} ${doesnt} lead ${dir2}ward.`);
+      }
     }
-    // Passable — DO-WALK.
+    // No dobj, or dobj is a global in dest — proceed.
     return doWalk(dir, ctx);
   }
 

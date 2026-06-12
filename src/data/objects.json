@@ -188,6 +188,7 @@
     "kind": "thing",
     "desc": "kitchen window",
     "flags": [
+      "Climbable",
       "Door",
       "NonDescript"
     ],
