@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, goto, vTieUp, vLock, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { ROOM_GLOBAL_IDS } from '../parser/room-globals.js';
 import { CURE_WAIT } from '../combat.js';
@@ -1005,6 +1005,153 @@ function verbDig(ctx: VerbContext): VerbResult {
   return result(fmt(vDig.withNonTool, inst!.desc));
 }
 
+// V-RING (gverbs.zil:1162–1163) — default when no object FCN claims it.
+function verbRing(_ctx: VerbContext): VerbResult {
+  return result(vRing.response);
+}
+
+// V-TIE (gverbs.zil:1465–1469) — PRSI=WINNER → "to yourself"; else "to that".
+function verbTie(ctx: VerbContext): VerbResult {
+  if (ctx.iobj === ctx.player) return result(vTie.toSelf);
+  return result(fmt(vTie.toOther, ctx.dobj?.desc ?? ''));
+}
+
+// V-UNTIE (gverbs.zil:1511–1512) — one-liner fallback.
+function verbUntie(_ctx: VerbContext): VerbResult {
+  return result(vUntie.response);
+}
+
+// PRE-BURN (gverbs.zil:243–249) — flame-source guard.
+// No PRSI → TELL-NO-PRSI; PRSI not FLAMING? → "With a X??!?"; FLAMING → pass (RFALSE).
+function verbPreBurn(ctx: VerbContext): VerbResult {
+  const inst = ctx.iobj;
+  if (inst === undefined) return result(tellNoPrsi.response);
+  // FLAMING? = OnFire AND Light (preactions.ts:25–27 — the engine's FLAMING? port)
+  if (inst.has(Flag.OnFire) && inst.has(Flag.Light)) return result('');
+  return result(fmt(preBurn.notAFlame, inst.desc));
+}
+
+// IDROP (gverbs.zil:1966–1977) — drop PRSO to LOC(WINNER), return success/failure.
+// Returns true and moves the item to the room on success; false if not-carried or closed.
+function idrop(item: GameObject, player: GameObject, room: Room): boolean {
+  const loc = item.parent;
+  const inPlayer = loc === player;
+  const inHeldContainer = loc !== null && loc !== undefined && (loc as GameObject).parent === player;
+  if (!inPlayer && !inHeldContainer) return false;
+  if (!inPlayer && !(loc as GameObject).has(Flag.Open)) return false;
+  item.moveTo(room);
+  return true;
+}
+
+// V-BURN (gverbs.zil:251–274, Zork-1 branch).
+// BURNBIT + held-or-inside → REMOVE-CAREFULLY + partial msg + JIGS-UP.
+// BURNBIT + not held → consumed msg.
+// No BURNBIT → "You can't burn a X."
+function verbBurn(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result("Burn what?");
+  if (!dobj.has(Flag.Flammable)) return result(fmt(vBurn.cantBurn, dobj.desc));
+
+  const playerHoldsIt = dobj.parent === ctx.player;
+  const playerInsideIt = ctx.player.parent === dobj;
+  if (playerHoldsIt || playerInsideIt) {
+    // REMOVE-CAREFULLY: move obj out of world (player drops it; it burns)
+    dobj.moveTo(null);
+    const suffix = playerInsideIt
+      ? fmt(vBurn.burningHeldIn, dobj.desc)
+      : fmt(vBurn.burningHeldHolding, dobj.desc);
+    // jigsUp prints the message; verb returns empty output (mirrors grue pattern).
+    ctx.jigsUp?.(suffix);
+    return result('', false, true);
+  }
+  // Not held — consume in place
+  dobj.moveTo(null);
+  return result(fmt(vBurn.consumed, dobj.desc));
+}
+
+// V-THROW (gverbs.zil:1445–1460).
+// IDROP first; on success: PRSI=ME → death; PRSI actor → "ducks"; else "Thrown."
+function verbThrow(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result('Huh?');
+  // idrop: drop to LOC(WINNER)
+  if (!idrop(dobj, ctx.player, ctx.here)) return result(vThrow.notCarrying);
+  // PRSI=ME (throw at self) — full death message via jigsUp; empty output (grue pattern).
+  if (ctx.iobj === ctx.player) {
+    ctx.jigsUp?.(fmt(vThrow.thrownAtSelf, dobj.desc));
+    return result('', false, true);
+  }
+  if (ctx.iobj !== undefined && ctx.iobj.has(Flag.Actor)) {
+    return result(fmt(vThrow.actorDucks, ctx.iobj.desc, dobj.desc));
+  }
+  return result(vThrow.thrown);
+}
+
+// PRE-GIVE (gverbs.zil:708–711) — HELD? check.
+function verbPreGive(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result('');
+  if (dobj.parent !== ctx.player) return result(fmt(preGive.notHoldingIt, dobj.desc));
+  return result('');
+}
+
+// V-GIVE (gverbs.zil:713–717).
+function verbGive(ctx: VerbContext): VerbResult {
+  const iobj = ctx.iobj;
+  if (iobj === undefined || !iobj.has(Flag.Actor)) {
+    return result(fmt(vGive.prsiNotActor, ctx.dobj?.desc ?? '', iobj?.desc ?? ''));
+  }
+  return result(fmt(vGive.refusesPolitely, iobj.desc));
+}
+
+// V-WEAR (gverbs.zil:1597–1602) — WEARBIT check; on pass, PERFORM V-TAKE.
+// V-TAKE with WEARBIT prints "You are now wearing the X." (gverbs.zil:1384–1385).
+function verbWear(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result('Wear what?');
+  if (!dobj.has(Flag.Wearable)) return result(fmt(vWear.cantWear, dobj.desc));
+  // PERFORM V-TAKE: move to player + apply TOUCHBIT + scoring side-effects.
+  // V-TAKE with WEARBIT prints the wearing message (gverbs.zil:1384–1385).
+  const takeResult = verbTake(ctx);
+  if (takeResult.output === 'Taken.') {
+    return { ...takeResult, output: fmt(vTake.takenWearing, dobj.desc) };
+  }
+  return takeResult;
+}
+
+// PRE-MOVE (gverbs.zil:910–912) — block if PRSO is held.
+function verbPreMove(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj !== undefined && dobj.parent === ctx.player) return result(preMove.holdingIt);
+  return result('');
+}
+
+// V-MOVE (gverbs.zil:914–918) — TAKEBIT → "reveals nothing"; else "can't move".
+function verbMove(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result("Move what?");
+  if (dobj.has(Flag.Takeable)) return result(fmt(vMove.nothingRevealed, dobj.desc));
+  return result(fmt(vMove.notMoveable, dobj.desc));
+}
+
+// HACK-HACK (gverbs.zil:2024–2029) — shared helper for RAISE/LOWER/WAVE/RUB/etc.
+// Global-objects item (parentless non-room) + verb WAVE/RAISE/LOWER → "isn't here".
+// Otherwise: STR + D(PRSO) + PICK-ONE(HO-HUM).
+function hackHackVerb(prefix: string, ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  const name = dobj?.desc ?? '';
+  // GLOBAL-OBJECTS check: parent === null and not a Room.
+  const isGlobal = dobj !== undefined && dobj.parent === null && !('exits' in dobj);
+  if (isGlobal) return result(fmt(hackHack.notHere, name));
+  const suffix = ctx.rng !== undefined ? pick(hoHum, ctx.rng) : hoHum.entries[0]!;
+  return result(`${prefix}${name}${suffix}`);
+}
+
+// V-LOWER (gverbs.zil:902) — HACK-HACK "Playing in this way with the ".
+function verbLower(ctx: VerbContext): VerbResult {
+  return hackHackVerb('Playing in this way with the ', ctx);
+}
+
 // V-WAVE (gverbs.zil:1594-1595) — fall-through via HACK-HACK "Waving the ".
 // HACK-HACK: "Waving the " + D(PRSO) + PICK-ONE(HO-HUM). gverbs.zil:2024-2036.
 // (The global-object "isn't here" branch of HACK-HACK is unreachable here:
@@ -1028,9 +1175,9 @@ function verbCross(_ctx: VerbContext): VerbResult {
   return result("You can't cross that!");
 }
 
-// V-RAISE (gverbs.zil:1131) — fall-through when object handler doesn't claim it.
-function verbRaise(_ctx: VerbContext): VerbResult {
-  return result("You can't raise that.");
+// V-RAISE (gverbs.zil:1131–1132) — V-LOWER (same HACK-HACK route).
+function verbRaise(ctx: VerbContext): VerbResult {
+  return verbLower(ctx);
 }
 
 
@@ -1304,6 +1451,21 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-CLIMB-DOWN': verbClimbDown,
   'V-CLIMB-FOO':  verbClimbFoo,
   'V-CLIMB-ON':   verbClimbOn,
+
+  // CB2 — gverbs.zil:1162, 1465–1469, 1511–1512, 243–274, 1445–1460,
+  //        708–717, 1597–1602, 910–918, 902, 1131–1132
+  'V-RING':     verbRing,
+  'V-TIE':      verbTie,
+  'V-UNTIE':    verbUntie,
+  'PRE-BURN':   verbPreBurn,
+  'V-BURN':     verbBurn,
+  'V-THROW':    verbThrow,
+  'PRE-GIVE':   verbPreGive,
+  'V-GIVE':     verbGive,
+  'V-WEAR':     verbWear,
+  'PRE-MOVE':   verbPreMove,
+  'V-MOVE':     verbMove,
+  'V-LOWER':    verbLower,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.

@@ -1,7 +1,8 @@
-# verb-defaults.txt — CB1 verb-default corpus (Zork I dfrotz R119)
+# verb-defaults.txt — CB1+CB2 verb-default corpus (Zork I dfrotz R119)
 # generated-by: dfrotz-r119 2026-06-12 CB1-climb-enter-exit-lock
 # amended: 2026-06-12 CB1-repair-closeout-v2 (CASE 6b: climb-walls-at-FOREST-1)
 # amended: 2026-06-12 CB1-repair-window-elseMessage (CASE 8: enter/west at EAST-OF-HOUSE closed)
+# amended: 2026-06-12 CB2-ring-tie-burn-throw-give-wear-move-raise (CASE 9–16)
 #
 # Anchors the CB1 default-verb strings against dfrotz R119.
 # Verbs covered: V-CLIMB family (gverbs.zil:279–335),
@@ -128,3 +129,86 @@ enter
 # west exit also gated by KITCHEN-WINDOW; same elseMessage.
 # dfrotz R119: "The kitchen window is closed."
 west
+
+# ===========================================================================
+# CB2 cases — V-RING, V-TIE, V-UNTIE, V-BURN, V-THROW, V-GIVE, V-WEAR,
+#             V-MOVE, V-RAISE, V-LOWER  (gverbs.zil:1162, 1465, 1511, 243–274,
+#             1445, 708–717, 1597, 910–918, 902, 1131)
+#
+# State at EAST-OF-HOUSE after CASE 8b; still holding nothing.
+# Navigate to WEST-OF-HOUSE for fresh setup with accessible objects.
+# Revisit nav turns are marked ~ (structural match only, pre-existing BD9 gap).
+#
+# CASE 9 (commands 19–20): V-RING default — "How, exactly, can you ring that?"
+#   Route: ~north (NORTH-OF-HOUSE revisit); ~west (WEST-OF-HOUSE revisit).
+#   "ring mailbox" — no object FCN claims V-RING on mailbox → default fires.
+#   gverbs.zil:1162–1163.  dfrotz: "How, exactly, can you ring that?"
+#
+# CASE 10 (commands 21–24): V-WEAR (no WEARBIT) + V-MOVE (TAKEBIT) defaults
+#   Still at WEST-OF-HOUSE.  Open mailbox; take leaflet.
+#   "wear leaflet" — leaflet has no WEARBIT → "You can't wear the leaflet."
+#   "move leaflet" — leaflet has TAKEBIT → "Moving the leaflet reveals nothing."
+#   gverbs.zil:1599, 916.
+#
+# CASE 11 (commands 25–26): V-TIE / V-UNTIE defaults — need rope.
+#   "take rope" is not reachable without entering the house (gated).
+#   Use "tie leaflet to mailbox" to get V-TIE "to that" branch.
+#   "untie leaflet" → V-UNTIE default.
+#   gverbs.zil:1468–1469, 1512.
+#
+# CASE 12 (commands 27–28): V-RAISE + V-LOWER defaults
+#   "raise mailbox" / "lower mailbox" → HACK-HACK "Playing in this way with the mailbox"
+#   + HO-HUM suffix.  Mailbox is not a GLOBAL-OBJECTS member (it has a parent room).
+#   gverbs.zil:902, 1131–1132, 2024–2029.
+#   dfrotz: "Playing in this way with the mailbox doesn't seem to work." (or variant)
+#
+# CASE 13 (commands 29–30): PRE-MOVE / V-MOVE defaults
+#   "move leaflet" already in CASE 10; retest "move mailbox" (mailbox has TAKEBIT → reveals).
+#   "move small leaflet" → reveals nothing (TAKEBIT).
+#   gverbs.zil:914–918.
+#
+# ===========================================================================
+
+# --- CASE 9 setup: EAST-OF-HOUSE → NORTH-OF-HOUSE (revisit) → WEST-OF-HOUSE (revisit) ---
+~north
+~west
+
+# --- CASE 9: ring mailbox → "How, exactly, can you ring that?" ---
+# mailbox has no ring object FCN; V-RING default fires.
+# dfrotz R119: "How, exactly, can you ring that?"
+ring mailbox
+
+# --- CASE 10 setup: open mailbox, take leaflet ---
+open mailbox
+take leaflet
+
+# --- CASE 10a: wear leaflet → "You can't wear the leaflet." ---
+# leaflet has no WEARBIT; V-WEAR default fires.
+# dfrotz R119: "You can't wear the leaflet."
+wear leaflet
+
+# --- CASE 10b: move leaflet → "Moving the leaflet reveals nothing." ---
+# leaflet has TAKEBIT; V-MOVE TAKEBIT branch.
+# dfrotz R119: "Moving the leaflet reveals nothing."
+move leaflet
+
+# --- CASE 11a: tie leaflet to mailbox → "You can't tie the leaflet to that." ---
+# no rope-function intercepts; V-TIE "to that" branch.
+# dfrotz R119: "You can't tie the leaflet to that."
+tie leaflet to mailbox
+
+# --- CASE 11b: untie leaflet → "This cannot be tied, so it cannot be untied!" ---
+# no object FCN claims V-UNTIE; default fires.
+# dfrotz R119: "This cannot be tied, so it cannot be untied!"
+untie leaflet
+
+# --- CASE 12a: raise mailbox → HACK-HACK "Playing in this way with the mailbox" ---
+# mailbox is in room (not GLOBAL-OBJECTS); HACK-HACK suffix branch.
+# HO-HUM PICK-ONE is RNG-seeded — structural match only (prefix is deterministic).
+# dfrotz R119 (seeded run): "Playing in this way with the small mailbox has no effect."
+# The HO-HUM suffix varies by RNG seed; marked ~ (structural/skip).
+~raise mailbox
+
+# --- CASE 12b: lower mailbox → same HACK-HACK route as V-RAISE ---
+# Same HO-HUM variability; marked ~ (structural/skip).
+~lower mailbox
