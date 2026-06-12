@@ -5,12 +5,12 @@
 # a message at odd water levels.  Putty applied to the leak stops the demon.
 # At WATER-LEVEL 14 the room floods (player dies).
 #
-# The putty tube is in MAINTENANCE-ROOM; squeeze it to get PUTTY, or use PUTTY
-# directly (implementation-dependent).
+# The putty tube is in MAINTENANCE-ROOM; apply directly as "put putty on leak".
 #
 # RNG NOTE: MAINTENANCE-ROOM is accessed via the DAM-LOBBY area (push yellow
 # button to unlock the north door from DAM-LOBBY).  The path to the dam passes
-# through the Troll Room (see c-dam.txt for the -s 1 knife route).
+# through the Troll Room.  With seed -s 1, the troll (fought with sword) dies
+# after ~3 hits (RNG-variable; annotated with ~).
 #
 # Run with:
 #   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-leak.txt
@@ -18,43 +18,41 @@
 # Set verbose mode so dfrotz and engine both use verbose room descriptions.
 verbose
 
-# --- Setup: get to MAINTENANCE-ROOM (abbreviated troll-kill path) ---
+# --- Setup: get to MAINTENANCE-ROOM ---
 north
 east
 open window
 west
+
+# Living Room: take sword and lantern
 west
+take sword
 take lantern
 move rug
 open trap door
 turn on lantern
+
+# Cellar → Troll Room (north from Cellar)
 down
+north
+# Troll fight with sword (RNG-variable; different outcomes per seed)
+~kill troll with sword
+~kill troll with sword
+~kill troll with sword
+@resync East-West Passage
+
+# EW-Passage → Round Room → NS-Passage → Deep Canyon → Dam Room
 east
-take knife
-kill troll with knife
-kill troll with knife
-kill troll with knife
-kill troll with knife
-kill troll with knife
+north
+ne
 east
-north
-west
-south
-west
-south
-west
-west
-north
-north
-west
+
+# Dam Room → Dam Lobby → Maintenance Room
 north
 north
 
-# Yellow button unlocks the north door in DAM-LOBBY
+# Yellow button (in MAINTENANCE-ROOM) unlocks the north door of DAM-LOBBY
 push yellow button
-
-# Enter MAINTENANCE-ROOM (north from DAM-LOBBY)
-north
 
 # C-LEAK walkthrough proper
 look

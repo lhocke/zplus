@@ -220,9 +220,11 @@ describe('CB-BOAT3 — LAUNCH: GO-NEXT + I-RIVER arm (1actions.zil:2738)', () =>
   it('launch while at RIVER-5 (in boat) → "can\'t launch it here" not "on the river"', () => {
     const g = newGameAt('DAM-BASE');
     inflateAndBoard(g);
-    // Drift to RIVER-5: launch(→RIVER-1) + 3+4+3+2 waits
+    // Drift to RIVER-5: launch(→RIVER-1) + 5 waits total (multi-CLOCKER timing).
+    // wait 1: RIVER-1→2, wait 2: RIVER-2 hold, wait 3: RIVER-2→3,
+    // wait 4: RIVER-3→4, wait 5: RIVER-4→5.
     g.turn('launch');
-    for (let i = 0; i < 12; i++) g.turn('wait');
+    for (let i = 0; i < 5; i++) g.turn('wait');
     const inflated = g.world.get('INFLATED-BOAT')!;
     const river5   = g.world.get('RIVER-5')!;
     expect(inflated.parent).toBe(river5);
@@ -288,20 +290,27 @@ describe('CB-BOAT3 — DROP/ATTACK WEAPONBIT in boat → puncture (1actions.zil:
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT3 — NM-H: I-RIVER drift speeds (1actions.zil:2708–2720)', () => {
-  it('I-RIVER fires after 3 turns from RIVER-1, moves to RIVER-2', () => {
+  // V-WAIT (gverbs.zil:1514–1519) calls CLOCKER up to NUM=3 times per wait,
+  // stopping on the first interrupt fire.  Multi-CLOCKER timing (per wait call):
+  //   launch → RIVER-1, turnsLeft=3  (launch consumed 1 tick from arm at 4)
+  //   wait 1: 3 ticks (3→2→1→0 FIRE) → RIVER-2, rearm 4
+  //   wait 2: 3 ticks (4→3→2→1)     → RIVER-2, turnsLeft=1
+  //   wait 3: 1 tick  (1→0 FIRE)    → RIVER-3, rearm 3
+  //   wait 4: 3 ticks (3→2→1→0 FIRE)→ RIVER-4, rearm 2
+  //   wait 5: 2 ticks (2→1→0 FIRE)  → RIVER-5, rearm 1
+  //   wait 6: 1 tick  (1→0 FIRE)    → waterfall death
+
+  it('I-RIVER fires after 1 wait from RIVER-1, moves to RIVER-2', () => {
     const g = newGameAt('DAM-BASE');
     inflateAndBoard(g);
-    g.turn('launch');  // I-RIVER armed at speed 4; clock advance → turnsLeft=3
+    g.turn('launch');  // I-RIVER armed at speed 4; launch clock advance → turnsLeft=3
 
-    // 2 waits — should NOT drift yet
-    g.turn('wait');
-    g.turn('wait');
     const inflated = g.world.get('INFLATED-BOAT')!;
     const river1   = g.world.get('RIVER-1')!;
-    // Still on RIVER-1 after 2 waits (need 3rd)
+    // Before any wait: still on RIVER-1
     expect(inflated.parent).toBe(river1);
 
-    // 3rd wait — I-RIVER fires, moves to RIVER-2
+    // 1st wait: 3 clock ticks (3→2→1→0 FIRE) → moves to RIVER-2
     const out = g.turn('wait').output;
     expect(out).toContain('downstream');
     const river2 = g.world.get('RIVER-2')!;
@@ -312,9 +321,9 @@ describe('CB-BOAT3 — NM-H: I-RIVER drift speeds (1actions.zil:2708–2720)', (
     const g = newGameAt('DAM-BASE');
     inflateAndBoard(g);
     g.turn('launch');
-    // Drift to RIVER-2: fires on the 3rd wait (turnsLeft 3→2→1→0 fire).
+    // Drift to RIVER-2: fires on wait 1 (turnsLeft 3→2→1→0 fire).
     // After the fire tick(), re-arm sets turnsLeft=4 (RIVER-2 speed).
-    for (let i = 0; i < 3; i++) g.turn('wait');
+    g.turn('wait');  // 1 wait to fire RIVER-1→RIVER-2
 
     // turnsLeft was set to 4 during the fire tick; advance() already finished,
     // so the value is 4 (not yet decremented by the next turn).
@@ -323,53 +332,49 @@ describe('CB-BOAT3 — NM-H: I-RIVER drift speeds (1actions.zil:2708–2720)', (
     expect(entry!.turnsLeft).toBe(4);
   });
 
-  it('I-RIVER fires after 3 turns from RIVER-3', () => {
+  it('I-RIVER fires after 3 waits from RIVER-3', () => {
     const g = newGameAt('DAM-BASE');
     inflateAndBoard(g);
     g.turn('launch');
-    // RIVER-1→2: fires on wait 3 (turnsLeft 3→2→1→0).
-    // RIVER-2→3: re-arms at 4; fires on wait 3+4=7 (turnsLeft 4→3→2→1→0).
-    for (let i = 0; i < 7; i++) g.turn('wait');
+    // RIVER-1→2: wait 1 (turnsLeft 3→2→1→0).
+    // RIVER-2→3: re-arms at 4; wait 2 (4→3→2→1), wait 3 (1→0 FIRE).
+    for (let i = 0; i < 3; i++) g.turn('wait');
     const inflated = g.world.get('INFLATED-BOAT')!;
     const river3   = g.world.get('RIVER-3')!;
     expect(inflated.parent).toBe(river3);
 
     // RIVER-3 speed = 3; turnsLeft=3 after re-arm.
-    // Wait 2 turns (3→2, 2→1) — still RIVER-3.
-    for (let i = 0; i < 2; i++) g.turn('wait');
-    expect(inflated.parent).toBe(river3); // not yet
-    const out = g.turn('wait').output;    // 3rd wait (1→0 fires)
+    // Wait 4: 3 ticks (3→2→1→0 FIRE) → moves to RIVER-4 immediately.
+    const out = g.turn('wait').output;
     expect(out).toContain('downstream');
     const river4 = g.world.get('RIVER-4')!;
     expect(inflated.parent).toBe(river4);
   });
 
-  it('I-RIVER fires after 2 turns from RIVER-4', () => {
+  it('I-RIVER fires after 5 waits total (RIVER-4 → RIVER-5)', () => {
     const g = newGameAt('DAM-BASE');
     inflateAndBoard(g);
     g.turn('launch');
-    // RIVER-1→2 on wait 3, RIVER-2→3 on wait 7, RIVER-3→4 on wait 10.
-    for (let i = 0; i < 10; i++) g.turn('wait');
+    // RIVER-1→2: wait 1, RIVER-2→3: wait 3, RIVER-3→4: wait 4.
+    for (let i = 0; i < 4; i++) g.turn('wait');
     const inflated = g.world.get('INFLATED-BOAT')!;
     const river4   = g.world.get('RIVER-4')!;
     expect(inflated.parent).toBe(river4);
 
     // RIVER-4 speed = 2; turnsLeft=2 after re-arm.
-    // Wait 1 turn (2→1) — still RIVER-4.
-    g.turn('wait');
-    expect(inflated.parent).toBe(river4); // not yet
-    const out = g.turn('wait').output;    // 2nd wait (1→0 fires)
+    // Wait 5: 2 ticks (2→1→0 FIRE) → moves to RIVER-5.
+    const out = g.turn('wait').output;
     expect(out).toContain('downstream');
     const river5 = g.world.get('RIVER-5')!;
     expect(inflated.parent).toBe(river5);
   });
 
-  it('NM-I: past RIVER-5 (after 1 turn) → waterfall death (1actions.zil:2716)', () => {
+  it('NM-I: past RIVER-5 (after 6 waits total) → waterfall death (1actions.zil:2716)', () => {
     const g = newGameAt('DAM-BASE');
     inflateAndBoard(g);
     g.turn('launch');
-    // RIVER-1→2 on wait 3, →3 on wait 7, →4 on wait 10, →5 on wait 12.
-    for (let i = 0; i < 12; i++) g.turn('wait');
+    // RIVER-1→2: wait 1, →3: wait 3, →4: wait 4, →5: wait 5.
+    for (let i = 0; i < 5; i++) g.turn('wait');
     const inflated = g.world.get('INFLATED-BOAT')!;
     const river5   = g.world.get('RIVER-5')!;
     expect(inflated.parent).toBe(river5);

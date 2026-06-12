@@ -28,93 +28,87 @@ You are now in the magic boat.
 
 > launch
 (magic boat)
-Frigid River
+Frigid River, in the magic boat
 You are on the Frigid River in the vicinity of the Dam. The river flows quietly here. There is a landing on the west shore.
-There is a magic boat here.
 The magic boat contains:
   A tan label
 
 > look
-Frigid River
+Frigid River, in the magic boat
 You are on the Frigid River in the vicinity of the Dam. The river flows quietly here. There is a landing on the west shore.
-There is a magic boat here.
 The magic boat contains:
   A tan label
-
-> wait
-Time passes...
 
 > wait
 Time passes...
 The flow of the river carries you downstream.
-Frigid River
+Frigid River, in the magic boat
 The river turns a corner here making it impossible to see the Dam. The White Cliffs loom on the east bank and large rocks prevent landing on the west.
-There is a magic boat here.
 The magic boat contains:
   A tan label
+
+> wait
+Time passes...
 
 > look
-Frigid River
+Frigid River, in the magic boat
 The river turns a corner here making it impossible to see the Dam. The White Cliffs loom on the east bank and large rocks prevent landing on the west.
-There is a magic boat here.
 The magic boat contains:
   A tan label
-
-> wait
-Time passes...
-
-> wait
-Time passes...
-
-> wait
-Time passes...
 The flow of the river carries you downstream.
-Frigid River
+Frigid River, in the magic boat
 The river descends here into a valley. There is a narrow beach on the west shore below the cliffs. In the distance a faint rumbling can be heard.
-There is a magic boat here.
 The magic boat contains:
   A tan label
 
 > wait
 Time passes...
-
-> wait
-Time passes...
-
-> wait
-Time passes...
 The flow of the river carries you downstream.
-Frigid River
+Frigid River, in the magic boat
 The river is running faster here and the sound ahead appears to be that of rushing water. On the east shore is a sandy beach. A small area of beach can also be seen below the cliffs on the west shore.
 There is a red buoy here (probably a warning).
-There is a magic boat here.
 The magic boat contains:
   A tan label
-
-> take buoy
-Taken.
-You notice something funny about the feel of the buoy.
 
 > wait
 Time passes...
 The flow of the river carries you downstream.
-Frigid River
+Frigid River, in the magic boat
 The sound of rushing water is nearly unbearable here. On the east shore is a large landing area.
-There is a magic boat here.
 The magic boat contains:
   A tan label
+
+> wait
+Time passes...
+Unfortunately, the magic boat doesn't provide protection from
+the rocks and boulders one meets at the bottom of waterfalls. Including this one.
+
+    ****  You have died  ****
+
+Now, let's take a look here... Well, you probably deserve another chance. I can't quite fix you
+up completely, but you can't have everything.
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+
+> wait
+Time passes...
+
+> wait
+Time passes...
+
+> wait
+Time passes...
+
+> take buoy
+You can't see any buoy here!
+
+> wait
+Time passes...
 
 > east
-The magic boat comes to a rest on the shore.
-Shore
-You are on the east shore of the river. The water here seems somewhat treacherous. A path travels from north to south here, the south end quickly turning around a sharp corner.
-There is a magic boat here.
-The magic boat contains:
-  A tan label
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
 
 > look
-Shore
-You are on the east shore of the river. The water here seems somewhat treacherous. A path travels from north to south here, the south end quickly turning around a sharp corner.
-There is a magic boat here.
-The magic boat contains:
-  A tan label
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.

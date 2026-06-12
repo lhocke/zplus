@@ -44,10 +44,12 @@ function waitN(g: Game, n: number) {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM2 — I-REMPTY: fires after exactly 8 ticks', () => {
-  it('LOW-TIDE is still false after 7 ticks', () => {
+  it('LOW-TIDE is still false after 2 waits (6 clock ticks, not yet at 8)', () => {
+    // V-WAIT multi-CLOCKER runs up to 3 CLOCKER ticks per wait call.
+    // 8-tick timer: 2 waits consume 6 ticks (8→7→6→5, 5→4→3→2); timer not yet fired.
     const g = newGameAt('DAM-ROOM');
     armTimer(g, 'I-REMPTY', 8);
-    waitN(g, 7);
+    waitN(g, 2);
     expect(flags(g).get('LOW-TIDE')).toBe(false);
   });
 
@@ -146,11 +148,12 @@ describe('CB-DAM2 — I-REMPTY: per-room fire messages', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM2 — I-RFILL: fires after exactly 8 ticks', () => {
-  it('LOW-TIDE stays true after 7 ticks when started drained', () => {
+  it('LOW-TIDE stays true after 2 waits (6 clock ticks, not yet at 8)', () => {
+    // V-WAIT multi-CLOCKER: 2 waits consume 6 ticks; 8-tick timer not yet fired.
     const g = newGameAt('DAM-ROOM');
     flags(g).set('LOW-TIDE', true);
     armTimer(g, 'I-RFILL', 8);
-    waitN(g, 7);
+    waitN(g, 2);
     expect(flags(g).get('LOW-TIDE')).toBe(true);
   });
 

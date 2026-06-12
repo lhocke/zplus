@@ -24,8 +24,7 @@ The magic boat contains:
   A tan label
 
 > board boat
-Oops! Something sharp seems to have slipped and punctured the boat.
-The boat deflates to the sounds of hissing, sputtering, and cursing.
+Oops! Something sharp seems to have slipped and punctured the boat. The boat deflates to the sounds of hissing, sputtering, and cursing.
 
 > look
 Dam Base

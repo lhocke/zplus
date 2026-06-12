@@ -223,8 +223,10 @@ describe('CB-DAM3 — I-MAINT-ROOM: DROWNINGS message at WATER-LEVEL/2 (NM-C)', 
     const out = g.turn('wait').output;
     // No level message when player is not in MAINTENANCE-ROOM
     expect(out).not.toContain('up to your');
-    // But WL still increments
-    expect(getWaterLevel(g)).toBe(2);
+    // WL increments on every clock advance.  V-WAIT (multi-CLOCKER) calls CLOCKER up
+    // to 3 times per wait; I-MAINT-ROOM produces no transcript text when player is not
+    // in MAINTENANCE-ROOM, so CLOCKER keeps looping all 3 times → WL goes from 1 to 4.
+    expect(getWaterLevel(g)).toBe(4);
   });
 });
 

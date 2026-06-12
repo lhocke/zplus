@@ -67,12 +67,21 @@ export const preBurnHandler: ActionHandler = (ctx: ActionContext): boolean => {
 
 // PRE-DROP (gverbs.zil:474)
 // If PRSO == LOC(WINNER) (player is inside it), perform V-DISEMBARK (RTRUE).
-// V-DISEMBARK body is deferred; slot is live so the RTRUE fires correctly.
+// V-DISEMBARK: on land → move player to here, tell "You are on your own feet again."
+//              over water → "Getting out here would be fatal."
 export const preDropHandler: ActionHandler = (ctx: ActionContext): boolean => {
-  const { dobj, actor } = ctx;
+  const { dobj, actor, here, tell } = ctx;
   if (dobj === undefined) return false;
-  if (actor.parent === dobj) return true;
-  return false;
+  if (actor.parent !== dobj) return false;
+  // Player is inside the object being dropped — perform V-DISEMBARK.
+  if (!here.has(Flag.Land)) {
+    tell("Getting out here would be fatal.");
+    ctx.fatal();
+    return true;
+  }
+  ctx.moveTo(actor, here);
+  tell("You are on your own feet again.");
+  return true;
 };
 
 // PRE-FILL (gverbs.zil:646)

@@ -37,10 +37,11 @@ turn on lantern
 down
 north
 
-# --- Kill troll (seed -s 1: 3 kills with sword) ---
-kill troll with sword
-kill troll with sword
-kill troll with sword
+# --- Kill troll (seed -s 1: ~3 hits with sword; RNG-variable turns) ---
+~kill troll with sword
+~kill troll with sword
+~kill troll with sword
+@resync East-West Passage
 
 # --- East of Troll Room → East-West Passage → Round Room ---
 east

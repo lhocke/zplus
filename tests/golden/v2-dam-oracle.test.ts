@@ -1,5 +1,11 @@
 /**
- * V2 — Dam/River oracle + golden integration (spec §9 Wave 4 V2)
+ * V2 — Dam/River engine self-consistency golden lock (spec §9 Wave 4 V2)
+ *
+ * SCOPE: These tests verify ENGINE INTERNAL CONSISTENCY only.  They are NOT
+ * dfrotz-anchored oracle tests.  dfrotz anchoring lives in the oracle harness
+ * (tools/oracle/run-corpus.ts) run against the six c-*.txt corpus files in
+ * tools/oracle/corpus/ — those files carry full dfrotz-navigable command
+ * sequences (including troll kill) and are verified by: npm run oracle
  *
  * Six golden walkthroughs covering the dam/river deterministic surfaces
  * that the 218-command master path misses.  Each corpus maps to a stored
@@ -16,9 +22,6 @@
  *
  * Engine starts via startRoom (teleport) with minimal state setup, so the
  * troll-combat section of the navigation path does not interfere.
- * The companion corpus TXT files in tools/oracle/corpus/ carry the full
- * dfrotz-navigable command sequence (including troll kill) for manual
- * oracle runs via `npm run oracle`.
  *
  * ZIL refs: 1actions.zil dam/river section as cited in spec §3–§6.
  *

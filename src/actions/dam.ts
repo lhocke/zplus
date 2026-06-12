@@ -91,7 +91,7 @@ export const boltF: ActionHandler = (ctx) => {
   if (ctx.verb === 'lubricate') {
     // :1215 — "Hmm. It appears the tube contained glue, not oil."
     ctx.tell(
-      "Hmm. It appears the tube contained glue, not oil. Turning the bolt\nwon't get any easier....",
+      "Hmm. It appears the tube contained glue, not oil. Turning the bolt won't get any easier....",
     );
     return true;
   }
@@ -109,11 +109,9 @@ export const boltF: ActionHandler = (ctx) => {
 export const damRoomFcn: ActionHandler = (ctx) => {
   if (ctx.rarg !== M_LOOK) return false;
 
-  // Base paragraph — :1158
+  // Base paragraph — :1158 (one <TELL> + CR; no embedded newline)
   ctx.tell(
-    'You are standing on the top of the Flood Control Dam #3, which was\n' +
-    'quite a tourist attraction in times far distant. There are paths to\n' +
-    'the north, south, and west, and a scramble down.',
+    'You are standing on the top of the Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down.',
   );
 
   const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
@@ -122,36 +120,32 @@ export const damRoomFcn: ActionHandler = (ctx) => {
   if (lowTide && gatesOpen) {
     // :1163 — S3 drained
     ctx.tell(
-      'The water level behind the dam is low: The sluice gates have been\n' +
-      'opened. Water rushes through the dam and downstream.',
+      'The water level behind the dam is low: The sluice gates have been opened. Water rushes through the dam and downstream.',
     );
   } else if (gatesOpen) {
     // :1167 — S2 draining
     ctx.tell(
-      'The sluice gates are open, and water rushes through the dam. The\n' +
-      'water level behind the dam is still high.',
+      'The sluice gates are open, and water rushes through the dam. The water level behind the dam is still high.',
     );
   } else if (lowTide) {
     // :1171 — S4 refilling
     ctx.tell(
-      'The sluice gates are closed. The water level in the reservoir is\n' +
-      'quite low, but the level is rising quickly.',
+      'The sluice gates are closed. The water level in the reservoir is quite low, but the level is rising quickly.',
     );
   } else {
     // :1175 — S0 sealed (default)
     ctx.tell(
-      'The sluice gates on the dam are closed. Behind the dam, there can be\n' +
-      'seen a wide reservoir. Water is pouring over the top of the now\n' +
-      'abandoned dam.',
+      'The sluice gates on the dam are closed. Behind the dam, there can be seen a wide reservoir. Water is pouring over the top of the now abandoned dam.',
     );
   }
 
-  // Control panel + bubble — :1179
+  // Control panel + bubble — :1179–1185.
+  // ZIL uses no-CR between the bolt line and the bubble suffix; dfrotz word-wraps
+  // all three fragments as one paragraph.  Port: one ctx.tell() call, no embedded \n.
   const gateFlag = ctx.getGlobal?.('GATE-FLAG') ?? false;
-  const bubbleSuffix = gateFlag ? ' which is\nglowing serenely' : '';
+  const bubbleSuffix = gateFlag ? ' which is glowing serenely' : '';
   ctx.tell(
-    'There is a control panel here, on which a large metal bolt is mounted.\n' +
-    `Directly above the bolt is a small green plastic bubble${bubbleSuffix}.`,
+    `There is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble${bubbleSuffix}.`,
   );
 
   return true;
@@ -177,8 +171,7 @@ export const damFunction: ActionHandler = (ctx) => {
       // :1407 — "With a <prsi>? Do you know how big this dam is?"
       const prsiDesc = ctx.iobj.desc;
       ctx.tell(
-        `With a ${prsiDesc}? Do you know how big this dam is? You could only\n` +
-        'stop a tiny leak with that.',
+        `With a ${prsiDesc}? Do you know how big this dam is? You could only stop a tiny leak with that.`,
       );
     }
     return true;
@@ -215,9 +208,7 @@ export const buttonF: ActionHandler = (ctx) => {
       const leak = ctx.world.get('LEAK');
       if (leak) ctx.clearFlag(leak, Flag.Invisible);
       ctx.tell(
-        'There is a rumbling sound and a stream of water appears to burst\n' +
-        'from the east wall of the room (apparently, a leak has occurred in a\n' +
-        'pipe).',
+        'There is a rumbling sound and a stream of water appears to burst from the east wall of the room (apparently, a leak has occurred in a pipe).',
       );
       ctx.setIntGlobal?.('WATER-LEVEL', 1);
       // :1310 — ENABLE <QUEUE I-MAINT-ROOM -1> (every-turn demon)
@@ -277,8 +268,7 @@ function fixMaintLeak(ctx: Parameters<ActionHandler>[0]): void {
   ctx.setIntGlobal?.('WATER-LEVEL', -1);
   ctx.queueClock?.('I-MAINT-ROOM', 0, false);   // park the demon
   ctx.tell(
-    'By some miracle of Zorkian technology, you have managed to stop the\n' +
-    'leak in the dam.',
+    'By some miracle of Zorkian technology, you have managed to stop the leak in the dam.',
   );
 }
 
@@ -395,8 +385,7 @@ export const toolChestFcn: ActionHandler = (ctx) => {
   if (ctx.verb === 'take' || ctx.verb === 'open' || ctx.verb === 'put') {
     ctx.self.moveTo(null);   // REMOVE-CAREFULLY — chest crumbles
     ctx.tell(
-      'The chests are so rusty and corroded that they crumble when you\n' +
-      'touch them.',
+      'The chests are so rusty and corroded that they crumble when you touch them.',
     );
     return true;
   }
@@ -416,42 +405,33 @@ export const reservoirSouthFcn: ActionHandler = (ctx) => {
   const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
   const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
 
+  // :1417–1437 — each branch is one <TELL> with no embedded CR; dfrotz word-wraps
+  // to 80 cols within each paragraph.  Port: no embedded \n inside each string.
   if (lowTide && gatesOpen) {
     // :1417 — S3 drained
     ctx.tell(
-      'You are in a long room, to the north of which was formerly a lake.\n' +
-      'However, with the water level lowered, there is merely a wide stream\n' +
-      'running through the center of the room.',
+      'You are in a long room, to the north of which was formerly a lake. However, with the water level lowered, there is merely a wide stream running through the center of the room.',
     );
   } else if (gatesOpen) {
     // :1422 — S2 draining
     ctx.tell(
-      'You are in a long room. To the north is a large lake, too deep\n' +
-      'to cross. You notice, however, that the water level appears to be\n' +
-      'dropping at a rapid rate. Before long, it might be possible to cross\n' +
-      'to the other side from here.',
+      'You are in a long room. To the north is a large lake, too deep to cross. You notice, however, that the water level appears to be dropping at a rapid rate. Before long, it might be possible to cross to the other side from here.',
     );
   } else if (lowTide) {
     // :1428 — S4 refilling
     ctx.tell(
-      'You are in a long room, to the north of which is a wide area which\n' +
-      'was formerly a reservoir, but now is merely a stream. You notice,\n' +
-      'however, that the level of the stream is rising quickly and that\n' +
-      'before long it will be impossible to cross here.',
+      'You are in a long room, to the north of which is a wide area which was formerly a reservoir, but now is merely a stream. You notice, however, that the level of the stream is rising quickly and that before long it will be impossible to cross here.',
     );
   } else {
     // :1434 — S0 sealed (default)
     ctx.tell(
-      'You are in a long room on the south shore of a large lake, far\n' +
-      'too deep and wide for crossing.',
+      'You are in a long room on the south shore of a large lake, far too deep and wide for crossing.',
     );
   }
 
-  // Fixed exit paragraph — :1439
+  // Fixed exit paragraph — :1439 (after <CRLF> = paragraph boundary)
   ctx.tell(
-    'There is a path along the stream to the east or west, a steep pathway\n' +
-    'climbing southwest along the edge of a chasm, and a path leading into a\n' +
-    'canyon to the southeast.',
+    'There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.',
   );
 
   return true;
@@ -471,9 +451,9 @@ export const reservoirFcn: ActionHandler = (ctx) => {
     const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
     const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
     if (!inVehicle && !gatesOpen && lowTide) {
+      // :1449–1451 — one <TELL> + CR; no embedded \n
       ctx.tell(
-        'You notice that the water level here is rising rapidly. The currents\n' +
-        'are also becoming stronger. Staying here seems quite perilous!',
+        'You notice that the water level here is rising rapidly. The currents are also becoming stronger. Staying here seems quite perilous!',
       );
     }
     return false;  // M-END handlers return false to continue the chain
@@ -482,17 +462,16 @@ export const reservoirFcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
     const lowTide = ctx.getGlobal?.('LOW-TIDE') ?? false;
     if (lowTide) {
-      // :1453 — drained: mud pile
-      ctx.tell(
-        'You are on what used to be a large lake, but which is now a large\n' +
-        'mud pile. There are "shores" to the north and south.',
-      );
+      // :1453–1456 — drained: mud pile.  ZIL string has a physical \n after "large"
+      // which dfrotz treats as a word separator; dfrotz wraps "...large mud pile."
+      // as line 1 (76 chars), then "There are..." as line 2.  After normalization:
+      // two paragraphs.  Port: two separate tells to match.
+      ctx.tell('You are on what used to be a large lake, but which is now a large mud pile.');
+      ctx.tell('There are "shores" to the north and south.');
     } else {
-      // :1457 — filled: lake
+      // :1457–1461 — filled: lake.  One <TELL> block; dfrotz word-wraps to one paragraph.
       ctx.tell(
-        'You are on the lake. Beaches can be seen north and south.\n' +
-        'Upstream a small stream enters the lake through a narrow cleft\n' +
-        'in the rocks. The dam can be seen downstream.',
+        'You are on the lake. Beaches can be seen north and south. Upstream a small stream enters the lake through a narrow cleft in the rocks. The dam can be seen downstream.',
       );
     }
     return true;
@@ -513,34 +492,32 @@ export const reservoirNorthFcn: ActionHandler = (ctx) => {
   const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
   const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
 
+  // :1465–1482 — each branch is one <TELL> with no embedded CR.
+  // S3 (lowTide && gatesOpen): dfrotz word-wraps at col 80 after "a lake." (73 chars),
+  // which ends with '.' → normalizer creates a paragraph break.  Port: split there
+  // with \n so the engine matches dfrotz's 2-paragraph layout.
+  // ZIL cite: 1actions.zil:1468–1470 (single TELL, dfrotz wraps at 73 chars).
   if (lowTide && gatesOpen) {
     // :1466 — S3 drained
     ctx.tell(
-      'You are in a large cavernous room, the south of which was formerly\n' +
-      'a lake. However, with the water level lowered, there is merely\n' +
-      'a wide stream running through there.',
+      'You are in a large cavernous room, the south of which was formerly a lake.\nHowever, with the water level lowered, there is merely a wide stream running through there.',
     );
   } else if (gatesOpen) {
     // :1471 — S2 draining
     ctx.tell(
-      'You are in a large cavernous area. To the south is a wide lake,\n' +
-      'whose water level appears to be falling rapidly.',
+      'You are in a large cavernous area. To the south is a wide lake, whose water level appears to be falling rapidly.',
     );
   } else if (lowTide) {
     // :1475 — S4 refilling
     ctx.tell(
-      'You are in a cavernous area, to the south of which is a very wide\n' +
-      'stream. The level of the stream is rising rapidly, and it appears\n' +
-      'that before long it will be impossible to cross to the other side.',
+      'You are in a cavernous area, to the south of which is a very wide stream. The level of the stream is rising rapidly, and it appears that before long it will be impossible to cross to the other side.',
     );
   } else {
     // :1480 — S0 sealed (default)
-    ctx.tell(
-      'You are in a large cavernous room, north of a large lake.',
-    );
+    ctx.tell('You are in a large cavernous room, north of a large lake.');
   }
 
-  // Fixed exit line — :1483
+  // Fixed exit line — :1483 (after <CRLF> = paragraph boundary)
   ctx.tell('There is a slimy stairway leaving the room to the north.');
 
   return true;
@@ -558,27 +535,22 @@ export const reservoirNorthFcn: ActionHandler = (ctx) => {
 export const deepCanyonF: ActionHandler = (ctx) => {
   if (ctx.rarg !== M_LOOK) return false;
 
-  // Base text — :1732
-  ctx.tell(
-    'You are on the south edge of a deep canyon. Passages lead off to the\n' +
-    'east, northwest and southwest. A stairway leads down.',
-  );
+  // :1732–1744 — ZIL emits base text then appends the water-sound suffix with
+  // no <CRLF> between them — one logical paragraph.  Port: build one string.
+  const base = 'You are on the south edge of a deep canyon. Passages lead off to the east, northwest and southwest. A stairway leads down.';
 
   const gatesOpen = ctx.getGlobal?.('GATES-OPEN') ?? false;
   const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
 
   if (gatesOpen && !lowTide) {
-    // :1735 — gates open, water rushing = loud roar
-    ctx.tell(
-      ' You can hear a loud roaring sound, like that of rushing water, from\n' +
-      'below.',
-    );
+    // :1735 — gates open, water rushing = loud roar (no-CR appended to base)
+    ctx.tell(base + ' You can hear a loud roaring sound, like that of rushing water, from below.');
   } else if (!gatesOpen && lowTide) {
     // :1739 — gates sealed, reservoir drained = quiet (no suffix)
-    return true;
+    ctx.tell(base);
   } else {
-    // :1742 — default: soft flow sound
-    ctx.tell(' You can hear the sound of flowing water from below.');
+    // :1742 — default: soft flow sound (no-CR appended to base)
+    ctx.tell(base + ' You can hear the sound of flowing water from below.');
   }
 
   return true;
@@ -614,22 +586,17 @@ function isLoudRoomQuiet(ctx: Parameters<ActionHandler>[0]): boolean {
 
 export const loudRoomFcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
-    // Base paragraph — 1actions.zil:1662–1665
-    ctx.tell(
-      'This is a large room with a ceiling which cannot be detected from\n' +
-      'the ground. There is a narrow passage from east to west and a stone\n' +
-      'stairway leading upward.',
-    );
+    // :1662–1672 — base text + quiet/loud suffix, all NO-CR = one paragraph + <CRLF>.
+    // Port: build one string to match dfrotz's word-wrapped single paragraph.
+    const base = 'This is a large room with a ceiling which cannot be detected from the ground. There is a narrow passage from east to west and a stone stairway leading upward.';
 
     if (isLoudRoomQuiet(ctx)) {
-      // :1668 — quiet suffix
-      ctx.tell(' The room is eerie in its quietness.');
+      // :1668 — quiet suffix (no-CR appended to base)
+      ctx.tell(base + ' The room is eerie in its quietness.');
     } else {
-      // :1670 — loud suffix
+      // :1670 — loud suffix (no-CR appended to base)
       ctx.tell(
-        ' The room is deafeningly loud with an\n' +
-        'undetermined rushing sound. The sound seems to reverberate from all\n' +
-        'of the walls, making it difficult even to think.',
+        base + ' The room is deafeningly loud with an undetermined rushing sound. The sound seems to reverberate from all of the walls, making it difficult even to think.',
       );
     }
     return true;
@@ -640,10 +607,9 @@ export const loudRoomFcn: ActionHandler = (ctx) => {
     const lowTide   = ctx.getGlobal?.('LOW-TIDE')   ?? false;
     // :1674 — only when loud: GATES-OPEN && !LOW-TIDE
     if (gatesOpen && !lowTide) {
+      // :1676–1678 — one <TELL> + CR CR (two newlines = one blank line); port: one string
       ctx.tell(
-        'It is unbearably loud here, with an ear-splitting roar seeming to\n' +
-        'come from all around you. There is a pounding in your head which won\'t\n' +
-        'stop. With a tremendous effort, you scramble out of the room.',
+        "It is unbearably loud here, with an ear-splitting roar seeming to come from all around you. There is a pounding in your head which won't stop. With a tremendous effort, you scramble out of the room.",
       );
       // :1679 — GOTO pickOne(LOUD-RUNS) — RNG draw on game's rng
       const idx = Math.floor((ctx.rng?.next() ?? Math.random()) * LOUD_RUNS.length);

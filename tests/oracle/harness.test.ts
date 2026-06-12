@@ -20,7 +20,7 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeDfrotz, normalizeEngine } from '../../tools/oracle/normalizer.js';
 import { compareTurns } from '../../tools/oracle/comparator.js';
-import { extractSeedFromHeader } from '../../tools/oracle/run-corpus.js';
+import { extractSeedFromHeader, loadCorpusItems, extractCommands } from '../../tools/oracle/run-corpus.js';
 
 // ---------------------------------------------------------------------------
 // Normalizer — dfrotz transcript
@@ -415,5 +415,161 @@ describe('extractSeedFromHeader', () => {
     ].join('\n');
     // The seed directive is after the first non-comment line — should NOT be found
     expect(extractSeedFromHeader(withSeedAfterCommands)).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Corpus annotation parsing (~ and @resync)
+// ---------------------------------------------------------------------------
+
+describe('loadCorpusItems', () => {
+  // Write a temporary in-memory corpus to test via the exported parsers.
+  // We test extractCommands and loadCorpusItems together with synthetic content.
+
+  it('extracts plain commands with rngVariable=false', () => {
+    // Use extractCommands on a plain corpus
+    const corpusPath = '/Users/lhocke/Code/zork-test-dam/tools/oracle/corpus/c-rainbow.txt';
+    const items = loadCorpusItems(corpusPath);
+    const cmds = extractCommands(items);
+    expect(cmds.length).toBeGreaterThan(0);
+    // All entries from c-rainbow (no ~) should be rngVariable=false
+    const entries = items.filter((i) => !('kind' in i));
+    for (const e of entries) {
+      // c-rainbow.txt has no ~ annotations
+      if (!('kind' in e)) {
+        expect(e.rngVariable).toBe(false);
+      }
+    }
+  });
+
+  it('parses ~ prefix as rngVariable=true and strips the tilde', () => {
+    // c-dam.txt now has ~kill troll with sword
+    const corpusPath = '/Users/lhocke/Code/zork-test-dam/tools/oracle/corpus/c-dam.txt';
+    const items = loadCorpusItems(corpusPath);
+    const rngItems = items.filter((i) => !('kind' in i) && (i as { rngVariable: boolean }).rngVariable);
+    expect(rngItems.length).toBeGreaterThan(0);
+    // The command text should not start with ~
+    for (const item of rngItems) {
+      if (!('kind' in item)) {
+        expect(item.command).not.toMatch(/^~/);
+        expect(item.command).toContain('kill troll');
+      }
+    }
+  });
+
+  it('parses @resync directives', () => {
+    // c-dam.txt has @resync East-West Passage
+    const corpusPath = '/Users/lhocke/Code/zork-test-dam/tools/oracle/corpus/c-dam.txt';
+    const items = loadCorpusItems(corpusPath);
+    const resyncs = items.filter((i) => 'kind' in i);
+    expect(resyncs.length).toBeGreaterThan(0);
+    if ('kind' in resyncs[0]!) {
+      expect(resyncs[0]!.pattern).toBe('East-West Passage');
+    }
+  });
+
+  it('excludes @resync and # lines from extractCommands', () => {
+    const corpusPath = '/Users/lhocke/Code/zork-test-dam/tools/oracle/corpus/c-dam.txt';
+    const items = loadCorpusItems(corpusPath);
+    const cmds = extractCommands(items);
+    // Commands must not contain @resync or start with #
+    for (const c of cmds) {
+      expect(c).not.toMatch(/^@resync/);
+      expect(c).not.toMatch(/^#/);
+      expect(c).not.toMatch(/^~/);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Comparator — structural matching and @resync support
+// ---------------------------------------------------------------------------
+
+describe('compareTurns with annotation metadata', () => {
+  it('uses structural-landmark comparison for rngVariable=true entries', () => {
+    // The annotated compareTurns path always consumes dfrotz[0]/engine[0] as the
+    // "initial" room turn (pre-command output).  Provide a matching initial turn,
+    // then the two command turns.
+    const dfrotz = [
+      { command: '', text: 'West of House\nYou are here.' },   // initial (turn 0)
+      { command: '', text: 'Troll Room\nWith a mighty swing, you score a partial hit!' },
+      { command: '', text: 'East-West Passage\nYou are here.' },
+    ];
+    const engine = [
+      { command: '', text: 'West of House\nYou are here.' },   // initial (turn 0)
+      { command: '', text: 'Troll Room\nThe troll hits you with a glancing blow.' },
+      { command: '', text: 'East-West Passage\nYou are here.' },
+    ];
+    const items = [
+      { command: 'kill troll with sword', rngVariable: true },
+      { command: 'east', rngVariable: false },
+    ];
+
+    const report = compareTurns(dfrotz, engine, items);
+    // Turn 0: initial room (exact match, added automatically)
+    expect(report.turns[0]?.kind).toBe('exact');
+    // Turn 1: structural match (room name "Troll Room" matches, combat text differs)
+    expect(report.structuralMatches).toBe(1);
+    expect(report.turns[1]?.match).toBe(true);
+    expect(report.turns[1]?.kind).toBe('structural');
+    // Turn 2: exact match (east → east-west passage)
+    expect(report.exactMatches).toBe(2); // initial + east
+    expect(report.turns[2]?.match).toBe(true);
+    expect(report.turns[2]?.kind).toBe('exact');
+    expect(report.divergences).toBe(0);
+  });
+
+  it('marks structural turns as skipped (not diverged) when room name differs', () => {
+    // rngVariable=true turns are NEVER counted as divergences — they are annotated
+    // as "expected to vary" and get kind='skipped' when structural landmarks differ.
+    const dfrotz = [
+      { command: '', text: 'West of House\nYou are here.' },   // initial
+      { command: '', text: 'Troll Room\nWith a mighty swing!' },
+    ];
+    const engine = [
+      { command: '', text: 'West of House\nYou are here.' },   // initial
+      { command: '', text: 'Different Room\nThe troll hits you.' },
+    ];
+    const items = [{ command: 'kill troll', rngVariable: true }];
+
+    const report = compareTurns(dfrotz, engine, items);
+    // rng-variable turns are always "pass" — divergence=0
+    expect(report.divergences).toBe(0);
+    expect(report.turns[1]?.kind).toBe('skipped'); // annotated RNG skip
+    expect(report.skipped).toBe(1);
+  });
+
+  it('skips turns during @resync and does not count them as divergences', () => {
+    // dfrotz has extra combat turns before the resync pattern; engine aligns sooner.
+    // Both transcripts start with a matching initial turn.
+    const dfrotz = [
+      { command: '', text: 'West of House\nYou are here.' },   // initial
+      { command: '', text: 'Troll Room\nThe troll attacks.' },
+      { command: '', text: 'Troll Room\nA critical hit!' },
+      { command: '', text: 'East-West Passage\nYou are in the passage.' },
+      { command: '', text: 'Round Room\nYou are in a round room.' },
+    ];
+    const engine = [
+      { command: '', text: 'West of House\nYou are here.' },   // initial
+      { command: '', text: 'East-West Passage\nYou are in the passage.' },
+      { command: '', text: 'Round Room\nYou are in a round room.' },
+    ];
+    const items = [
+      { kind: 'resync' as const, pattern: 'east-west passage' },
+      { command: 'east', rngVariable: false },
+    ];
+
+    const report = compareTurns(dfrotz, engine, items);
+    // Two dfrotz turns were skipped (troll attacks, critical hit); then east-west passage aligned
+    expect(report.skipped).toBeGreaterThan(0);
+    expect(report.divergences).toBe(0);
+  });
+
+  it('falls back to exact comparison when no corpusItems provided', () => {
+    const dfrotz = [{ command: '', text: 'Same text.' }];
+    const engine = [{ command: '', text: 'Same text.' }];
+    const report = compareTurns(dfrotz, engine);
+    expect(report.exactMatches).toBe(1);
+    expect(report.divergences).toBe(0);
   });
 });

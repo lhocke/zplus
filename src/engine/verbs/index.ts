@@ -189,9 +189,22 @@ function printCont(
   // JS Set is append-order, so we reverse to match ZIL iteration order.
   const children = Array.from(container.children).reverse();
 
+  // ZIL PRINT-CONT :1753-1755 — AV = LOC(WINNER) if vehicle, else nil.
+  // When player is in a vehicle and we're printing a room (the vehicle's
+  // parent), the vehicle itself is skipped and its contents are shown at
+  // the end via the PV? path (:1793-1795).
+  const playerVehicle = (player.parent !== null &&
+                         player.parent !== undefined &&
+                         player.parent.has(Flag.Vehicle) &&
+                         player.parent.parent === container)
+    ? player.parent
+    : null;
+  let vehicleSeen = false;  // PV? — vehicle was encountered during iteration
+
   // Pass 1: untouched items with an FDESC
   for (const child of children) {
     if (child === player) continue;
+    if (child === playerVehicle) { vehicleSeen = true; continue; }  // :1775 skip AV
     if (child.has(Flag.Invisible)) continue;
     if (!child.has(Flag.Touched) && child.fdesc !== undefined) {
       if (!child.has(Flag.NonDescript)) {
@@ -209,6 +222,7 @@ function printCont(
 
   for (const child of children) {
     if (child === player) continue;
+    if (child === playerVehicle) continue;  // :1797 skip AV
     if (child.has(Flag.Invisible)) continue;
     if (!child.has(Flag.Touched) && child.fdesc !== undefined) continue;
 
@@ -225,6 +239,11 @@ function printCont(
       }
     }
   }
+
+  // ZIL PRINT-CONT :1793-1795 — PV? path: after room items, show vehicle contents.
+  if (vehicleSeen && playerVehicle !== null && playerVehicle.children.size > 0) {
+    printCont(playerVehicle, player, level + 1, tell);
+  }
 }
 
 // DESCRIBE-OBJECTS (gverbs.zil:1681) — calls PRINT-CONT on HERE at level −1.
@@ -236,6 +255,21 @@ export function describeRoomObjects(
 ): void {
   if (Array.from(room.children).some(c => c !== player && !c.has(Flag.Invisible))) {
     printCont(room, player, -1, tell);
+  }
+}
+
+// DESCRIBE-VEHICLE-OBJECTS — show the contents of a vehicle the player is
+// riding in (gverbs.zil:1649-1679 V-LOOK vehicle path).
+// Calls PRINT-CONT at level=0 so items inside the vehicle are indented
+// as "  A <desc>" (level 1) with header "The <vehicle> contains:".
+// Exported so game.ts can call it from describeCurrentRoom().
+export function describeVehicleObjects(
+  vehicle: GameObject,
+  player: GameObject,
+  tell: (s: string) => void,
+): void {
+  if (vehicle.children.size > 0) {
+    printCont(vehicle, player, 0, tell);
   }
 }
 
@@ -253,8 +287,16 @@ function describeRoom(
     return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
   }
 
+  // ZIL gverbs.zil:1649–1679: when player is in a vehicle, the room title
+  // becomes "<room>, in the <vehicle>" and the vehicle is NOT listed as a room
+  // object; instead the vehicle's contents are shown (PRINT-CONT on the vehicle).
+  const vehicle = (player.parent !== null && player.parent !== undefined &&
+                   player.parent.has(Flag.Vehicle))
+    ? player.parent
+    : null;
+
   const lines: string[] = [];
-  lines.push(room.desc);
+  lines.push(vehicle !== null ? `${room.desc}, in the ${vehicle.desc}` : room.desc);
 
   if (room.ldesc) {
     lines.push(room.ldesc);
@@ -263,6 +305,9 @@ function describeRoom(
     if (dynamic.length > 0) lines.push(dynamic);
   }
 
+  // ZIL DESCRIBE-OBJECTS (gverbs.zil:1681-1684) — always calls PRINT-CONT on
+  // HERE. When player is in a vehicle, PRINT-CONT internally skips the vehicle
+  // (PV? path :1753-1795), shows room objects first, then vehicle contents.
   describeRoomObjects(room, player, (s) => lines.push(s));
 
   return lines.join('\n');
@@ -864,10 +909,19 @@ function verbBoard(ctx: VerbContext): VerbResult {
 }
 
 // V-DISEMBARK (gverbs.zil:418–432) — exit a vehicle.
-// Over water: fatal ("getting out here would be fatal.").
-// On land: "You are on your own feet again." — handled by object; stub here.
-function verbDisembark(_ctx: VerbContext): VerbResult {
-  return result("You're not in anything you can disembark from.");
+// :422 — no vehicle: "You're not in anything you can disembark from."
+// :424 — over water (room lacks RLANDBIT): "Getting out here would be fatal."
+// :430 — on land: move player to room, "You are on your own feet again."
+function verbDisembark(ctx: VerbContext): VerbResult {
+  const wloc = ctx.player.parent;
+  if (wloc === null || wloc === undefined || !wloc.has(Flag.Vehicle)) {
+    return result("You're not in anything you can disembark from.");
+  }
+  if (!ctx.here.has(Flag.Land)) {
+    return result("Getting out here would be fatal.");
+  }
+  ctx.player.moveTo(ctx.here);
+  return result("You are on your own feet again.", /*moved*/true);
 }
 
 // V-LAUNCH (gverbs.zil:804-808) — fall-through when no boat handler claims launch.

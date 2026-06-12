@@ -14,10 +14,9 @@
 #   take buoy: 2→1 | wait: 1→0 FIRE → RIVER-5
 #   east: exit to Shore
 #
-# RNG NOTE: Path to DAM-BASE passes through the Troll Room (see c-dam.txt for
-# the -s 1 knife route).  The pump is in RESERVOIR-NORTH; to get it, drain the
-# reservoir first (open the dam bolt) then retrieve the pump.  Alternatively,
-# the automated golden test gives the pump directly to the player via setup.
+# RNG NOTE: Path to DAM-BASE passes through the Troll Room.  With seed -s 1,
+# the troll (fought with sword) dies after ~3 hits.  The pump is retrieved from
+# RESERVOIR-NORTH after draining the dam.
 #
 # Run with:
 #   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-river.txt
@@ -26,40 +25,44 @@
 verbose
 
 # --- Setup: get to the dam area and retrieve the pump ---
-# (abbreviated; see c-dam.txt for the full troll-kill path)
 north
 east
 open window
 west
+
+# Living Room: take sword and lantern
 west
+take sword
 take lantern
 move rug
 open trap door
 turn on lantern
+
+# Cellar → Troll Room (north from Cellar)
 down
+north
+~kill troll with sword
+~kill troll with sword
+~kill troll with sword
+@resync East-West Passage
+
+# EW-Passage → Round Room → NS-Passage → Deep Canyon → Dam Room
 east
-take knife
-kill troll with knife
-kill troll with knife
-kill troll with knife
-kill troll with knife
-kill troll with knife
+north
+ne
 east
-north
-west
-south
-west
-south
-west
-west
+
+# Dam Room → Dam Lobby → Maintenance Room → take wrench → unlock panel
 north
 north
-west
-north
-north
+take wrench
 push yellow button
-west
+
+# Maintenance Room → Dam Lobby → Dam Room
 south
+south
+
+# Drain the reservoir: turn bolt (sluice open) then wait 8 turns
 turn bolt with wrench
 wait
 wait
@@ -69,18 +72,20 @@ wait
 wait
 wait
 wait
-# Reservoir drained; pump is now accessible at RESERVOIR-NORTH
+
+# Reservoir drained; navigate to Reservoir North to get pump
+# DAM-ROOM → RESERVOIR-SOUTH → RESERVOIR → RESERVOIR-NORTH
 west
 north
-east
+north
 take pump
-west
-south
-# Close the dam (not strictly needed for the river; omit or include as desired)
 
-# --- Navigate to DAM-BASE (scramble down) ---
-east
+# Return: RESERVOIR-NORTH → RESERVOIR → RESERVOIR-SOUTH → DAM-ROOM
 south
+south
+east
+
+# --- Navigate to DAM-BASE (down from Dam Room) ---
 down
 
 # --- River walkthrough proper ---

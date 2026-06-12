@@ -800,26 +800,43 @@ export class Game {
       }
 
       // CLOCKER tick — once per non-meta executed command (gclock.zil).
+      // V-WAIT exception (gverbs.zil:1514–1519): ZIL's V-WAIT calls CLOCKER up
+      // to NUM=3 times in a loop, stopping early when an interrupt fires.  The
+      // main GMAIN CLOCKER call is then skipped (CLOCK-WAIT flag).  We mirror
+      // this here: run up to 3 CLOCKER advances for V-WAIT, stop on first fire.
       if (segmentConsumesTime) {
-        this.moveCount += 1;
-        const clockLines = this.clock.advance();
-        if (clockLines.length > 0) {
-          const clockText = clockLines.join('\n');
-          const idx = outputs.length - 1;
-          if (idx >= 0) {
-            outputs[idx] = [outputs[idx], clockText].filter(s => s.length > 0).join('\n');
-          } else {
-            outputs.push(clockText);
-          }
-        }
-        this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+        const isWait = cmd.action === 'V-WAIT';
+        const maxClocks = isWait ? 3 : 1;
+        let fatalFromClock = false;
 
-        // B3: I-FIGHT → jigsUp signaled RFATAL from clock context — abort turn.
-        if (this.fatalPending) {
-          this.fatalPending = false;
-          this.parser.clearContinuation();
-          break;
+        for (let ci = 0; ci < maxClocks; ci++) {
+          this.moveCount += 1;
+          const clockLines = this.clock.advance();
+          const clockFiredThisTick = clockLines.length > 0;
+          if (clockFiredThisTick) {
+            const clockText = clockLines.join('\n');
+            const idx = outputs.length - 1;
+            if (idx >= 0) {
+              outputs[idx] = [outputs[idx], clockText].filter(s => s.length > 0).join('\n');
+            } else {
+              outputs.push(clockText);
+            }
+          }
+          this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+
+          // B3: I-FIGHT / I-RIVER JIGS-UP → abort turn.
+          if (this.fatalPending) {
+            this.fatalPending = false;
+            this.parser.clearContinuation();
+            fatalFromClock = true;
+            break;
+          }
+
+          // V-WAIT: stop loop when an interrupt fired (mirrors ZIL <CLOCKER> → <RETURN>).
+          if (isWait && clockFiredThisTick) break;
         }
+
+        if (fatalFromClock) break;
       }
 
       if (!this.parser.hasContinuation()) {
@@ -1057,7 +1074,20 @@ export class Game {
       return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
     }
 
-    const lines: string[] = [this.here.desc];
+    // ZIL gverbs.zil:1649–1679: when player is in a vehicle, the room title
+    // becomes "<room>, in the <vehicle>" and the vehicle is NOT listed as a room
+    // object; instead the vehicle's contents are shown (PRINT-CONT on the vehicle).
+    const vehicle = (this.player.parent !== null && this.player.parent !== undefined &&
+                     !(this.player.parent instanceof Room) &&
+                     this.player.parent.has(Flag.Vehicle))
+      ? this.player.parent
+      : null;
+
+    const lines: string[] = [
+      vehicle !== null
+        ? `${this.here.desc}, in the ${vehicle.desc}`
+        : this.here.desc,
+    ];
 
     if (this.here.ldesc) {
       lines.push(this.here.ldesc);
@@ -1071,6 +1101,9 @@ export class Game {
       if (buf.length > 0) lines.push(buf.join('\n'));
     }
 
+    // ZIL DESCRIBE-OBJECTS (gverbs.zil:1681-1684) — always calls PRINT-CONT on
+    // HERE. When player is in a vehicle, PRINT-CONT internally skips the vehicle
+    // (PV? path :1753-1795), shows room objects first, then vehicle contents.
     describeRoomObjects(this.here, this.player, (s) => lines.push(s));
 
     return lines.join('\n');
@@ -1779,7 +1812,7 @@ export class Game {
           const clockFatal = (): void => { this.fatalPending = true; };
           jigsUp(
             'Unfortunately, the magic boat doesn\'t provide protection from\n' +
-            'the rocks and boulders one meets at the bottom of waterfalls.\n' +
+            'the rocks and boulders one meets at the bottom of waterfalls. ' +
             'Including this one.',
             this.jigsUpMsgs(),
             this.makeJigsUpCallbacks(ctx.tell, clockFatal),

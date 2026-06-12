@@ -9,10 +9,11 @@
 # Sharp objects: SWORD, KNIFE, AXE, STILETTO, RUSTY-KNIFE, SCEPTRE.
 # This walkthrough uses the sword.
 #
-# RNG NOTE: Path to DAM-BASE passes through the Troll Room (see c-dam.txt for
-# the -s 1 knife route).  The sword is in the Living Room above ground; pick it
-# up before going underground.  The pump is retrieved from RESERVOIR-NORTH
-# after draining the dam (see c-river.txt).
+# RNG NOTE: Path to DAM-BASE passes through the Troll Room.  With seed -s 1,
+# the troll (fought with sword) dies after ~3 hits.  The sword is in the
+# Living Room above ground; pick it up before going underground.  The pump is
+# retrieved from RESERVOIR-NORTH after draining the dam.  The putty tube is
+# in MAINTENANCE-ROOM; we pick it up during the setup phase.
 #
 # Run with:
 #   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-puncture.txt
@@ -20,7 +21,7 @@
 # Set verbose mode so dfrotz and engine both use verbose room descriptions.
 verbose
 
-# --- Setup: get sword + pump, reach DAM-BASE ---
+# --- Setup: get sword + lantern, go underground ---
 north
 east
 open window
@@ -31,32 +32,36 @@ take lantern
 move rug
 open trap door
 turn on lantern
+
+# Cellar → Troll Room (north from Cellar)
 down
+north
+# Troll fight with sword (RNG-variable turns)
+~kill troll with sword
+~kill troll with sword
+~kill troll with sword
+@resync East-West Passage
+
+# EW-Passage → Round Room → NS-Passage → Deep Canyon → Dam Room
 east
-# Troll fight (sword works too but triggers I-SWORD glow divergence; use knife
-# for oracle diffing — here we use sword since puncture requires it)
-kill troll with sword
-kill troll with sword
-kill troll with sword
-kill troll with sword
-kill troll with sword
+north
+ne
 east
-north
-west
-south
-west
-south
-west
-west
+
+# Dam Room → Dam Lobby → Maintenance Room
 north
 north
-west
-north
-north
+
+# Take wrench and putty tube; unlock panel
+take wrench
+take putty
 push yellow button
-west
+
+# Return to Dam Room
 south
-# Drain dam to access RESERVOIR-NORTH for pump
+south
+
+# Drain the reservoir (bolt open, wait 8 turns)
 turn bolt with wrench
 wait
 wait
@@ -66,14 +71,19 @@ wait
 wait
 wait
 wait
+
+# Navigate to Reservoir North for pump
 west
 north
-east
+north
 take pump
-west
+
+# Return to Dam Room
+south
 south
 east
-south
+
+# Down to Dam Base
 down
 
 # --- C-PUNCTURE walkthrough proper (at DAM-BASE) ---
@@ -87,8 +97,7 @@ look
 board boat
 look
 
-# Repair with putty (putty tube is in MAINTENANCE-ROOM; for dfrotz manual run
-# you need to retrieve it first — or adapt this corpus to do so)
+# Repair with putty
 put putty on boat
 look
 

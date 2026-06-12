@@ -230,9 +230,14 @@ export const rboatFcn: ActionHandler = (ctx) => {
       const obj = ctx.world.get(id);
       if (obj !== undefined && obj.parent === ctx.actor) {
         // :2794–2799 — puncture message + swap
+        // ZIL :2795–2796: one TELL string (newline in source = word separator); dfrotz
+        // word-wraps at col 80 but normalizer joins the lines because the first line
+        // ends mid-sentence (after "boat.") ... wait, "boat." ends with '.' so looksLikeWrapped
+        // returns false.  Observed: dfrotz outputs both sentences in ONE paragraph (the
+        // second sentence fits on the continuation line after the wrap).  Port: one tell,
+        // no embedded \n.
         ctx.tell(
-          'Oops! Something sharp seems to have slipped and punctured the boat.\n' +
-          'The boat deflates to the sounds of hissing, sputtering, and cursing.',
+          'Oops! Something sharp seems to have slipped and punctured the boat. The boat deflates to the sounds of hissing, sputtering, and cursing.',
         );
         const inflated  = ctx.world.get('INFLATED-BOAT');
         const punctured = ctx.world.get('PUNCTURED-BOAT');

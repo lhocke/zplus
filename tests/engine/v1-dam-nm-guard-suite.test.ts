@@ -406,9 +406,10 @@ describe('NM-H — I-RIVER re-arms at new section speed after drift', () => {
     g.turn('inflate boat with pump');
     g.turn('board boat');
     g.turn('launch');
-    // RIVER-1 speed = 4; clock advances once at end of launch turn → turnsLeft=3
-    // Fire: 3 waits trigger the drift (turnsLeft 3→2→1→0)
-    waitN(g, 3);
+    // RIVER-1 speed = 4; clock advances once at end of launch turn → turnsLeft=3.
+    // V-WAIT multi-CLOCKER (gverbs.zil:1514-1519): one wait runs up to 3 CLOCKER
+    // ticks, stopping on first fire.  1 wait fires the drift (3→2→1→0 FIRE).
+    waitN(g, 1);
     // Drift to RIVER-2 fires; re-arm at RIVER-2 speed (4)
     const entry = clock(g).getEntry('I-RIVER');
     expect(entry!.enabled).toBe(true);
@@ -431,11 +432,16 @@ describe('NM-I — past RIVER-5: waterfall death (not silent disable)', () => {
     g.turn('inflate boat with pump');
     g.turn('board boat');
     g.turn('launch');
-    // Speeds: R1=4(→3), R2=4, R3=3, R4=2, R5=1
-    // Launch: turnsLeft=3 (4-1 from advance).  Cumulative waits to reach R5:
-    // R1→R2 on wait 3, R2→R3 on wait 7, R3→R4 on wait 10, R4→R5 on wait 12.
-    // R5 turnsLeft=1 after re-arm; falls on wait 13.
-    waitN(g, 12);
+    // Speeds: R1=4(→3), R2=4, R3=3, R4=2, R5=1.
+    // V-WAIT multi-CLOCKER (gverbs.zil:1514-1519): up to 3 CLOCKER ticks per wait.
+    // Cumulative waits to reach R5 (multi-CLOCKER):
+    //   wait 1: 3→2→1→0 FIRE → RIVER-2 (rearm 4)
+    //   wait 2: 4→3→2→1 (no fire)
+    //   wait 3: 1→0 FIRE → RIVER-3 (rearm 3)
+    //   wait 4: 3→2→1→0 FIRE → RIVER-4 (rearm 2)
+    //   wait 5: 2→1→0 FIRE → RIVER-5 (rearm 1)
+    // R5 turnsLeft=1 after re-arm; falls on wait 6.
+    waitN(g, 5);
     expect(g.world.get('INFLATED-BOAT')!.parent?.id).toBe('RIVER-5');
     const out = g.turn('wait').output;
     expect(out).toMatch(/waterfalls|bottom|rocks/i);
