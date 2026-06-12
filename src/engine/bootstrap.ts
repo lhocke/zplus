@@ -112,13 +112,15 @@ export function createGame(opts: {
   });
 
   // I-MATCH: queued for 2 turns when a match is lit; starts disabled.
+  // ZIL I-MATCH returns RTRUE (stay registered) so the slot can be re-armed
+  // by a subsequent light via queueClock('I-MATCH', 2, true).
   const iMatchEntry: ClockEntry = {
     id: 'I-MATCH',
     turnsLeft: 2,
     enabled: false,
     tick(ctx): boolean {
       iMatchTick(world, ctx.tell);
-      return false;
+      return true;  // keep slot alive for re-arm (ZIL I-MATCH: RTRUE)
     },
   };
   clock.schedule(iMatchEntry);

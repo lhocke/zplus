@@ -112,7 +112,8 @@ export const matchFunction: ActionHandler = (ctx) => {
 
     ctx.setFlag(match, Flag.OnFire);
     ctx.setFlag(match, Flag.Light);
-    ctx.enableClock('I-MATCH');
+    // Re-arm the 2-tick countdown; idempotent if not yet burned (QUEUE I-MATCH 2 in ZIL).
+    ctx.queueClock?.('I-MATCH', 2, true);
     ctx.tell('One of the matches starts to burn.');
     return true;
   }
@@ -169,6 +170,13 @@ export function iMatchTick(world: World, tell: (text: string) => void): void {
 /** CANDLES-FCN — zil/1actions.zil:2343 */
 export const candlesFcn: ActionHandler = (ctx) => {
   const candles = ctx.self;
+
+  // First-touch arming: if the candles have never been touched (no TOUCHBIT),
+  // enable I-CANDLES so the burn countdown starts.  ZIL 1actions.zil:2343 —
+  // this fires before the PRSI check, on any interaction with the candles.
+  if (!ctx.hasFlag(candles, Flag.Touched)) {
+    ctx.enableClock('I-CANDLES');
+  }
 
   // When candles are the indirect object, fall through to the other handler.
   if (ctx.iobj === candles) return false;

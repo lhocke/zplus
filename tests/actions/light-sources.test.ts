@@ -14,7 +14,7 @@
  *   - TORCH:   examine and attempted extinguish.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, assert } from 'vitest';
 import { createGame } from '../../src/engine/bootstrap.js';
 import { newGameAt } from '../helpers/new-game.js';
 import { Flag } from '../../src/domain/flags.js';
@@ -22,6 +22,11 @@ import type { EngineEvent } from '../../src/engine/events.js';
 import { SimpleEventEmitter } from '../../src/engine/events.js';
 import { resetMatchCount } from '../../src/actions/light-sources.js';
 import type { World } from '../../src/domain/world.js';
+
+type ClockLike = { getEntry(id: string): { turnsLeft: number; enabled: boolean } | undefined };
+function clockOf(g: ReturnType<typeof createGame>): ClockLike {
+  return (g as unknown as { clock: ClockLike }).clock;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -521,5 +526,151 @@ describe('CANDLES: fuel interrupt events', () => {
     wait(g, 100);
 
     expect(candleEvents).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CA3 — Match burnout re-arm (spec sec 3.3)
+// ---------------------------------------------------------------------------
+
+describe('CA3 MATCH: burnout re-arm after relight', () => {
+  beforeEach(() => resetMatchCount());
+
+  it('match burns out after 2 ticks', () => {
+    const events = new SimpleEventEmitter();
+    const g = createGame({ startRoom: 'DAM-LOBBY', events });
+    g.start();
+    g.turn('take matchbook');
+    g.turn('light match');
+
+    // 1 wait = 1 clocker tick (or up to 3 for V-WAIT, but we need exactly 2)
+    // Use 'z' (wait) — the multi-CLOCKER loop advances up to 3; match burnout
+    // at exactly turnsLeft=2 means it fires on the 2nd tick.  A single 'z' fires
+    // up to 3 ticks, so 1 wait is enough to trigger burnout.
+    const r = g.turn('z');
+    // After 1-3 ticks, the 2-turn match should have burned out.
+    expect(r.output).toContain('The match has gone out.');
+
+    const match = worldOf(g).get('MATCH');
+    assert(match !== undefined, 'MATCH must exist in world');
+    expect(match.has(Flag.OnFire)).toBe(false);
+  });
+
+  it('re-lighting a match after burnout re-arms the 2-tick timer', () => {
+    const g = createGame({ startRoom: 'DAM-LOBBY' });
+    g.start();
+    g.turn('take matchbook');
+
+    // First light + burnout
+    g.turn('light match');
+    g.turn('z'); // match burns out
+
+    // Re-light: queueClock sets turnsLeft=2, then the turn's clock advance
+    // decrements it to 1.  What matters: the slot stays registered and enabled.
+    g.turn('light match');
+
+    const entry = clockOf(g).getEntry('I-MATCH');
+    assert(entry !== undefined, 'I-MATCH must remain registered after burnout');
+    expect(entry.enabled).toBe(true);
+    // turnsLeft was set to 2 by queueClock; one clock tick fires at end of the
+    // light-match turn, decrementing to 1.
+    expect(entry.turnsLeft).toBe(1);
+  });
+
+  it('re-lit match burns out a second time', () => {
+    const g = createGame({ startRoom: 'DAM-LOBBY' });
+    g.start();
+    g.turn('take matchbook');
+
+    g.turn('light match');
+    g.turn('z');  // first burnout
+
+    g.turn('light match');  // re-light
+    const r = g.turn('z');  // second burnout
+    expect(r.output).toContain('The match has gone out.');
+  });
+
+  it('MATCH-COUNT caps: using all 6 matches exhausts supply', () => {
+    const g = createGame({ startRoom: 'DAM-LOBBY' });
+    g.start();
+    g.turn('take matchbook');
+
+    // Light + extinguish 5 times (count stays positive)
+    for (let i = 0; i < 5; i++) {
+      g.turn('light match');
+      g.turn('extinguish match');
+    }
+
+    // 6th light succeeds; 7th fails
+    g.turn('light match');
+    g.turn('extinguish match');
+    const r = g.turn('light match');
+    expect(r.output).toContain("I'm afraid that you have run out of matches.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CA3 — Candle first-touch arming (spec sec 3.4)
+// ---------------------------------------------------------------------------
+
+describe('CA3 CANDLES: first-touch arming', () => {
+  beforeEach(() => resetMatchCount());
+
+  it('taking already-lit candles enables I-CANDLES (first-touch)', () => {
+    // SOUTH-TEMPLE has lit candles. Taking them triggers CANDLES-FCN which
+    // must enable I-CANDLES on the first touch (before TOUCHBIT is set).
+    const g = createGame({ startRoom: 'SOUTH-TEMPLE' });
+    g.start();
+
+    // Before take: I-CANDLES must exist but be disabled (GO() queues, no ENABLE)
+    const before = clockOf(g).getEntry('I-CANDLES');
+    assert(before !== undefined, 'I-CANDLES must be registered at game start');
+    expect(before.enabled).toBe(false);
+
+    g.turn('take candles');
+
+    const after = clockOf(g).getEntry('I-CANDLES');
+    assert(after !== undefined, 'I-CANDLES must remain registered after take');
+    expect(after.enabled).toBe(true);
+  });
+
+  it('first-touch arming fires independently of burn/relight path', () => {
+    // Candles start lit in SOUTH-TEMPLE. We never call burn or relight —
+    // the clock must be armed purely by the take-and-touch path.
+    const events = new SimpleEventEmitter();
+    const candleEvents: Array<Extract<EngineEvent, { type: 'candle-fuel' }>> = [];
+    events.on('candle-fuel', (e) => candleEvents.push(e));
+
+    const g = createGame({ startRoom: 'SOUTH-TEMPLE', events });
+    g.start();
+    g.turn('take candles');
+
+    // Advance enough ticks to see a fuel warning if I-CANDLES is armed.
+    // I-CANDLES starts at 40 ticks; each 'z' fires up to 3 CLOCKER ticks.
+    // 14 waits = up to 42 ticks → first warning at 40 should appear.
+    wait(g, 14);
+
+    expect(candleEvents.length).toBeGreaterThan(0);
+  });
+
+  it('second touch does NOT re-arm (TOUCHBIT set, idempotent)', () => {
+    // After first touch TOUCHBIT is set; a second examine/interaction must not
+    // double-arm I-CANDLES or reset its countdown.
+    const g = createGame({ startRoom: 'SOUTH-TEMPLE' });
+    g.start();
+    g.turn('take candles');
+
+    const afterFirstTouch = clockOf(g).getEntry('I-CANDLES');
+    assert(afterFirstTouch !== undefined, 'I-CANDLES must be registered');
+    const turnsAfterFirst = afterFirstTouch.turnsLeft;
+
+    // A wait tick will decrement turnsLeft; then examine should not reset it
+    wait(g, 1);
+    g.turn('examine candles');
+
+    const afterExamine = clockOf(g).getEntry('I-CANDLES');
+    assert(afterExamine !== undefined, 'I-CANDLES must remain registered');
+    // turnsLeft should be LESS than turnsAfterFirst (it ticked), not reset
+    expect(afterExamine.turnsLeft).toBeLessThan(turnsAfterFirst);
   });
 });
