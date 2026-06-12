@@ -8,9 +8,7 @@ import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
 import { tokenize } from './parser/tokenizer.js';
 import { ROOMS_SENTINEL } from './parser/gwim.js';
-import { executeVerb, describeRoomObjects, META_ACTIONS } from './verbs/index.js';
-import { lit } from './parser/scope.js';
-import { describeRoom as describeRoomMsgs } from './game-messages.js';
+import { executeVerb, describeRoomObjects, describeRoomShared, META_ACTIONS } from './verbs/index.js';
 import { Scoring } from './scoring.js';
 import { FlagStore } from './flag-store.js';
 import { lookupPer, lookupPreAction } from '../actions/registry.js';
@@ -271,7 +269,8 @@ export class Game {
 
   /** Print the intro banner and describe the initial room. */
   start(): string {
-    const roomDesc = this.describeCurrentRoom();
+    // First visit to starting room — lookFlag=true (always verbose on start).
+    const roomDesc = this.describeCurrentRoom(true);
     this.emitRoomEntered(this.here.id);
     return INTRO + '\n' + roomDesc;
   }
@@ -437,7 +436,7 @@ export class Game {
           this.player.moveTo(forest1);
           const enterOut = this.onRoomEntered(forest1);
           if (enterOut) tell(enterOut);
-          tell(this.describeCurrentRoom());
+          tell(this.describeCurrentRoom(false)); // movement arrival
         }
         return wrap({ output: outputs.join('\n'), moved: true });
       }
@@ -553,7 +552,7 @@ export class Game {
     const mEndNewRoom = mEndNewParent instanceof Room ? mEndNewParent : null;
     if (mEndNewRoom !== null && mEndNewRoom !== mEndPrevHere) {
       const enterOut = this.onRoomEntered(mEndNewRoom);
-      const roomDesc = this.describeCurrentRoom();
+      const roomDesc = this.describeCurrentRoom(false); // movement arrival
       const parts = [enterOut, roomDesc].filter(s => s.length > 0);
       if (parts.length > 0) outputs.push(parts.join('\n'));
     }
@@ -718,7 +717,7 @@ export class Game {
           moved = true;
           const targetRoom = newCurrentRoom ?? (newRoomAfterHandler as Room);
           const enterOut = this.onRoomEntered(targetRoom);
-          const roomDesc = this.describeCurrentRoom();
+          const roomDesc = this.describeCurrentRoom(false); // handler-triggered arrival
           const parts = [...handled, ...(enterOut ? [enterOut] : []), roomDesc].filter(s => s.length > 0);
           const cmdOut = parts.join('\n');
           outputs.push(allIterPrefix ? allIterPrefix + cmdOut : cmdOut);
@@ -759,6 +758,7 @@ export class Game {
           iCureEnabled: this.clock.getEntry('I-CURE')?.enabled ?? false,
           iCureTick: this.clock.getEntry('I-CURE')?.turnsLeft ?? 0,
           disableClock: (id) => this.clock.disable(id),
+          finish: () => this.doFinish((text) => handled.push(text)),
           heroBlow: (targetId, weaponId) => {
             const out: string[] = [];
             const entry = this.getVillainEntry(targetId, (s) => out.push(s));
@@ -818,7 +818,7 @@ export class Game {
               if (newRoom !== null && newRoom !== this.here) {
                 enterOut = this.onRoomEntered(newRoom);
               }
-              const roomDesc = this.describeCurrentRoom();
+              const roomDesc = this.describeCurrentRoom(false); // darkness returns early anyway
               const mergedParts = [
                 outputs[outputs.length - 1] ?? '',
                 enterOut,
@@ -872,7 +872,7 @@ export class Game {
         if (mEndNewRoom !== null && mEndNewRoom !== this.here) {
           moved = true;
           const enterOut = this.onRoomEntered(mEndNewRoom);
-          const roomDesc = this.describeCurrentRoom();
+          const roomDesc = this.describeCurrentRoom(false); // M-END movement arrival
           const mEndParts = [enterOut, roomDesc].filter(s => s.length > 0);
           if (mEndParts.length > 0) {
             const idx = outputs.length - 1;
@@ -1180,47 +1180,19 @@ export class Game {
     return enterBuf.join('\n');
   }
 
-  private describeCurrentRoom(): string {
-    // Darkness gate — gverbs.zil:1637-1649.
-    // alwaysLit suppresses darkness for ghost mode (ALWAYS-LIT global, 1actions.zil:4083).
-    if (!this.alwaysLit && !lit(this.here, this.player, this.world)) {
-      const sprayed = this.flags.get('SPRAYED?');
-      return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
-    }
-
-    // ZIL gverbs.zil:1649–1679: when player is in a vehicle, the room title
-    // becomes "<room>, in the <vehicle>" and the vehicle is NOT listed as a room
-    // object; instead the vehicle's contents are shown (PRINT-CONT on the vehicle).
-    const vehicle = (this.player.parent !== null && this.player.parent !== undefined &&
-                     !(this.player.parent instanceof Room) &&
-                     this.player.parent.has(Flag.Vehicle))
-      ? this.player.parent
-      : null;
-
-    const lines: string[] = [
-      vehicle !== null
-        ? `${this.here.desc}, in the ${vehicle.desc}`
-        : this.here.desc,
-    ];
-
-    if (this.here.ldesc) {
-      lines.push(this.here.ldesc);
-    } else if (this.here.handler !== undefined) {
-      const buf: string[] = [];
-      const ctx = this.makeContext(
-        this.here, 'look', 'V-LOOK', undefined, false, undefined, undefined, M_LOOK,
-        (text) => buf.push(text),
-      );
-      this.here.handler(ctx);
-      if (buf.length > 0) lines.push(buf.join('\n'));
-    }
-
-    // ZIL DESCRIBE-OBJECTS (gverbs.zil:1681-1684) — always calls PRINT-CONT on
-    // HERE. When player is in a vehicle, PRINT-CONT internally skips the vehicle
-    // (PV? path :1753-1795), shows room objects first, then vehicle contents.
-    describeRoomObjects(this.here, this.player, (s) => lines.push(s));
-
-    return lines.join('\n');
+  // lookFlag=true: explicit LOOK or first-look semantics (always verbose).
+  // lookFlag=false: movement arrival (brief when room already Touched).
+  // Delegates to describeRoomShared (gverbs.zil:1635-1679).
+  private describeCurrentRoom(lookFlag = false): string {
+    return describeRoomShared(
+      this.here,
+      this.player,
+      lookFlag,
+      (room) => this.runMLook(room),
+      this.world,
+      (n) => this.flags.get(n),
+      this.alwaysLit,
+    );
   }
 
   /** Run a room's M-LOOK handler and return the output — used by the verb layer. */
@@ -2014,7 +1986,7 @@ export class Game {
             this.player.moveTo(dest);  // ZIL GOTO moves the player
             const enterOut = this.onRoomEntered(dest);
             if (enterOut) ctx.tell(enterOut);
-            ctx.tell(this.describeCurrentRoom());
+            ctx.tell(this.describeCurrentRoom(false)); // panic scramble arrival
           }
         } else if (hereId === 'RESERVOIR-NORTH' || hereId === 'RESERVOIR-SOUTH') {
           // :1255
@@ -2155,7 +2127,7 @@ export class Game {
             // Re-describe: fire onRoomEntered for M-ENTER + score
             const enterOut = this.onRoomEntered(dest);
             if (enterOut) ctx.tell(enterOut);
-            ctx.tell(this.describeCurrentRoom());
+            ctx.tell(this.describeCurrentRoom(false)); // river drift arrival
           }
           // :2715 — re-arm at new section's speed (NM-H: read speed AFTER the move)
           const newSpeed = RIVER_SPEEDS[nextId];
@@ -2203,7 +2175,7 @@ export class Game {
         this.player.moveTo(room);
         return this.onRoomEntered(room);
       },
-      describeRoom: () => this.describeCurrentRoom(),
+      describeRoom: () => this.describeCurrentRoom(true), // resurrection re-look = explicit look
       clearContinuation: () => { this.parser.clearContinuation(); },
       finish: () => { this.doFinish(tell); },
       signalFatal: onFatal,

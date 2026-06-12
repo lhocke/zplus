@@ -232,8 +232,9 @@ export const maze11Fcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
     const grate = ctx.world.get('GRATE');
     const grateOpen = grate !== undefined && ctx.hasFlag(grate, Flag.Open);
+    // ZIL source newline within a string segment normalizes to a single space.
     let text =
-      'You are in a small room near the maze. There are twisty passages\nin the immediate vicinity.';
+      'You are in a small room near the maze. There are twisty passages in the immediate vicinity.';
     if (grateOpen) {
       text += '\nAbove you is an open grating with sunlight pouring in.';
     } else if (grunlock) {

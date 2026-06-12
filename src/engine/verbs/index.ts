@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, vBrief, vSuperBrief, vVersion, vScript, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { ROOM_GLOBAL_IDS } from '../parser/room-globals.js';
 import { CURE_WAIT } from '../combat.js';
@@ -124,6 +124,8 @@ export interface VerbContext {
   readonly heroBlow?: (targetId: string, weaponId: string | null) => VerbResult;
   /** DISABLE <INT id> — used by V-ODYSSEUS to stop the wrath timer. */
   readonly disableClock?: (id: string) => void;
+  /** Render the end-of-game score block and set gameOver (V-QUIT / gverbs.zil:55–61 web form). */
+  readonly finish?: () => void;
 }
 
 export interface VerbResult {
@@ -301,48 +303,107 @@ export function describeVehicleObjects(
   }
 }
 
-// Produce the room description: name, ldesc/M-LOOK, and DESCRIBE-OBJECTS listing.
-// When dark (gverbs.zil:1637-1649), returns the pitch-black message and skips the rest.
-function describeRoom(
+/**
+ * DESCRIBE-ROOM faithful port — gverbs.zil:1635–1679 (Zork I branches).
+ *
+ * Shared by both the verb path (verbLook/verbGo) and the engine path
+ * (describeCurrentRoom/runMLook in game.ts) so both stay byte-identical.
+ *
+ * lookFlag (LOOK? param): true for explicit LOOK and first-look semantics;
+ * false for movement arrivals. V? = lookFlag OR VERBOSE-global.
+ *
+ * Side effects on room: sets Flag.Touched on first visit; maze rooms clear
+ * it again so they always force-verbose (gverbs.zil:1653–1655).
+ */
+export function describeRoomShared(
   room: Room,
   player: GameObject,
+  lookFlag: boolean,
   mlookRunner?: (r: Room) => string,
   world?: World,
   getGlobal?: (name: string) => boolean,
+  alwaysLit?: boolean,
 ): string {
-  if (world !== undefined && !lit(room, player, world)) {
+  // gverbs.zil:1636 — V? = LOOK? OR VERBOSE
+  let vFlag = lookFlag || (getGlobal?.('VERBOSE') ?? false);
+
+  // gverbs.zil:1637-1649 — darkness gate (RFALSE path)
+  if (world !== undefined && !(alwaysLit ?? false) && !lit(room, player, world)) {
     const sprayed = getGlobal?.('SPRAYED?') ?? false;
     return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
   }
 
-  // ZIL gverbs.zil:1649–1679: when player is in a vehicle, the room title
-  // becomes "<room>, in the <vehicle>" and the vehicle is NOT listed as a room
-  // object; instead the vehicle's contents are shown (PRINT-CONT on the vehicle).
+  // gverbs.zil:1650-1652 — TOUCHBIT: set on first visit, force V?=true
+  if (!room.has(Flag.Touched)) {
+    room.set(Flag.Touched);
+    vFlag = true;
+  }
+
+  // gverbs.zil:1653-1655 — Zork I: maze rooms clear TOUCHBIT so every
+  // arrival is forced-verbose (maze rooms have no stable ldesc).
+  if (room.has(Flag.Maze)) {
+    room.clear(Flag.Touched);
+  }
+
+  // gverbs.zil:1658-1663 — room title line (always printed, outside the V? gate).
+  // When player is in a vehicle: "<room>, in the <vehicle>".
   const vehicle = (player.parent !== null && player.parent !== undefined &&
+                   !(player.parent instanceof Room) &&
                    player.parent.has(Flag.Vehicle))
     ? player.parent
     : null;
 
-  const lines: string[] = [];
-  lines.push(vehicle !== null ? `${room.desc}, in the ${vehicle.desc}` : room.desc);
+  const lines: string[] = [
+    vehicle !== null ? `${room.desc}, in the ${vehicle.desc}` : room.desc,
+  ];
 
-  if (room.ldesc) {
-    lines.push(room.ldesc);
-  } else if (mlookRunner !== undefined) {
-    const dynamic = mlookRunner(room);
-    if (dynamic.length > 0) lines.push(dynamic);
+  // gverbs.zil:1664-1667 — SUPER-BRIEF body gate.
+  // The M-LOOK/LDESC block only runs when LOOK? OR NOT SUPER-BRIEF.
+  const superBrief = getGlobal?.('SUPER-BRIEF') ?? false;
+  if (!lookFlag && superBrief) {
+    // Super-brief without explicit look: title-only, skip body.
+    describeRoomObjects(room, player, (s) => lines.push(s));
+    return lines.join('\n');
   }
 
-  // ZIL DESCRIBE-OBJECTS (gverbs.zil:1681-1684) — always calls PRINT-CONT on
-  // HERE. When player is in a vehicle, PRINT-CONT internally skips the vehicle
-  // (PV? path :1753-1795), shows room objects first, then vehicle contents.
-  describeRoomObjects(room, player, (s) => lines.push(s));
+  // gverbs.zil:1671-1676 — THE PRECEDENCE FLIP (handler-wins-with-ldesc-fallback).
+  // ZIL Zork I: M-LOOK first; if it emits output, done. Otherwise ldesc; otherwise M-FLASH.
+  if (vFlag) {
+    if (mlookRunner !== undefined) {
+      const handlerOut = mlookRunner(room);
+      if (handlerOut.length > 0) {
+        lines.push(handlerOut);
+        // gverbs.zil:1677-1678 — vehicle M-LOOK (if player is in vehicle)
+        describeRoomObjects(room, player, (s) => lines.push(s));
+        return lines.join('\n');
+      }
+    }
+    if (room.ldesc) {
+      lines.push(room.ldesc);
+    }
+    // else M-FLASH — no-op in Zork I for most rooms
+  }
+  // V?=false (touched, brief, no explicit look): body skipped — title-only
 
+  // gverbs.zil:1681-1684 — DESCRIBE-OBJECTS always runs after
+  describeRoomObjects(room, player, (s) => lines.push(s));
   return lines.join('\n');
 }
 
+function describeRoom(
+  room: Room,
+  player: GameObject,
+  lookFlag: boolean,
+  mlookRunner?: (r: Room) => string,
+  world?: World,
+  getGlobal?: (name: string) => boolean,
+  alwaysLit?: boolean,
+): string {
+  return describeRoomShared(room, player, lookFlag, mlookRunner, world, getGlobal, alwaysLit);
+}
+
 function verbLook(ctx: VerbContext): VerbResult {
-  return result(describeRoom(ctx.here, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal));
+  return result(describeRoom(ctx.here, ctx.player, /*lookFlag*/true, ctx.mlookRunner, ctx.world, ctx.getGlobal, ctx.alwaysLit));
 }
 
 // Map ZIL VTYPE prop string to the Flag it names.  Only NONLANDBIT is used in
@@ -417,7 +478,8 @@ function verbGo(ctx: VerbContext): VerbResult {
       return result(goto.darkPlaceEntered, true, false, /*movedIntoDark*/true);
     }
 
-    const roomDesc = describeRoom(dest, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal);
+    // Movement arrival — lookFlag=false: brief mode when room already touched.
+    const roomDesc = describeRoom(dest, ctx.player, /*lookFlag*/false, ctx.mlookRunner, ctx.world, ctx.getGlobal, ctx.alwaysLit);
     const parts = [landingMsg, roomDesc].filter(s => s.length > 0);
     return result(parts.join('\n'), true);
   };
@@ -811,10 +873,46 @@ function verbPutOn(ctx: VerbContext): VerbResult {
   return result(vPut.done);
 }
 
-// V-VERBOSE (gverbs.zil:13–16) — set VERBOSE=T, clear SUPER-BRIEF, print the string.
-// The engine is always verbose; the state-set is a no-op here but the message is faithful.
-function verbVerbose(_ctx: VerbContext): VerbResult {
+// V-VERBOSE (gverbs.zil:13–16) — SETG VERBOSE T, SETG SUPER-BRIEF <>, print the string.
+function verbVerbose(ctx: VerbContext): VerbResult {
+  ctx.setGlobal?.('VERBOSE', true);
+  ctx.setGlobal?.('SUPER-BRIEF', false);
   return result(vVerbose.response);
+}
+
+// V-BRIEF (gverbs.zil:18–21) — SETG VERBOSE <>, SETG SUPER-BRIEF <>, print the string.
+function verbBrief(ctx: VerbContext): VerbResult {
+  ctx.setGlobal?.('VERBOSE', false);
+  ctx.setGlobal?.('SUPER-BRIEF', false);
+  return result(vBrief.response);
+}
+
+// V-SUPER-BRIEF (gverbs.zil:23–25) — SETG SUPER-BRIEF T, print the string.
+function verbSuperBrief(ctx: VerbContext): VerbResult {
+  ctx.setGlobal?.('SUPER-BRIEF', true);
+  return result(vSuperBrief.response);
+}
+
+// V-VERSION (gverbs.zil:99–121) — the full Zork I banner.
+// Release/Serial pinned to 88/840726 (OQ-5) — dfrotz emits R119 but the
+// golden encodes the pinned divergence, so we hardcode rather than read
+// the Z-machine header.
+function verbVersion(_ctx: VerbContext): VerbResult {
+  return result(vVersion.banner);
+}
+
+// V-SCRIPT (gverbs.zil:86–90) — prints the transcript header + version banner.
+// The DIROUT/PUT-0-8 bit is a Z-machine output-stream op with no web equivalent;
+// dropped here. RTRUE.
+function verbScript(_ctx: VerbContext): VerbResult {
+  return result(`${vScript.header}\n${vVersion.banner}`);
+}
+
+// V-QUIT (gverbs.zil:55–61) — web form: render score + set gameOver.
+// No Y/N prompt (RESTART/RESTORE deferred per spec §1).
+function verbQuit(ctx: VerbContext): VerbResult {
+  ctx.finish?.();
+  return result('');
 }
 
 // V-SCORE (1actions.zil:4026–4044)
@@ -1455,9 +1553,16 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   // gverbs.zil:945–961 — ODYSSEUS / ULYSSES (gsyntax.zil:334–335).
   'V-ODYSSEUS': verbOdysseus,
 
+  // Meta-verb bodies — gverbs.zil:13-25, 55-121.
+  'V-VERBOSE':       verbVerbose,
+  'V-BRIEF':         verbBrief,
+  'V-SUPER-BRIEF':   verbSuperBrief,
+  'V-VERSION':       verbVersion,
+  'V-SCRIPT':        verbScript,
+  'V-QUIT':          verbQuit,
+
   // Phase-3 dam/river verbs — thin shells; object handlers (IBOAT-FUNCTION etc.)
   // short-circuit before these in the PERFORM chain.
-  'V-VERBOSE':   verbVerbose,
   'V-BREATHE':   verbBreathe, // BLOW IN OBJECT → PERFORM V?INFLATE PRSO LUNGS
   'V-INFLATE':   verbInflate,
   'V-DEFLATE':   verbDeflate,

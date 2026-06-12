@@ -43,13 +43,9 @@ Taken.
 
 > east
 On the Rainbow
-You are on top of a rainbow (I bet you never thought you would walk on a rainbow), with a magnificent view of the Falls. The rainbow travels east-west here.
 
 > east
 Aragain Falls
-You are at the top of Aragain Falls, an enormous waterfall with a
-drop of about 450 feet. The only path here is on the north end.
-A solid rainbow spans the falls.
 
 > look
 Aragain Falls
