@@ -431,12 +431,40 @@ describe('CB1 repair: V-ENTER resolves "in" exit at EAST-OF-HOUSE', () => {
     expect(g.view().here).toBe('KITCHEN');
   });
 
-  it('enter at EAST-OF-HOUSE with window closed: blocked (no open in exit)', () => {
+  it('enter at EAST-OF-HOUSE with window closed: "The kitchen window is closed." — ZIL CEXIT auto-message', () => {
+    // ZIL 1dungeon.zil:1303-1304: CEXIT with IF KITCHEN-WINDOW IS OPEN; when condition
+    // fails ZIL generates "The kitchen window is closed." from the object desc.
+    // dfrotz R119 confirms this exact string.  Engine fix: elseMessage on the exits.
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    // Window is closed by default — in exit is gated by KITCHEN-WINDOW.
     const r = g.turn('enter');
     expect(r.moved).toBe(false);
+    expect(r.output).toBe('The kitchen window is closed.');
+  });
+
+  it('go west at EAST-OF-HOUSE with window closed: "The kitchen window is closed."', () => {
+    const g = newGameAt('EAST-OF-HOUSE');
+    g.start();
+    const r = g.turn('west');
+    expect(r.moved).toBe(false);
+    expect(r.output).toBe('The kitchen window is closed.');
+  });
+
+  it('go east at KITCHEN with window closed: "The kitchen window is closed."', () => {
+    const g = newGameAt('KITCHEN');
+    g.start();
+    const r = g.turn('east');
+    expect(r.moved).toBe(false);
+    expect(r.output).toBe('The kitchen window is closed.');
+  });
+
+  it('exit at KITCHEN with window closed: "The kitchen window is closed."', () => {
+    // V-EXIT → DO-WALK 'out'; KITCHEN out exit is gated by KITCHEN-WINDOW.
+    const g = newGameAt('KITCHEN');
+    g.start();
+    const r = g.turn('exit');
+    expect(r.moved).toBe(false);
+    expect(r.output).toBe('The kitchen window is closed.');
   });
 });
 

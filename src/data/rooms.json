@@ -197,12 +197,14 @@
       {
         "dir": "west",
         "to": "KITCHEN",
-        "ifFlag": "KITCHEN-WINDOW"
+        "ifFlag": "KITCHEN-WINDOW",
+        "elseMessage": "The kitchen window is closed."
       },
       {
         "dir": "in",
         "to": "KITCHEN",
-        "ifFlag": "KITCHEN-WINDOW"
+        "ifFlag": "KITCHEN-WINDOW",
+        "elseMessage": "The kitchen window is closed."
       }
     ]
   },
@@ -527,7 +529,8 @@
       {
         "dir": "east",
         "to": "EAST-OF-HOUSE",
-        "ifFlag": "KITCHEN-WINDOW"
+        "ifFlag": "KITCHEN-WINDOW",
+        "elseMessage": "The kitchen window is closed."
       },
       {
         "dir": "west",
@@ -536,7 +539,8 @@
       {
         "dir": "out",
         "to": "EAST-OF-HOUSE",
-        "ifFlag": "KITCHEN-WINDOW"
+        "ifFlag": "KITCHEN-WINDOW",
+        "elseMessage": "The kitchen window is closed."
       },
       {
         "dir": "up",

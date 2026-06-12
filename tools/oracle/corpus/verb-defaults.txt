@@ -1,6 +1,7 @@
 # verb-defaults.txt — CB1 verb-default corpus (Zork I dfrotz R119)
 # generated-by: dfrotz-r119 2026-06-12 CB1-climb-enter-exit-lock
 # amended: 2026-06-12 CB1-repair-closeout-v2 (CASE 6b: climb-walls-at-FOREST-1)
+# amended: 2026-06-12 CB1-repair-window-elseMessage (CASE 8: enter/west at EAST-OF-HOUSE closed)
 #
 # Anchors the CB1 default-verb strings against dfrotz R119.
 # Verbs covered: V-CLIMB family (gverbs.zil:279–335),
@@ -61,6 +62,14 @@
 #   dfrotz output: "Climbing the walls is to no avail."
 #   gverbs.zil:320–323.
 #
+# CASE 8 (commands 16-18): enter/west at EAST-OF-HOUSE with window closed
+#   Route from WEST-OF-HOUSE: east → EAST-OF-HOUSE (first visit).
+#   KITCHEN-WINDOW closed (default); in/west exits are gated by ifFlag KITCHEN-WINDOW.
+#   ZIL 1dungeon.zil:1303-1304: CEXIT "IF KITCHEN-WINDOW IS OPEN"; condition fails →
+#   ZIL auto-generates "The kitchen window is closed." from the object desc.
+#   dfrotz output for "enter" and "west": "The kitchen window is closed."
+#   gverbs.zil:620–621 (V-ENTER → DO-WALK in → verbGo → ifFlag fails → elseMessage).
+#
 # LOCK/UNLOCK: tested via CB1 unit tests only. The LOCK syntax requires a
 # TOOLBIT indirect object; orchestrating that deterministically in a corpus
 # without parser orphan-slot complexity is deferred. Corpus rows will be
@@ -105,3 +114,17 @@ climb wall
 # --- CASE 7: climb wall at WEST-OF-HOUSE → "Climbing the walls is to no avail." ---
 # WEST-OF-HOUSE has no up exit; WALL is GLOBAL-OBJECTS → accessible everywhere.
 climb wall
+
+# --- CASE 8 setup: WEST-OF-HOUSE → NORTH-OF-HOUSE (revisit) → EAST-OF-HOUSE (first visit) ---
+~north
+east
+
+# --- CASE 8: enter at EAST-OF-HOUSE (window closed) → "The kitchen window is closed." ---
+# V-ENTER → DO-WALK 'in' → verbGo ifFlag KITCHEN-WINDOW gate fails → elseMessage.
+# dfrotz R119: "The kitchen window is closed."
+enter
+
+# --- CASE 8b: west at EAST-OF-HOUSE (window closed) → "The kitchen window is closed." ---
+# west exit also gated by KITCHEN-WINDOW; same elseMessage.
+# dfrotz R119: "The kitchen window is closed."
+west

@@ -163,7 +163,7 @@ describe('KITCHEN-WINDOW-F: open/close/enter', () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
     const r = g.turn('west');
-    expect(r.output).toContain("You can't go that way.");
+    expect(r.output).toBe('The kitchen window is closed.');
     expect(g.view().here).toBe('EAST-OF-HOUSE');
   });
 });
