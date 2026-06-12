@@ -118,18 +118,15 @@ export const machineF: ActionHandler = (ctx) => {
       ctx.tell(pickDummy(ctx.rng));
       return true;
     }
-    // Has contents — reveal them.
-    const first = [...machine.children].filter(c => !ctx.hasFlag(c, Flag.Invisible))[0];
-    if (first !== undefined) {
-      ctx.tell('The lid opens, revealing ');
-      // PRINT-CONTENTS: list direct non-invisible children as "a X, a Y, and a Z".
-      const items = [...machine.children].filter(c => !ctx.hasFlag(c, Flag.Invisible));
+    // Has contents — reveal them on a single line (ZIL: sequential TELLs, no CR between).
+    const items = [...machine.children].filter(c => !ctx.hasFlag(c, Flag.Invisible));
+    if (items.length > 0) {
+      // PRINT-CONTENTS: "a X" or "a X, and a Y" or "a X, a Y, and a Z".
       const parts = items.map(c => 'a ' + c.desc);
-      if (parts.length === 1) {
-        ctx.tell(parts[0]! + '.');
-      } else {
-        ctx.tell(parts.slice(0, -1).join(', ') + ', and ' + parts[parts.length - 1]! + '.');
-      }
+      const list = parts.length === 1
+        ? parts[0]!
+        : parts.slice(0, -1).join(', ') + ', and ' + parts[parts.length - 1]!;
+      ctx.tell('The lid opens, revealing ' + list + '.');
     } else {
       ctx.tell('The lid opens.');
     }
@@ -241,7 +238,7 @@ export const mswitchFunction: ActionHandler = (ctx) => {
  * Intercepts before HACK-HACK (spec §4.5 seam).
  */
 export const basketF: ActionHandler = (ctx) => {
-  const cageTop = ctx.getGlobal?.('CAGE-TOP') ?? true;  // ZIL default: T
+  const cageTop = ctx.getGlobal?.('CAGE-TOP') ?? false;
 
   if (ctx.action === 'V-RAISE') {
     if (cageTop) {

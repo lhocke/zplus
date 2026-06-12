@@ -183,6 +183,8 @@ export class Game {
     // Phase-3 dam/river boolean globals — non-default (true) init values.
     // BUOY-FLAG: buoy hint not yet given. 1actions.zil:2842 <GLOBAL BUOY-FLAG T>.
     this.flags.set('BUOY-FLAG', true);
+    // CAGE-TOP: basket is raised at start. 1actions.zil:275 <GLOBAL CAGE-TOP T>.
+    this.flags.set('CAGE-TOP', true);
 
     // WON-FLAG world effects — gverbs.zil:1858–1862.
     // Fired once when SCORE first reaches 350 inside scoreUpd or recomputeTrophy.

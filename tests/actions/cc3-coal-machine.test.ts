@@ -504,3 +504,80 @@ describe('CC3 — LIGHT-SHAFT end-to-end: NO-OBJS awards +13 (1actions.zil:2558)
     expect(scoreAfterSecond).toBe(scoreAfterFirst);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Fresh-game basket state (CAGE-TOP=T by default — 1actions.zil:275).
+// These tests do NOT call setBasketUp/setBasketDown; they exercise the real
+// default game path to catch the CAGE-TOP init seam.
+// ---------------------------------------------------------------------------
+
+describe('CC3 — BASKET-F: fresh-game default CAGE-TOP=T (1actions.zil:275)', () => {
+  it('fresh game lower basket: basket descends (CAGE-TOP=T → valid lower)', () => {
+    const g = newGameAt('SHAFT-ROOM');
+    g.start();
+    giveLantern(g);
+    const raised = g.world.get('RAISED-BASKET')!;
+    expect(raised, 'RAISED-BASKET must exist').toBeDefined();
+    g.turn('lower basket');
+    // After lowering, RAISED-BASKET should be in LOWER-SHAFT.
+    expect(raised.parent?.id).toBe('LOWER-SHAFT');
+  });
+
+  it('fresh game lower basket: emits "lowered to the bottom" (not a DUMMY)', () => {
+    const g = newGameAt('SHAFT-ROOM');
+    g.start();
+    giveLantern(g);
+    const out = g.turn('lower basket').output;
+    expect(out).toContain('lowered to the bottom');
+  });
+
+  it('fresh game raise basket: emits DUMMY (basket already up by default)', () => {
+    const g = newGameAt('SHAFT-ROOM');
+    g.start();
+    giveLantern(g);
+    const out = g.turn('raise basket').output;
+    expect(out).not.toContain('raised to the top');
+  });
+
+  it('fresh game raise basket: RAISED-BASKET stays in SHAFT-ROOM', () => {
+    const g = newGameAt('SHAFT-ROOM');
+    g.start();
+    giveLantern(g);
+    const raised = g.world.get('RAISED-BASKET')!;
+    expect(raised, 'RAISED-BASKET must exist').toBeDefined();
+    g.turn('raise basket');
+    expect(raised.parent?.id).toBe('SHAFT-ROOM');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// OPEN MACHINE output formatting — single-line "The lid opens, revealing X."
+// ZIL 1actions.zil:2509–2511: sequential TELL calls concatenate with no newline.
+// ---------------------------------------------------------------------------
+
+describe('CC3 — MACHINE-F: open output on single line (1actions.zil:2509)', () => {
+  it('open machine with one item: output is one line (no embedded newline)', () => {
+    const g = gameWithCoalInMachine();
+    const out = g.turn('open machine').output;
+    // The revealing line must not be split by a newline
+    const revealLine = out.split('\n').find(l => l.includes('revealing'));
+    expect(revealLine).toBeDefined();
+    expect(revealLine).toContain('coal');
+  });
+
+  it('open machine with two items: both items on same line as "revealing"', () => {
+    const g = gameAtMachineRoom();
+    const coal = g.world.get('COAL')!;
+    const screw = g.world.get('SCREWDRIVER')!;
+    const machine = g.world.get('MACHINE')!;
+    expect(coal, 'COAL must exist').toBeDefined();
+    expect(screw, 'SCREWDRIVER must exist').toBeDefined();
+    coal.moveTo(machine);
+    screw.moveTo(machine);
+    const out = g.turn('open machine').output;
+    const revealLine = out.split('\n').find(l => l.includes('revealing'));
+    expect(revealLine).toBeDefined();
+    expect(revealLine).toContain('coal');
+    expect(revealLine).toContain('screwdriver');
+  });
+});
