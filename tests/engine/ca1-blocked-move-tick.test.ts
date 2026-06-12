@@ -189,6 +189,21 @@ describe('CA1: ghost intercepted command ticks exactly once', () => {
     g.turn('diagnose');
     expect(g.view().moves).toBe(before + 1);
   });
+
+  it('"wait" in ghost mode advances moves by exactly 1, not 3', () => {
+    // ZIL DEAD-FUNCTION (1actions.zil:3128–3129) intercepts WAIT with a bare TELL
+    // and returns from the Actor handler — it never invokes V-WAIT's 3-tick REPEAT
+    // loop (gverbs.zil:1514).  dfrotz R119 seed 42: ghost wait → Moves +1.
+    // Pre-fix the engine over-ticked by 2 (runSegmentTick saw V-WAIT → maxClocks=3).
+    const g = newGameAt('ENTRANCE-TO-HADES');
+    g.start();
+    (g as unknown as { dead: boolean }).dead = true;
+    (g as unknown as { alwaysLit: boolean }).alwaysLit = true;
+
+    const before = g.view().moves;
+    g.turn('wait');
+    expect(g.view().moves).toBe(before + 1);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -587,7 +587,10 @@ export class Game {
         const ga = ghostResult.action;
         if (ga !== undefined && !META_ACTIONS.has(ga)) {
           const ghostOutputs = [ghostResult.output];
-          this.runSegmentTick(ga, ghostOutputs, false);
+          // Ghost intercepts are always single-tick: DEAD-FUNCTION does a bare TELL
+          // and returns before any multi-tick loop (e.g. V-WAIT's 3-tick REPEAT)
+          // can run — dfrotz R119: ghost wait → Moves +1, not +3.
+          this.runSegmentTick(ga, ghostOutputs, false, true);
           return { output: ghostOutputs[0] ?? ghostResult.output, moved: ghostResult.moved };
         }
         return ghostResult;
@@ -895,6 +898,10 @@ export class Game {
    * Fatal segments (blocked V-WALK, RFATAL) always use maxClocks=1 — they are
    * never V-WAIT, so the loop body runs exactly once.
    *
+   * `singleTick` forces maxClocks=1 regardless of action — used by the ghost
+   * dispatch path because DEAD-FUNCTION intercepts WAIT with a bare TELL before
+   * V-WAIT's 3-tick REPEAT runs (1actions.zil:3128–3129 vs gverbs.zil:1514).
+   *
    * Appends clock interrupt text directly to `outputs` (last entry or a new entry).
    * Returns true when the turn should abort (fatalPending fired, or fatalExit set).
    */
@@ -902,8 +909,9 @@ export class Game {
     action: string,
     outputs: string[],
     fatalExit: boolean,
+    singleTick = false,
   ): boolean {
-    const isWait = action === 'V-WAIT';
+    const isWait = !singleTick && action === 'V-WAIT';
     // Fatal segments are never V-WAIT (RFATAL on a blocked walk → maxClocks=1).
     const maxClocks = isWait ? 3 : 1;
 
