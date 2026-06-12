@@ -7,6 +7,7 @@ import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
 import { tokenize } from './parser/tokenizer.js';
+import { ROOMS_SENTINEL } from './parser/gwim.js';
 import { executeVerb, describeRoomObjects, META_ACTIONS } from './verbs/index.js';
 import { lit } from './parser/scope.js';
 import { describeRoom as describeRoomMsgs } from './game-messages.js';
@@ -640,7 +641,13 @@ export class Game {
       // Meta-verbs don't consume time (ZIL gmain.zil:171-172 VERB? guard around CLOCKER).
       const segmentConsumesTime = !META_ACTIONS.has(cmd.action);
 
-      const dobj = cmd.dobjIds?.[0] !== undefined ? this.world.get(cmd.dobjIds[0]!) : undefined;
+      const dobjId0 = cmd.dobjIds?.[0];
+      const dobj = dobjId0 !== undefined ? this.world.get(dobjId0) : undefined;
+      // ROOMS_SENTINEL: bare climb/climb-down with no noun; GWIM returns __ROOMS__
+      // which world.get can't resolve. Flag it so verb handlers distinguish nil from
+      // ROOMS (gverbs.zil:300–302 — V-CLIMB-DOWN passes PRSO=ROOMS as OBJ; branch 1
+      // fires only when OBJ is set, including the ROOMS case).
+      const dobjIsRooms = dobjId0 === ROOMS_SENTINEL;
       const iobj = cmd.iobjIds?.[0] !== undefined ? this.world.get(cmd.iobjIds[0]!) : undefined;
 
       // Stash for M-END (gmain.zil:151–161) — LIVING-ROOM-FCN reads these.
@@ -682,7 +689,7 @@ export class Game {
       // runActionChain covers steps 1–6; step 7 (executeVerb) is caller-side,
       // gated on !handled && !fatal.
       const chainResult = this.runActionChain(
-        cmd.verb, cmd.action, dobj, iobj, cmd.prep, cmd.preAction,
+        cmd.verb, cmd.action, dobj, dobjIsRooms, iobj, cmd.prep, cmd.preAction,
         (text) => handled.push(text),
       );
 
@@ -726,6 +733,7 @@ export class Game {
           verb: cmd.verb,
           action: cmd.action,
           dobj,
+          dobjIsRooms,
           iobj,
           prep: cmd.prep,
           player: this.player,
@@ -982,6 +990,7 @@ export class Game {
     verb: string,
     action: string,
     dobj: GameObject | undefined,
+    dobjIsRooms: boolean,
     iobj: GameObject | undefined,
     prep: string | undefined,
     rarg: number | undefined,
@@ -994,6 +1003,7 @@ export class Game {
       verb,
       action,
       dobj,
+      dobjIsRooms: dobjIsRooms || undefined,
       iobj,
       prep,
       world: this.world,
@@ -1048,6 +1058,7 @@ export class Game {
     verb: string,
     action: string,
     dobj: GameObject | undefined,
+    dobjIsRooms: boolean,
     iobj: GameObject | undefined,
     prep: string | undefined,
     preAction: string | undefined,
@@ -1057,7 +1068,7 @@ export class Game {
     const onFatal = (): void => { fatal = true; };
 
     const ctx = (self: GameObject, rarg?: number): ActionContext =>
-      this.makeContext(self, verb, action, dobj, iobj, prep, rarg, tell, onFatal);
+      this.makeContext(self, verb, action, dobj, dobjIsRooms, iobj, prep, rarg, tell, onFatal);
 
     // WINNER (actor) P?ACTION — gmain.zil:211
     if (this.player.handler !== undefined) {
@@ -1130,7 +1141,7 @@ export class Game {
   ): ObjectId | undefined {
     const per = lookupPer(routineName);
     if (per === undefined) return undefined;
-    const ctx = this.makeContext(here, 'walk', 'V-WALK', undefined, undefined, undefined, undefined, tell);
+    const ctx = this.makeContext(here, 'walk', 'V-WALK', undefined, false, undefined, undefined, undefined, tell);
     return per(ctx);
   }
 
@@ -1160,7 +1171,7 @@ export class Game {
     const enterBuf: string[] = [];
     if (room.handler !== undefined) {
       const ctx = this.makeContext(
-        room, 'walk', 'V-WALK', undefined, undefined, undefined, M_ENTER,
+        room, 'walk', 'V-WALK', undefined, false, undefined, undefined, M_ENTER,
         (text) => enterBuf.push(text),
       );
       room.handler(ctx);
@@ -1197,7 +1208,7 @@ export class Game {
     } else if (this.here.handler !== undefined) {
       const buf: string[] = [];
       const ctx = this.makeContext(
-        this.here, 'look', 'V-LOOK', undefined, undefined, undefined, M_LOOK,
+        this.here, 'look', 'V-LOOK', undefined, false, undefined, undefined, M_LOOK,
         (text) => buf.push(text),
       );
       this.here.handler(ctx);
@@ -1217,7 +1228,7 @@ export class Game {
     if (room.handler === undefined) return '';
     const buf: string[] = [];
     const ctx = this.makeContext(
-      room, 'look', 'V-LOOK', undefined, undefined, undefined, M_LOOK,
+      room, 'look', 'V-LOOK', undefined, false, undefined, undefined, M_LOOK,
       (text) => buf.push(text),
     );
     room.handler(ctx);
@@ -1238,6 +1249,7 @@ export class Game {
       this.lastVerb,
       this.lastAction,
       this.lastDobj,
+      false,
       this.lastIobj,
       this.lastPrep,
       M_END,

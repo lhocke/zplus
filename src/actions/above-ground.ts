@@ -247,6 +247,22 @@ export const maze11Fcn: ActionHandler = (ctx) => {
   return false;
 };
 
+// Shared DO-WALK simulation for FOREST-ROOM / TREE-ROOM M-BEG climb intercepts.
+// Finds the exit in `dir`, moves the actor if passable, prints elseMessage if blocked.
+// Returns true (handled) when the exit exists; false to fall through to verb dispatch.
+// Mirrors ZIL DO-WALK for simple to/elseMessage exits (per/ifFlag not needed here).
+function doWalkSimple(dir: string, ctx: Parameters<ActionHandler>[0]): boolean {
+  const exit = ctx.here.exits.find(e => e.dir === dir);
+  if (exit === undefined) return false;
+  if (exit.to !== undefined) {
+    const dest = ctx.world.get(exit.to);
+    if (dest !== undefined) ctx.moveTo(ctx.actor, dest);
+  } else if (exit.elseMessage !== undefined) {
+    ctx.tell(exit.elseMessage);
+  }
+  return true;
+}
+
 /** TREE-ROOM — zil/1actions.zil:2880 */
 export const treeRoom: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
@@ -272,6 +288,19 @@ export const treeRoom: ActionHandler = (ctx) => {
     ctx.enableClock('I-FOREST-ROOM');
     return false;
   }
+  // M-BEG: 1actions.zil:2890-2895
+  // climb down + PRSO=TREE or PRSO=ROOMS → DO-WALK down
+  // climb up/foo + PRSO=TREE → DO-WALK up
+  if (ctx.rarg === M_BEG) {
+    if (ctx.action === 'V-CLIMB-DOWN' &&
+        (ctx.dobj?.id === 'TREE' || ctx.dobjIsRooms === true)) {
+      return doWalkSimple('down', ctx);
+    }
+    if ((ctx.action === 'V-CLIMB-FOO' || ctx.action === 'V-CLIMB-UP') &&
+        ctx.dobj?.id === 'TREE') {
+      return doWalkSimple('up', ctx);
+    }
+  }
   return false;
 };
 
@@ -283,6 +312,14 @@ export const forestRoom: ActionHandler = (ctx) => {
   }
   if (ctx.rarg === M_LOOK) {
     return false;
+  }
+  // M-BEG: 1actions.zil:3006-3009
+  // climb up/foo + PRSO=TREE → DO-WALK up (structured for CC9 to extend with SONGBIRD/I-FOREST-ROOM)
+  if (ctx.rarg === M_BEG) {
+    if ((ctx.action === 'V-CLIMB-FOO' || ctx.action === 'V-CLIMB-UP') &&
+        ctx.dobj?.id === 'TREE') {
+      return doWalkSimple('up', ctx);
+    }
   }
   return false;
 };

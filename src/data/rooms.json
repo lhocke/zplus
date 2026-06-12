@@ -639,7 +639,8 @@
       {
         "dir": "up",
         "to": "LIVING-ROOM",
-        "ifFlag": "TRAP-DOOR"
+        "ifFlag": "TRAP-DOOR",
+        "elseMessage": "The trap door is closed."
       },
       {
         "dir": "west",

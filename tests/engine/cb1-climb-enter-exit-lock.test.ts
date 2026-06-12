@@ -227,20 +227,24 @@ describe('V-CLIMB-UP', () => {
     expect(fix.player.parent?.id).toBe('TREE-TOP');
   });
 
-  it('climb tree from FOREST: elseMessage exit → room\'s own blocked message — gverbs.zil:303–319', () => {
-    // DIV-1: FOREST up exit carries elseMessage, so it is NOT a bare NEXIT.
-    // V-CLIMB-UP must call doWalk → verbGo surfaces exit.elseMessage.
-    // dfrotz @ FOREST-1 "climb tree": "There is no tree here suitable for climbing."
+  it('climb tree from FOREST: elseMessage-only exit is NEXIT → verb-layer refusal — gverbs.zil:305–306', () => {
+    // Structural fix: {elseMessage}-only exits (no to/per) are NEXIT at the verb layer.
+    // ZIL V-CLIMB-UP always has OBJ=nil (gverbs.zil:300-302); the dobj passed here
+    // simulates V-CLIMB-FOO ("climb tree") which DOES pass PRSO as OBJ.
+    // V-CLIMB-FOO: OBJ set (TREE) + NEXIT → "The tree doesn't lead upward." — gverbs.zil:305–306.
+    // In the full game, FOREST-ROOM M-BEG intercepts climb-tree FIRST and prints the
+    // elseMessage ("There is no tree here suitable for climbing.") via DO-WALK.
+    // This unit test exercises verbClimbFoo without the M-BEG layer.
     const fix = makeFixture();
     fix.player.moveTo(fix.forest);
     const r = executeVerb(makeCtx(fix, {
       verb: 'climb',
-      action: 'V-CLIMB-UP',
+      action: 'V-CLIMB-FOO',
       dobj: fix.tree,
       here: fix.forest,
-    }), 'V-CLIMB-UP');
+    }), 'V-CLIMB-FOO');
     expect(r.moved).toBe(false);
-    expect(r.output).toBe('There is no tree here suitable for climbing.');
+    expect(r.output).toBe("The tree doesn't lead upward.");
   });
 
   it('climb wall from FOREST (elseMessage exit, WALL not global of HERE): refusal — gverbs.zil:306–316', () => {
@@ -248,6 +252,8 @@ describe('V-CLIMB-UP', () => {
     // of FOREST (GLOBAL:TREE only). ZIL CEXIT check: NOT GLOBAL-IN? PRSO HERE →
     // "The surrounding wall doesn't lead upward."
     // dfrotz @ FOREST-1 "climb wall": "The surrounding wall doesn't lead upward."
+    // Uses V-CLIMB-FOO because V-CLIMB-UP always has OBJ=nil (gverbs.zil:300-302);
+    // the verb that actually passes PRSO as OBJ is V-CLIMB-FOO (bare "climb <obj>").
     const fix = makeFixture();
     const wallObj = new Thing('WALL', 'surrounding wall', { synonyms: ['WALL', 'WALLS'], adjectives: ['SURROUNDING'] });
     wallObj.moveTo(fix.forest);
@@ -255,12 +261,12 @@ describe('V-CLIMB-UP', () => {
     const w = World.fromObjects([fix.path, fix.treeTop, fix.forest, fix.boatRoom, fix.player, fix.tree, fix.mailbox, fix.boat, wallObj]);
     const r = executeVerb({
       verb: 'climb',
-      action: 'V-CLIMB-UP',
+      action: 'V-CLIMB-FOO',
       dobj: wallObj,
       player: fix.player,
       here: fix.forest,
       world: w,
-    }, 'V-CLIMB-UP');
+    }, 'V-CLIMB-FOO');
     expect(r.moved).toBe(false);
     expect(r.output).toBe("The surrounding wall doesn't lead upward.");
   });
@@ -268,6 +274,7 @@ describe('V-CLIMB-UP', () => {
   it('climb tree from room with bare NEXIT up: still "The X doesn\'t lead upward." — gverbs.zil:306', () => {
     // DIV-1 control: a genuinely bare NEXIT (no elseMessage/ifFlag/per) still
     // gets the "doesn't lead upward" refusal, not the room message.
+    // Uses V-CLIMB-FOO because V-CLIMB-UP always has OBJ=nil (gverbs.zil:300-302).
     const player2 = new Actor('PLAYER2', 'yourself');
     const bareNexitRoom = new Room('BARE-NEXIT', 'Cave', {
       ldesc: 'A cave.',
@@ -281,7 +288,7 @@ describe('V-CLIMB-UP', () => {
     tree2.moveTo(bareNexitRoom);
     const w2 = World.fromObjects([bareNexitRoom, player2, wallObj, tree2]);
     const ctx2: VerbContext = { verb: 'climb', player: player2, here: bareNexitRoom, world: w2 };
-    const r = executeVerb({ ...ctx2, dobj: tree2 }, 'V-CLIMB-UP');
+    const r = executeVerb({ ...ctx2, dobj: tree2 }, 'V-CLIMB-FOO');
     expect(r.moved).toBe(false);
     expect(r.output).toBe("The tree doesn't lead upward.");
   });
@@ -289,6 +296,8 @@ describe('V-CLIMB-UP', () => {
   it('climb wall in room with no up exit: WALL synonym → "Climbing the walls is to no avail." — gverbs.zil:320–323 (DIV-2)', () => {
     // DIV-2: no exit in DIR and dobj has WALL in its synonyms → walls branch fires.
     // ZIL gverbs.zil:320–323 is the ELSE branch of GETPT (no exit found).
+    // Uses V-CLIMB-FOO because V-CLIMB-UP always has OBJ=nil (gverbs.zil:300-302);
+    // the WALL branch only fires when OBJ is set with WALL synonym.
     const player2 = new Actor('PLAYER2WV', 'yourself');
     const caveRoom = new Room('CAVE-WV', 'Cave', {
       ldesc: 'A cave with stone walls.',
@@ -301,12 +310,12 @@ describe('V-CLIMB-UP', () => {
     const w2 = World.fromObjects([caveRoom, player2, wallObj]);
     const r = executeVerb({
       verb: 'climb',
-      action: 'V-CLIMB-UP',
+      action: 'V-CLIMB-FOO',
       dobj: wallObj,
       player: player2,
       here: caveRoom,
       world: w2,
-    }, 'V-CLIMB-UP');
+    }, 'V-CLIMB-FOO');
     expect(r.moved).toBe(false);
     expect(r.output).toBe('Climbing the walls is to no avail.');
   });

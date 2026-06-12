@@ -38,6 +38,13 @@ export interface ActionContext {
   readonly action?: string;
   /** Direct object, if any (ZIL PRSO). */
   readonly dobj?: GameObject;
+  /**
+   * True when ZIL PRSO == ROOMS (bare climb/climb-down with no noun).
+   * Distinct from dobj=undefined (V-CLIMB-UP direct): in ZIL, V-CLIMB-DOWN
+   * passes PRSO=ROOMS as the OBJ arg so branch 1 fires; V-CLIMB-UP direct
+   * passes OBJ=<> so branch 1 is skipped.  gverbs.zil:300–302.
+   */
+  readonly dobjIsRooms?: boolean;
   /** Indirect object, if any (ZIL PRSI). */
   readonly iobj?: GameObject;
   /** Preposition for this command, e.g. 'in', 'with' — or a direction for walk. */
