@@ -22,6 +22,9 @@
 # Run with:
 #   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-river.txt
 
+# Set verbose mode so dfrotz and engine both use verbose room descriptions.
+verbose
+
 # --- Setup: get to the dam area and retrieve the pump ---
 # (abbreviated; see c-dam.txt for the full troll-kill path)
 north

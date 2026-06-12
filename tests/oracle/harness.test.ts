@@ -20,6 +20,7 @@
 import { describe, it, expect } from 'vitest';
 import { normalizeDfrotz, normalizeEngine } from '../../tools/oracle/normalizer.js';
 import { compareTurns } from '../../tools/oracle/comparator.js';
+import { extractSeedFromHeader } from '../../tools/oracle/run-corpus.js';
 
 // ---------------------------------------------------------------------------
 // Normalizer — dfrotz transcript
@@ -252,5 +253,167 @@ describe('compareTurns', () => {
 
     const report = compareTurns(dfrotz, engine);
     expect(report.exactMatches).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Normalizer — ambient-line stripping (dfrotz only)
+// ---------------------------------------------------------------------------
+
+describe('normalizeDfrotz ambient-line stripping', () => {
+  it('strips ambient random lines from dfrotz output (e.g. "You hear...song bird")', () => {
+    const raw = [
+      ' West of House                                    Score: 0        Moves: 0',
+      '',
+      'West of House',
+      'You are in a field.',
+      'You hear in the distance the chirping of a song bird.',
+      '',
+      '> West of House                                    Score: 0        Moves: 1',
+      '',
+      'North of House',
+      'You walk north.',
+      'You hear in the distance the chirping of a song bird.',
+      '',
+    ].join('\n');
+
+    const turns = normalizeDfrotz(raw);
+    // Ambient lines must be stripped
+    expect(turns[0]?.text).not.toContain('You hear in the distance');
+    expect(turns[0]?.text).toContain('You are in a field.');
+    expect(turns[1]?.text).not.toContain('You hear in the distance');
+    expect(turns[1]?.text).toContain('North of House');
+  });
+
+  it('strips "You hear ... in the distance" variants', () => {
+    const raw = [
+      ' West of House                                    Score: 0        Moves: 0',
+      '',
+      'Room',
+      'Normal text.',
+      'You hear nearby the chirping of a song bird.',
+      '',
+    ].join('\n');
+
+    const turns = normalizeDfrotz(raw);
+    expect(turns[0]?.text).not.toContain('You hear nearby');
+    expect(turns[0]?.text).toContain('Normal text.');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Normalizer — dfrotz inline meta-verb response (verbose/brief without status bar)
+// ---------------------------------------------------------------------------
+
+describe('normalizeDfrotz inline meta-verb responses', () => {
+  it('splits ">Maximum verbosity." into its own turn (not merged into initial block)', () => {
+    // In dfrotz -p output, meta-verb responses like verbose appear without a
+    // status-bar line: ">Maximum verbosity." is emitted inline after the initial
+    // room display, before the first status-bar separator.
+    const raw = [
+      ' West of House                                    Score: 0        Moves: 0',
+      '',
+      'West of House',
+      'You are in a field.',
+      '',
+      '>Maximum verbosity.',
+      '',
+      '> North of House                                   Score: 0        Moves: 1',
+      '',
+      'North of House',
+      'You are at the north.',
+      '',
+    ].join('\n');
+
+    const turns = normalizeDfrotz(raw);
+    // Turn 0: initial room (no verbose response)
+    expect(turns[0]?.text).toContain('You are in a field.');
+    expect(turns[0]?.text).not.toContain('Maximum verbosity');
+    // Turn 1: verbose response as its own turn
+    expect(turns[1]?.text).toBe('Maximum verbosity.');
+    // Turn 2: north response
+    expect(turns[2]?.text).toContain('North of House');
+  });
+
+  it('handles verbose as first command — matches engine turn layout', () => {
+    // The corpus files prepend "verbose" as the first command.  dfrotz emits
+    // ">Maximum verbosity." before the first status-bar separator; the engine
+    // emits it as its own turn.  Both must produce the same number of turns.
+    const dfrotzRaw = [
+      ' West of House                                    Score: 0        Moves: 0',
+      '',
+      'West of House',
+      'You are in a field.',
+      '',
+      '>Maximum verbosity.',
+      '',
+      '> North of House                                   Score: 0        Moves: 1',
+      '',
+      'North of House',
+      'You are here.',
+    ].join('\n');
+
+    const engineRaw = [
+      'West of House',
+      'You are in a field.',
+      '',
+      '> verbose',
+      'Maximum verbosity.',
+      '',
+      '> north',
+      'North of House',
+      'You are here.',
+    ].join('\n');
+
+    const dfrotzTurns = normalizeDfrotz(dfrotzRaw);
+    const engineTurns = normalizeEngine(engineRaw);
+    expect(dfrotzTurns).toHaveLength(3);
+    expect(engineTurns).toHaveLength(3);
+    // All three turns should match
+    expect(dfrotzTurns[0]?.text).toBe(engineTurns[0]?.text);
+    expect(dfrotzTurns[1]?.text).toBe(engineTurns[1]?.text);
+    expect(dfrotzTurns[2]?.text).toBe(engineTurns[2]?.text);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// run-corpus seed extraction
+// ---------------------------------------------------------------------------
+
+describe('extractSeedFromHeader', () => {
+  it('extracts seed from a -s N dfrotz header', () => {
+    const header = [
+      '# C-DAM corpus',
+      '# Run with:',
+      '#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-dam.txt',
+      '#',
+      'north',
+    ].join('\n');
+    expect(extractSeedFromHeader(header)).toBe(1);
+  });
+
+  it('returns undefined when no seed in header', () => {
+    const header = [
+      '# C-SAND corpus',
+      '# Run with:',
+      '#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/c-sand.txt',
+      '#',
+      'north',
+    ].join('\n');
+    expect(extractSeedFromHeader(header)).toBeUndefined();
+  });
+
+  it('returns undefined when no header at all', () => {
+    expect(extractSeedFromHeader('north\neast\n')).toBeUndefined();
+  });
+
+  it('stops scanning at first non-comment line', () => {
+    const withSeedAfterCommands = [
+      '# comment',
+      'north',
+      '# Run with: dfrotz -s 99 /path',
+    ].join('\n');
+    // The seed directive is after the first non-comment line — should NOT be found
+    expect(extractSeedFromHeader(withSeedAfterCommands)).toBeUndefined();
   });
 });

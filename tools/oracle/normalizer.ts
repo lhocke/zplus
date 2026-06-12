@@ -58,11 +58,26 @@ const SCORE_SUMMARY_RE =
 // The quit prompt bare "> " or ">" at end of output
 const QUIT_PROMPT_RE = /^>\s*$/;
 
+// Ambient random flavor lines from dfrotz (RNG-driven, not in engine output).
+// I-FOREST-ROOM (1actions.zil:3000–3002): 15% chance per turn in forest rooms.
+// The text is deterministic but the occurrence is RNG-driven — strip from dfrotz
+// so it doesn't produce false divergences against the engine.
+// Scope: dfrotz normalizer only (not engine).
+const AMBIENT_LINE_RE = /^You hear (?:in the distance|nearby) .+/;
+
 // dfrotz turn boundary: ">" (possibly followed by status bar which we've stripped)
 // In raw output: "> West of House   Score: 0   Moves: 1"
 // After stripping the status bar portion we want to detect these as separators.
 // Strategy: detect the RAW pattern BEFORE stripping so we can use it to split.
 const DFROTZ_TURN_SEP_RE = /^>\s*.{5,}\bScore:\s*\d+\s+Moves:\s*\d+/;
+
+// dfrotz inline meta-verb response: ">Maximum verbosity." etc.
+// Meta-verbs (verbose/brief) don't produce a status-bar line in dfrotz -p output;
+// instead, dfrotz emits ">response" inline.  Treat as a turn boundary so the
+// dfrotz transcript stays aligned with the engine's per-turn output.
+// Match: starts with ">" immediately followed by non-whitespace (rule out
+// bare quit prompt ">" and status-bar lines already handled above).
+const DFROTZ_INLINE_RESPONSE_RE = /^>(?!\s*$)\S/;
 
 // Our engine prompt: "> <command text>"
 const ENGINE_PROMPT_RE = /^>\s+(\S.*)$/;
@@ -119,7 +134,8 @@ function parseDfrotzTurns(rawLines: string[]): NormalizedTurn[] {
       .filter((l) => !DFROTZ_INTRO_RE.test(l))
       .filter((l) => !STATUS_BAR_RE.test(l))
       .filter((l) => !SCORE_SUMMARY_RE.test(l))
-      .filter((l) => !QUIT_PROMPT_RE.test(l));
+      .filter((l) => !QUIT_PROMPT_RE.test(l))
+      .filter((l) => !AMBIENT_LINE_RE.test(l));
 
     const text = rejoinWrapped(filtered).trim();
     if (text.length > 0) {
@@ -134,6 +150,21 @@ function parseDfrotzTurns(rawLines: string[]): NormalizedTurn[] {
       // Flush the accumulated block as the previous turn.
       flush();
       // The separator line itself is discarded (it's just the status bar).
+    } else if (
+      DFROTZ_INLINE_RESPONSE_RE.test(line) &&
+      !DFROTZ_TURN_SEP_RE.test(line) &&
+      !SCORE_SUMMARY_RE.test(line) &&
+      !QUIT_PROMPT_RE.test(line)
+    ) {
+      // Inline meta-verb response (e.g. ">Maximum verbosity.") — no status bar.
+      // Flush the current block, then emit the response text as its own turn.
+      // (Score-summary and quit-prompt lines that start with ">" are excluded —
+      // they fall through to the flush() handler which filters them.)
+      flush();
+      const text = line.slice(1).trim(); // strip the leading ">"
+      if (text.length > 0) {
+        turns.push({ command: '', text });
+      }
     } else {
       blockLines.push(line);
     }

@@ -21,6 +21,9 @@
 #   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/c-sand.txt
 # (no seed needed — no RNG in this walkthrough)
 
+# Set verbose mode so dfrotz and engine both use verbose room descriptions.
+verbose
+
 # --- Route to Sandy Beach via above-ground path ---
 # North of House → Behind House → forest south
 north

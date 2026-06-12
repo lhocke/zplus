@@ -15,6 +15,9 @@
 # Run with:
 #   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/c-leak.txt
 
+# Set verbose mode so dfrotz and engine both use verbose room descriptions.
+verbose
+
 # --- Setup: get to MAINTENANCE-ROOM (abbreviated troll-kill path) ---
 north
 east

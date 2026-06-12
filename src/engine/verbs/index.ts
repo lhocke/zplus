@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, goto, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { CURE_WAIT } from '../combat.js';
 
@@ -700,6 +700,12 @@ function verbPutOn(ctx: VerbContext): VerbResult {
   return result(vPut.done);
 }
 
+// V-VERBOSE (gverbs.zil:13–16) — set VERBOSE=T, clear SUPER-BRIEF, print the string.
+// The engine is always verbose; the state-set is a no-op here but the message is faithful.
+function verbVerbose(_ctx: VerbContext): VerbResult {
+  return result(vVerbose.response);
+}
+
 // V-SCORE (1actions.zil:4026–4044)
 // Plural rule (1actions.zil:4032): MOVES==1 → "move", else "moves".
 function verbScore(ctx: VerbContext): VerbResult {
@@ -972,6 +978,7 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
 
   // Phase-3 dam/river verbs — thin shells; object handlers (IBOAT-FUNCTION etc.)
   // short-circuit before these in the PERFORM chain.
+  'V-VERBOSE':   verbVerbose,
   'V-BREATHE':   verbBreathe, // BLOW IN OBJECT → PERFORM V?INFLATE PRSO LUNGS
   'V-INFLATE':   verbInflate,
   'V-DEFLATE':   verbDeflate,
