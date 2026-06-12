@@ -638,12 +638,11 @@ function buildKnownIssuesDialog(): { open: () => void; element: HTMLElement } {
   title.textContent = 'Known Issues & Limitations';
 
   const issues = [
-    'Content ends at the troll. Combat arrives in a later phase.',
-    'No saving. Each page load is a fresh game.',
-    'The map is rough and only covers the pre-troll area.',
-    'No thief, no cyclops, no combat (deferred mechanics).',
-    'RANDOMIZE-OBJECTS is deferred — object placement is deterministic.',
-    'Score is out of the full game\'s 350. The pre-troll region reaches a small fraction.',
+    'No saving yet. Each page load is a fresh game.',
+    'The map only covers the surface and the first rooms underground — the dam, river, coal mine, and temple regions aren\'t drawn yet.',
+    'The temple and Hades stretch is reachable but its puzzles aren\'t fully wired.',
+    'Some timed mechanics (lamp burnout, candles) are still being verified against the original and may diverge.',
+    'Not every point of the full 350 can be earned yet — late-game content is still landing.',
   ];
 
   const list = el('ul', 'list-disc pl-5 space-y-1');
