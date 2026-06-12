@@ -359,10 +359,10 @@ export function describeRoomShared(
 
   // gverbs.zil:1664-1667 — SUPER-BRIEF body gate.
   // The M-LOOK/LDESC block only runs when LOOK? OR NOT SUPER-BRIEF.
+  // V-FIRST-LOOK (gverbs.zil:1632) gates DESCRIBE-OBJECTS the same way:
+  // objects are suppressed when NOT SUPER-BRIEF fails, so title-only here.
   const superBrief = getGlobal?.('SUPER-BRIEF') ?? false;
   if (!lookFlag && superBrief) {
-    // Super-brief without explicit look: title-only, skip body.
-    describeRoomObjects(room, player, (s) => lines.push(s));
     return lines.join('\n');
   }
 
