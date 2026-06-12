@@ -279,15 +279,20 @@ AUDIT/RECONCILE task, not a build:** (1) verify the loop-driven form against the
 no-double-tick (the isWait branch must replace, never add to, the normal end-of-turn tick;
 **concrete assertion (A.1): plain `wait` with no pending interrupt advances `moveCount` by
 exactly 3 — not 4**), mid-wait interrupt early-stop, mid-wait death, `wait` in the dark, AND
-**(A.1, panel-confirmed) the printed-vs-interrupted distinction:** the current stop condition
-`clockFiredThisTick = clockLines.length > 0` (game.ts:885) halts on ANY clock output, but ZIL
-stops only when `<CLOCKER>` returns true — an interrupt routine FIRED (gverbs.zil:1514–1519).
-A benign warning print (lamp dimming) must NOT stop the wait at tick 1 when dfrotz continues
-to 3 — anchor this exact case in `wait.txt` (wait across a lamp-warning tick) before ruling;
-(2) author `wait.txt` vs dfrotz; (3) if every edge matches, RATIFY loop-driven-equivalent here
-(OQ-8) and update OQ-1's note — refactor the STOP CONDITION (or the whole form to (a)) if the
-warning-print edge diverges. Do not rip out a dfrotz-validated mechanism on mechanism-purity
-grounds; do not keep a stop condition dfrotz disproves.
+**(A.2 — dfrotz-settled) the printed-vs-interrupted distinction:** the original
+`clockLines.length > 0` stop condition was genuinely wrong, but NOT for the reason A.1
+asserted. **dfrotz R119 ground truth (live runs, 2026-06-12):** a lamp WARNING firing on wait
+tick 1 DOES stop the wait — Moves 205 → 206, delta +1 (A.1's "must not stop" claim was an
+unverified inference; dfrotz disproves it). What must NOT stop the wait is the lamp BURNOUT
+sentinel — it prints but returns false; dfrotz continues to +3 (Moves 388 → 391, corpus
+CASE 3). ZIL semantics: `<CLOCKER>` returns the interrupt routine's value (gverbs.zil:
+1514–1519) — warning branch returns true (stops), burnout sentinel returns false (doesn't).
+The faithful stop condition is the per-entry `interrupted` flag (returned && entryTold —
+clock.ts:122–139 + game.ts:941), implemented and dfrotz-verified at 252877a across all seven
+edges (plain +3; warning tick 1/2 → +1/+2; burnout tick 1/2/3 → +3; dark +3);
+(2) `wait.txt` is authored (386/386 vs dfrotz) — ADD the warning-on-tick-1 case so the
+contested edge is corpus-anchored, not only unit-anchored; (3) OQ-8 ratified per the above.
+Do not re-litigate the stop condition against any prose claim — only against a dfrotz run.
 
 ### 3.3 Relit-match burnout re-arm — `light-sources.ts` (I-MATCH) — EXTEND
 
@@ -1043,7 +1048,11 @@ depends on a cluster (BD-A V-INVENTORY is independent; CC10 BOOM needs Phase-2 j
    `ctx.tell` and return truthy) → early stop; burnout sets `interrupted=false` (returns
    false) → loop continues through tick 3 and prints "You'd better have more light than from
    the brass lantern." wait.txt CASE 3 (dfrotz R119, 2026-06-12) anchors burnout-during-wait
-   at mc=388→391. DGC-2 not triggered (no wait lines in the golden walkthrough).
+   at mc=388→391. **A.2 evidence supplement (the case that settles the contested edge):
+   live dfrotz R119 confirms warning-on-wait-tick-1 STOPS the wait — Moves 205→206, delta
+   +1 (engine matches). A.1's contrary "warnings must not stop" claim was unverified
+   inference, now disproven; no reviewer may re-raise it without a fresh dfrotz run.**
+   DGC-2 not triggered (no wait lines in the golden walkthrough).
 
 9. **OQ-9 — SKELETON rob helper.** **RATIFIED (2026-06-12, autonomous run):** OQ-4 is obsolete —
    its premise (thief wave unbuilt) inverted when the thief wave merged first. CC5 reuses
