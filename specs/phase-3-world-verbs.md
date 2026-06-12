@@ -1037,10 +1037,14 @@ depends on a cluster (BD-A V-INVENTORY is independent; CC10 BOOM needs Phase-2 j
    28bfc98 ldesc-deletion pattern; the 16 default-state ldescs stay as fallbacks.
 
 8. **OQ-8 — V-WAIT mechanism: keep the dam wave's loop-driven 3-tick form, or refactor to
-   OQ-1's option (a)?** **PROVISIONALLY RATIFIED (2026-06-12, autonomous run):** keep the
-   loop-driven form IF the CA2 edge audit (§3.2 amended) passes all four edges; refactor to (a)
-   only on a proven divergence. Rationale: the form is dfrotz-validated by six dam corpora;
-   mechanism purity does not outrank behavioral anchoring.
+   OQ-1's option (a)?** **RATIFIED (2026-06-12, CA2 edge audit):** keep the loop-driven form.
+   All five edges pass: no-double-tick (moveCount+=3-not-4), mid-wait interrupt early-stop,
+   wait-in-dark, "Time passes..." once, bootstrap-game 3 ticks. The stop condition
+   `clockLines.length>0` is correct — dfrotz confirms lamp warnings DO stop V-WAIT early
+   (I-LANTERN returns truthy on warning fire; CLOCKER returns true; V-WAIT exits). The spec
+   concern "warning must NOT stop at tick 1 when dfrotz continues to 3" was a wrong
+   assumption; wait.txt dfrotz anchor disproves it. No refactor. DGC-2 not triggered (no
+   wait lines in the golden walkthrough).
 
 9. **OQ-9 — SKELETON rob helper.** **RATIFIED (2026-06-12, autonomous run):** OQ-4 is obsolete —
    its premise (thief wave unbuilt) inverted when the thief wave merged first. CC5 reuses
