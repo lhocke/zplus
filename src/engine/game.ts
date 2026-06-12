@@ -558,7 +558,7 @@ export class Game {
 
     // Clock tick — each intercepted command consumes a turn.
     this.moveCount += 1;
-    const clockLines = this.clock.advance();
+    const { lines: clockLines } = this.clock.advance();
     if (clockLines.length > 0) outputs.push(clockLines.join('\n'));
     this.events.emit({ type: 'turn-complete', moves: this.moveCount });
     if (this.fatalPending) {
@@ -917,9 +917,8 @@ export class Game {
 
     for (let ci = 0; ci < maxClocks; ci++) {
       this.moveCount += 1;
-      const clockLines = this.clock.advance();
-      const clockFiredThisTick = clockLines.length > 0;
-      if (clockFiredThisTick) {
+      const { lines: clockLines, interrupted } = this.clock.advance();
+      if (clockLines.length > 0) {
         const clockText = clockLines.join('\n');
         const idx = outputs.length - 1;
         if (idx >= 0) {
@@ -936,7 +935,10 @@ export class Game {
         return true;
       }
 
-      if (isWait && clockFiredThisTick) break;
+      // V-WAIT stops early when CLOCKER returns true — an interrupt routine fired
+      // (gverbs.zil:1518 <CLOCKER> <RETURN>).  Burnout returns false, so it does
+      // not stop the loop even though it pushes a message (LIGHT-INT 1actions:2333).
+      if (isWait && interrupted) break;
     }
 
     return fatalExit;

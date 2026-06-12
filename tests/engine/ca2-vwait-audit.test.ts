@@ -308,3 +308,80 @@ describe('CA2: bootstrap game wait (real lantern, cold start)', () => {
     expect(g.view().moves - before).toBe(3);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Edge 7: burnout during wait — does NOT stop the loop, but message appears.
+//
+// In ZIL: CLOCKER returns true only when an interrupt routine returns truthy.
+// I-LANTERN's burnout sentinel (ticks:0) returns false from onFire(), so
+// CLOCKER returns false → V-WAIT does NOT stop early.
+// But the burnout message "You'd better have more light..." MUST appear in
+// the turn output (LIGHT-INT prints it via <TELL> when TICK=0 and object
+// is accessible — 1actions.zil:2328–2335).
+//
+// Regression caught: the engine's burnout sentinel emits dark:true but never
+// calls ctx.tell(), so the message was silently dropped.  After the fix,
+// a burnout-like entry (returns false, calls ctx.tell) must NOT stop the wait
+// but MUST appear in the output — full 3 ticks.
+//
+// ZIL ref: gverbs.zil:1514 (V-WAIT stops on CLOCKER truthy),
+//   1actions.zil:2328–2335 (LIGHT-INT burnout branch prints message, returns <>).
+// ---------------------------------------------------------------------------
+
+describe('CA2: burnout-like interrupt does not stop wait but message appears', () => {
+  it('clock entry returning false with ctx.tell() does not stop the 3-tick loop', () => {
+    const clock = new Clock();
+    // Fires on tick 2, prints a burnout message, returns false (like I-LANTERN burnout).
+    const entry: ClockEntry = {
+      id: 'BURNOUT-LIKE',
+      turnsLeft: 2,
+      enabled: true,
+      tick(ctx) {
+        ctx.tell("You'd better find another light source.");
+        return false;  // burnout: does not stop V-WAIT
+      },
+    };
+    clock.schedule(entry);
+
+    const g = buildLitRoom(clock);
+    g.start();
+
+    const before = g.view().moves;
+    const out = g.turn('wait').output;
+    const delta = g.view().moves - before;
+
+    // Wait must complete all 3 ticks — burnout returns false, not a stop condition.
+    expect(delta).toBe(3);
+    // The burnout message must appear in the output.
+    expect(out).toContain("You'd better find another light source.");
+    // The wait text is also present.
+    expect(out).toContain('Time passes...');
+  });
+
+  it('clock entry returning false on tick 1 allows ticks 2 and 3 to run', () => {
+    const clock = new Clock();
+    const fired: number[] = [];
+    const entry: ClockEntry = {
+      id: 'BURNOUT-TICK1',
+      turnsLeft: 1,
+      enabled: true,
+      tick(ctx) {
+        fired.push(1);
+        ctx.tell('Burnout on tick 1!');
+        return false;
+      },
+    };
+    clock.schedule(entry);
+
+    const g = buildLitRoom(clock);
+    g.start();
+
+    const before = g.view().moves;
+    g.turn('wait');
+    const delta = g.view().moves - before;
+
+    // Entry fires once (then removed), wait continues for all 3 ticks.
+    expect(fired).toHaveLength(1);
+    expect(delta).toBe(3);
+  });
+});

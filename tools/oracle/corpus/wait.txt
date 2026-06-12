@@ -5,19 +5,28 @@
 #
 # CASE 1 (commands 1-8): plain wait with no pending interrupt.
 #   Setup: navigate to Living Room, take lantern, turn on (Moves 7).
-#   wait → Moves 10 (+3 ticks). No clock output (lamp warning is 200 turns away).
+#   wait → Moves 10 (+3 ticks). No clock output (lamp warning is 199 turns away).
 #   dfrotz output: "Time passes..." then Moves: 10.
 #
-# CASE 2 (commands 9-207): wait across a lamp-warning tick.
-#   After 198 looks (Moves 206 → lamp burn turn = 198 since lamp-on tick used 1),
-#   the lamp has 1 turn left before its first warning.
-#   wait tick 1: lamp turnsLeft 1→0, I-LANTERN fires → "The lamp appears a bit dimmer."
-#   I-LANTERN returns true → CLOCKER returns true → V-WAIT stops after 1 tick.
-#   dfrotz: Moves 205→206 (+1 tick only). Output: "Time passes..." + lamp warning.
+# CASE 2 (commands 9-207): wait after a lamp warning already fired on a look.
+#   After 198 looks (Moves 10→208), the lamp warning fires on look #196 (Moves 206).
+#   The CASE 2 wait at Moves 208 sees no pending interrupt (lamp re-queued 100
+#   turns out), so it runs the full +3 ticks: Moves 208→211.
+#   dfrotz output: "Time passes..." then Moves: 211.
 #
-# ZIL ref: gverbs.zil:1514-1519 (V-WAIT), gclock.zil:43 (CLOCKER FLG logic),
-#   1actions.zil:2315-2319 (I-LANTERN returns truthy on warning).
-# OQ-8 ruling: loop-driven form kept; clockLines.length>0 stop condition correct.
+# CASE 3 (commands 208-385): wait with lamp burnout on tick 3.
+#   After 177 more looks (Moves 211→388), the lamp is 2 turns before burnout.
+#   wait: tick 1 (Moves 389): no interrupt; tick 2 (Moves 390): no interrupt;
+#   tick 3 (Moves 391): burnout fires — I-LANTERN returns false (no stop), but
+#   LIGHT-INT prints "You'd better have more light than from the brass lantern."
+#   (1actions.zil:2328-2335). V-WAIT completes all 3 ticks; Moves 388→391.
+#   dfrotz output: "Time passes...\nYou'd better have more light than from the
+#   brass lantern." then Moves: 391.
+#
+# ZIL ref: gverbs.zil:1514-1519 (V-WAIT), 1actions.zil:2315-2335 (I-LANTERN/LIGHT-INT).
+# OQ-8 ruling: loop-driven form kept; stop condition uses clock.advance() interrupted
+# flag (set only when tick() returns true AND ctx.tell() called); burnout returns false
+# so it does not stop the loop, but its message does appear in the turn output.
 
 # --- CASE 1: plain wait (no interrupt) ---
 south
@@ -29,8 +38,9 @@ take lantern
 turn on lantern
 wait
 
-# --- CASE 2: wait across lamp-warning tick (warning fires on tick 1) ---
-# 198 look commands advance lamp burn turns to 1-before-warning.
+# --- CASE 2: wait after lamp warning fired on a look (no interrupt during wait) ---
+# 198 looks: warning fires on look #196 (Moves 206), lamp re-queues for 100 turns.
+# The subsequent wait sees no pending clock event and runs the full 3 ticks.
 look
 look
 look
@@ -52,6 +62,191 @@ look
 look
 look
 look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+look
+wait
+
+# --- CASE 3: wait with burnout on tick 3 (Moves 388→391) ---
+# 177 more looks advance the lamp timer to 2 turns before burnout.
+# At Moves 388, the lamp has 2 ticks remaining before the burnout sentinel fires.
+# Wait: tick 1 (Moves 389): no interrupt; tick 2 (Moves 390): no interrupt;
+# tick 3 (Moves 391): burnout fires (I-LANTERN returns false, loop continues
+# through tick 3) and prints the burnout message. Full 3 ticks run.
 look
 look
 look
