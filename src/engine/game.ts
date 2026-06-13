@@ -1033,7 +1033,13 @@ export class Game {
       isDead: () => this.dead,
       queueClock: (id, period, enabled) => this.clock.queue(id, period, enabled),
       getGlobal: (n) => this.flags.get(n),
-      setGlobal: (n, v = true) => this.flags.set(n, v),
+      setGlobal: (n, v = true) => {
+        // LUCKY is stored on the Game instance (not FlagStore) so zprob callers
+        // read it directly via getLucky(). Intercept here so MIRROR-MUNG can flip it.
+        // 1actions.zil:1009 (<SETG LUCKY <>>).
+        if (n === 'LUCKY') { this.lucky = v; return; }
+        this.flags.set(n, v);
+      },
       getIntGlobal: (n) => {
         if (n === 'WATER-LEVEL') return this.waterLevel;
         if (n === 'BEACH-DIG')   return this.beachDig;

@@ -21,6 +21,7 @@ import { hadesActions } from './hades.js';
 import { domeRopeActions } from './dome-rope.js';
 import { batGarlicActions } from './bat-garlic.js';
 import { skeletonActions } from './skeleton.js';
+import { mirrorActions } from './mirror.js';
 import {
   treasureRoomFcnAction,
   chaliceFcnAction,
@@ -67,6 +68,7 @@ const ACTIONS: Record<string, ActionHandler> = {
   ...domeRopeActions,
   ...batGarlicActions,
   ...skeletonActions,
+  ...mirrorActions,
 };
 
 const PER_ROUTINES: Record<string, PerRoutine> = {
