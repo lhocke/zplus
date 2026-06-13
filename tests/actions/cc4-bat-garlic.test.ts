@@ -175,6 +175,40 @@ describe('CC4 — FLY-ME: bat teleport (1actions.zil:317)', () => {
     expect(out).toContain('scruff');
     expect(BAT_DROPS).toContain(g.player.parent?.id);
   });
+
+  // ZIL FWEEP(N) decrements N before the print test, so FWEEP(4) prints 3 lines.
+  // 1actions.zil:328: <COND (<L? <SET N <- .N 1>> 1> <RETURN>) (T <TELL "    Fweep!" CR>)>
+  it('FLY-ME: exactly 3 Fweep! lines (FWEEP(4) = N-1 prints, 1actions.zil:326-330)', () => {
+    const g = gameAtBatRoom();
+    ensureBatInRoom(g);
+    const out = g.turn('take bat').output;
+    const fweepCount = (out.match(/    Fweep!/g) ?? []).length;
+    expect(fweepCount).toBe(3);
+  });
+
+  // ZIL FWEEP ends with <CRLF> (1actions.zil:330), dfrotz renders a blank line
+  // between the last Fweep and the grab message.
+  it('FLY-ME: blank line between last Fweep and grab message (1actions.zil:330)', () => {
+    const g = gameAtBatRoom();
+    ensureBatInRoom(g);
+    const out = g.turn('take bat').output;
+    expect(out).toMatch(/Fweep!\n\nThe bat grabs/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BAT-F V-TELL path — FWEEP(6) count (1actions.zil:309-311)
+// ---------------------------------------------------------------------------
+
+describe('CC4 — BAT-F V-TELL: Fweep count (1actions.zil:310)', () => {
+  // ZIL <FWEEP 6> with the N-1 rule prints 5 lines.
+  it('tell bat: exactly 5 Fweep! lines (FWEEP(6) = N-1 prints)', () => {
+    const g = gameAtBatRoom();
+    ensureBatInRoom(g);
+    const out = g.turn('tell bat').output;
+    const fweepCount = (out.match(/    Fweep!/g) ?? []).length;
+    expect(fweepCount).toBe(5);
+  });
 });
 
 // ---------------------------------------------------------------------------

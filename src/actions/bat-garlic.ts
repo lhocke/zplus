@@ -32,14 +32,16 @@ const BAT_DROPS: readonly string[] = [
 ];
 
 // FWEEP — 1actions.zil:326–330.
-// Prints "    Fweep!" N times (each on its own line) then a blank line.
+// ZIL loop: <SET N <- .N 1> then checks <L? N 1>, so N is decremented BEFORE the
+// print test.  FWEEP(4) prints 3 lines; FWEEP(6) prints 5 lines (N-1 rule).
+// Trailing <CRLF> (1actions.zil:330) produces a blank line after the Fweeps;
+// embed it in the string so it survives the empty-string filter in game.ts.
 function fweep(n: number, ctx: ActionContext): void {
   const lines: string[] = [];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n - 1; i++) {
     lines.push('    Fweep!');
   }
-  ctx.tell(lines.join('\n'));
-  ctx.tell('');
+  ctx.tell(lines.join('\n') + '\n');
 }
 
 // FLY-ME — 1actions.zil:317–324.
