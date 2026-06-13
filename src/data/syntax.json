@@ -2689,6 +2689,18 @@
   },
   {
     "verb": "THROW",
+    "numObjects": 1,
+    "prep1": null,
+    "prep2": null,
+    "dobjFindBit": null,
+    "dobjLocBits": 194,
+    "iobjFindBit": null,
+    "iobjLocBits": 0,
+    "action": "V-THROW",
+    "preAction": null
+  },
+  {
+    "verb": "THROW",
     "numObjects": 2,
     "prep1": null,
     "prep2": "AT",

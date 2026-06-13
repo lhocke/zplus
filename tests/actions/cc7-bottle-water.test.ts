@@ -182,6 +182,118 @@ describe('CC7 — BOTTLE-FUNCTION: shake open bottle → spill (1actions.zil:150
 });
 
 // ---------------------------------------------------------------------------
+// V-SHAKE closed bottle — gverbs.zil:1233–1237 (repair: V-SHAKE was unregistered)
+// ---------------------------------------------------------------------------
+
+describe('CC7 — V-SHAKE: closed bottle sounds (gverbs.zil:1233–1237)', () => {
+  it('shake closed bottle with water inside: "something inside" message', () => {
+    const g = kitchenWithBottle();
+    const bottle = g.world.get('BOTTLE');
+    expect(bottle, 'BOTTLE must exist').toBeDefined();
+    // Bottle starts closed — BOTTLE-FUNCTION returns false, V-SHAKE default runs.
+    expect(bottle!.has(Flag.Open), 'BOTTLE must start closed for this test').toBe(false);
+
+    const out = g.turn('shake bottle').output;
+    expect(out).toContain('something inside');
+  });
+
+  it('shake closed bottle: water NOT spilled', () => {
+    const g = kitchenWithBottle();
+    const bottle = g.world.get('BOTTLE');
+    expect(bottle, 'BOTTLE must exist').toBeDefined();
+    expect(bottle!.has(Flag.Open), 'BOTTLE must start closed').toBe(false);
+    const water = g.world.get('WATER');
+    expect(water, 'WATER must exist').toBeDefined();
+
+    g.turn('shake bottle');
+
+    expect(water!.parent?.id, 'WATER must remain in BOTTLE after closed-shake').toBe('BOTTLE');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WATER-F DROP — 1actions.zil:219–233 (repair: V-DROP path was unhandled)
+// "pour water" routes to V-DROP via gsyntax.zil:360; WATER-F intercepts.
+// ---------------------------------------------------------------------------
+
+describe('CC7 — WATER-F: pour/drop water → evaporates (1actions.zil:219–233)', () => {
+  it('pour water (no target): evaporates message', () => {
+    const g = kitchenWithBottle();
+    const bottle = g.world.get('BOTTLE');
+    expect(bottle, 'BOTTLE must exist').toBeDefined();
+    bottle!.set(Flag.Open);
+    const water = g.world.get('WATER');
+    expect(water, 'WATER must exist').toBeDefined();
+    water!.moveTo(g.player);   // water in player inventory (poured out of bottle)
+
+    const out = g.turn('pour water').output;
+    expect(out).toContain('evaporates');
+  });
+
+  it('pour water (no target): water removed', () => {
+    const g = kitchenWithBottle();
+    const bottle = g.world.get('BOTTLE');
+    expect(bottle, 'BOTTLE must exist').toBeDefined();
+    bottle!.set(Flag.Open);
+    const water = g.world.get('WATER');
+    expect(water, 'WATER must exist').toBeDefined();
+    water!.moveTo(g.player);
+
+    g.turn('pour water');
+
+    expect(water!.parent, 'WATER must be removed after pour').toBeNull();
+  });
+
+  it('pour water from closed bottle: "The bottle is closed."', () => {
+    const g = kitchenWithBottle();
+    const bottle = g.world.get('BOTTLE');
+    expect(bottle, 'BOTTLE must exist').toBeDefined();
+    // Bottle is closed; water is inside the bottle.
+    expect(bottle!.has(Flag.Open), 'BOTTLE must start closed').toBe(false);
+    const water = g.world.get('WATER');
+    expect(water, 'WATER must exist').toBeDefined();
+    expect(water!.parent?.id, 'WATER must be in BOTTLE').toBe('BOTTLE');
+
+    const out = g.turn('pour water').output;
+    expect(out).toContain('bottle is closed');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// THROW bottle (no target) — BOTTLE-FUNCTION intercepts before V-THROW default
+// (repair: bare THROW needed a 1-object syntax entry so parser routes it)
+// ---------------------------------------------------------------------------
+
+describe('CC7 — BOTTLE-FUNCTION: throw bottle (no target) → shatters (1actions.zil:1492–1496)', () => {
+  it('throw bottle (no target): shatters message emitted', () => {
+    const g = kitchenWithBottle();
+    const out = g.turn('throw bottle').output;
+    expect(out).toContain('shatters');
+  });
+
+  it('throw bottle (no target): bottle removed from world', () => {
+    const g = kitchenWithBottle();
+    const bottle = g.world.get('BOTTLE');
+    expect(bottle, 'BOTTLE must exist').toBeDefined();
+
+    g.turn('throw bottle');
+
+    expect(bottle!.parent, 'BOTTLE must be removed after throw').toBeNull();
+  });
+
+  it('throw bottle (no target): water also removed (spills)', () => {
+    const g = kitchenWithBottle();
+    const water = g.world.get('WATER');
+    expect(water, 'WATER must exist').toBeDefined();
+    expect(water!.parent?.id, 'WATER must be in BOTTLE before throw').toBe('BOTTLE');
+
+    g.turn('throw bottle');
+
+    expect(water!.parent, 'WATER must be removed after bottle shatters').toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Drink water — open bottle gate (spec §6.7, gverbs.zil:483–524)
 // ---------------------------------------------------------------------------
 

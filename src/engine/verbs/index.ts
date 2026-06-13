@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, vBrief, vSuperBrief, vVersion, vScript, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, vLeap, jumploss, wheeeee, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, vBrief, vSuperBrief, vVersion, vScript, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, vLeap, jumploss, wheeeee, vShake, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { ROOM_GLOBAL_IDS } from '../parser/room-globals.js';
 import { CURE_WAIT } from '../combat.js';
@@ -1139,6 +1139,42 @@ function verbUntie(_ctx: VerbContext): VerbResult {
   return result(vUntie.response);
 }
 
+// V-SHAKE (gverbs.zil:1213–1240).
+// ACTORBIT → no effect; NOT TAKEBIT → can't shake it; CONTBIT:
+//   open + contents → SHAKE-LOOP + spill; open + empty → "Shaken.";
+//   closed + contents → sounds like something inside; closed + empty → sounds empty.
+// Non-container → "Shaken."
+function verbShake(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result('Shake what?');
+  if (dobj.has(Flag.Actor)) return result(vShake.actor);
+  if (!dobj.has(Flag.Takeable)) return result(vShake.cantTakeIt);
+  if (dobj.has(Flag.Container)) {
+    if (dobj.has(Flag.Open)) {
+      // Shake open container — move contents to floor or pseudo-object.
+      const contents = [...dobj.children];
+      if (contents.length > 0) {
+        const land = ctx.here.has(Flag.Land);
+        for (const item of contents) {
+          item.set(Flag.Touched);
+          item.moveTo(land ? ctx.here : null);
+        }
+        if (land) {
+          return result(fmt(vShake.openContainerSpills, dobj.desc));
+        }
+        return result(`The contents of the ${dobj.desc} spill out and disappears.`);
+      }
+      return result(vShake.shaken);
+    }
+    // Closed container — rattle check.
+    if ([...dobj.children].length > 0) {
+      return result(fmt(vShake.soundsLikeSomethingInside, dobj.desc));
+    }
+    return result(fmt(vShake.soundsEmpty, dobj.desc));
+  }
+  return result(vShake.shaken);
+}
+
 // PRE-BURN (gverbs.zil:243–249) — flame-source guard.
 // No PRSI → TELL-NO-PRSI; PRSI not FLAMING? → "With a X??!?"; FLAMING → pass (RFALSE).
 function verbPreBurn(ctx: VerbContext): VerbResult {
@@ -1707,11 +1743,12 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-CLIMB-FOO':  verbClimbFoo,
   'V-CLIMB-ON':   verbClimbOn,
 
-  // CB2 — gverbs.zil:1162, 1465–1469, 1511–1512, 243–274, 1445–1460,
+  // CB2 — gverbs.zil:1162, 1465–1469, 1511–1512, 1213–1240, 243–274, 1445–1460,
   //        708–717, 1597–1602, 910–918, 902, 1131–1132
   'V-RING':     verbRing,
   'V-TIE':      verbTie,
   'V-UNTIE':    verbUntie,
+  'V-SHAKE':    verbShake,
   'PRE-BURN':   verbPreBurn,
   'V-BURN':     verbBurn,
   'V-THROW':    verbThrow,

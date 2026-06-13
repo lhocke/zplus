@@ -93,6 +93,28 @@ export const bottleFunction: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const waterFunction: ActionHandler = (ctx) => {
+  // V-DROP / "pour water" (no target) — 1actions.zil:219–233.
+  // gsyntax.zil:360: POUR OBJECT = V-DROP PRE-DROP; WATER-F intercepts.
+  if (ctx.action === 'V-DROP') {
+    const water  = ctx.self;
+    const bottle = ctx.world.get('BOTTLE');
+    // Closed-bottle gate: if water is inside a closed bottle, refuse.
+    if (bottle !== undefined && water.parent === bottle && !bottle.has(Flag.Open)) {
+      ctx.tell('The bottle is closed.');
+      return true;
+    }
+    // AV (vehicle): player's immediate parent if it has VEHBIT (Flag.Vehicle).
+    const av = ctx.actor.parent?.has(Flag.Vehicle) ? ctx.actor.parent : null;
+    water.moveTo(null);
+    if (av !== null) {
+      ctx.tell(`There is now a puddle in the bottom of the ${av.desc}.`);
+      water.moveTo(av);
+    } else {
+      ctx.tell('The water spills to the floor and evaporates immediately.');
+    }
+    return true;
+  }
+
   if (ctx.action !== 'V-DRINK' && ctx.action !== 'V-EAT') return false;
 
   const water  = ctx.dobj;
