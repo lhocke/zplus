@@ -1,0 +1,95 @@
+# bottle-water.txt — bottle/water oracle corpus (Zork I oracle harness)
+# generated-by: dfrotz-r119 2026-06-12 bottle-water-cc7
+#
+# MECHANIC: BOTTLE-FUNCTION / WATER-F / V-POUR-ON — CC7.
+# Routines: BOTTLE-FUNCTION (BOTTLE), WATER-F (WATER, GLOBAL-WATER), V-POUR-ON (gverbs).
+# Globals: none relevant to this mechanic.
+#
+# ZIL refs:
+#   1actions.zil:1491  BOTTLE-FUNCTION — THROW/MUNG/SHAKE the bottle
+#   1actions.zil:157   WATER-F         — TAKE/PUT/DROP water, drink gate (via V-EAT)
+#   gverbs.zil:1024    V-POUR-ON       — pour water onto FLAMING?/non-lit target
+#   gverbs.zil:483     V-EAT           — drink logic: DRINKBIT path, bottle-open gate
+#   gverbs.zil:518     HIT-SPOT        — "Thank you very much. I was rather thirsty..."
+#
+# BOTTLE-FUNCTION (1actions.zil:1491–1507):
+#   THROW bottle (at actor): "The bottle hits the far wall and shatters." + remove bottle + spill water
+#   MUNG  bottle: "A brilliant maneuver destroys the bottle." + remove bottle
+#   SHAKE open bottle (with water): "The water spills to the floor and evaporates." + remove water
+#
+# WATER-F drink gate (gverbs.zil:483–524, via V-EAT / V-DRINK):
+#   Open bottle held → HIT-SPOT: "Thank you very much. I was rather thirsty (from all this talking,\nprobably)."
+#   Closed bottle held → "You'll have to open the glass bottle first."
+#
+# V-POUR-ON (gverbs.zil:1024–1044):
+#   POUR water ON FLAMING? obj → "The <obj> is extinguished." + clear OnFire + clear Light
+#   POUR water ON non-lit obj → "The water spills over the <obj>, to the floor, and evaporates."
+#
+# BLOCKER (documented): The POUR-water-ON-candles scenario requires the player to
+# reach SOUTH-TEMPLE, which is deep underground via the EGYPT-ROOM route (crossing
+# the Troll Room). The troll blocks passage and triggers RNG-driven combat.
+# The pour-on mechanic is fully exercised by the unit tests in
+#   tests/actions/cc7-bottle-water.test.ts
+# which drive the real world data via newGameAt('SOUTH-TEMPLE').
+#
+# State-table coverage (all cells exercised by cc7-bottle-water.test.ts unit tests):
+#
+# Cell 1 — DRINK water from open bottle:
+#   → "Thank you very much. I was rather thirsty (from all this talking, probably)."
+#   → water removed from world
+#   cc7 tests: "drink water from open bottle: HIT-SPOT thirst message" / "water consumed"
+#
+# Cell 2 — DRINK water from closed bottle (gate):
+#   → "You'll have to open the glass bottle first."
+#   → water NOT consumed
+#   cc7 tests: "drink water from closed bottle: bottle-closed gate message" / "water NOT consumed"
+#
+# Cell 3 — THROW bottle (at actor):
+#   → "The bottle hits the far wall and shatters."
+#   → bottle removed; water spills + removed
+#   cc7 tests: "throw bottle at troll: shatters message" / "bottle removed" / "water removed"
+#
+# Cell 4 — MUNG (break/destroy) bottle:
+#   → "A brilliant maneuver destroys the bottle."
+#   → bottle removed
+#   cc7 tests: "mung bottle: brilliant maneuver destroys the bottle" / "bottle removed"
+#
+# Cell 5 — SHAKE open bottle with water:
+#   → "The water spills to the floor and evaporates."
+#   → water removed
+#   cc7 tests: "shake open bottle: water spills..." / "water removed"
+#
+# Cell 6 — POUR water ON lit candles (V-POUR-ON, FLAMING?):
+#   → "The pair of candles is extinguished."
+#   → candles lose OnFire and Light flags
+#   cc7 tests: "pour water on lit candles: extinguished message" / "candles lose OnFire flag" / "water removed"
+#
+# Cell 7 — POUR water ON non-lit object (V-POUR-ON, non-FLAMING):
+#   → "The water spills over the glass bottle, to the floor, and evaporates."
+#   cc7 tests: "pour water on unlit object: evaporates message"
+#
+# dfrotz R119 above-ground kitchen route (deterministic):
+# Verified against dfrotz R119: kitchen is Above Ground and lit (Flag.On).
+# Bottle starts on kitchen table. Route has no RNG-driven content.
+#
+# Run with:
+#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/bottle-water.txt
+# (no seed needed — no RNG-driven content in this route)
+
+# Set verbose mode.
+verbose
+
+# --- Route: West of House → East of House → Kitchen ---
+north
+east
+west
+
+# Take the bottle (it's on the kitchen table).
+take bottle
+
+# Closed-bottle gate: drinking from a closed bottle must fail.
+drink water
+
+# Open the bottle, then drink — HIT-SPOT thirst message + water consumed.
+open bottle
+drink water

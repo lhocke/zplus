@@ -1611,6 +1611,34 @@ function verbOdysseus(ctx: VerbContext): VerbResult {
   return result("Wasn't he a sailor?");
 }
 
+// V-POUR-ON (gverbs.zil:1024–1044) — pour water onto a target.
+// Fires when dobj=WATER and iobj=target ("pour water on X").
+// FLAMING? — gmacros.zil:145: FSET? FLAMEBIT (Flag.OnFire) AND FSET? ONBIT (Flag.Light).
+function verbPourOn(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  const iobj = ctx.iobj;
+
+  // Not water → "You can't pour that." — gverbs.zil:1043–1044.
+  if (dobj === undefined || (dobj.id !== 'WATER' && dobj.id !== 'GLOBAL-WATER')) {
+    return result("You can't pour that.");
+  }
+
+  // Consume water — gverbs.zil:1026 REMOVE-CAREFULLY.
+  if (dobj.id !== 'GLOBAL-WATER') dobj.moveTo(null);
+
+  if (iobj !== undefined && iobj.has(Flag.OnFire) && iobj.has(Flag.Light)) {
+    // FLAMING? — extinguish — gverbs.zil:1027–1034.
+    iobj.clear(Flag.OnFire);
+    iobj.clear(Flag.Light);
+    if (iobj.id === 'CANDLES') ctx.disableClock?.('I-CANDLES');
+    return result(`The ${iobj.desc} is extinguished.`);
+  }
+
+  // Non-flaming — evaporates — gverbs.zil:1035–1037.
+  const target = iobj !== undefined ? `the ${iobj.desc}` : 'the floor';
+  return result(`The water spills over ${target}, to the floor, and evaporates.`);
+}
+
 // Primary dispatch on V-* action id (ZIL PERFORM dispatches on PRSA, gmain.zil:283–284).
 const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LOOK':      verbLook,
@@ -1693,6 +1721,9 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'PRE-MOVE':   verbPreMove,
   'V-MOVE':     verbMove,
   'V-LOWER':    verbLower,
+
+  // CC7 — gverbs.zil:1024–1044
+  'V-POUR-ON':  verbPourOn,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.
