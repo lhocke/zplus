@@ -1,0 +1,83 @@
+# bat-garlic.txt — bat/garlic oracle corpus (Zork I oracle harness)
+# generated-by: dfrotz-r119 2026-06-12 bat-garlic-cc4
+#
+# MECHANIC: bat/garlic — BAT-F / FLY-ME / GARLIC-F.
+# Routines: BAT-F (BAT), FLY-ME (internal), GARLIC-F (GARLIC).
+# Global: none — garlic check is a real-time LOC query.
+#
+# ZIL refs:
+#   1actions.zil:308   BAT-F     — TAKE/ATTACK bat + garlic check → repel or FLY-ME
+#   1actions.zil:317   FLY-ME    — FWEEP(4) + grab msg + GOTO BAT-DROPS room
+#   1actions.zil:326   FWEEP     — prints "    Fweep!" N times then CRLF
+#   1actions.zil:332   BAT-DROPS — 8 rooms: MINE-1..4, LADDER-TOP/BOTTOM,
+#                                  SQUEEKY-ROOM, MINE-ENTRANCE
+#   1actions.zil:4160  GARLIC-F  — EAT garlic: REMOVE-CAREFULLY + gulp message
+#
+# BLOCKER (documented): BAT-ROOM is reached by navigating through the Troll Room
+# (east from TROLL-ROOM → north → east past ROUND-ROOM → through CHASM, etc.) and
+# then deep into the coal mines.  The troll blocks all passages and triggers
+# RNG-driven combat (ZIL: <PROB 33>, FIGHT-STRENGTH rolls).  dfrotz and the engine
+# use different RNG implementations, so the troll attack/result lines diverge —
+# exactly the RNG-driven content the corpus README declares out of scope.
+# BAT-ROOM therefore cannot be reached end-to-end without crossing a known RNG
+# divergence.
+#
+# Additionally, FLY-ME is seeded/structural (Path B fence): the destination is a
+# random draw from BAT-DROPS and must never be golden-diffed on the specific room.
+# Tests assert membership in the 8-room table, not a specific draw.
+#
+# The bat/garlic mechanics are fully exercised by the unit tests in
+#   tests/actions/cc4-bat-garlic.test.ts
+# which drive the real world data via newGameAt('BAT-ROOM').
+#
+# State-table coverage:
+#
+# BAT-F garlic-in-inventory repels (1actions.zil:313–314):
+#   garlic in player inventory: "You can't reach him; he's on the ceiling."
+#   → cc4 test "take bat with garlic in inventory: clinging to the ceiling message"
+#
+# BAT-F garlic-in-room repels (1actions.zil:313):
+#   garlic on floor of BAT-ROOM: same repel message; player does not move
+#   → cc4 test "take bat with garlic on floor: clinging to the ceiling message"
+#
+# FLY-ME no-garlic teleport (1actions.zil:317–324):
+#   take bat with no garlic present → FWEEP(4) + grab message + player in BAT-DROPS room
+#   Path B fence: assert BAT_DROPS membership; never assert specific draw against golden.
+#   → cc4 tests: "Fweep!" present / "scruff of your neck" present / BAT_DROPS member
+#
+# FLY-ME attack path (1actions.zil:312):
+#   attack bat with weapon + no garlic → same FLY-ME branch fires
+#   → cc4 test "attack bat with sword, no garlic: also triggers FLY-ME"
+#
+# GARLIC-F EAT (1actions.zil:4161–4165):
+#   eat garlic → remove from world + "What the heck! You won't make friends..."
+#   → cc4 tests: garlic removed / gulp message / "won't make friends"
+#
+# dfrotz R119 garlic-repel output (from BAT-ROOM initial state with garlic in hand):
+# > take bat
+# You can't reach him; he's on the ceiling.
+#
+# Run with:
+#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/bat-garlic.txt
+# (no seed needed for the above-ground legs)
+#
+# Verified against dfrotz R119: first troll-attack divergence at the "east"
+# command from TROLL-ROOM (or first attack response after entry).
+
+# Set verbose mode.
+verbose
+
+# --- Route: West of House → Cellar → North of Troll Room ---
+open mailbox
+north
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+north
+east

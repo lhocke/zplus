@@ -19,6 +19,7 @@ import { beachActions } from './beach.js';
 import { rainbowActions } from './rainbow.js';
 import { hadesActions } from './hades.js';
 import { domeRopeActions } from './dome-rope.js';
+import { batGarlicActions } from './bat-garlic.js';
 import {
   treasureRoomFcnAction,
   chaliceFcnAction,
@@ -63,6 +64,7 @@ const ACTIONS: Record<string, ActionHandler> = {
   ...rainbowActions,
   ...hadesActions,
   ...domeRopeActions,
+  ...batGarlicActions,
 };
 
 const PER_ROUTINES: Record<string, PerRoutine> = {
