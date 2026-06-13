@@ -14,7 +14,8 @@
 # RUB mirror (no instrument) — 1actions.zil:972–993:
 #   swap ALL contents of MIRROR-ROOM-1 ↔ MIRROR-ROOM-2 + GOTO other room.
 #   Message: "There is a rumble from deep within the earth and the room shakes."
-#   ZIL GOTO .RM2 <> means no V-FIRST-LOOK; engine fires describeCurrentRoom automatically.
+#   ZIL GOTO .RM2 <> passes V?=false → V-FIRST-LOOK skipped (gverbs.zil:2134–2136).
+#   Engine respects this via ctx.suppressArrivalLook() — no room description after teleport.
 #
 # RUB mirror WITH <instrument> — 1actions.zil:973–976:
 #   PRSI set and ≠ HANDS → "You feel a faint tingling transmitted through the <desc>."

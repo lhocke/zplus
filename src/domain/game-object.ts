@@ -122,6 +122,13 @@ export interface ActionContext {
    * 1actions.zil:2834 (inflate), :2815 (deflate).
    */
   thisIsIt?(obj: GameObject): void;
+  /**
+   * ZIL GOTO V?=false — suppress the post-handler arrival room description.
+   * Call when a handler teleports the player but ZIL's GOTO was invoked with
+   * the look-flag false (second arg <>), so V-FIRST-LOOK is skipped.
+   * gverbs.zil:2134–2136.  Optional; absent → description fires normally.
+   */
+  suppressArrivalLook?(): void;
 }
 
 export type ActionHandler = (ctx: ActionContext) => HandlerResult;

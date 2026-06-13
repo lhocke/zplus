@@ -86,9 +86,10 @@ export const mirrorMirrorFcn: ActionHandler = (ctx) => {
       obj.moveTo(here);
     }
 
-    // GOTO .RM2 <> — engine move detection fires automatically; no explicit call needed
-    // (ctx.moveTo is redundant since the player is already in rm2 from the loop above).
+    // GOTO .RM2 <> — V?=false suppresses V-FIRST-LOOK (gverbs.zil:2134–2136).
+    // Signal the engine to skip the post-handler room description.
     // 1actions.zil:991.
+    ctx.suppressArrivalLook?.();
 
     // Rumble message follows the GOTO in ZIL. 1actions.zil:992–993.
     ctx.tell('There is a rumble from deep within the earth and the room shakes.');

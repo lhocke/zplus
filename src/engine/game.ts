@@ -157,6 +157,11 @@ export class Game {
   // Cleared at the start of each new turn. (B3)
   private fatalPending = false;
 
+  // Set by a handler that teleports the player with GOTO V?=false (look-flag off).
+  // Prevents the post-handler move-detection from firing describeCurrentRoom.
+  // Cleared at the start of each command segment. gverbs.zil:2134–2136.
+  private suppressNextArrivalLook = false;
+
   // Stashed command context for M-END (gmain.zil:151–161).
   // LIVING-ROOM-FCN's M-END branch reads VERB?/PRSO/PRSI (1actions.zil:478–482)
   // to detect a treasure deposit, so M-END needs the just-executed command's values.
@@ -625,8 +630,9 @@ export class Game {
 
     let isFirstCall = true;
     while (true) {
-      // Reset per-segment fatal flag (set when M-FATAL fires — tick still runs, M-END skipped).
+      // Reset per-segment flags.
       let fatalExit = false;
+      this.suppressNextArrivalLook = false;
       const rawLine = isFirstCall ? input : '';
       isFirstCall = false;
 
@@ -726,7 +732,11 @@ export class Game {
           moved = true;
           const targetRoom = newCurrentRoom ?? (newRoomAfterHandler as Room);
           const enterOut = this.onRoomEntered(targetRoom);
-          const roomDesc = this.describeCurrentRoom(false); // handler-triggered arrival
+          // Skip room desc when the handler used GOTO V?=false (suppressArrivalLook).
+          // ZIL GOTO gverbs.zil:2134–2136: V-FIRST-LOOK only fires when V? is true.
+          const roomDesc = this.suppressNextArrivalLook
+            ? ''
+            : this.describeCurrentRoom(false); // handler-triggered arrival
           const parts = [...handled, ...(enterOut ? [enterOut] : []), roomDesc].filter(s => s.length > 0);
           const cmdOut = parts.join('\n');
           outputs.push(allIterPrefix ? allIterPrefix + cmdOut : cmdOut);
@@ -1054,6 +1064,7 @@ export class Game {
         if (room !== undefined) room.ldesc = desc;
       },
       thisIsIt: (obj) => { this.parser.setItRef(obj.id); },
+      suppressArrivalLook: () => { this.suppressNextArrivalLook = true; },
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
       jigsUp: (msg: string) => {
         jigsUp(msg, this.jigsUpMsgs(), this.makeJigsUpCallbacks(tell, onFatal ?? (() => {})));

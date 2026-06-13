@@ -146,6 +146,18 @@ describe('CC6 — MIRROR-MIRROR: rub swaps room contents (1actions.zil:979–990
     const out = g.turn('rub mirror').output;
     expect(out).not.toContain('seven years');
   });
+
+  // spec §6.6 "(no LOOK)" — ZIL <GOTO .RM2 <>> passes V?=false, so V-FIRST-LOOK
+  // is skipped (gverbs.zil:2134–2136).  The engine must not auto-describe the
+  // arrival room after the handler-driven teleport.
+  it('rub mirror: no room description printed (no LOOK — spec §6.6, gverbs.zil:2134)', () => {
+    const g = gameAtRoom1();
+    const out = g.turn('rub mirror').output;
+    // Room title and ldesc must be absent — only the rumble line should appear.
+    expect(out).not.toContain('Mirror Room');
+    expect(out).not.toContain('tall ceilings');
+    expect(out).not.toContain('enormous mirror');
+  });
 });
 
 describe('CC6 — MIRROR-MIRROR: rub swaps items in both rooms (1actions.zil:979–990)', () => {
