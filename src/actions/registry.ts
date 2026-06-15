@@ -23,6 +23,7 @@ import { batGarlicActions } from './bat-garlic.js';
 import { skeletonActions } from './skeleton.js';
 import { mirrorActions } from './mirror.js';
 import { bottleWaterActions } from './bottle-water.js';
+import { weaponsActions } from './weapons.js';
 import {
   treasureRoomFcnAction,
   chaliceFcnAction,
@@ -71,6 +72,7 @@ const ACTIONS: Record<string, ActionHandler> = {
   ...skeletonActions,
   ...mirrorActions,
   ...bottleWaterActions,
+  ...weaponsActions,
 };
 
 const PER_ROUTINES: Record<string, PerRoutine> = {
