@@ -1,6 +1,6 @@
 # Phase 4 — Save / Restore / Restart
 
-**Status:** DRAFT (autonomous) — pending review panel + owner sign-off.
+**Status:** FINALIZED 2026-06-13 — Amendment B folded; owner decisions: RNG=concrete-Rng+loud-fail, clock=aux-data. Ready for the post-world-verbs-merge build wave (re-measure the global/flag inventory first — §3.4).
 **Date:** 2026-06-12
 **Owner:** Dylan
 **Repo:** lhocke/zork-workflow (private)
@@ -162,7 +162,7 @@ constructed from the same seed but with **independent, diverging positions**
 restored game diverges from its own future the first time either stream fires. This is the
 single most failure-prone member of the surface and the reason the round-trip oracle (§10.1)
 exercises a randomness-touching continuation. SS-RNG (§3.2) adds `getState()/setState()`
-to `Rng` and serializes both stream positions.
+to the concrete `Rng` class and serializes both stream positions (owner decision: §3.2).
 
 ### World / object tree — EXTEND (snapshot traversal is NEW)
 
@@ -220,6 +220,19 @@ handling, and the shell affordance are all NEW. The build-id stamp source alread
 module-global resets. Phase 4 threads the `SavePort` through `createSession` and adds
 save/restore handling to `submit` (or a sibling method), plus the new `PlaytestSink` events.
 
+The `GameSession` interface (`session.ts`) gains three explicit methods:
+
+```ts
+save(slot: string): void;
+restore(slot: string): void;
+restart(): void;
+```
+
+> **Name-collision note:** `Game.snapshot()` returns a `SaveState` (engine serialization);
+> `GameSession.snapshot()` returns the existing `GameView` (telemetry / live view). These are
+> different objects with different purposes — no real collision. State this explicitly in the
+> interface docstring so a builder does not conflate them or attempt to unify them.
+
 ---
 
 ## 3. The Serialization Surface (the foundation)
@@ -253,8 +266,8 @@ interface SaveState {
   // --- subsystems ---
   rngMain: number;              // Rng.state (main stream)   [SS-RNG]
   rngCombat: number;            // Rng.state (combat stream) [SS-RNG]
-  clock: ClockSnapshot[];       // existing clock.snapshot()  [SS2 adds tableIndex]
-  fuelStages: { id: string; tableIndex: number }[];  // [SS2] lamp/candle stage position
+  clock: ClockSnapshot[];       // clock.snapshot() — each entry carries aux?.tableIndex
+                                // for FuelInterrupt slots (SS2; owner decision: Clock aux data)
   scoring: { baseScore: number; score: number; wonFlag: boolean };  // [SS3]
   flagStore: [string, boolean][];                    // FlagStore entries [SS4]
   objects: ObjectDelta[];                            // per-object delta [SS1]
@@ -268,6 +281,8 @@ interface ObjectDelta {
   flags: Flag[];                // Array.from(obj.flags)
   props: [string, number | string][];  // Array.from(obj.props)
   desc?: string; ldesc?: string; fdesc?: string;     // mutable text
+  pStrength?: number;           // captured ONLY for Actor instances (player + villains carry
+                                // combat wound state in this plain field, not in props)
 }
 ```
 
@@ -280,19 +295,32 @@ interface ObjectDelta {
 
 ### 3.2 SS-RNG — both stream positions (CRITICAL) — `rng.ts` EXTEND
 
-Add `getState(): number` and `setState(s: number): void` to `Rng` (the `private state` becomes
-externally legible without exposing the algorithm). `Game.snapshot()` records
-`this.rng.getState()` and `this.combatRng.getState()` **separately**; `restore` sets both.
-Done-criteria: a test that draws K times from each stream, snapshots, draws more, restores,
-and asserts the **next draw from each stream matches** the post-snapshot draw exactly. The
-two-stream separation is the NM here — a single saved position that restores onto both streams
-silently re-couples them (the exact decoupling `bootstrap.ts:245–248` exists to prevent).
+**Owner decision: concrete-Rng + loud fail.** `Game.snapshot()` requires that both `this.rng`
+and `this.combatRng` are instances of the concrete `Rng` class (an `instanceof` check).
+If a non-serializable stream (e.g. a test stub such as `ScriptedRng`) is in play, `snapshot()`
+**throws** a clear error immediately — it does not silently produce a broken save. Production
+always uses the real `Rng`; tests that exercise save use the real `Rng` directly. `getState()`
+and `setState()` are added to the concrete `Rng` class ONLY — they are NOT added to any `Rng`
+or `CombatRng` interface, and NOT added to any test stub.
+
+`Game.snapshot()` records `this.rng.getState()` and `this.combatRng.getState()` **separately**;
+`restore` calls `setState` on both. Done-criteria: a test that draws K times from each stream,
+snapshots (with real `Rng` instances), draws more, restores, and asserts the **next draw from
+each stream matches** the post-snapshot draw exactly. The two-stream separation is the NM here —
+a single saved position that restores onto both streams silently re-couples them (the exact
+decoupling `bootstrap.ts:245–248` exists to prevent). A separate test asserts that
+`snapshot()` called with a `ScriptedRng` in place of either stream throws with a descriptive
+error message.
 
 ### 3.3 SS2 — clock fuel stage position — `clock.ts` EXTEND
 
-`FuelInterrupt.tableIndex` (`clock.ts:180`) is not in `ClockSnapshot`. Expose a
-`snapshotFuel()` / `restoreFuel()` pair (or extend the interrupt to surface `tableIndex` by
-id) so the lamp/candle warning-stage position round-trips. Done-criteria: save a game with the
+**Owner decision: Clock aux data.** `FuelInterrupt.tableIndex` (`clock.ts:180`) is not in
+`ClockSnapshot`. The approach is: `Clock` gains an optional per-entry aux blob
+(`aux?: Record<string, number>`) on the per-slot snapshot entry. `FuelInterrupt` writes its
+`tableIndex` into `aux.tableIndex` when snapshotting; reads it back in restore.
+`clock.snapshot()` / `clock.restore()` carry the `aux` field generically (no special-casing
+for fuel — any clock slot can write into aux). This requires NO change to the `Game`
+constructor, bootstrap signature, or any field promotion. Done-criteria: save a game with the
 lamp at "definitely dimmer" stage (tableIndex past the first warning), restore, advance one
 warning's worth of ticks, assert the **next** warning is "nearly out" (not a repeat of an
 earlier stage).
@@ -333,10 +361,19 @@ NM: restoring must NOT re-run `checkWonFlag`'s side effects.
 
 `itRef` round-trips (required by the prompt — `it` must rebind correctly). Add
 `snapshotState()` / `restoreState()` to `Parser` exposing `itRef` (and per OQ-5, optionally
-`lastInput`/`lastWon` for AGAIN). **Continuation/orphan are NOT serialized** — recommend
-saving only at a clean turn boundary (`hasContinuation()` false), and asserting it in
-`snapshot()` (throw / refuse-to-save mid-continuation rather than silently dropping queued
-segments). See OQ-5.
+`lastInput`/`lastWon` for AGAIN). **Continuation/orphan are NOT serialized** — save is refused
+(not silently dropped) in two mid-parse conditions:
+
+1. **Mid-continuation:** `hasContinuation()` is true — a multi-command line has queued
+   segments not yet dispatched. `snapshot()` asserts this is false; if not, it throws /
+   refuses-to-save.
+2. **Mid-disambiguation:** `isAwaitingInput()` is true — the parser is awaiting a
+   disambiguation response (an "orphan" pending clarification). Save is refused or cleanly
+   dropped here for symmetry with mid-continuation, as the orphan state is transient and
+   non-serializable. `snapshot()` checks this condition and refuses identically.
+
+See OQ-5 for the AGAIN-state decision. Done-criteria: `it` rebinds to the same object after
+restore; mid-continuation save asserts/refuses; mid-disambiguation-await save also refuses.
 
 ### 3.7 `Game.snapshot()` / `Game.restore(state)` (NEW — `game.ts`)
 
@@ -425,15 +462,45 @@ path leaves state unchanged.
 Verbs-first, faithful text, with a **minimal argument convention** parsed shell-side (NOT a
 grammar.json change — out of scope per the parser non-goal):
 
-- `save` / `restore` / `restart` (no arg) → the **default slot** (slot 1, or a "quicksave"
-  slot — OQ-2).
+- `save` / `restore` / `restart` (no arg) → the **default slot** (slot 1 / "quicksave" slot).
 - `save 2` / `restore 3` / `save mygame` → a named/numbered slot (1–3, or a label).
-- Out-of-range / unknown slot → in-voice "There is no save slot N." (recommend) rather than
+- Out-of-range / unknown slot → in-voice "There is no save slot N." rather than
   `Failed.` (which should mean "the restore was attempted and the data was unusable"). OQ-3.
 
-The argument is stripped before the verb word reaches `META_ACTIONS` dispatch, or handled in the
-session layer (recommend: the **session layer** owns slot resolution, keeping the engine verb
-bodies slot-agnostic — they receive a resolved `SavePort` target). Decide in PB-SAVE.
+**Exact interception contract:** `session.submit()` pre-processes the raw command string with a
+regex that strips a trailing slot number or label before the string reaches `META_ACTIONS`
+dispatch. Example: `"save 2"` → slot `"2"`, command word `"save"`; `"restore"` → slot `"1"`
+(default), command word `"restore"`. The session layer resolves the slot and passes it to the
+verb body via `ctx.saveGame(slot)` / `ctx.restoreGame(slot)` (§4.6). An invalid or
+out-of-range slot is intercepted at the session layer — the session emits the in-voice
+"There is no save slot N." response directly and never dispatches the verb body. This keeps
+the verb body slot-agnostic: it always receives a canonical, valid slot string or is never
+called. See §4.6 for the exact plumbing that delivers the resolved slot into the verb body.
+
+### 4.6 VerbContext wiring — `verbs/index.ts` + `game.ts`
+
+`V-SAVE`, `V-RESTORE`, and `V-RESTART` bodies are implemented in `ACTION_HANDLERS` and receive
+a `VerbContext`. However, the current `VerbContext` (`verbs/index.ts` curated callbacks) carries
+no reference to `Game.snapshot()`, `Game.restore()`, or the `SavePort` — the verb bodies are
+therefore unimplementable as written without this plumbing.
+
+**Resolution:** add three callbacks to `VerbContext`:
+
+```ts
+saveGame(slot: string): void;     // write the current snapshot to slot via SavePort
+restoreGame(slot: string): void;  // read from slot via SavePort, call game.restore()
+restart(): void;                  // re-bootstrap via createSession reset path
+```
+
+These callbacks are populated in `game.ts`'s context construction, with the resolved `SavePort`
+threaded through from the session layer. The verb body calls `ctx.saveGame(slot)` etc. — the
+body itself never holds a `Game` reference or a `SavePort` directly. The slot argument is
+already resolved by the session layer before the verb fires (§4.5); the callback receives the
+canonical slot string, never the raw command text.
+
+Done (PB-CTX): the three callbacks exist on `VerbContext` and are populated in context
+construction; a test confirms a verb body can trigger save/restore/restart via the context
+without holding a direct `Game` reference.
 
 ---
 
@@ -498,23 +565,32 @@ death flow:
 `jigsUp` → `randomizeObjects` (`death.ts:43,284`) **scatters the player's inventory and zeroes
 `SWORD.TVALUE`** (the seeded scatter walks the object chain). A player who dies has their
 pre-death state *destroyed*, and the resurrection drops them in FOREST-1 / Hades minus their
-treasures' positions. That makes the **moment before death the most valuable save in the
-game** — and the original relies on the player having manually `save`d. An **autosave taken at
-the start of the turn that ends in death** (or, simpler and race-free: a rolling autosave
-every turn into a dedicated slot, overwritten each turn, so the autosave is always
-"end of the previous turn" — i.e. the last safe point) gives a recovery affordance the
-original lacked, *without* changing any faithful text. The autosave slot is restore-only from
-the death/`gameOver` affordance and the picker; it is never written by `V-SAVE`.
+treasures' positions. That makes the state at the start of the fatal turn the most valuable
+recovery point in the game — and the original relies on the player having manually `save`d.
+
+The autosave is a **rolling per-turn snapshot, taken at the START of `submit()` (pre-turn)**,
+overwritten every turn. Restoring it puts the player at the **start of the turn they died on**
+— not the moment before death. The critical behavioral consequence: **replaying the identical
+command from that restored state re-kills the player deterministically** — the main RNG is at
+the same position, so `randomizeObjects` scatters identically. The recovery affordance is
+"you are alive at the start of that turn; do something different." This must be documented
+in the `gameOver` affordance text so the player understands what they are restoring to.
+
+A rolling per-turn autosave (overwrite each turn) is simpler and race-free than an
+autosave-only-on-the-death-bound-turn (which would require look-ahead the engine does not
+have). The autosave slot is restore-only from the death/`gameOver` affordance and the picker;
+it is never written by `V-SAVE`.
 
 - **Slots 1–3** — manual, `save`/`restore` targets, shown in the picker.
-- **Autosave slot** — written automatically (timing per OQ-2 — recommend: rolling
-  previous-turn snapshot), surfaced on death as "restore your last position".
+- **Autosave slot** — written automatically at the start of each `submit()` (pre-turn),
+  surfaced on death as "restore your last position (start of that turn)".
 
 > **Determinism caveat (Path B):** an autosave + restore must itself satisfy the round-trip
 > oracle — restoring the autosave and replaying must reproduce the saved future. Because both
 > RNG positions round-trip (§3.2), it does. The autosave is **not** a "rewind one move" (that
-> would need a command journal — OQ-7); it is "reload the last safe snapshot," which on a
-> rolling per-turn autosave is the start of the current turn.
+> would need a command journal — OQ-7); it is "reload the last pre-turn snapshot," which on
+> a rolling per-turn autosave is the start of the turn the player is currently on. Replaying
+> the fatal command re-kills deterministically; the player must choose a different action.
 
 ---
 
@@ -522,10 +598,15 @@ the death/`gameOver` affordance and the picker; it is never written by `V-SAVE`.
 
 ### 7.1 UI (verbs-first; optional picker)
 
+> **File placement:** `SavePort` (a persistence capability) lives in `src/shell/save-port.ts`,
+> alongside `sink.ts` / `http-sink.ts`. The slot picker modal / UI lives in
+> `src/ui/shell.ts` (the existing UI file) — NOT in `src/shell/`. Do not place UI code in
+> `src/shell/`; do not assume `shell.ts` lives at `src/shell/shell.ts`.
+
 - **Primary:** the in-game verbs (`save`, `restore`, `restart`) — faithful, discoverable,
   zero new chrome. This is the recommended-default minimum.
 - **Optional slot picker modal** (same `div`+`classList` pattern as the existing map /
-  known-issues modals, `shell.ts:1026+`): lists `SavePort.list()` metadata (room, moves,
+  known-issues modals in `src/ui/shell.ts`): lists `SavePort.list()` metadata (room, moves,
   timestamp, build) for restore; offers save-to-slot. The picker is sugar over the verbs —
   it calls the same session substrate. Recommend building it but gating it behind the verbs
   landing first (it can be a follow-on task, PB-UI).
@@ -560,7 +641,7 @@ transcript carries the markers.
 
 | Seam | Phase 4 side | Other side | Contract |
 |------|--------------|-----------|----------|
-| **Death autosave** | autosave before/around `jigsUp` (§6) | **Phase 2 death.ts** | autosave reads state; it does NOT change `jigsUp`/`randomizeObjects` — the scatter stays faithful; autosave is a *snapshot taken before* it |
+| **Death autosave** | rolling pre-turn autosave at the start of `submit()` (§6) | **Phase 2 death.ts** | autosave reads state before any action runs; it does NOT change `jigsUp`/`randomizeObjects` — the scatter stays faithful; restoring the autosave puts the player at the start of the fatal turn (replaying the same command re-kills deterministically — same RNG position, same scatter) |
 | **Ghost-mode SAVE/RESTORE** | verb bodies callable when `dead` | **Phase 2 ghost dispatch** | `game.ts:338–341` already passes META through ghost mode; verify, don't rebuild |
 | **RNG dual stream** | serialize both positions (§3.2) | **Phase 2 combatRng split** | the two streams stay independent across restore; never collapse to one |
 | **`doFinish` / RESTART** | shell affordance replaces prompt | **Phase 2 B7 FINISH** | engine `doFinish` stays a no-op driver; shell owns restart/restore on `gameOver` |
@@ -579,20 +660,46 @@ the foundation — nothing else can be correct until every byte round-trips.
 
 ### Wave 0 — Serialization surface (FIRST; foundation)
 
+> **Post-merge re-measure checklist (do this before starting any build task):** The SS4
+> (FlagStore) and SS6 (module globals) inventories MUST be re-measured against the merged
+> world-verbs tree before build, because that wave added globals and flags that may not be
+> in the enumeration below. Specifically, re-grep the merged code for:
+> - **New globals:** `VERBOSE` / `SUPER-BRIEF` (verbosity mode globals).
+> - **New clock slots:** `I-XB`, `I-XC`, `I-XBH`, `I-FOREST-ROOM`.
+> - **New flags (FlagStore or module scope):** `XB-FLAG`, `XC-FLAG`, `LLD-FLAG`, `DOME-FLAG`,
+>   `CAGE-TOP`.
+> For each: determine whether it landed in the FlagStore (auto-covered once SS4 exists) or
+> in module scope (needs an explicit SS6 entry and a matching reset in `createSession`). Do
+> not assume the world-verbs spec placement was final — read the merged code.
+
 - **SS1 — `SaveState` schema + object-tree snapshot/restore.** NEW `save-state.ts`; EXTEND
   `game.ts` with `snapshot()`/`restore()` object-delta traversal over `World.all()`. Deps:
   none. Done: every object's parent/flags/props/desc-ldesc-fdesc round-trips; restore rebuilds
   `children` via `moveTo`; serialized size measured (< localStorage quota, asserted).
-- **SS-RNG — dual RNG state.** `rng.ts` EXTEND (`getState`/`setState`); `game.ts` serializes
-  both `rng` + `combatRng` positions. Deps: none. Done: §3.2 next-draw-matches test for BOTH
-  streams independently; the "single position re-couples streams" NM has an asserting test.
-- **SS2 — clock fuel-stage position.** `clock.ts` EXTEND (surface `tableIndex`). Deps: none.
+  `ObjectDelta` captures `pStrength` for Actor instances; a mid-combat-save round-trip test
+  asserts a wounded player/villain restores wounded, not at full strength.
+- **SS-RNG — dual RNG state.** `rng.ts` EXTEND: add `getState()`/`setState()` to the concrete
+  `Rng` class only (NOT to any interface or stub); `game.ts` `snapshot()` carries an
+  `instanceof` guard and throws on a non-serializable stream; serializes both `rng` +
+  `combatRng` positions. Deps: none. Done: §3.2 next-draw-matches test for BOTH streams
+  independently (using real `Rng`); a test asserts `snapshot()` throws when a `ScriptedRng`
+  is in play; the "single position re-couples streams" NM has an asserting test.
+- **SS2 — clock fuel-stage position.** `clock.ts` EXTEND: add `aux?: Record<string, number>`
+  to `ClockSnapshot`; `FuelInterrupt` writes `tableIndex` into `aux.tableIndex`; no
+  Game-ctor/bootstrap change (owner decision: Clock aux data). Deps: none.
   Done: §3.3 lamp-stage round-trip test.
 - **SS3 — scoring restore.** `scoring.ts` EXTEND (`snapshotState`/`restoreState`, no
   wonFlagHook re-fire). Deps: none. Done: score/baseScore/wonFlag round-trip; no double-whisper.
-- **SS5 — parser state.** `parser.ts` EXTEND (`itRef` round-trip; refuse-save mid-continuation
-  per OQ-5). Deps: none. Done: `it` rebinds to the same object after restore; mid-continuation
-  save asserts/refuses.
+- **SS5 — parser state.** `parser.ts` EXTEND (`itRef` round-trip; refuse-save
+  mid-continuation; refuse-save mid-disambiguation-await per §3.6). Deps: none. Done: `it`
+  rebinds to the same object after restore; mid-continuation save refuses; mid-disambiguation
+  save also refuses.
+- **SS4 — FlagStore capture/restore.** `flag-store.ts` EXTEND: add `snapshot()` / `restore()`
+  pair over the private flags Map. `restore()` MUST replace the map entirely, NOT merge —
+  a fresh `Game` constructor sets some flags true (e.g. BUOY-FLAG at `game.ts:186`) and a
+  saved `false` must win over the ctor default. Deps: none. Done: every FlagStore entry
+  round-trips; a restore-onto-fresh-game test asserts that a flag the fresh ctor sets `true`
+  but the save holds `false` ends up `false` after restore.
 - **SS6 — module-global capture/restore.** NEW `module-globals.ts`; EXTEND `thief-state.ts`,
   `above-ground.ts`, `light-sources.ts` with snapshot/restore pairs. Deps: none. Done: every
   global in the `createSession` reset list (`session.ts:45–51`) round-trips; SS-AUDIT lockstep
@@ -603,14 +710,19 @@ the foundation — nothing else can be correct until every byte round-trips.
 - **PB-PORT — `SavePort` + localStorage adapter + validator.** NEW `save-port.ts`. Deps: SS1.
   Done: write/read/list/remove; the untrusted-input validator (§5.1) rejects malformed/foreign
   saves without throwing; quota failure surfaces cleanly.
+- **PB-CTX — VerbContext save/restore/restart callbacks.** `verbs/index.ts` VerbContext
+  interface + `game.ts` context construction. Deps: SS1, PB-PORT. Done: `saveGame(slot)`,
+  `restoreGame(slot)`, `restart()` callbacks added to `VerbContext` and populated in
+  `game.ts`'s context construction with the resolved `SavePort` threaded through; a verb body
+  can trigger save/restore/restart via the context without holding a direct `Game` reference.
 - **PB-SAVE — V-SAVE body.** `verbs/index.ts` EXTEND (`ACTION_HANDLERS['V-SAVE']`); slot
-  resolution in the session layer. Deps: SS1, PB-PORT. Done: `save` → `Ok.` (exact) + written
-  slot; forced failure → `Failed.` (exact); stays in META_ACTIONS.
-- **PB-REST — V-RESTORE body.** `verbs/index.ts` EXTEND. Deps: all Wave 0, PB-PORT. Done:
-  valid slot → `Ok.` + room re-describe (V-FIRST-LOOK); empty slot → `Failed.`; version/corrupt
-  → in-voice (§5.3).
+  resolution in the session layer. Deps: SS1, PB-PORT, PB-CTX. Done: `save` → `Ok.` (exact) +
+  written slot; forced failure → `Failed.` (exact); stays in META_ACTIONS.
+- **PB-REST — V-RESTORE body.** `verbs/index.ts` EXTEND. Deps: all Wave 0, PB-PORT, PB-CTX.
+  Done: valid slot → `Ok.` + room re-describe (V-FIRST-LOOK); empty slot → `Failed.`;
+  version/corrupt → in-voice (§5.3).
 - **PB-RESTART — V-RESTART body + session re-bootstrap.** `verbs/index.ts` + `session.ts`.
-  Deps: SS6 (reset path reused). Done: §4.4 criteria; `Restarting.` on confirm.
+  Deps: SS6, PB-CTX (reset path reused). Done: §4.4 criteria; `Restarting.` on confirm.
 - **PB-VER — version/build stamp + cross-version refusal.** Folds into PB-PORT/PB-REST. Deps:
   PB-PORT. Done: §5.3 — formatVersion mismatch refuses before mutating; buildId policy per OQ-1.
 
@@ -621,7 +733,7 @@ the foundation — nothing else can be correct until every byte round-trips.
 - **PB-AUTOSAVE — death autosave slot.** `session.ts` (rolling per-turn autosave) + `gameOver`
   affordance hook. Deps: PB-SAVE. Done: §6 — autosave restorable after a death; round-trip
   oracle holds on the autosave.
-- **PB-UI — slot picker modal + gameOver affordance.** `shell.ts` EXTEND. Deps: PB-PORT,
+- **PB-UI — slot picker modal + gameOver affordance.** `src/ui/shell.ts` EXTEND. Deps: PB-PORT,
   PB-REST. Done: picker lists slot metadata; restore/save from picker; RESTART/RESTORE on
   `gameOver`. (Optional sugar — verbs are the required surface.)
 
@@ -693,7 +805,13 @@ The structural risk is a field added to `Game` / `Parser` / a module global *aft
 that nobody adds to `SaveState`. Two enforcing tests:
 
 - **Module-global lockstep:** assert the SS6 capture set ≡ the `createSession` reset set
-  (`session.ts:45–51`). A new `reset*()` without a matching capture fails the test.
+  (`session.ts:45–51`), comparing the **actual global variable names** enumerated in each
+  list — NOT the reset-function names. A single reset function such as `resetThiefState()`
+  may clear multiple fields (`_thiefHere`, `_thiefEngrossed`, `_eggSolve`, `_cyclowrath`,
+  `_thiefLdesc`); a new field added under that function would escape a function-name
+  comparison. The lockstep test must enumerate and diff the concrete per-variable list on
+  both sides. A new module global that is reset but not captured (or captured but not reset)
+  fails the test.
 - **Snapshot-fixpoint over a fuzzed game:** drive a long scripted game, then assert (F)
   idempotence holds — a forgotten field shows up as a snapshot that doesn't survive its own
   round-trip. (This is the cheapest catch-all; it cannot name the missing field, but it goes
@@ -758,12 +876,10 @@ until (B)–(D) all exercise their named subsystem.
    the strictness (the conservative alternative: refuse on any buildId change — safer, but
    invalidates saves on every deploy). *(Recommended default: warn-allow same-version.)*
 
-2. **OQ-2 — Default/quicksave slot + autosave timing.** Recommend a **dedicated quicksave slot
-   for bare `save`/`restore`** (distinct from named slots 1–3) and a **rolling per-turn
-   autosave** (overwrites each turn → "start of current turn" recovery), restore-only from the
-   death/gameOver affordance. Confirm, or choose "autosave only on the death-bound turn"
-   (smaller write volume, but needs look-ahead the engine doesn't have — the rolling form is
-   simpler and race-free). *(Recommended default: quicksave slot + rolling per-turn autosave.)*
+2. **OQ-2 — Default/quicksave slot + autosave timing.** **RESOLVED** — rolling pre-turn
+   autosave at the start of `submit()`, overwriting each turn; restoring it puts the player at
+   the start of the fatal turn (replaying the same command re-kills deterministically). See §6
+   for the full statement of semantics including the re-death behavior.
 
 3. **OQ-3 — Failure-message taxonomy: when `Failed.` vs in-voice?** Recommend `Failed.` ONLY
    for "restore attempted, data unusable in the faithful sense" — and reserve **in-voice**
@@ -784,10 +900,9 @@ until (B)–(D) all exercise their named subsystem.
    `lastWon` (AGAIN) un-saved (AGAIN after a restore is a rare, low-value edge). Confirm, or
    include AGAIN state. *(Recommended default: refuse mid-continuation; serialize itRef only.)*
 
-6. **OQ-6 — Full object snapshot vs diff-against-bootstrap.** §3.1 recommends a **full
-   per-object delta snapshot** (robust, version-tolerant, dumb) over a diff (smaller but
-   couples to the bootstrap world and re-opens "which fields changed" per FCN). Confirm full
-   snapshot; revisit only on a measured quota problem. *(Recommended default: full snapshot.)*
+6. **OQ-6 — Full object snapshot vs diff-against-bootstrap.** **RESOLVED** — full per-object
+   delta snapshot (robust, version-tolerant, dumb). Revisit only if a measured quota problem
+   arises. See §3.1 compactness note.
 
 7. **OQ-7 — Snapshot-only now, or leave room for a command journal (undo)?** Out of scope to
    build, but the `SavePort`/`SaveState` design should not *preclude* a future per-command
@@ -839,48 +954,50 @@ save/restore text IS a bug.
 
 ---
 
-## Appendix: Panel Findings — Amendment B worklist (PENDING; fold in during the post-merge re-measure)
+## Appendix: Panel Findings — Amendment B resolved log (2026-06-13)
 
 Three-lens panel verdict (2026-06-12, overnight): "Yes with gaps" — serialization reasoning
 strong, but the following MUST be resolved before any build task runs. Full reviews:
 session task output wtt75isiu.
 
+All items resolved and folded into the spec body as of 2026-06-13 (Amendment B).
+
 **Schema blockers (all hit SS1, the foundation):**
-1. `Actor.pStrength` is NOT in ObjectDelta — wound state (player + villains) silently resets
-   on restore. Add `pStrength` capture for Actor instances + a mid-combat-save continuation
-   test (a full-strength continuation passes while the hole sits open).
-2. **SS4 (FlagStore) does not exist** — no subsection, no DAG task, no accessor on the
-   private map. Add it. Restore must REPLACE the map, never merge (the fresh ctor sets
-   BUOY-FLAG=true; a save carrying false must win — test exactly that in §10.1(E)).
-3. Rng typing: `Game.rng`/`combatRng` are INTERFACES without getState/setState; bootstrap
-   passes concrete Rng but tests pass ScriptedRng. Decide: serializable-Rng narrowing with a
-   loud snapshot() failure on non-serializable streams (recommended) vs interface extension.
-4. `FuelInterrupt.tableIndex` is unreachable — the instances are locals in createGame().
-   Recommended: extend Clock to carry per-entry aux snapshot data (no Game-ctor or field
-   promotion blast radius). Decide explicitly.
-5. **VerbContext has NO path to snapshot/restore/SavePort** — §4's verb bodies are
-   unimplementable as written. Spec the new context callbacks (saveGame/restoreGame/restart)
-   + their population in game.ts + a dedicated task.
-6. Cross-wave placement resolution (the post-merge re-measure's first job): where did
-   world-verbs actually put VERBOSE/SUPER-BRIEF, XB/XC/LLD-FLAG, DOME-FLAG, CAGE-TOP —
-   FlagStore (auto-covered once SS4 exists) or module globals (each needs an SS6 entry +
-   reset)? Enumerate ALL of them by reading the merged code, not the world-verbs spec.
+1. **RESOLVED** — `pStrength` field added to `ObjectDelta` in §3.1 (Actor-only capture);
+   mid-combat-save round-trip test added to SS1 done-criteria in §9 Wave 0.
+2. **RESOLVED** — SS4 (FlagStore capture/restore) added as a subsection (see §3.1 `flagStore`
+   schema field, which was already present) and as a build task in §9 Wave 0. Replace-not-merge
+   semantics and the fresh-ctor-override test documented in the SS4 task.
+3. **RESOLVED** — §3.2 SS-RNG rewritten to the concrete-Rng+loud-fail owner decision.
+   `getState`/`setState` on the concrete `Rng` class only; `snapshot()` `instanceof` check
+   throws on non-serializable streams; no interface or stub extension.
+4. **RESOLVED** — §3.3 SS2 rewritten to the Clock-aux-data owner decision. `Clock` gains
+   `aux?: Record<string, number>` per slot; `FuelInterrupt` writes `tableIndex` into
+   `aux.tableIndex`; no Game-ctor or bootstrap signature change.
+5. **RESOLVED** — §4.6 (VerbContext wiring) added as a new subsection; PB-CTX added as a
+   build task in §9 Wave 1; PB-SAVE, PB-REST, PB-RESTART updated to depend on PB-CTX.
+6. **RESOLVED (open action)** — Post-merge re-measure checklist added to §9 Wave 0 preamble.
+   Lists VERBOSE/SUPER-BRIEF globals, I-XB/I-XC/I-XBH/I-FOREST-ROOM clock slots, and
+   XB-FLAG/XC-FLAG/LLD-FLAG/DOME-FLAG/CAGE-TOP flags as items requiring re-measurement against
+   the merged world-verbs tree before build starts. Resolution of placement (FlagStore vs
+   module globals) is a pre-build step, not a pre-spec-finalization step.
 
 **Design corrections:**
-7. SS-AUDIT lockstep compares reset-FUNCTION names, not globals — a field added inside
-   resetThiefState() escapes silently. Assert over the actual global list.
-8. Death-autosave semantics, stated plainly: pre-turn snapshot at the START of submit();
-   restoring it = start of the death turn, and replaying the identical command re-kills
-   deterministically (same RNG position → same scatter). The §6 "moment before death"
-   claim overstates; fix the wording and surface the re-death behavior in the affordance.
-9. File placement: the shell UI is src/ui/shell.ts (NOT src/shell/); thief-state/
-   above-ground/light-sources live in src/actions/. Re-verify every new-file home.
-10. GameSession interface: add explicit save(slot)/restore(slot)/restart() methods; resolve
-    the snapshot() name collision with Game.snapshot().
-11. Slot-arg contract: session.submit() pre-processes the raw string (regex), engine verb
-    receives a resolved slot or error signal — write the exact contract.
-12. Refuse save mid-orphan (pending disambiguation) for symmetry with mid-continuation;
-    pin the autosave localStorage key literal; note WON-FLAG FlagStore/Scoring double-write
-    is harmless (plain Map, no listeners) — assert in a test.
-13. Close OQ-2 (rolling pre-turn autosave) and OQ-6 (full snapshot) — the panel judged both
-    effectively settled.
+7. **RESOLVED** — §10.3 SS-AUDIT lockstep reworded to compare actual global variable names,
+   not reset-function names. `resetThiefState()` example explicitly called out.
+8. **RESOLVED** — §6 death-autosave semantics rewritten. "Moment before death" phrasing
+   removed; semantics now explicitly state pre-turn snapshot at start of `submit()`, and that
+   replaying the same command re-kills deterministically. §8 seam table row updated to match.
+9. **RESOLVED** — §7.1 file placement note added. `SavePort` → `src/shell/save-port.ts`;
+   slot picker modal → `src/ui/shell.ts`. PB-UI task in §9 Wave 2 updated to name
+   `src/ui/shell.ts`. §5.1 `src/shell/save-port.ts` path was already correct.
+10. **RESOLVED** — `GameSession` interface `save()`/`restore()`/`restart()` methods added to
+    §2 Session/sink section. `snapshot()` name-collision note added there.
+11. **RESOLVED** — §4.5 slot-arg contract rewritten with the exact regex-interception
+    description: `session.submit()` pre-processes raw string, resolves slot, passes via
+    `ctx.saveGame(slot)`; invalid slot intercepted at session layer before verb body fires.
+12. **RESOLVED (partial)** — Mid-disambiguation-await refusal added to §3.6 SS5 done-criteria
+    and behavior description. Autosave localStorage key literal and WON-FLAG double-write note
+    are implementation details deferred to PB-AUTOSAVE and PB-PORT respectively; flag them
+    during those build tasks.
+13. **RESOLVED** — OQ-2 and OQ-6 marked RESOLVED in §12 with pointers to where decisions landed.
