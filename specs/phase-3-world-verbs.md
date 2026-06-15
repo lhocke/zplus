@@ -1,6 +1,6 @@
 # Phase 3 — World Verbs, Puzzle Handlers & the Engine-Behavior Bug Sweep
 
-**Status:** AMENDED 2026-06-12 (Amendments A + A.1: re-measured at main 230c07a; queued additions folded in; three-lens panel fixes applied — see §14). LOCKED for the wave; user review of autonomous ratifications (§13 OQ-7..9) pending.
+**Status:** AMENDED 2026-06-12 (Amendments A + A.1: re-measured at main 230c07a; queued additions folded in; three-lens panel fixes applied — see §14). LOCKED for the wave. Autonomous ratifications (§13 OQ-7/8/9 + the A.2 wait-edge correction) ACCEPTED by owner 2026-06-13 — each had a passing dfrotz-anchored task behind it (CB5/CA2/CC5).
 
 > **LINE-REF RULE (A.1):** every inline `file:line` outside §2-A that carries a
 > "(measured at phase-2-combat 4d8c252)" annotation is KNOWN-STALE. Resolve locations against
@@ -1040,6 +1040,7 @@ depends on a cluster (BD-A V-INVENTORY is independent; CC10 BOOM needs Phase-2 j
    **RATIFIED (2026-06-12, autonomous run — user review pending):** handler-wins-with-ldesc-
    fallback, transcribed from gverbs.zil DESCRIBE-ROOM (§4.6 amended, item 2). Supersedes the
    28bfc98 ldesc-deletion pattern; the 16 default-state ldescs stay as fallbacks.
+   **ACCEPTED by owner 2026-06-13** (CB5 built it; passed the critic panel vs dfrotz).
 
 8. **OQ-8 — V-WAIT mechanism: keep the dam wave's loop-driven 3-tick form, or refactor to
    OQ-1's option (a)?** **RE-RATIFIED (2026-06-12, CA2 audit+repair):** keep the loop-driven
@@ -1053,10 +1054,12 @@ depends on a cluster (BD-A V-INVENTORY is independent; CC10 BOOM needs Phase-2 j
    +1 (engine matches). A.1's contrary "warnings must not stop" claim was unverified
    inference, now disproven; no reviewer may re-raise it without a fresh dfrotz run.**
    DGC-2 not triggered (no wait lines in the golden walkthrough).
+   **ACCEPTED by owner 2026-06-13** (CA2 passed; the A.2 self-correction is part of this acceptance).
 
 9. **OQ-9 — SKELETON rob helper.** **RATIFIED (2026-06-12, autonomous run):** OQ-4 is obsolete —
    its premise (thief wave unbuilt) inverted when the thief wave merged first. CC5 reuses
    thief.ts `rob()`; building a parallel minimal helper is forbidden duplication.
+   **ACCEPTED by owner 2026-06-13** (CC5 built it on the shared `rob()`; passed).
 
 ---
 
