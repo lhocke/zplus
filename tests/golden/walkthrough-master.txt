@@ -55,7 +55,8 @@ North of House
 You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
 
 > examine house
-There's nothing special about the white house.
+The house is a beautiful colonial house which is painted white.
+It is clear that the owners must have been extremely wealthy.
 
 > south
 The windows are all boarded.
@@ -97,7 +98,8 @@ South of House
 You are facing the south side of a white house. There is no door here, and all the windows are boarded.
 
 > examine house
-There's nothing special about the white house.
+The house is a beautiful colonial house which is painted white.
+It is clear that the owners must have been extremely wealthy.
 
 > north
 The windows are all boarded.
@@ -400,6 +402,7 @@ A small leaflet is on the ground.
 
 > west
 Forest
+You hear in the distance the chirping of a song bird.
 
 > examine east of chasm
 I don't know the word "chasm".
@@ -560,7 +563,8 @@ North of House
 You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
 
 > examine house
-There's nothing special about the white house.
+The house is a beautiful colonial house which is painted white.
+It is clear that the owners must have been extremely wealthy.
 
 > east
 Behind House
@@ -603,6 +607,7 @@ Forest
 
 > west
 Forest Path
+You hear in the distance the chirping of a song bird.
 
 > north
 Clearing

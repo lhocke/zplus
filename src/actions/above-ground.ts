@@ -922,6 +922,210 @@ export const canaryObject: ActionHandler = (ctx) => {
   return false;
 };
 
+// Rooms adjacent to the white house — the four cardinal sides.
+const HOUSE_SIDES = new Set(['WEST-OF-HOUSE', 'NORTH-OF-HOUSE', 'EAST-OF-HOUSE', 'SOUTH-OF-HOUSE']);
+
+// Inside rooms (IN-HOUSE-AROUND table) — WALK-AROUND cycles through these.
+const IN_HOUSE_AROUND = ['LIVING-ROOM', 'KITCHEN', 'ATTIC', 'KITCHEN'];
+
+// Exterior house walk cycle (HOUSE-AROUND table from 1dungeon.zil:2620).
+const HOUSE_AROUND = ['WEST-OF-HOUSE', 'NORTH-OF-HOUSE', 'EAST-OF-HOUSE', 'SOUTH-OF-HOUSE', 'WEST-OF-HOUSE'];
+
+// Forest walk cycle (FOREST-AROUND table from 1dungeon.zil:2624).
+const FOREST_AROUND = ['FOREST-1', 'FOREST-2', 'FOREST-3', 'PATH', 'CLEARING', 'FOREST-1'];
+
+// ZIL GO-NEXT: find current room in table, move to the next entry.
+// Returns true if moved, false if current room not in table.
+function goNext(table: string[], ctx: Parameters<ActionHandler>[0]): boolean {
+  const idx = table.indexOf(ctx.here.id);
+  if (idx === -1) return false;
+  const next = table[idx + 1];
+  if (next === undefined) return false;
+  const dest = ctx.world.get(next);
+  if (dest !== undefined) ctx.moveTo(ctx.actor, dest);
+  return true;
+}
+
+/** WHITE-HOUSE-F — zil/1actions.zil:92 */
+export const whiteHouseF: ActionHandler = (ctx) => {
+  const here = ctx.here.id;
+
+  // Inside the house (KITCHEN, LIVING-ROOM, ATTIC) — walk around the interior.
+  if (here === 'KITCHEN' || here === 'LIVING-ROOM' || here === 'ATTIC') {
+    if (ctx.action === 'V-FIND') {
+      ctx.tell('Why not find your brains?');
+      return true;
+    }
+    if (ctx.action === 'V-WALK-AROUND') {
+      goNext(IN_HOUSE_AROUND, ctx);
+      return true;
+    }
+    return false;
+  }
+
+  // Not at a house-adjacent room (i.e., not one of the four sides).
+  if (!HOUSE_SIDES.has(here)) {
+    if (ctx.action === 'V-FIND') {
+      if (here === 'CLEARING') {
+        ctx.tell('It seems to be to the west.');
+      } else {
+        ctx.tell('It was here just a minute ago....');
+      }
+      return true;
+    }
+    if (ctx.action === 'V-WALK-AROUND') {
+      ctx.tell("You're not at the house.");
+      return true;
+    }
+    return false;
+  }
+
+  // At a house-adjacent room (the four cardinal sides).
+  if (ctx.action === 'V-FIND') {
+    ctx.tell("It's right here! Are you blind or something?");
+    return true;
+  }
+  if (ctx.action === 'V-WALK-AROUND') {
+    goNext(HOUSE_AROUND, ctx);
+    return true;
+  }
+  if (ctx.action === 'V-EXAMINE') {
+    ctx.tell(
+      'The house is a beautiful colonial house which is painted white.\n' +
+      'It is clear that the owners must have been extremely wealthy.',
+    );
+    return true;
+  }
+  // V-THROUGH + V-OPEN: enter the house via the kitchen window from the east.
+  if (ctx.action === 'V-THROUGH' || ctx.action === 'V-OPEN') {
+    if (here === 'EAST-OF-HOUSE') {
+      const win = ctx.world.get('KITCHEN-WINDOW');
+      if (win !== undefined && ctx.hasFlag(win, Flag.Open)) {
+        const kitchen = ctx.world.get('KITCHEN');
+        if (kitchen !== undefined) ctx.moveTo(ctx.actor, kitchen);
+      } else {
+        ctx.tell('The window is closed.');
+        // ZIL: <THIS-IS-IT ,KITCHEN-WINDOW> — rebind "it" to window.
+        const kwin = ctx.world.get('KITCHEN-WINDOW');
+        if (kwin !== undefined) ctx.thisIsIt?.(kwin);
+      }
+    } else {
+      ctx.tell("I can't see how to get in from here.");
+    }
+    return true;
+  }
+  if (ctx.action === 'V-BURN') {
+    ctx.tell('You must be joking.');
+    return true;
+  }
+  return false;
+};
+
+/** FOREST-F — zil/1actions.zil:136 */
+export const forestF: ActionHandler = (ctx) => {
+  const here = ctx.here.id;
+  if (ctx.action === 'V-WALK-AROUND') {
+    // Non-forest rooms adjacent to the forest: "You aren't even in the forest."
+    if (
+      here === 'WEST-OF-HOUSE' || here === 'NORTH-OF-HOUSE' ||
+      here === 'SOUTH-OF-HOUSE' || here === 'EAST-OF-HOUSE'
+    ) {
+      ctx.tell('You aren\'t even in the forest.');
+      return true;
+    }
+    goNext(FOREST_AROUND, ctx);
+    return true;
+  }
+  if (ctx.action === 'V-DISEMBARK') {
+    ctx.tell('You will have to specify a direction.');
+    return true;
+  }
+  if (ctx.action === 'V-FIND') {
+    ctx.tell('You cannot see the forest for the trees.');
+    return true;
+  }
+  if (ctx.action === 'V-LISTEN') {
+    ctx.tell('The pines and the hemlocks seem to be murmuring.');
+    return true;
+  }
+  return false;
+};
+
+/** GRANITE-WALL-F — zil/1actions.zil:64 */
+export const graniteWallF: ActionHandler = (ctx) => {
+  const here = ctx.here.id;
+  if (here === 'NORTH-TEMPLE') {
+    if (ctx.action === 'V-FIND') {
+      ctx.tell('The west wall is solid granite here.');
+      return true;
+    }
+    if (ctx.action === 'V-TAKE' || ctx.action === 'V-RAISE' || ctx.action === 'V-LOWER') {
+      ctx.tell("It's solid granite.");
+      return true;
+    }
+    return false;
+  }
+  if (here === 'TREASURE-ROOM') {
+    if (ctx.action === 'V-FIND') {
+      ctx.tell('The east wall is solid granite here.');
+      return true;
+    }
+    if (ctx.action === 'V-TAKE' || ctx.action === 'V-RAISE' || ctx.action === 'V-LOWER') {
+      ctx.tell("It's solid granite.");
+      return true;
+    }
+    return false;
+  }
+  if (here === 'SLIDE-ROOM') {
+    if (ctx.action === 'V-FIND' || ctx.action === 'V-READ') {
+      ctx.tell('It only SAYS "Granite Wall".');
+      return true;
+    }
+    ctx.tell("The wall isn't granite.");
+    return true;
+  }
+  ctx.tell('There is no granite wall here.');
+  return true;
+};
+
+/** WCLIF-OBJECT (WHITE-CLIFF) — zil/1actions.zil:3011 */
+export const wclifObject: ActionHandler = (ctx) => {
+  if (
+    ctx.action === 'V-CLIMB-UP' ||
+    ctx.action === 'V-CLIMB-DOWN' ||
+    ctx.action === 'V-CLIMB-FOO'
+  ) {
+    ctx.tell('The cliff is too steep for climbing.');
+    return true;
+  }
+  return false;
+};
+
+/** CLIFF-OBJECT (CLIMBABLE-CLIFF) — zil/1actions.zil:3015 */
+export const cliffObject: ActionHandler = (ctx) => {
+  // V-LEAP or PUT-self-on-cliff → "very unwise"
+  if (ctx.action === 'V-LEAP') {
+    ctx.tell('That would be very unwise. Perhaps even fatal.');
+    return true;
+  }
+  if (ctx.action === 'V-PUT' && ctx.dobj !== undefined && ctx.dobj === ctx.actor) {
+    ctx.tell('That would be very unwise. Perhaps even fatal.');
+    return true;
+  }
+  // PRSI = CLIMBABLE-CLIFF: throw/put something off the cliff into the river.
+  if (ctx.iobj !== undefined && ctx.iobj === ctx.self) {
+    if (ctx.action === 'V-PUT' || ctx.action === 'V-THROW-OFF') {
+      const target = ctx.dobj;
+      if (target !== undefined) {
+        ctx.tell(`The ${target.desc} tumbles into the river and is seen no more.`);
+        target.moveTo(null);  // REMOVE-CAREFULLY: remove from world
+      }
+      return true;
+    }
+  }
+  return false;
+};
+
 function isForestRoom(id: string): boolean {
   return (
     id === 'FOREST-1' ||
@@ -1127,6 +1331,12 @@ export const aboveGroundActions: Record<string, ActionHandler> = {
   'BARROW-FCN': barrowFcn,
   'CRACK-FCN': crackFcn,
   'STONE-BARROW-FCN': stoneBarrowFcn,
+  // CC9 — scenery/ambience
+  'WHITE-HOUSE-F':  whiteHouseF,
+  'FOREST-F':       forestF,
+  'GRANITE-WALL-F': graniteWallF,
+  'WCLIF-OBJECT':   wclifObject,
+  'CLIFF-OBJECT':   cliffObject,
 };
 
 /** PER (exit-resolution) routines for the above-ground region. */
