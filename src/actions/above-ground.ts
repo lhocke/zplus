@@ -1025,16 +1025,17 @@ export const whiteHouseF: ActionHandler = (ctx) => {
 export const forestF: ActionHandler = (ctx) => {
   const here = ctx.here.id;
   if (ctx.action === 'V-WALK-AROUND') {
-    // Non-forest rooms adjacent to the forest: "You aren't even in the forest."
+    // House-side rooms: print the message, then fall through to GO-NEXT which
+    // returns false (they're not in FOREST-AROUND) → routine returns false →
+    // V-WALK-AROUND default ("Use compass directions for movement.") fires.
+    // ZIL: no trailing T after <GO-NEXT ,FOREST-AROUND> (unlike WHITE-HOUSE-F).
     if (
       here === 'WEST-OF-HOUSE' || here === 'NORTH-OF-HOUSE' ||
       here === 'SOUTH-OF-HOUSE' || here === 'EAST-OF-HOUSE'
     ) {
       ctx.tell('You aren\'t even in the forest.');
-      return true;
     }
-    goNext(FOREST_AROUND, ctx);
-    return true;
+    return goNext(FOREST_AROUND, ctx);
   }
   if (ctx.action === 'V-DISEMBARK') {
     ctx.tell('You will have to specify a direction.');

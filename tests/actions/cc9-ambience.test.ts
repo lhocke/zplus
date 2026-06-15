@@ -151,6 +151,45 @@ describe('CC9 — FOREST-F: V-LISTEN (1actions.zil:149)', () => {
 // Structural note: the handler returns true for V-DISEMBARK when FOREST is PRSO.
 
 // ---------------------------------------------------------------------------
+// FOREST-F: V-WALK-AROUND — dfrotz-verified two-line / one-line cases
+// (1actions.zil:137–143; GO-NEXT contract: see 1actions.zil:131–134)
+// ---------------------------------------------------------------------------
+// ZIL: FOREST-F returns the value of <GO-NEXT ,FOREST-AROUND> — no trailing T.
+// House-side rooms: GO-NEXT finds no match → FOREST-F returns false →
+//   V-WALK-AROUND default fires ("Use compass directions for movement.").
+// Rooms absent from FOREST-AROUND (e.g. UP-A-TREE): same false-return path.
+
+describe('CC9 — FOREST-F: V-WALK-AROUND at house side emits both lines (1actions.zil:138)', () => {
+  it('walk around forest at WEST-OF-HOUSE → "not in forest" + compass default', () => {
+    const g = newGameAt('WEST-OF-HOUSE');
+    g.start();
+    const out = g.turn('walk around forest').output;
+    expect(out).toContain("You aren't even in the forest.");
+    expect(out).toContain('Use compass directions for movement.');
+  });
+
+  it('walk around forest at NORTH-OF-HOUSE → "not in forest" + compass default', () => {
+    const g = newGameAt('NORTH-OF-HOUSE');
+    g.start();
+    const out = g.turn('walk around forest').output;
+    expect(out).toContain("You aren't even in the forest.");
+    expect(out).toContain('Use compass directions for movement.');
+  });
+});
+
+describe('CC9 — FOREST-F: V-WALK-AROUND at non-table forest room emits compass default (1actions.zil:143)', () => {
+  it('walk around forest at UP-A-TREE → compass default only (not in FOREST-AROUND)', () => {
+    // UP-A-TREE is absent from FOREST-AROUND so GO-NEXT returns false →
+    // FOREST-F returns false → V-WALK-AROUND default fires.
+    const g = newGameAt('UP-A-TREE');
+    g.start();
+    const out = g.turn('walk around forest').output;
+    expect(out).not.toContain("You aren't even in the forest.");
+    expect(out).toContain('Use compass directions for movement.');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GRANITE-WALL-F — 1actions.zil:64
 // ---------------------------------------------------------------------------
 

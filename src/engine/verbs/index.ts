@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, vBrief, vSuperBrief, vVersion, vScript, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, vLeap, jumploss, wheeeee, vShake, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, vBrief, vSuperBrief, vVersion, vScript, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, vLeap, jumploss, wheeeee, vShake, vWalkAround, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { ROOM_GLOBAL_IDS } from '../parser/room-globals.js';
 import { CURE_WAIT } from '../combat.js';
@@ -1703,6 +1703,8 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LOOK-ON':     verbLookOn,           // gverbs.zil:892-897
   // gverbs.zil:1471 — default when no object handler claims V-TIE-UP.
   'V-TIE-UP': () => result(vTieUp.response),
+  // gverbs.zil:1583–1584 — V-WALK-AROUND default when no room/object handler moved the player.
+  'V-WALK-AROUND': () => result(vWalkAround.response),
   // gverbs.zil:945–961 — ODYSSEUS / ULYSSES (gsyntax.zil:334–335).
   'V-ODYSSEUS': verbOdysseus,
 
