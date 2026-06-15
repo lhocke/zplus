@@ -93,6 +93,27 @@ export const bottleFunction: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const waterFunction: ActionHandler = (ctx) => {
+  // V-TAKE water — 1actions.zil:195–204 (the TAKE arm). Water can't be picked
+  // up by hand; the object FCN must intercept "take water" before the generic
+  // take path (which would wrongly pocket it). Reachable surface: the water sits
+  // inside the bottle, so the parser only resolves "water" when the bottle is
+  // open. Closed-bottle take is normally blocked by container scope upstream;
+  // the faithful "bottle is closed." message (:196–198) is kept for when it isn't.
+  if (ctx.action === 'V-TAKE') {
+    const water  = ctx.self;
+    const bottle = ctx.world.get('BOTTLE');
+    if (bottle !== undefined && water.parent === bottle && !bottle.has(Flag.Open)) {
+      ctx.tell('The bottle is closed.');
+      return true;
+    }
+    ctx.tell('The water slips through your fingers.');
+    return true;
+    // Deferred (outside CC7's reachable kitchen surface, untested here):
+    //   - the in-vehicle "puddle in the bottom of the <boat>" case (:191–194)
+    //   - the empty-bottle fill-at-source case (:199–201, GLOBAL-WATER) — that is
+    //     the V-FILL / reservoir mechanic, separate from the bottle-water region.
+  }
+
   // V-DROP / "pour water" (no target) — 1actions.zil:219–233.
   // gsyntax.zil:360: POUR OBJECT = V-DROP PRE-DROP; WATER-F intercepts.
   if (ctx.action === 'V-DROP') {

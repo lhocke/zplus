@@ -260,6 +260,41 @@ describe('CC7 — WATER-F: pour/drop water → evaporates (1actions.zil:219–23
 });
 
 // ---------------------------------------------------------------------------
+// WATER-F TAKE — 1actions.zil:195–204 (take water from a held bottle)
+// "TAKE-water context" (spec §6.7): the water can't be grabbed by hand. Without
+// the TAKE arm, "take water" falls to the generic take path and wrongly pockets
+// the water as a free-floating object.
+// ---------------------------------------------------------------------------
+
+describe('CC7 — WATER-F: take water from open bottle → slips through fingers (1actions.zil:195–204)', () => {
+  it('take water from open held bottle: "slips through your fingers" message', () => {
+    const g = kitchenWithBottle();
+    const bottle = g.world.get('BOTTLE');
+    expect(bottle, 'BOTTLE must exist').toBeDefined();
+    bottle!.set(Flag.Open);
+    const water = g.world.get('WATER');
+    expect(water, 'WATER must exist').toBeDefined();
+    expect(water!.parent?.id, 'WATER must be in BOTTLE').toBe('BOTTLE');
+
+    const out = g.turn('take water').output;
+    expect(out).toContain('slips through your fingers');
+  });
+
+  it('take water from open held bottle: water stays in BOTTLE (not pocketed)', () => {
+    const g = kitchenWithBottle();
+    const bottle = g.world.get('BOTTLE');
+    expect(bottle, 'BOTTLE must exist').toBeDefined();
+    bottle!.set(Flag.Open);
+    const water = g.world.get('WATER');
+    expect(water, 'WATER must exist').toBeDefined();
+
+    g.turn('take water');
+
+    expect(water!.parent?.id, 'WATER must remain in BOTTLE after take').toBe('BOTTLE');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // THROW bottle (no target) — BOTTLE-FUNCTION intercepts before V-THROW default
 // (repair: bare THROW needed a 1-object syntax entry so parser routes it)
 // ---------------------------------------------------------------------------
