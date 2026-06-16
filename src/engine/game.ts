@@ -850,12 +850,21 @@ export class Game {
                 outputs.push(mergedParts.join('\n'));
               }
             } else if (newRoom !== null && newRoom !== this.here) {
-              // Lit destination: fire M-ENTER and prepend its output before room description.
+              // Lit destination: fire M-ENTER then merge with room description.
               const enterOut = this.onRoomEntered(newRoom);
               if (enterOut.length > 0) {
                 const idx = outputs.length - 1;
                 if (idx >= 0) {
-                  outputs[idx] = [enterOut, outputs[idx]].join('\n');
+                  // If M-ENTER moved the player a second time (e.g. BATS-ROOM FLY-ME),
+                  // ZIL's <V-LOOK> <CRLF> <FLY-ME> ordering means the destination room
+                  // description (verbResult.output) must precede the M-ENTER output
+                  // (fweep/grab).  When M-ENTER did NOT teleport, normal ordering applies:
+                  // M-ENTER output precedes the room description.
+                  // 1actions.zil:2484–2486.
+                  const movedInEnter = this.player.parent !== newRoom;
+                  outputs[idx] = movedInEnter
+                    ? [outputs[idx], enterOut].join('\n')
+                    : [enterOut, outputs[idx]].join('\n');
                 } else {
                   outputs.push(enterOut);
                 }

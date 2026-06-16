@@ -187,7 +187,10 @@ function describeObject(
   tell: (s: string) => void,
 ): void {
   if (level === 0) {
-    if (!obj.has(Flag.Touched) && obj.fdesc !== undefined) {
+    if (obj.descFcn !== undefined) {
+      // ZIL DESCFCN — replaces the generic description (gverbs.zil:1707–1711).
+      obj.descFcn(player, tell);
+    } else if (!obj.has(Flag.Touched) && obj.fdesc !== undefined) {
       tell(obj.fdesc);
     } else if (obj.ldesc !== undefined) {
       tell(obj.ldesc);

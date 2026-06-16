@@ -12,6 +12,7 @@ import type { Rng as RngInterface } from './game.js';
 import type { CombatRng } from './combat.js';
 import { lookupAction } from '../actions/registry.js';
 import { iMatchTick } from '../actions/light-sources.js';
+import { wireBatDescFcn } from '../actions/bat-garlic.js';
 
 import roomsData from '../data/rooms.json';
 import objectsData from '../data/objects.json';
@@ -54,6 +55,11 @@ export function createGame(opts: {
       if (handler !== undefined) obj.handler = handler;
     }
   }
+
+  // BAT-D (1actions.zil:2469): set the bat's DESCFCN so DESCRIBE-OBJECTS
+  // emits the dynamic vampire-bat description instead of "There is a bat here."
+  const bat = world.get('BAT');
+  if (bat !== undefined) wireBatDescFcn(bat, world);
 
   const player = new Actor('PLAYER', 'cretin', {
     synonyms: ['me', 'myself'],

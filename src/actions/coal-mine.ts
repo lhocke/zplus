@@ -332,10 +332,15 @@ export const basketF: ActionHandler = (ctx) => {
 /**
  * BATS-ROOM — room FCN for BAT-ROOM.
  *
- * M-LOOK: emit the room description (matches ldesc; intercept to ensure exact
- *         ZIL text when ldesc fallback isn't used).
- * M-ENTER: when not dead and garlic is absent (not in WINNER, not in HERE) →
- *          call FLY-ME (same path as BAT-F, 1actions.zil:321).
+ * M-LOOK: emit the room description.  BAT-D fires via the bat's descFcn during
+ *         DESCRIBE-OBJECTS (wired in bootstrap), so the bat-presence text is
+ *         produced there — this handler only owns the room's own ldesc.
+ * M-ENTER: ZIL 1actions.zil:2482–2486 — when not dead and garlic is absent:
+ *   <V-LOOK> emits the room description (already in verbResult.output via verbGo);
+ *   <CRLF>   blank-line separator (emitted here, prepended by engine ordering fix);
+ *   <FLY-ME> fweep × 3 + grab + teleport.
+ *   The engine (game.ts) appends M-ENTER output after verbResult.output when
+ *   M-ENTER itself moves the player, giving the correct ZIL ordering.
  */
 export const batsRoom: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
@@ -350,6 +355,10 @@ export const batsRoom: ActionHandler = (ctx) => {
       garlic !== undefined &&
       (garlic.parent === ctx.actor || garlic.parent === ctx.here);
     if (!garlicNearby) {
+      // <CRLF> — blank line between V-LOOK output and the first Fweep!
+      // (1actions.zil:2485).  The engine appends M-ENTER output after the
+      // verbResult room description, so this blank line lands in the right spot.
+      ctx.tell('');
       flyMe(ctx);
     }
   }

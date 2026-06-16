@@ -156,6 +156,13 @@ export class GameObject {
   contFcnRoutine?: string;
   /** CONTFCN handler — called by PERFORM step 5 when dobj is inside a container. */
   contFcn?: ActionHandler;
+  /**
+   * ZIL DESCFCN — dynamic object description, replaces the generic
+   * "There is a X here." when set.  Called by describeObject (gverbs.zil:1693)
+   * with the player object and a tell callback.  Captured world state lives in
+   * the closure (set at bootstrap by wireBatDescFcn etc.).
+   */
+  descFcn?: (player: GameObject, tell: (s: string) => void) => void;
   readonly synonyms: string[];
   readonly adjectives: string[];
 

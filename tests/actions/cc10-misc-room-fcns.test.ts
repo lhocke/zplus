@@ -68,6 +68,67 @@ describe('CC10 — BATS-ROOM M-ENTER: garlic absent triggers bat grab (1actions.
     expect(out).toContain('scruff of your neck');
   });
 
+  // ZIL BATS-ROOM M-ENTER: <V-LOOK> <CRLF> <FLY-ME> (1actions.zil:2484–2486).
+  // Room description must appear BEFORE the fweep/grab block.
+  it('enter BAT-ROOM with no garlic: room description appears before bat grab (1actions.zil:2484)', () => {
+    const g = newGameAt('SHAFT-ROOM');
+    g.start();
+    giveLantern(g);
+    const garlic = g.world.get('GARLIC');
+    expect(garlic, 'GARLIC must exist').toBeDefined();
+    const remote = g.world.get('LIVING-ROOM');
+    expect(remote, 'LIVING-ROOM must exist for garlic park').toBeDefined();
+    garlic!.moveTo(remote!);
+    const out = g.turn('west').output;
+    const descIdx = out.indexOf('doors only to the east and south');
+    const grabIdx = out.indexOf('scruff of your neck');
+    expect(descIdx, 'room description must appear in output').toBeGreaterThanOrEqual(0);
+    expect(grabIdx, 'grab message must appear in output').toBeGreaterThanOrEqual(0);
+    // ZIL ordering: description before grab.
+    expect(descIdx).toBeLessThan(grabIdx);
+  });
+
+  // BAT-D (1actions.zil:2469–2476): when garlic absent, bat is described as swooping.
+  // V-LOOK inside M-ENTER fires DESCRIBE-OBJECTS → BAT's DESCFCN → swoop text.
+  it('enter BAT-ROOM with no garlic: bat described as swooping (BAT-D, 1actions.zil:2475)', () => {
+    const g = newGameAt('SHAFT-ROOM');
+    g.start();
+    giveLantern(g);
+    const garlic = g.world.get('GARLIC');
+    expect(garlic, 'GARLIC must exist').toBeDefined();
+    const remote = g.world.get('LIVING-ROOM');
+    expect(remote, 'LIVING-ROOM must exist for garlic park').toBeDefined();
+    garlic!.moveTo(remote!);
+    const out = g.turn('west').output;
+    expect(out).toContain('swoops down at you');
+  });
+
+  // BAT-D garlic-present branch: "deranged and holding his nose" (1actions.zil:2471–2473).
+  it('look in BAT-ROOM with garlic in hand: bat described as deranged (BAT-D, 1actions.zil:2471)', () => {
+    const g = newGameAt('BAT-ROOM');
+    g.start();
+    giveLantern(g);
+    const garlic = g.world.get('GARLIC');
+    expect(garlic, 'GARLIC must exist').toBeDefined();
+    garlic!.moveTo(g.player);
+    const out = g.turn('look').output;
+    expect(out).toContain('deranged');
+  });
+
+  // BAT-D garlic-absent branch visible on explicit LOOK in BAT-ROOM.
+  it('look in BAT-ROOM with no garlic: bat described as swooping (BAT-D, 1actions.zil:2475)', () => {
+    const g = newGameAt('BAT-ROOM');
+    g.start();
+    giveLantern(g);
+    const garlic = g.world.get('GARLIC');
+    expect(garlic, 'GARLIC must exist').toBeDefined();
+    const remote = g.world.get('LIVING-ROOM');
+    expect(remote, 'LIVING-ROOM must exist').toBeDefined();
+    garlic!.moveTo(remote!);
+    const out = g.turn('look').output;
+    expect(out).toContain('swoops down at you');
+  });
+
   it('enter BAT-ROOM with no garlic: player is teleported to a BAT-DROPS room', () => {
     const BAT_DROPS = [
       'MINE-1', 'MINE-2', 'MINE-3', 'MINE-4',

@@ -16,7 +16,8 @@
  *   1/8 Hades draw and is not exercised by any corpus or golden test).
  */
 
-import type { ActionContext, ActionHandler } from '../domain/game-object.js';
+import type { ActionContext, ActionHandler, GameObject } from '../domain/game-object.js';
+import type { World } from '../domain/world.js';
 
 // BAT-DROPS — 1actions.zil:332–341.
 // The eight rooms the bat can drop the player into (0-indexed for rng.nextInt(8)).
@@ -134,6 +135,36 @@ export const garlicF: ActionHandler = (ctx) => {
   }
   return false;
 };
+
+// ---------------------------------------------------------------------------
+// BAT-D — 1actions.zil:2469–2476
+// ---------------------------------------------------------------------------
+
+/**
+ * BAT-D — DESCFCN for the deranged vampire bat.
+ *
+ * Sets the bat object's `descFcn` to the BAT-D routine, which runs in place
+ * of the generic "There is a bat here." whenever DESCRIBE-OBJECTS lists the bat.
+ * The closure captures the world so the garlic-location check is live.
+ *
+ * Call once from bootstrap after the world is built.
+ */
+export function wireBatDescFcn(bat: GameObject, world: World): void {
+  bat.descFcn = (player: GameObject, tell: (s: string) => void) => {
+    const garlic = world.get('GARLIC');
+    const garlicNearby =
+      garlic !== undefined &&
+      (garlic.parent === player || garlic.parent === bat.parent);
+    if (garlicNearby) {
+      tell(
+        'In the corner of the room on the ceiling is a large vampire bat who\n' +
+        'is obviously deranged and holding his nose.',
+      );
+    } else {
+      tell('A large vampire bat, hanging from the ceiling, swoops down at you!');
+    }
+  };
+}
 
 /** ACTION routines for the bat/garlic region. */
 export const batGarlicActions: Record<string, ActionHandler> = {
