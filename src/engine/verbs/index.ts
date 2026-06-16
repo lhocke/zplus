@@ -163,12 +163,24 @@ function seeInside(obj: GameObject): boolean {
 }
 
 // FIRSTER (gverbs.zil:1818) — print the header before the first pass-2 item.
-// Rooms are skipped (no "X contains:" header at room level).
-function firster(obj: GameObject, level: number, tell: (s: string) => void): void {
+// Rooms are skipped (no header at room level).
+// WINNER (player) always prints "You are carrying:" regardless of ACTORBIT.
+function firster(obj: GameObject, player: GameObject, level: number, tell: (s: string) => void): void {
   if (obj instanceof Room) return;
 
-  // Non-room containers: indent if level > 0, then print container header.
   const indent = level > 0 ? '  '.repeat(level) : '';
+
+  // ZIL: EQUAL? .OBJ ,WINNER → "You are carrying:"
+  if (obj === player) {
+    tell(`${indent}You are carrying:`);
+    return;
+  }
+
+  // ZIL: EQUAL? .OBJ ,TROPHY-CASE → "Your collection of treasures consists of:"
+  if (obj.id === 'TROPHY-CASE') {
+    tell(`${indent}Your collection of treasures consists of:`);
+    return;
+  }
 
   if (obj.has(Flag.Surface)) {
     tell(`${indent}On the ${obj.desc} is:`);
@@ -195,11 +207,21 @@ function describeObject(
     } else if (obj.ldesc !== undefined) {
       tell(obj.ldesc);
     } else {
-      tell(`There is a ${obj.desc} here.`);
+      // gverbs.zil:1730 — room-level "There is a X here. (providing light)"
+      let line = `There is a ${obj.desc} here`;
+      if (obj.has(Flag.OnFire)) line += ' (providing light)';
+      tell(`${line}.`);
     }
   } else {
+    // gverbs.zil:1707–1715 — inventory/nested level: "  A X (providing light)"
     const indent = '  '.repeat(level);
-    tell(`${indent}A ${obj.desc}`);
+    let line = `${indent}A ${obj.desc}`;
+    if (obj.has(Flag.OnFire)) {
+      line += ' (providing light)';
+    } else if (obj.has(Flag.Wearable) && obj.parent === player) {
+      line += ' (being worn)';
+    }
+    tell(line);
   }
 
   if (seeInside(obj) && obj.children.size > 0) {
@@ -212,6 +234,10 @@ function describeObject(
 // Pass 2: touched/no-FDESC children printed via DESCRIBE-OBJECT; first item
 // triggers FIRSTER to emit the container header. NDESCBIT items are skipped
 // in pass 2 but still recursed if SEE-INSIDE?.
+//
+// INV? (gverbs.zil:1757-1760): when container == player OR player == container's
+// parent (i.e., we're listing inventory), all non-invisible items appear in pass
+// 2 regardless of Touched/FDESC state.
 function printCont(
   container: GameObject,
   player: GameObject,
@@ -234,22 +260,29 @@ function printCont(
     : null;
   let vehicleSeen = false;  // PV? — vehicle was encountered during iteration
 
-  // Pass 1: untouched items with an FDESC
-  for (const child of children) {
-    if (child === player) continue;
-    if (child === playerVehicle) { vehicleSeen = true; continue; }  // :1775 skip AV
-    if (child.has(Flag.Invisible)) continue;
-    if (!child.has(Flag.Touched) && child.fdesc !== undefined) {
-      if (!child.has(Flag.NonDescript)) {
-        tell(child.fdesc);
-      }
-      if (seeInside(child) && child.children.size > 0) {
-        printCont(child, player, level + 1, tell);
+  // INV? — printing the player's own inventory (or a container they're carrying).
+  // ZIL: EQUAL? WINNER OBJ <LOC OBJ> — player === container OR player === container.parent.
+  const inv = container === player || container.parent === player;
+
+  // Pass 1: untouched items with an FDESC — skipped entirely in inventory context
+  // (INV? overrides, making everything land in pass 2).
+  if (!inv) {
+    for (const child of children) {
+      if (child === player) continue;
+      if (child === playerVehicle) { vehicleSeen = true; continue; }
+      if (child.has(Flag.Invisible)) continue;
+      if (!child.has(Flag.Touched) && child.fdesc !== undefined) {
+        if (!child.has(Flag.NonDescript)) {
+          tell(child.fdesc);
+        }
+        if (seeInside(child) && child.children.size > 0) {
+          printCont(child, player, level + 1, tell);
+        }
       }
     }
   }
 
-  // Pass 2: touched / no-FDESC objects
+  // Pass 2: touched / no-FDESC objects (or ALL when INV?).
   let firsterFired = false;
   let currentLevel = level;
 
@@ -257,13 +290,14 @@ function printCont(
     if (child === player) continue;
     if (child === playerVehicle) continue;  // :1797 skip AV
     if (child.has(Flag.Invisible)) continue;
-    if (!child.has(Flag.Touched) && child.fdesc !== undefined) continue;
+    // ZIL: <OR .INV? <FSET? .Y ,TOUCHBIT> <NOT <GETP .Y ,P?FDESC>>>
+    if (!inv && !child.has(Flag.Touched) && child.fdesc !== undefined) continue;
 
     if (!child.has(Flag.NonDescript)) {
       if (!firsterFired) {
         firsterFired = true;
         currentLevel = level + 1;
-        firster(container, level, tell);
+        firster(container, player, level, tell);
       }
       describeObject(child, player, currentLevel, tell);
     } else {
@@ -734,14 +768,15 @@ function verbRead(ctx: VerbContext): VerbResult {
 }
 
 function verbInventory(ctx: VerbContext): VerbResult {
-  const carried = Array.from(ctx.player.children).filter(c => !c.has(Flag.Invisible));
-
-  if (carried.length === 0) {
+  // ZIL V-INVENTORY (gverbs.zil:29-31): <FIRST? ,WINNER> → PRINT-CONT, else empty-handed.
+  const visibleItems = Array.from(ctx.player.children).filter(c => !c.has(Flag.Invisible));
+  if (visibleItems.length === 0) {
     return result("You are empty-handed.");
   }
 
-  const list = carried.map(c => `  ${c.desc}`).join('\n');
-  return result(`You are carrying:\n${list}`);
+  const lines: string[] = [];
+  printCont(ctx.player, ctx.player, 0, (s) => lines.push(s));
+  return result(lines.join('\n'));
 }
 
 // V-LOOK-INSIDE core — gverbs.zil:865-890.

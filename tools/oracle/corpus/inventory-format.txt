@@ -1,0 +1,27 @@
+# inventory-format.txt — V-INVENTORY PRINT-CONT corpus (Zork I oracle harness)
+# generated-by: dfrotz-r119 2026-06-16 inventory-format-BD3
+#
+# MECHANIC: V-INVENTORY PRINT-CONT rewrite (BD3 / DGC-4).
+# Verifies that inventory output uses "A " article prefix, "(providing light)"
+# when lamp is lit, and nested container contents (PRINT-CONT recursion).
+#
+# Scenario 1: empty-handed
+inventory
+# Scenario 2: single item (leaflet)
+open mailbox
+take leaflet
+inventory
+# Scenario 3: nested container — glass bottle (Transparent) with water inside
+north
+east
+open window
+west
+take bottle
+inventory
+# Scenario 4: lamp unlit
+west
+take lamp
+inventory
+# Scenario 5: lamp lit
+turn on lamp
+inventory

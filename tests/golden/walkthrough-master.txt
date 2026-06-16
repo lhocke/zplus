@@ -36,7 +36,7 @@ The small mailbox is closed.
 
 > inventory
 You are carrying:
-  leaflet
+  A leaflet
 
 > score
 Your score is 0 (total of 350 points), in 8 moves.
@@ -155,8 +155,10 @@ The chimney leads downward, and looks climbable.
 
 > inventory
 You are carrying:
-  leaflet
-  glass bottle
+  A glass bottle
+  The glass bottle contains:
+    A quantity of water
+  A leaflet
 
 > drop bottle
 Dropped.
@@ -220,9 +222,9 @@ Taken.
 
 > inventory
 You are carrying:
-  leaflet
-  sword
-  brass lantern
+  A brass lantern
+  A sword
+  A leaflet
 
 > score
 Your score is 10 (total of 350 points), in 46 moves.
@@ -263,9 +265,9 @@ nailed shut, a trophy case, and a large oriental rug in the center of the room.
 
 > inventory. diagnose
 You are carrying:
-  leaflet
-  sword
-  brass lantern
+  A brass lantern
+  A sword
+  A leaflet
 You are in perfect health.
 You can be killed by a serious wound.
 
@@ -872,7 +874,7 @@ nailed shut, a trophy case, and a rug lying beside an open trap door.
 Your score is 25 (total of 350 points), in 173 moves.
 This gives you the rank of Beginner.
 You are carrying:
-  brass lantern
+  A brass lantern (providing light)
 
 > score
 Your score is 25 (total of 350 points), in 174 moves.
@@ -885,4 +887,4 @@ You have been killed once.
 
 > inventory
 You are carrying:
-  brass lantern
+  A brass lantern (providing light)
