@@ -852,13 +852,21 @@ export class Game {
             } else if (newRoom !== null && newRoom !== this.here) {
               // Lit destination: fire M-ENTER then merge with room description.
               const enterOut = this.onRoomEntered(newRoom);
-              if (enterOut.length > 0) {
-                const idx = outputs.length - 1;
+              const idx = outputs.length - 1;
+              if (this.suppressNextArrivalLook) {
+                // M-ENTER returned RTRUE — suppresses V-FIRST-LOOK (gverbs.zil:2134–2136).
+                // The room desc V-WALK embedded is discarded; only the M-ENTER tell survives.
+                if (idx >= 0) {
+                  outputs[idx] = enterOut;
+                } else if (enterOut.length > 0) {
+                  outputs.push(enterOut);
+                }
+              } else if (enterOut.length > 0) {
                 if (idx >= 0) {
                   // BAT-ROOM only: ZIL 1actions.zil:2484–2486 does <V-LOOK> <CRLF> <FLY-ME>,
                   // so the room description must precede the M-ENTER output (fweep/grab).
-                  // All other M-ENTER handlers (DOME-ROOM-FCN etc.) do NOT call V-LOOK, so
-                  // the default ordering applies: M-ENTER output before the room description.
+                  // All other M-ENTER handlers do NOT call V-LOOK so the default ordering
+                  // applies: M-ENTER output before the room description.
                   const batRoomFirst = newRoom.id === 'BAT-ROOM';
                   outputs[idx] = batRoomFirst
                     ? [outputs[idx], enterOut].join('\n')
@@ -893,19 +901,26 @@ export class Game {
         // describeCurrentRoom so this.here is updated and the new room is described.
         // Guard: new parent must be a Room (not a vehicle/container) and must differ
         // from the pre-M-END room to avoid false triggers for players inside vehicles.
+        // Exception: when suppressNextArrivalLook is set (M-ENTER RTRUE path, e.g.
+        // DOME-ROOM dead-player teleport), the destination was already handled in M-ENTER;
+        // update this.here via onRoomEntered for housekeeping but emit nothing.
         const mEndNewParent = this.player.parent;
         const mEndNewRoom = mEndNewParent instanceof Room ? mEndNewParent : null;
         if (mEndNewRoom !== null && mEndNewRoom !== this.here) {
           moved = true;
           const enterOut = this.onRoomEntered(mEndNewRoom);
-          const roomDesc = this.describeCurrentRoom(false); // M-END movement arrival
-          const mEndParts = [enterOut, roomDesc].filter(s => s.length > 0);
-          if (mEndParts.length > 0) {
-            const idx = outputs.length - 1;
-            if (idx >= 0) {
-              outputs[idx] = [outputs[idx], ...mEndParts].filter(s => s.length > 0).join('\n');
-            } else {
-              outputs.push(mEndParts.join('\n'));
+          // suppressNextArrivalLook: M-ENTER RTRUE already handled the move (e.g. dome
+          // dead-player teleport).  this.here is updated; nothing more to emit.
+          if (!this.suppressNextArrivalLook) {
+            const roomDesc = this.describeCurrentRoom(false); // M-END movement arrival
+            const mEndParts = [enterOut, roomDesc].filter(s => s.length > 0);
+            if (mEndParts.length > 0) {
+              const idx = outputs.length - 1;
+              if (idx >= 0) {
+                outputs[idx] = [outputs[idx], ...mEndParts].filter(s => s.length > 0).join('\n');
+              } else {
+                outputs.push(mEndParts.join('\n'));
+              }
             }
           }
         }
@@ -1207,7 +1222,15 @@ export class Game {
         room, 'walk', 'V-WALK', undefined, false, undefined, undefined, M_ENTER,
         (text) => enterBuf.push(text),
       );
-      room.handler(ctx);
+      const enterHandled = room.handler(ctx);
+      // gverbs.zil:2123 — after M-ENTER, if RTRUE AND HERE changed (M-ENTER
+      // teleported the player via MOVE+SETG rather than calling GOTO which would
+      // fire its own V-FIRST-LOOK), GOTO exits before V-FIRST-LOOK.
+      // DOME-ROOM dead-player path: RTRUE + player moved to TORCH-ROOM → suppress.
+      // BAT-ROOM: M-ENTER returns false (FLY-ME's nested GOTO handles V-FIRST-LOOK).
+      if (enterHandled && this.player.parent !== room) {
+        this.suppressNextArrivalLook = true;
+      }
     }
     this.emitRoomEntered(room.id, (text) => enterBuf.push(text));
     return enterBuf.join('\n');
