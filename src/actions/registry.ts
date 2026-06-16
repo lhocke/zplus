@@ -31,6 +31,7 @@ import {
   largeBagFAction,
   dumbContainerAction,
 } from './treasure-room.js';
+import { trollRoomFcn } from './troll-fcn.js';
 import { cyclopsFcnAction, cyclopsRoomFcnAction } from './cyclops.js';
 import {
   preBoardHandler,
@@ -61,6 +62,7 @@ const ACTIONS: Record<string, ActionHandler> = {
   'DUMB-CONTAINER':    dumbContainerAction,
   'CYCLOPS-FCN':       cyclopsFcnAction,
   'CYCLOPS-ROOM-FCN':  cyclopsRoomFcnAction,
+  'TROLL-ROOM-F':      trollRoomFcn,
   ...damActions,
   ...boatActions,
   ...riverObjActions,

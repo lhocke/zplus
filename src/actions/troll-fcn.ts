@@ -2,9 +2,15 @@
 //
 // TROLL-FLAG double-duty: dead/unconscious → trollFlag=true (opens exits);
 // F_BUSY axe-recovery short-circuit (spec §10.2, D3).
+//
+// Also houses TROLL-ROOM-F (1actions.zil:4175–4178): the smallest room FCN
+// in the game — on M-ENTER with troll present, THIS-IS-IT binds "it" to the
+// troll so "attack it" works on arrival.
 
+import type { ActionHandler } from '../domain/game-object.js';
 import { Flag } from '../domain/flags.js';
 import { F_BUSY, F_DEAD, F_UNCONSCIOUS, F_CONSCIOUS, F_FIRST } from '../engine/combat.js';
+import { M_ENTER } from '../engine/messages.js';
 
 /** Minimal handle for a world object that TROLL-FCN needs to touch. */
 export interface TrollObjHandle {
@@ -157,3 +163,14 @@ export function makeTrollFcn(ctx: TrollFcnContext): (fcode: number) => boolean {
     return false;
   };
 }
+
+// TROLL-ROOM-F — 1actions.zil:4175–4178.
+// On M-ENTER with the troll present, bind "it" to the troll so "attack it"
+// targets the troll on arrival without the player having to name it first.
+export const trollRoomFcn: ActionHandler = (ctx) => {
+  if (ctx.rarg !== M_ENTER) return false;
+  const troll = ctx.world.get('TROLL');
+  if (troll === undefined || troll.parent !== ctx.here) return false;
+  ctx.thisIsIt?.(troll);
+  return false;
+};
