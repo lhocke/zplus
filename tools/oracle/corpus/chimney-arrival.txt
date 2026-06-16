@@ -1,0 +1,32 @@
+# chimney-arrival.txt — chimney UP brief-revisit corpus (Zork I oracle harness)
+# generated-by: dfrotz-r119 2026-06-16 chimney-arrival
+#
+# MECHANIC: BD7 — UP-CHIMNEY-FUNCTION (1actions.zil:553) returns KITCHEN.
+# When the player already visited KITCHEN (Flag.Touched set), the arrival
+# must render the abbreviated revisit view: room name + objects, no ldesc.
+# dfrotz R119 move 15 confirms the brief landing; move 16 (LOOK) shows
+# the verbose form as contrast.
+#
+# Route: visit Kitchen first (via open window), go underground to Studio,
+# then climb chimney UP back to Kitchen.  Lamp is the only held item
+# (one item ≤ 2) so UP-CHIMNEY-FUNCTION permits the ascent.
+
+north
+east
+open window
+west
+west
+take lamp
+move rug
+open trap door
+turn on lamp
+down
+south
+# Gallery and Studio first-visit descs have a pre-existing paragraph-join
+# divergence (normalizer wrap-width boundary).  Mark structural so the
+# chimney-arrival turns (up / look) can be validated exactly.
+~east
+take painting
+~north
+up
+look
