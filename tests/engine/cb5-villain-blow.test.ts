@@ -481,8 +481,8 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
 
   it('take succeeds when exactly at loadAllowed', () => {
     const player = makeTestPlayer();
-    const held = makeTestItem('HELD', 50);
-    held.moveTo(player);  // player weight=50
+    const held = makeTestItem('HELD', 45);
+    held.moveTo(player);  // player weight = 5 (player SIZE default) + 45 = 50
     const room = makeTestRoom();
     const item = makeTestItem('NEW', 50);  // 50+50=100 ≤ 100 → allowed
     item.moveTo(room);

@@ -100,6 +100,8 @@ function makeFixture(): Fix {
     ldesc: 'A heavy chest.',
   });
   chest.set(Flag.Container);
+  chest.props.set('CAPACITY', 100);
+  chest.props.set('SIZE', 10);
   // Chest starts closed (no Flag.Open), not takeable
   chest.moveTo(room);
 

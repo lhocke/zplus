@@ -609,10 +609,10 @@ function verbGo(ctx: VerbContext): VerbResult {
 }
 
 // WEIGHT — gverbs.zil:1988: SIZE(obj) + recursive sum over all children.
-// ZIL GETP returns 0 when the property is absent, so objects with no SIZE
-// contribute 0 to the total (the player object has no SIZE, for example).
+// ZIL <PROPDEF SIZE 5> (zork1.zil:24) makes GETP P?SIZE return 5 when the
+// property is absent — NOT 0.  Use 5 as the fallback to match ZIL semantics.
 function weight(obj: GameObject): number {
-  const size = (obj.props.get('SIZE') as number | undefined) ?? 0;
+  const size = (obj.props.get('SIZE') as number | undefined) ?? 5;
   let w = size;
   for (const child of obj.children) {
     w += weight(child);
@@ -889,7 +889,7 @@ function verbPut(ctx: VerbContext): VerbResult {
 
   // Capacity: (WEIGHT(PRSI) + WEIGHT(PRSO) - SIZE(PRSI)) > CAPACITY(PRSI) (gverbs.zil:1099–1102)
   const capacity = (container.props.get('CAPACITY') as number | undefined) ?? 0;
-  const containerSize = (container.props.get('SIZE') as number | undefined) ?? 0;
+  const containerSize = (container.props.get('SIZE') as number | undefined) ?? 5;
   if (weight(container) + weight(item) - containerSize > capacity) {
     return result(vPut.noRoom);
   }

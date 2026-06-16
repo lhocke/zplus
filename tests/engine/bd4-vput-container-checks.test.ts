@@ -21,6 +21,7 @@ import { Container } from '../../src/domain/container.js';
 import { Actor } from '../../src/domain/actor.js';
 import { Flag } from '../../src/domain/flags.js';
 import { vPut, fmt } from '../../src/engine/game-messages.js';
+import { newGameAt } from '../helpers/new-game.js';
 
 // ---------------------------------------------------------------------------
 // Fixture
@@ -188,5 +189,66 @@ describe('BD4 — V-PUT success sets TOUCHBIT and calls SCORE-OBJ', () => {
     fix.boulder.moveTo(fix.player);
     executeVerb(ctx(fix, 'BOULDER', 'BOX'), 'V-PUT');
     expect(fix.scoreLog).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ZIL default SIZE — objects with no explicit SIZE property
+// ---------------------------------------------------------------------------
+// ZIL declares <PROPDEF SIZE 5> (zork1.zil:24), so GETP P?SIZE returns 5
+// for any object that lacks an explicit (SIZE ...) stanza. The capacity guard
+// must use 5 as the absent-SIZE default, not 0.
+//
+// Real-game anchor: dfrotz R119 path
+//   north / east / open window / west / open sack / take bottle /
+//   put bottle in sack  →  "There's no room."
+// Kitchen sack starts with garlic (SIZE 4) + lunch (no SIZE → 5).
+// WEIGHT(sack) = SIZE(sack=9) + 4 + 5 = 18; WEIGHT(bottle) = 5 + 4 = 9.
+// (18 + 9) - 9 = 18 > 9 (capacity) → no room.
+
+describe('BD4 — capacity uses ZIL default SIZE=5 for items without explicit SIZE', () => {
+  it('rejects put bottle in sack (dfrotz R119: "There\'s no room.")', () => {
+    const game = newGameAt('KITCHEN');
+    game.turn('open sack');
+    game.turn('take bottle');
+    const result = game.turn('put bottle in sack');
+    expect(result.output).toBe("There's no room.");
+  });
+
+  it('weight() counts absent-SIZE items as 5 per ZIL PROPDEF', () => {
+    // Minimal fixture: a container with capacity 4, and two SIZE-less items.
+    // With default-0: 0+0 <= 4 → fits. With default-5: 5+5=10 > 4 → no room.
+    const room = new Room('R', 'Room', { ldesc: 'A room.' });
+    room.set(Flag.On);
+    const box = new Container('BOX2', 'box', { synonyms: ['box'] });
+    box.set(Flag.Container);
+    box.set(Flag.Open);
+    box.props.set('CAPACITY', 4);
+    box.props.set('SIZE', 5);
+    box.moveTo(room);
+
+    // filler — no explicit SIZE
+    const apple = new Thing('APPLE', 'apple', { synonyms: ['apple'] });
+    apple.set(Flag.Takeable);
+    apple.moveTo(box);   // already inside, contributes to WEIGHT(box)
+
+    const pear = new Thing('PEAR', 'pear', { synonyms: ['pear'] });
+    pear.set(Flag.Takeable);
+
+    const player = new Actor('PLAYER2', 'yourself');
+    player.moveTo(room);
+    pear.moveTo(player);
+
+    const world = World.fromObjects([room, box, apple, pear, player]);
+    const vctx: VerbContext = {
+      verb: 'put', action: 'V-PUT',
+      dobj: pear, iobj: box, prep: 'in',
+      player, here: room, world,
+    };
+    // WEIGHT(box) = SIZE(box=5) + WEIGHT(apple=5) = 10
+    // WEIGHT(pear) = 5
+    // (10 + 5) - 5 = 10 > 4 → no room
+    const result = executeVerb(vctx, 'V-PUT');
+    expect(result.output).toBe("There's no room.");
   });
 });
