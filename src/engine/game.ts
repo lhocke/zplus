@@ -778,6 +778,7 @@ export class Game {
           iCureTick: this.clock.getEntry('I-CURE')?.turnsLeft ?? 0,
           disableClock: (id) => this.clock.disable(id),
           finish: () => this.doFinish((text) => handled.push(text)),
+          thisIsIt: (obj) => { this.parser.setItRef(obj.id); },
           heroBlow: (targetId, weaponId) => {
             const out: string[] = [];
             const entry = this.getVillainEntry(targetId, (s) => out.push(s));

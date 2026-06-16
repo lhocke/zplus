@@ -14,7 +14,7 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, vBrief, vSuperBrief, vVersion, vScript, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, vLeap, jumploss, wheeeee, vShake, vWalkAround, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, vBrief, vSuperBrief, vVersion, vScript, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, vLeap, jumploss, wheeeee, vShake, vWalkAround, vWalk, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
 import { ROOM_GLOBAL_IDS } from '../parser/room-globals.js';
 import { CURE_WAIT } from '../combat.js';
@@ -126,6 +126,13 @@ export interface VerbContext {
   readonly disableClock?: (id: string) => void;
   /** Render the end-of-game score block and set gameOver (V-QUIT / gverbs.zil:55–61 web form). */
   readonly finish?: () => void;
+  /**
+   * ZIL THIS-IS-IT — re-point the "it" pronoun referent to the given object.
+   * verbOpen calls this when PRINT-CONTENTS reveals exactly one item
+   * (gverbs.zil:1747: THIS-IS-IT at end of PRINT-CONTENTS loop).
+   * Optional so test stubs that don't track pronouns can omit it.
+   */
+  readonly thisIsIt?: (obj: GameObject) => void;
 }
 
 export interface VerbResult {
@@ -458,12 +465,21 @@ function verbGo(ctx: VerbContext): VerbResult {
   const exit = ctx.here.exits.find(e => e.dir === dir);
 
   if (!exit) {
-    // No exit in this direction: RFATAL (ZIL V-WALK NEXIT/no-exit path).
-    // M-FATAL clears the continuation queue and skips M-END.
-    return result("You can't go that way.", /*moved*/false, /*fatal*/true);
+    // V-WALK no-exit fallthrough (gverbs.zil:1562–1580).
+    // Before "You can't go that way.", ZIL checks dark + PROB 80 for grue death.
+    const prob = ctx.prob ?? (() => false);
+    const roomLit = (ctx.alwaysLit ?? false) || lit(ctx.here, ctx.player, ctx.world);
+    if (!roomLit && !ctx.here.has(Flag.NonLand) && prob(80)) {
+      if (ctx.getGlobal?.('SPRAYED?')) {
+        return result(vWalk.grueSpray, /*moved*/false, /*fatal*/true);
+      }
+      ctx.jigsUp?.(vWalk.grueNoSpray);
+      return result('', /*moved*/false, /*fatal*/true);
+    }
+    return result(vWalk.cantGoThatWay, /*moved*/false, /*fatal*/true);
   }
 
-  const prob = ctx.prob ?? (() => false);
+  const prob = ctx.prob ?? (() => false);  // used in enterDest (GOTO grue gate)
 
   // ZIL GOTO vehicle interlock (gverbs.zil:2045–2088).
   // WLOC = LOC(WINNER): the player's immediate container (vehicle or room).
@@ -719,10 +735,13 @@ function verbOpen(ctx: VerbContext): VerbResult {
   let contentStr: string;
   if (articled.length === 1) {
     contentStr = articled[0]!;
+    // PRINT-CONTENTS (gverbs.zil:1747): single-item reveal binds IT to that item.
+    ctx.thisIsIt?.(contents[0]!);
   } else {
     const last = articled[articled.length - 1];
     const rest = articled.slice(0, -1);
     contentStr = rest.join(', ') + ', and ' + last;
+    // ZIL TWO? clears IT? when 2+ items — no rebind.
   }
   return result(fmt(vOpen.opensRevealing, item.desc, contentStr));
 }
