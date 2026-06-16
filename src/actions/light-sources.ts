@@ -17,6 +17,7 @@ import type { ActionHandler } from '../domain/game-object.js';
 import { fmt, vLampOn, vLampOff } from '../engine/game-messages.js';
 import type { World } from '../domain/world.js';
 import { Flag } from '../domain/flags.js';
+import { lit } from '../engine/parser/scope.js';
 
 /** LANTERN — zil/1actions.zil:2230 */
 export const lantern: ActionHandler = (ctx) => {
@@ -58,6 +59,10 @@ export const lantern: ActionHandler = (ctx) => {
     ctx.clearFlag(lamp, Flag.OnFire);
     // ZIL: V-LAMP-OFF "The [PRSO] is now off." (gverbs.zil:779)
     ctx.tell(fmt(vLampOff.turnedOff, lamp.desc));
+    // gverbs.zil:780-781: if room went dark, say so.
+    if (!lit(ctx.here, ctx.actor, ctx.world)) {
+      ctx.tell('It is now pitch black.');
+    }
     return true;
   }
 

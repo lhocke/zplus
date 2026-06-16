@@ -1,0 +1,24 @@
+# lamp-off-dark.txt — lamp-off-in-dark-room corpus (Zork I oracle harness)
+# generated-by: dfrotz-r119 2026-06-16 lamp-off-dark-BD1
+#
+# MECHANIC: V-LAMP-OFF pitch-black append (BD1 / DGC-3).
+# Verifies that turning off the lamp in an unlit room (Cellar) appends
+# "It is now pitch black." (gverbs.zil:780-781).
+#
+# Path: West of House -> north -> east -> open window -> west -> west (Living Room)
+#   take lamp, move rug, open trap door, turn on lamp, down (Cellar), look,
+#   turn off lamp  ->  "The brass lantern is now off.\nIt is now pitch black."
+#   look  ->  "It is pitch black. You are likely to be eaten by a grue."
+north
+east
+open window
+west
+west
+take lamp
+move rug
+open trap door
+turn on lamp
+down
+look
+turn off lamp
+look

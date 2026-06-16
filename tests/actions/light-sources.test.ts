@@ -292,6 +292,33 @@ describe('LANTERN: verb responses', () => {
     expect(lamp?.has(Flag.OnFire)).toBe(false);
   });
 
+  // BD1 — gverbs.zil:780-781: after clearing ONBIT, if LIT went false, append
+  // "It is now pitch black." (DGC-3).
+  it('turn off lantern in dark room appends pitch-black line (BD1)', () => {
+    // Cellar has no ONBIT — dark without a light source.
+    const g = newGameAt('CELLAR');
+    g.start();
+    const w = worldOf(g);
+    const lamp = w.get('LAMP')!;
+    const player = w.get('PLAYER')!;
+    lamp.moveTo(player);
+    lamp.set(Flag.OnFire);
+    lamp.set(Flag.Light);
+
+    const r = g.turn('turn off lantern');
+    expect(r.output).toContain('The brass lantern is now off.');
+    expect(r.output).toContain('It is now pitch black.');
+  });
+
+  it('turn off lantern in a naturally-lit room (ONBIT) does not append pitch-black', () => {
+    // Living Room has ONBIT — always lit regardless of lamp state.
+    const g = gameWithLamp();
+    g.turn('turn on lantern');
+    const r = g.turn('turn off lantern');
+    expect(r.output).toContain('The brass lantern is now off.');
+    expect(r.output).not.toContain('pitch black');
+  });
+
   it('examine lit lamp reports on', () => {
     const g = gameWithLamp();
     g.turn('turn on lantern');

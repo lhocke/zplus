@@ -64,6 +64,7 @@ steep metal ramp which is unclimbable.
 
 > turn off lamp
 The brass lantern is now off.
+It is now pitch black.
 
 > south
 Oh, no! A lurking grue slithered into the room and devoured you!
