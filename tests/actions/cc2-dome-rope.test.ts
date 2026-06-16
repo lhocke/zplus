@@ -299,6 +299,27 @@ describe('CC2 — DOME-ROOM-FCN M-ENTER: dead player falls to TORCH-ROOM', () =>
     // Dead player entering DOME-ROOM should be moved to TORCH-ROOM.
     expect(g.view().here).toBe('TORCH-ROOM');
   });
+
+  // Regression lock for CC10 fix: DOME-ROOM-FCN M-ENTER must NOT reorder output.
+  // ZIL 1actions.zil:1041–1047 — DEAD branch: TELL "strong pull", MOVE, RTRUE.
+  // No explicit V-LOOK call, so M-ENTER output ("strong pull") precedes the
+  // engine-emitted room description — pre-CC10 default ordering.
+  // The broad movedInEnter heuristic in commit 2f00f1e flipped this: "strong pull"
+  // appeared AFTER the Dome Room description. This test locks the correct order.
+  it('entering DOME-ROOM while dead: "strong pull" appears before dome description (1actions.zil:1042)', () => {
+    const g = newGameAt('ENGRAVINGS-CAVE');
+    g.start();
+    giveLantern(g);
+    const deadFlag = (g as unknown as { dead: boolean });
+    deadFlag.dead = true;
+    const out = g.turn('east').output;
+    const pullIdx = out.indexOf('strong pull');
+    const domeIdx = out.indexOf('periphery of a large dome');
+    expect(pullIdx, '"strong pull" must appear in output').toBeGreaterThanOrEqual(0);
+    expect(domeIdx, '"periphery of a large dome" must appear in output').toBeGreaterThanOrEqual(0);
+    // M-ENTER output precedes engine room description (pre-CC10 default ordering).
+    expect(pullIdx, '"strong pull" must come before dome description').toBeLessThan(domeIdx);
+  });
 });
 
 // ---------------------------------------------------------------------------

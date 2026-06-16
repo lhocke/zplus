@@ -855,14 +855,12 @@ export class Game {
               if (enterOut.length > 0) {
                 const idx = outputs.length - 1;
                 if (idx >= 0) {
-                  // If M-ENTER moved the player a second time (e.g. BATS-ROOM FLY-ME),
-                  // ZIL's <V-LOOK> <CRLF> <FLY-ME> ordering means the destination room
-                  // description (verbResult.output) must precede the M-ENTER output
-                  // (fweep/grab).  When M-ENTER did NOT teleport, normal ordering applies:
-                  // M-ENTER output precedes the room description.
-                  // 1actions.zil:2484–2486.
-                  const movedInEnter = this.player.parent !== newRoom;
-                  outputs[idx] = movedInEnter
+                  // BAT-ROOM only: ZIL 1actions.zil:2484–2486 does <V-LOOK> <CRLF> <FLY-ME>,
+                  // so the room description must precede the M-ENTER output (fweep/grab).
+                  // All other M-ENTER handlers (DOME-ROOM-FCN etc.) do NOT call V-LOOK, so
+                  // the default ordering applies: M-ENTER output before the room description.
+                  const batRoomFirst = newRoom.id === 'BAT-ROOM';
+                  outputs[idx] = batRoomFirst
                     ? [outputs[idx], enterOut].join('\n')
                     : [enterOut, outputs[idx]].join('\n');
                 } else {
