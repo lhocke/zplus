@@ -1,5 +1,5 @@
 /**
- * Coal-mine shaft region action routines — CC3.
+ * Coal-mine shaft region action routines — CC3 + CC10.
  *
  * Hand-translations of ZIL routines from zil/1actions.zil:
  *
@@ -10,6 +10,9 @@
  *   MSWITCH-FUNCTION 1actions.zil:2531  — TURN switch with screwdriver
  *   BASKET-F         1actions.zil:277   — RAISE/LOWER the basket (CAGE-TOP global)
  *   GUNK-FUNCTION    1actions.zil:2553  — slag crumbles on touch (already in above-ground.ts)
+ *   BATS-ROOM        1actions.zil:2478  — BAT-ROOM: M-LOOK description; M-ENTER bat-grab
+ *   BOOM-ROOM        1actions.zil:2446  — GAS-ROOM M-END: lit flame → explosion + jigsUp
+ *   CAVE2-ROOM       1actions.zil:2416  — TINY-CAVE M-END: candle blow-out (ZPROB 50)
  *
  * CAGE-TOP global (1actions.zil:275: <GLOBAL CAGE-TOP T>):
  *   true  = basket is raised; RAISED-BASKET in SHAFT-ROOM, LOWERED-BASKET in LOWER-SHAFT.
@@ -18,10 +21,11 @@
 
 import type { ActionHandler, GameObject } from '../domain/game-object.js';
 import { Flag } from '../domain/flags.js';
-import { M_BEG, M_LOOK } from '../engine/messages.js';
+import { M_BEG, M_END, M_ENTER, M_LOOK } from '../engine/messages.js';
 import { pick, dummy, type PickRng } from '../engine/game-messages.js';
 import { lit } from '../engine/parser/scope.js';
 import type { Room } from '../domain/room.js';
+import { flyMe } from './bat-garlic.js';
 
 function pickDummy(rng: PickRng | undefined): string {
   if (rng !== undefined) return pick(dummy, rng);
@@ -321,10 +325,140 @@ export const basketF: ActionHandler = (ctx) => {
   return false;
 };
 
+// ---------------------------------------------------------------------------
+// BATS-ROOM — 1actions.zil:2478–2486
+// ---------------------------------------------------------------------------
+
+/**
+ * BATS-ROOM — room FCN for BAT-ROOM.
+ *
+ * M-LOOK: emit the room description (matches ldesc; intercept to ensure exact
+ *         ZIL text when ldesc fallback isn't used).
+ * M-ENTER: when not dead and garlic is absent (not in WINNER, not in HERE) →
+ *          call FLY-ME (same path as BAT-F, 1actions.zil:321).
+ */
+export const batsRoom: ActionHandler = (ctx) => {
+  if (ctx.rarg === M_LOOK) {
+    ctx.tell('You are in a small room which has doors only to the east and south.');
+    return true;
+  }
+
+  if (ctx.rarg === M_ENTER && !ctx.isDead?.()) {
+    const garlic = ctx.world.get('GARLIC');
+    // <NOT <EQUAL? <LOC ,GARLIC> ,WINNER ,HERE>> — garlic must not be in player or HERE.
+    const garlicNearby =
+      garlic !== undefined &&
+      (garlic.parent === ctx.actor || garlic.parent === ctx.here);
+    if (!garlicNearby) {
+      flyMe(ctx);
+    }
+  }
+
+  return false;
+};
+
+// ---------------------------------------------------------------------------
+// BOOM-ROOM — 1actions.zil:2446–2467
+// ---------------------------------------------------------------------------
+
+/**
+ * BOOM-ROOM — GAS-ROOM M-END handler.
+ *
+ * Fires after each turn spent in the gas room.  If the player is carrying any
+ * lit light source (candles, torch, or match with ONBIT set), the room explodes.
+ *
+ * DUMMY? branch (1actions.zil:2458–2461): fires when the CURRENT TURN's action
+ * was V-LAMP-ON or V-BURN and PRSO was the ignited light source — the player
+ * literally just lit a flame in the room.  Message is different from passive carry.
+ */
+export const boomRoom: ActionHandler = (ctx) => {
+  if (ctx.rarg !== M_END) return false;
+
+  // Check if this turn's action was lighting a flame object.
+  // ZIL: <VERB? LAMP-ON BURN> AND <EQUAL? ,PRSO ,CANDLES ,TORCH ,MATCH>
+  const isDummyAction =
+    (ctx.action === 'V-LAMP-ON' || ctx.action === 'V-BURN') &&
+    (ctx.dobj?.id === 'CANDLES' || ctx.dobj?.id === 'TORCH' || ctx.dobj?.id === 'MATCH');
+
+  // Check carried lit objects — HELD? = parent is WINNER.
+  const candles = ctx.world.get('CANDLES');
+  const torch   = ctx.world.get('TORCH');
+  const match   = ctx.world.get('MATCH');
+
+  const hasLitFlame =
+    (candles !== undefined && candles.parent === ctx.actor && ctx.hasFlag(candles, Flag.OnFire)) ||
+    (torch   !== undefined && torch.parent   === ctx.actor && ctx.hasFlag(torch,   Flag.OnFire)) ||
+    (match   !== undefined && match.parent   === ctx.actor && ctx.hasFlag(match,   Flag.OnFire));
+
+  if (!hasLitFlame) return false;
+
+  if (isDummyAction) {
+    ctx.tell(
+      `How sad for an aspiring adventurer to light a ${ctx.dobj!.desc} in a room which\n` +
+      'reeks of gas. Fortunately, there is justice in the world.',
+    );
+  } else {
+    ctx.tell(
+      'Oh dear. It appears that the smell coming from this room was coal gas.\n' +
+      'I would have thought twice about carrying flaming objects in here.',
+    );
+  }
+
+  ctx.jigsUp?.('\n      ** BOOOOOOOOOOOM **');
+  return true;
+};
+
+// ---------------------------------------------------------------------------
+// CAVE2-ROOM — 1actions.zil:2416–2426
+// ---------------------------------------------------------------------------
+
+/**
+ * CAVE2-ROOM — TINY-CAVE M-END handler.
+ *
+ * Each turn: if the player is carrying lit candles, roll ZPROB(50) (≈50% with
+ * default LUCKY=T) to blow them out.  Disables the candle clock (I-CANDLES)
+ * and clears ONBIT.  If the room goes dark, announces that too.
+ *
+ * ZPROB(50) — gmacros.zil:119–122: next()*100 < 50 when LUCKY=T.
+ */
+export const cave2Room: ActionHandler = (ctx) => {
+  if (ctx.rarg !== M_END) return false;
+
+  const candles = ctx.world.get('CANDLES');
+  if (
+    candles === undefined ||
+    candles.parent !== ctx.actor ||
+    !ctx.hasFlag(candles, Flag.OnFire)
+  ) {
+    return false;
+  }
+
+  // ZPROB(50): next()*100 < 50 (LUCKY=T assumed, matching default game state).
+  const blow = ctx.rng !== undefined
+    ? ctx.rng.next() * 100 < 50
+    : false;
+  if (!blow) return false;
+
+  ctx.disableClock('I-CANDLES');
+  ctx.clearFlag(candles, Flag.OnFire);
+
+  ctx.tell('A gust of wind blows out your candles!');
+
+  // <NOT <SETG LIT <LIT? ,HERE>>> — announce if room is now dark.
+  if (!lit(ctx.here as Room, ctx.actor, ctx.world)) {
+    ctx.tell('It is now completely dark.');
+  }
+
+  return false;
+};
+
 export const coalMineActions: Record<string, ActionHandler> = {
   'NO-OBJS':           noObjs,
   'MACHINE-ROOM-FCN':  machineRoomFcn,
   'MACHINE-F':         machineF,
   'MSWITCH-FUNCTION':  mswitchFunction,
   'BASKET-F':          basketF,
+  'BATS-ROOM':         batsRoom,
+  'BOOM-ROOM':         boomRoom,
+  'CAVE2-ROOM':        cave2Room,
 };

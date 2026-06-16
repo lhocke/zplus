@@ -47,7 +47,8 @@ function fweep(n: number, ctx: ActionContext): void {
 // FLY-ME — 1actions.zil:317–324.
 // FWEEP(4) + grab message + GOTO random BAT-DROPS room.
 // Path B fence: destination is seeded/structural — callers must not golden-diff the draw.
-function flyMe(ctx: ActionContext): void {
+// Exported so BATS-ROOM (room FCN) can reuse the same path on M-ENTER.
+export function flyMe(ctx: ActionContext): void {
   fweep(4, ctx);
   ctx.tell('The bat grabs you by the scruff of your neck and lifts you away....\n');
 

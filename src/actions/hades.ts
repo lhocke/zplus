@@ -24,6 +24,33 @@ import { Flag } from '../domain/flags.js';
 import { M_BEG, M_END, M_LOOK } from '../engine/messages.js';
 
 // ---------------------------------------------------------------------------
+// SOUTH-TEMPLE-FCN — 1actions.zil:2573–2576
+// ---------------------------------------------------------------------------
+
+/**
+ * SOUTH-TEMPLE-FCN — SOUTH-TEMPLE M-BEG handler.
+ *
+ * Before each action, sets the COFFIN-CURE global to NOT(coffin in WINNER).
+ * The down-exit in rooms.json uses `ifFlag: COFFIN-CURE` — open when player
+ * is NOT carrying the coffin; blocked with "You haven't a prayer..." when they are.
+ *
+ * Returns RFALSE so it never intercepts the action; it only updates the gate flag.
+ *
+ * Note: the Hades resurrection branch triggered by SOUTH-TEMPLE TOUCHBIT lives
+ * in the PRAY handler (game.ts); this routine does ONLY the coffin-gate.
+ */
+export const southTempleFcn: ActionHandler = (ctx) => {
+  if (ctx.rarg !== M_BEG) return false;
+
+  const coffin = ctx.world.get('COFFIN');
+  const holdingCoffin = coffin !== undefined && coffin.parent === ctx.actor;
+  // COFFIN-CURE = NOT (coffin in WINNER) → true = can pass, false = blocked.
+  ctx.setGlobal?.('COFFIN-CURE', !holdingCoffin);
+
+  return false;
+};
+
+// ---------------------------------------------------------------------------
 // LLD-ROOM — 1actions.zil:1058–1125
 // ---------------------------------------------------------------------------
 
@@ -294,9 +321,10 @@ export const blackBook: ActionHandler = (ctx) => {
 
 /** ACTION routines for the Hades region. */
 export const hadesActions: Record<string, ActionHandler> = {
-  'LLD-ROOM':    lldRoomFcn,
-  'GHOSTS-F':    ghostsFcn,
-  'BELL-F':      bellFcn,
-  'HOT-BELL-F':  hotBellFcn,
-  'BLACK-BOOK':  blackBook,
+  'LLD-ROOM':          lldRoomFcn,
+  'GHOSTS-F':          ghostsFcn,
+  'BELL-F':            bellFcn,
+  'HOT-BELL-F':        hotBellFcn,
+  'BLACK-BOOK':        blackBook,
+  'SOUTH-TEMPLE-FCN':  southTempleFcn,
 };
