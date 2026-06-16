@@ -867,11 +867,6 @@ function verbPut(ctx: VerbContext): VerbResult {
   if (item === undefined) return result("Put what?");
   if (container === undefined) return result("Put it where?");
 
-  // Not HELD? (gverbs.zil:710–711)
-  if (item.parent !== ctx.player) {
-    return result(fmt(preGive.notHoldingIt, item.desc));
-  }
-
   // PRSI not a container/surface (gverbs.zil:1090)
   if (!container.has(Flag.Container) && !container.has(Flag.Surface)) {
     return result(vPut.cantDoThat);
@@ -882,7 +877,31 @@ function verbPut(ctx: VerbContext): VerbResult {
     return result(fmt(vPut.notOpen, container.desc));
   }
 
+  // Self-containment (gverbs.zil:1096)
+  if (item === container) {
+    return result(vPut.how);
+  }
+
+  // Already inside (gverbs.zil:1098)
+  if (item.parent === container) {
+    return result(fmt(vPut.alreadyIn, item.desc, container.desc));
+  }
+
+  // Capacity: (WEIGHT(PRSI) + WEIGHT(PRSO) - SIZE(PRSI)) > CAPACITY(PRSI) (gverbs.zil:1099–1102)
+  const capacity = (container.props.get('CAPACITY') as number | undefined) ?? 0;
+  const containerSize = (container.props.get('SIZE') as number | undefined) ?? 0;
+  if (weight(container) + weight(item) - containerSize > capacity) {
+    return result(vPut.noRoom);
+  }
+
+  // Not HELD? (gverbs.zil:1105–1110) — simplified: reject if not in player's hands
+  if (item.parent !== ctx.player) {
+    return result(fmt(preGive.notHoldingIt, item.desc));
+  }
+
   item.moveTo(container);
+  item.set(Flag.Touched);          // FSET TOUCHBIT (gverbs.zil:1112)
+  ctx.scoreObj?.(item);            // SCORE-OBJ (gverbs.zil:1113)
   return result(vPut.done);
 }
 
