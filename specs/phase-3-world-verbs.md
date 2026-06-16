@@ -759,6 +759,8 @@ was already moved — do not re-schedule it here).
 | **DGC-7** | Chimney→Kitchen arrival: abbreviated revisit view, not full description | BD7 / chimney | dfrotz climb chimney into already-visited Kitchen; capture the brief arrival. |
 | **DGC-8** | ~~Disambiguation prompt Oxford-comma format~~ **moot** — BD8 fixed at main (§2-A); row retained so V2's diff audit can still map any disambig delta | BD8 | dfrotz a genuinely ambiguous command; capture the exact "the X, the Y, or the Z?" line. |
 | **DGC-9** | Movement-arrival lines after first visit lose their ldesc re-print (TOUCHBIT-gated brief mode, CB5 §4.6); DGC-7 is one instance of this class | CB5 / gverbs.zil:1650–1678 | Re-run the golden command file through dfrotz R119; every revisit-arrival line re-baselines from that single transcript. The stash@{1} test deltas predict the blast radius (RESERVOIR-SOUTH, DAM room, +more) but are NOT a source — dfrotz is. |
+| **DGC-10** | The 3 `examine house` lines (North-of-House ×2, South-of-House ×1) change from the stub "There's nothing special about the white house." to the 2-line ZIL house description | CC9 / WHITE-HOUSE-F (1actions.zil:115–116) | dfrotz R119 `examine house` at North + South of House; the 2-line text ("The house is a beautiful colonial house which is painted white." / "It is clear that the owners must have been extremely wealthy.") byte-matches 1actions.zil:115–116. Dfrotz-anchored. |
+| **DGC-11** | The 2 songbird lines "You hear in the distance the chirping of a song bird." at the seed-42 forest-arrival moves (`west`→Forest, `west`→Forest Path) | CC9 / I-FOREST-ROOM registered (§6.9) | **ENGINE-DETERMINISM ARTIFACT — NOT dfrotz-anchored** (see the exception note below). The chirp STRING is dfrotz-verified (byte-identical to dfrotz's I-FOREST-ROOM line); the POSITION is a seed-42 Mulberry32 draw dfrotz cannot reproduce. Regression-lock only, regenerated from the seeded engine run — like the seed-42 grue death already pinned. (Separate open check: dfrotz chirped ~35% vs our prob(15); if the rate is corrected these positions re-derive — CC9 follow-up.) |
 
 **Provenance contract (L41, added 2026-06-12):** every oracle corpus file and golden baseline
 carries a first-line header naming its generator — `# generated-by: dfrotz-r119 <date> <cmd>`
@@ -778,6 +780,18 @@ every changed line in the golden maps to a DGC row, and verifies each replacemen
 snapshot. Re-baselines are never self-referential. A reviewer audits: (1) diff golden vs
 previous golden, (2) every changed line names a DGC row, (3) that row's dfrotz capture
 contains the new line at the claimed (command, move#).
+
+**Engine-RNG determinism artifacts (the one exception to "never self-referential", added
+2026-06-13):** a few golden lines are produced by our seeded RNG (Mulberry32 @ seed 42) and
+**cannot** be dfrotz-anchored — dfrotz's Z-machine RNG draws a different sequence, so the
+line's *position* in our transcript has no dfrotz equivalent (its *text* is still
+dfrotz-verified). These (the seed-42 grue death; the I-FOREST-ROOM songbird chirps, DGC-11)
+are pinned as **regression locks only** — they prove the engine still produces the same
+seeded output it did before, NOT that a specific draw is faithful. They are regenerated from
+the seeded engine run, are **exempt from the dfrotz-anchoring requirement**, and MUST be
+tagged "engine-determinism artifact" in their register row so the §10.2 audit does not demand
+an impossible dfrotz capture. This exception is narrow: it covers ONLY lines whose presence is
+a structural RNG fire (SONGBIRD/grue), never a verb default, room description, or timer phase.
 
 ---
 
