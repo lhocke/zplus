@@ -886,13 +886,19 @@ function verbPut(ctx: VerbContext): VerbResult {
   if (item === undefined) return result("Put what?");
   if (container === undefined) return result("Put it where?");
 
-  // PRSI not a container/surface (gverbs.zil:1090)
-  if (!container.has(Flag.Container) && !container.has(Flag.Surface)) {
+  // Gate: NOT (OPENBIT OR OPENABLE? OR VEHBIT) → "You can't do that." (gverbs.zil:1088–1091)
+  // OPENABLE? = has CONTBIT or DOORBIT.
+  const canReceive = container.has(Flag.Open) ||
+                     container.has(Flag.Container) ||
+                     container.has(Flag.Door) ||
+                     container.has(Flag.Vehicle);
+  if (!canReceive) {
     return result(vPut.cantDoThat);
   }
 
-  // PRSI not open (gverbs.zil:1093)
+  // Openable/vehicle but not yet open → "The X isn't open." (gverbs.zil:1092–1094)
   if (!container.has(Flag.Open)) {
+    ctx.thisIsIt?.(container);
     return result(fmt(vPut.notOpen, container.desc));
   }
 
