@@ -107,8 +107,14 @@ export function randomizeObjects(world: World, player: Actor, rng: DeathRng): vo
 }
 
 // The full ZIL slot list from 1actions.zil:4126–4133.
-// Registered: I-LANTERN, I-CANDLES, I-MATCH, I-XB, I-XC, I-XBH (CC1), I-SWORD (H3).
-// Unregistered (pending): I-CYCLOPS, I-FOREST-ROOM.
+// All 8 slots are registered: I-LANTERN/I-CANDLES/I-MATCH (bootstrap.ts);
+// I-XB/I-XC/I-XBH (bootstrap.ts stubs, tick bodies in game.ts — CC1);
+// I-SWORD (bootstrap.ts — phase-2 hotfix H3, OQ-2 ratified);
+// I-CYCLOPS (game.ts makeICyclopsEntry — C2);
+// I-FOREST-ROOM (bootstrap.ts — CC9, registered demon).
+// Dam/thief/fight slots (I-FIGHT, I-THIEF, I-CURE, I-RFILL, I-REMPTY,
+// I-MAINT-ROOM, I-RIVER) are absent because ZIL KILL-INTERRUPTS never listed
+// them — they were moved to DEMONS or self-manage their own teardown.
 const INTERRUPT_IDS = [
   'I-XB', 'I-XC', 'I-CYCLOPS',
   'I-LANTERN', 'I-CANDLES', 'I-SWORD',
