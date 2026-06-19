@@ -1,5 +1,5 @@
-# dome-rope.txt — rope/dome oracle corpus (Zork I oracle harness)
-# generated-by: dfrotz-r119 2026-06-12 dome-rope-cc2
+# dome-rope.txt — rope/dome descent gate
+# generated-by: dfrotz-r119 2026-06-17 dome-rope-cc2
 #
 # MECHANIC: rope/dome descent gate.
 # Global flag: DOME-FLAG — set when rope is tied to the railing in DOME-ROOM.
@@ -9,34 +9,21 @@
 # ZIL refs: 1actions.zil:3030–3078 (ROPE-FUNCTION), :1030–1050 (DOME-ROOM-FCN),
 #           :1018–1028 (TORCH-ROOM-FCN). 1dungeon.zil:2081-2082 (DOME-ROOM exit).
 #
-# BLOCKER (documented): DOME-ROOM is reached by navigating east from ENGRAVINGS-CAVE,
-# which is reached via ROUND-ROOM, CHASM-ROOM, and ultimately through the Troll Room.
-# The troll blocks all passages and triggers RNG-driven combat (ZIL: <PROB 33>,
-# FIGHT-STRENGTH rolls). dfrotz and the engine use different RNG implementations,
-# so the troll's attack/result lines diverge — exactly the RNG-driven content the
-# corpus README declares out of scope. DOME-ROOM therefore cannot be reached
-# end-to-end without crossing a known RNG divergence.
+# Route (seed -s 1):
+#   West of House → North of House → Behind House → Kitchen → Living Room
+#   → Attic (take knife + rope) → back down → Cellar → Troll Room
+#   (kill troll with knife, 4 hits at -s 1, RNG-variable)
+#   → East-West Passage → Round Room (se) → Engravings Cave (east) → Dome Room
+#   → tie rope to railing (DOME-FLAG set) → down → Torch Room
 #
-# The rope/dome mechanics are fully exercised by the unit tests in
-#   tests/actions/cc2-dome-rope.test.ts
-# which drive the real world data via newGameAt('DOME-ROOM') and newGameAt('TORCH-ROOM').
+# Mechanic exercise (this corpus):
+#   Enters DOME-ROOM, executes `tie rope to railing`, verifies the flag-setting
+#   response ("The rope drops over the side…"), then takes the now-unblocked DOWN
+#   exit to TORCH-ROOM. DOME-FLAG is confirmed visible in both the post-tie LOOK
+#   (rope-hanging line) and the TORCH-ROOM description (rope-descends line).
 #
-# This corpus drives the deterministic above-ground section (through the trap door)
-# and pins the exact turn where the troll's RNG combat first diverges, so the
-# harness can verify that the route up to that point matches dfrotz byte-for-byte.
-#
-# Run with:
-#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/dome-rope.txt
-# (no seed needed for the above-ground legs)
-#
-# Verified against dfrotz R119: first troll-attack divergence at the
-# "east" command from TROLL-ROOM (or first attack response after entry).
-
-# --- State-table coverage notes (cells 13 / 15 / 16) ---
-#
-# These cells require DOME-ROOM, which is blocked by troll RNG divergence on the
-# above-ground route. Corpus coverage is via unit tests in cc2-dome-rope.test.ts:
-#
+# State-table coverage notes (cells 13 / 15 / 16)
+# -----------------------------------------------
 # Cell 13 (untied → flag-false CEXIT → death):
 #   DOME-FLAG=false: DOWN exit has ifFlag="DOME-FLAG" and flag is false.
 #   V-LEAP checks → CEXIT flag-false → "This was not a very safe place to try
@@ -59,11 +46,14 @@
 #   disjunct; removed in this commit.
 #   dfrotz: from DOME-ROOM with rope tied, `climb rope` produces "You can't do that!"
 #   ZIL ref: 1actions.zil:3050, gverbs.zil:281.
+#
+# Run with:
+#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/dome-rope.txt
 
 # Set verbose mode.
 verbose
 
-# --- Route: West of House → Cellar → North of Troll Room ---
+# --- West of House → Kitchen → Attic: acquire knife and rope ---
 open mailbox
 north
 east
@@ -71,9 +61,40 @@ open window
 west
 west
 take lantern
+turn on lantern
+east
+up
+take knife
+take rope
+down
+west
+
+# --- Living Room: open trap door ---
 move rug
 open trap door
-turn on lantern
+
+# --- Cellar → Troll Room ---
 down
 north
+
+# --- Kill troll (seed -s 1: 4 hits with knife; RNG-variable turns) ---
+~kill troll with knife
+~kill troll with knife
+~kill troll with knife
+~kill troll with knife
+@resync East-West Passage
+
+# --- East-West Passage → Round Room → Engravings Cave → Dome Room ---
 east
+east
+se
+east
+
+# --- MECHANIC: tie rope to railing → sets DOME-FLAG; rope drops over side ---
+tie rope to railing
+
+# --- DOME-FLAG now true: look shows rope hanging from railing ---
+look
+
+# --- Take the now-unblocked down exit → Torch Room ---
+down

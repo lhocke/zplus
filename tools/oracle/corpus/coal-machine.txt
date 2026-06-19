@@ -1,93 +1,296 @@
-# coal-machine.txt — coal-mine machine oracle corpus (Zork I oracle harness)
-# generated-by: dfrotz-r119 2026-06-12 coal-machine-cc3
+# coal-machine.txt — coal→diamond machine mechanic (CC3)
+# generated-by: dfrotz-r119 2026-06-18 coal-machine-cc3
 #
-# MECHANIC: coal→diamond machine + basket RAISE/LOWER.
-# Routines: MACHINE-F (MACHINE), MSWITCH-FUNCTION (MACHINE-SWITCH),
-#            BASKET-F (RAISED-BASKET / LOWERED-BASKET), MACHINE-ROOM-FCN (MACHINE-ROOM).
-# Global: CAGE-TOP — T = basket at top (RAISED-BASKET in SHAFT-ROOM).
-#
+# MECHANIC: coal→diamond machine.
+# Routines: NO-OBJS (TIMBER-ROOM, LOWER-SHAFT), MACHINE-F, MSWITCH-FUNCTION, BASKET-F.
 # ZIL refs:
+#   1actions.zil:2558  NO-OBJS          — EMPTY-HANDED gate; LIGHT-SHAFT +13 award
 #   1actions.zil:2488  MACHINE-ROOM-FCN — M-LOOK with dynamic lid state
-#   1actions.zil:2502  MACHINE-F        — OPEN/CLOSE lid, TAKE machine
-#   1actions.zil:2531  MSWITCH-FUNCTION — TURN switch with screwdriver
-#   1actions.zil:277   BASKET-F         — RAISE/LOWER basket, TAKE blocked
-#   1actions.zil:2558  NO-OBJS          — LOWER-SHAFT empty-handed+lit → +13
-#   1actions.zil:2578  <GLOBAL LIGHT-SHAFT 13>
+#   1actions.zil:2502  MACHINE-F        — OPEN/CLOSE machine lid; TAKE machine
+#   1actions.zil:2531  MSWITCH-FUNCTION — TURN switch with screwdriver -> coal->diamond
+#   1actions.zil:277   BASKET-F         — RAISE/LOWER basket; CAGE-TOP global
 #
-# BLOCKER (documented): MACHINE-ROOM and SHAFT-ROOM are reached by navigating
-# through the coal mines, which requires crossing the Troll Room.  The troll
-# blocks all passages and triggers RNG-driven combat (ZIL: <PROB 33>,
-# FIGHT-STRENGTH rolls).  dfrotz and the engine use different RNG
-# implementations, so the troll attack/result lines diverge — exactly the
-# RNG-driven content the corpus README declares out of scope.  The coal-mine
-# area therefore cannot be reached end-to-end without crossing a known RNG
-# divergence.
+# PATH (seed -s 1):
+#   West of House -> Kitchen (open sack, take garlic) -> Attic (take knife, rope)
+#   -> Living Room (move rug, open trap door) -> Cellar -> Troll Room (kill with knife)
+#   -> East-West Passage -> Round Room -> Engravings Cave -> Dome Room
+#     (tie rope to railing, down) -> Torch Room (take torch)
+#   -> Temple -> Altar -> Cave -> Mirror Room -> Narrow Passage -> Round Room
+#     -> East-West Passage -> Chasm -> Reservoir South -> Dam -> Dam Lobby
+#   -> Maintenance Room (take screwdriver, take wrench, push yellow button)
+#   -> Dam (turn bolt with wrench, drop wrench) -> wait x8 (drains reservoir)
+#   -> Reservoir South -> Reservoir -> Reservoir North -> Atlantis Room -> Cave
+#     -> Mirror Room -> Cold Passage -> Slide Room -> Mine Entrance -> Squeaky Room
+#   -> Bat Room -> Shaft Room
+#     (put screwdriver in basket, put torch in basket)
+#   -> Smelly Room -> Gas Room -> Mine x4 -> Ladder Top -> Ladder Bottom
+#     -> Dead End (take coal) -> return to Shaft Room
+#     (put coal in basket, lower basket)
+#   -> second descent: Mine x4 -> Ladder Top -> Ladder Bottom
+#     (drop lamp, drop knife) -> Timber Room -> Lower Shaft (Drafty Room)
+#     (take torch, take screwdriver, take coal)
+#   -> Machine Room (open lid, put coal in machine, close lid,
+#                   turn switch with screwdriver, open lid, take diamond)
+#   -> Lower Shaft (put diamond in basket, put torch in basket, put screwdriver in basket)
+#   -> Timber Room -> Ladder Bottom (take lamp, take knife)
+#   -> return to Shaft Room (raise basket, take diamond)
 #
-# The machine and basket mechanics are fully exercised by the unit tests in
-#   tests/actions/cc3-coal-machine.test.ts
-# which drive the real world data via newGameAt('MACHINE-ROOM'),
-# newGameAt('SHAFT-ROOM'), and newGameAt('LOWER-SHAFT').
+# SEED SELECTION (dfrotz -s 1):
+#   All tested seeds (1-30) kill the troll within 8 knife hits.
+#   Seed 1: only 3 divergences, all from thief wandering text in Coal Mine rooms
+#   (turns 90, 102, 106). No item theft, no path differences. Thief passes through
+#   without stealing (coal lacks TVALUE; lamp/knife were dropped before thief arrived).
+#   Engine and dfrotz disagree on thief presence at those 3 specific mine turns.
 #
-# This corpus drives the deterministic above-ground section (through the trap
-# door) and pins the exact turn where the troll's RNG combat first diverges,
-# so the harness can verify that the route up to that point matches dfrotz
-# byte-for-byte.
+# WEAPON: Knife (not sword).
+#   Knife taken from Attic table. Sword avoided (sword I-SWORD glow demon causes
+#   extra output differences in troll area).
+#
+# KNIFE / SIZE NOTE:
+#   ZIL PROPDEF defines SIZE default = 5 (zork1.zil:24). The knife has no explicit
+#   SIZE, so its weight is 5 -- which exceeds the NO-OBJS threshold (> 4). Both the
+#   lamp (SIZE 15) and the knife (SIZE 5) must be dropped at Ladder Bottom before
+#   entering the Timber Room passage. Only the garlic (SIZE 4 <= 4) is permitted.
+#
+# RNG NOTE: Troll combat uses different RNG in dfrotz vs the engine. The 9 troll
+#   turns (~north + ~kill x8) are marked ~ and followed by @resync East-West Passage.
+#   Thief wander text in Coal Mine at turns 90, 102, 106 is also RNG-variable and
+#   marked ~.
+#
+# WAIT BEHAVIOUR: Each wait advances 3 internal clock ticks. 8 waits drain the
+#   reservoir (I-REMPTY needs 8 player-ticks after bolt is turned).
+#
+# MECHANIC EXERCISED:
+#   BASKET-F:        put screwdriver/torch/coal in basket; lower basket; raise basket.
+#   NO-OBJS:         EMPTY-HANDED gate (only garlic SIZE<=4 permits passage); LIGHT-SHAFT +13.
+#   MACHINE-ROOM-FCN: M-LOOK with closed/open lid.
+#   MACHINE-F:       open lid, put coal, close lid.
+#   MSWITCH-FUNCTION: turn switch with screwdriver -> coal->diamond.
 #
 # Run with:
-#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/coal-machine.txt
-# (no seed needed for the above-ground legs)
-#
-# Verified against dfrotz R119: first troll-attack divergence at the "east"
-# command from TROLL-ROOM (or first attack response after entry).
+#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/coal-machine.txt
 
-# --- State-table coverage notes ---
-#
-# All cells below require MACHINE-ROOM / SHAFT-ROOM / LOWER-SHAFT, which are
-# blocked by troll RNG divergence on the above-ground route.  Corpus coverage
-# is via unit tests in cc3-coal-machine.test.ts:
-#
-# MACHINE-F open (empty): "The lid opens." — cc3 test "open machine when closed"
-# MACHINE-F open (contents): "The lid opens, revealing a small pile of coal."
-# MACHINE-F open (already open): PICK-ONE DUMMY
-# MACHINE-F close (open): "The lid closes."
-# MACHINE-F close (already closed): PICK-ONE DUMMY
-# MACHINE-F take: "It is far too large to carry."
-# MSWITCH-FUNCTION turn/no-screwdriver: "It seems that a X won't do."
-# MSWITCH-FUNCTION turn/lid-open: "The machine doesn't seem to want to do anything."
-# MSWITCH-FUNCTION turn/lid-closed/no-coal: gunk produced + excitement text
-# MSWITCH-FUNCTION turn/lid-closed/coal: coal removed, diamond placed + excitement text
-# BASKET-F raise/up: PICK-ONE DUMMY
-# BASKET-F raise/down: "The basket is raised to the top of the shaft."
-# BASKET-F lower/up: "The basket is lowered to the bottom of the shaft."
-# BASKET-F lower/down: PICK-ONE DUMMY
-# BASKET-F lower/dark: "It is now pitch black." (lamp in basket goes dark)
-# BASKET-F take: "The cage is securely fastened to the iron chain."
-# NO-OBJS: +13 score when player is in LOWER-SHAFT, empty-handed, and room is lit
-#
-# MACHINE-ROOM-FCN M-LOOK lid-state (from dfrotz R119, MACHINE-ROOM initial state):
-# > look
-# Machine Room
-# This is a large, cold room whose sole exit is to the north. In one
-# corner there is a machine which is reminiscent of a clothes
-# dryer. On its face is a switch which is labelled "START".
-# The switch does not appear to be manipulable by any human hand (unless the
-# fingers are about 1/16 by 1/4 inch). On the front of the machine is a large
-# lid, which is closed.
-
-# Set verbose mode.
+# --- West of House ---
 verbose
 
-# --- Route: West of House → Cellar → North of Troll Room ---
+# --- Mailbox + path to house ---
 open mailbox
 north
 east
 open window
 west
+
+# --- Living Room: take lantern, turn on ---
 west
 take lantern
+turn on lantern
+
+# --- Kitchen: open sack, take garlic ---
+east
+open sack
+take garlic
+
+# --- Attic: take knife + rope ---
+up
+take knife
+take rope
+
+# --- Living Room -> Cellar ---
+down
+west
 move rug
 open trap door
-turn on lantern
+down
+
+# --- Troll Room: entry (deterministic room description) ---
+~north
+
+# --- Kill troll with knife (seed -s 1: engine takes <= 8 hits; RNG-variable) ---
+~kill troll with knife
+~kill troll with knife
+~kill troll with knife
+~kill troll with knife
+~kill troll with knife
+~kill troll with knife
+~kill troll with knife
+~kill troll with knife
+@resync East-West Passage
+
+# --- East-West Passage (resync anchor consumed) ---
+# After @resync, the anchor consumed the "East-West Passage" description.
+# This 'east' corresponds to the next move FROM East-West Passage.
+east
+
+# --- Round Room -> Engravings Cave -> Dome Room ---
+east
+se
+east
+
+# --- Dome Room: tie rope, descend to Torch Room ---
+tie rope to railing
+down
+
+# --- Torch Room: take torch ---
+take torch
+
+# --- Torch Room -> Temple -> Altar -> Cave -> Mirror Room -> Narrow Passage -> Round Room ---
+south
+south
 down
 north
+north
+north
+
+# --- Round Room -> East-West Passage -> Chasm ---
+west
+down
+
+# --- Chasm -> Reservoir South -> Dam -> Dam Lobby -> Maintenance Room ---
+ne
 east
+north
+north
+
+# --- Maintenance Room: take screwdriver, take wrench, push yellow button (sets GATE-FLAG) ---
+take screwdriver
+take wrench
+push yellow button
+
+# --- Back to Dam ---
+south
+south
+
+# --- Open sluice gates ---
+turn bolt with wrench
+
+# --- Drop wrench (SIZE 10 would block Timber Room passage later) ---
+drop wrench
+
+# --- Wait 8 turns for I-REMPTY to drain reservoir ---
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+wait
+
+# --- Reservoir South (drained) -> Reservoir -> Reservoir North -> Atlantis Room -> Cave ---
+west
+north
+north
+north
+up
+
+# --- Mirror Room -> Cold Passage -> Slide Room -> Mine Entrance -> Squeaky Room -> Bat Room ---
+north
+north
+west
+north
+west
+north
+
+# --- Bat Room -> Shaft Room ---
+east
+
+# --- Shaft Room: load basket (screwdriver + torch) ---
+put screwdriver in basket
+put torch in basket
+
+# --- First mine descent: Shaft Room -> Smelly -> Gas -> Mine x4 -> Ladder Top -> Ladder Bottom ---
+north
+down
+east
+ne
+se
+sw
+down
+down
+
+# --- Dead End: take coal ---
+south
+take coal
+
+# --- Return: Dead End -> Ladder Bottom -> Ladder Top -> Mine x4 -> Gas -> Smelly -> Shaft Room ---
+north
+up
+# RNG: thief wander text in Coal Mine area differs at seed 1 (engine sees thief here, dfrotz doesn't)
+~up
+north
+east
+south
+north
+up
+south
+
+# --- Shaft Room: put coal in basket, lower basket ---
+put coal in basket
+lower basket
+
+# --- Second mine descent to Ladder Bottom ---
+north
+down
+east
+# RNG: thief wander text in Coal Mine area (dfrotz sees thief here, engine doesn't)
+~ne
+se
+sw
+down
+# RNG: thief wander text at Ladder Bottom (dfrotz sees thief here, engine doesn't)
+~down
+
+# --- Ladder Bottom: drop lamp (SIZE 15) and knife (SIZE 5 by PROPDEF default) ---
+# Both exceed the NO-OBJS threshold of 4; only garlic (SIZE 4) is permitted.
+drop lamp
+drop knife
+
+# --- Timber Room -> Lower Shaft (Drafty Room) ---
+# M-BEG NO-OBJS fires: garlic (SIZE 4) <= 4 -> EMPTY-HANDED=T -> west permitted.
+# LIGHT-SHAFT +13 fires on first command in LOWER-SHAFT (lit by torch in basket via TRANSBIT).
+west
+west
+
+# --- Lower Shaft (Drafty Room): take items from lowered basket ---
+take torch
+take screwdriver
+take coal
+
+# --- Machine Room ---
+south
+
+# --- Machine operation ---
+open lid
+put coal in machine
+close lid
+turn switch with screwdriver
+open lid
+take diamond
+
+# --- Return to Lower Shaft: put items back in basket ---
+north
+put diamond in basket
+put torch in basket
+put screwdriver in basket
+
+# --- Exit Lower Shaft -> Timber Room -> Ladder Bottom ---
+east
+east
+
+# --- Ladder Bottom: reclaim lamp and knife ---
+take lamp
+take knife
+
+# --- Return: Ladder Bottom -> Ladder Top -> Mine x4 -> Gas Room -> Smelly Room -> Shaft Room ---
+up
+up
+north
+east
+south
+north
+up
+south
+
+# --- Shaft Room: raise basket, take diamond ---
+raise basket
+take diamond
