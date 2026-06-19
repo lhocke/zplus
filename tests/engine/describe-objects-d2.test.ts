@@ -453,3 +453,83 @@ describe('D2: living-room shows fdesc objects', () => {
     expect(output).not.toContain('There is a rug here.');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 9. TROPHY-CASE "consists of:" header — regression for printCont ndescContainer
+//    over-broad guard (bug: NonDescript on the CONTAINER fired for trophy case too,
+//    suppressing the firster header).
+//
+//    ZIL reference: gverbs.zil:1802 keys NDESCBIT on the CHILD, not the container.
+//    The trophy case is NonDescript+Transparent (not a Surface), so its contents
+//    must show the "Your collection of treasures consists of:" FIRSTER header.
+// ---------------------------------------------------------------------------
+
+describe('D2: trophy-case "consists of" header with filled case', () => {
+  function makeLivingRoomWithTreasure() {
+    const room = new Room('LIVING-ROOM', 'Living Room', {
+      ldesc: 'You are in the living room.',
+    });
+    room.set(Flag.On);
+
+    // Trophy case: NonDescript + Transparent + Container (matches real game flags).
+    // NOT a Surface — this is the key distinction from kitchen-table etc.
+    const trophyCase = new Container('TROPHY-CASE', 'trophy case', {
+      synonyms: ['case'],
+      adjectives: ['trophy'],
+    });
+    trophyCase.set(Flag.Container);
+    trophyCase.set(Flag.Transparent);
+    trophyCase.set(Flag.NonDescript);
+    trophyCase.set(Flag.TryTake);
+    trophyCase.set(Flag.Searchable);
+    trophyCase.moveTo(room);
+
+    // A treasure inside the trophy case, already touched so it shows in pass 2.
+    const egg = new Thing('EGG', 'jewel-encrusted egg', {
+      synonyms: ['egg'],
+      adjectives: ['jewel-encrusted', 'jeweled'],
+      ldesc: 'The egg is covered in jewels.',
+    });
+    egg.set(Flag.Takeable);
+    egg.set(Flag.Touched);
+    egg.moveTo(trophyCase);
+
+    const player = new Actor('PLAYER', 'yourself');
+    player.moveTo(room);
+
+    const world = World.fromObjects([room, trophyCase, egg, player]);
+    return { room, trophyCase, egg, player, world };
+  }
+
+  it('LOOK in living room with filled trophy case shows "consists of" header', () => {
+    const { room, player, world } = makeLivingRoomWithTreasure();
+    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    expect(result.output).toContain('Your collection of treasures consists of:');
+  });
+
+  it('LOOK in living room with filled trophy case lists the treasure (ldesc) under the header', () => {
+    // At room-look depth (level 0), describeObject uses ldesc rather than "A <desc>".
+    // ZIL: the treasury contents are printed at room depth via printCont(TROPHY-CASE, -1).
+    const { room, player, world } = makeLivingRoomWithTreasure();
+    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    expect(result.output).toContain('The egg is covered in jewels.');
+  });
+
+  it('EXAMINE trophy-case with treasure shows "consists of" header', () => {
+    const { room, trophyCase, player, world } = makeLivingRoomWithTreasure();
+    const result = executeVerb(
+      { ...makeCtx(room, player, world), dobj: trophyCase },
+      'V-EXAMINE',
+    );
+    expect(result.output).toContain('Your collection of treasures consists of:');
+  });
+
+  it('EXAMINE trophy-case with treasure lists the treasure under the header', () => {
+    const { room, trophyCase, player, world } = makeLivingRoomWithTreasure();
+    const result = executeVerb(
+      { ...makeCtx(room, player, world), dobj: trophyCase },
+      'V-EXAMINE',
+    );
+    expect(result.output).toContain('A jewel-encrusted egg');
+  });
+});

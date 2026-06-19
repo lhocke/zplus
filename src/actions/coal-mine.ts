@@ -42,6 +42,7 @@ const LIGHT_SHAFT_SCORED = 'LIGHT-SHAFT-SCORED';
 // Player-worn branch (WEARBIT adds 1 instead of recursing) is irrelevant here:
 // NO-OBJS only passes WINNER's direct inventory items, never WINNER itself.
 function weight(obj: GameObject): number {
+  // ZIL default: <PROPDEF SIZE 5> (zork1.zil:24) — undefined SIZE items weigh 5.
   const size = (obj.props.get('SIZE') as number | undefined) ?? 5;
   let w = size;
   for (const child of obj.children) {

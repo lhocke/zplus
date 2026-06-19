@@ -301,12 +301,25 @@ function printCont(
     if (!inv && !child.has(Flag.Touched) && child.fdesc !== undefined) continue;
 
     if (!child.has(Flag.NonDescript)) {
-      if (!firsterFired) {
+      // ZIL: NDESCBIT *surfaces* are "transparent" — their contents appear at the
+      // parent level without a container header (e.g. kitchen table, altar, pedestal).
+      // The trophy case is NonDescript+Transparent but NOT a Surface; it must keep
+      // its "Your collection of treasures consists of:" FIRSTER header.
+      // ZIL keys NDESCBIT on the CHILD (gverbs.zil:1802); here we key on the
+      // CONTAINER being a Surface to restrict to the four true ndesc surfaces.
+      const ndescContainer =
+        container.has(Flag.NonDescript) &&
+        container.has(Flag.Surface) &&
+        !(container === player);
+      if (!firsterFired && !ndescContainer) {
         firsterFired = true;
         currentLevel = level + 1;
         firster(container, player, level, tell);
       }
-      describeObject(child, player, currentLevel, tell);
+      // ndescContainer: items on a transparent surface appear at the room-contents
+      // level (0), not at the surface's own level. level=-1 is the room pseudo-level
+      // used by describeRoomObjects; level+1 gives the correct room-contents indent.
+      describeObject(child, player, ndescContainer ? Math.max(0, level + 1) : currentLevel, tell);
     } else {
       if (seeInside(child) && child.children.size > 0) {
         printCont(child, player, level, tell);
@@ -717,7 +730,9 @@ function verbOpen(ctx: VerbContext): VerbResult {
   }
 
   // CONTBIT path (gverbs.zil:974-985)
-  const contents = Array.from(item.children).filter(c => !c.has(Flag.Invisible));
+  // ZIL children are a prepend-list (FIRST? = last-defined in source).
+  // Reverse so the listing order matches dfrotz / ZIL iteration order.
+  const contents = Array.from(item.children).reverse().filter(c => !c.has(Flag.Invisible));
 
   if (contents.length === 0 || item.has(Flag.Transparent)) {
     return result(vOpen.opened);
