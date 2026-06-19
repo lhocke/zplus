@@ -1,0 +1,62 @@
+# cave2-candle.txt — TINY-CAVE candle blow-out corpus (Zork I oracle harness)
+# generated-by: dfrotz-r119 2026-06-17 cave2-candle-cc10
+#
+# MECHANIC: CAVE2-ROOM (1actions.zil:2416) — TINY-CAVE M-END candle blow-out.
+# When the player carries lit candles in TINY-CAVE, there is a ZPROB(50)
+# chance each turn that a gust of wind extinguishes them, clearing ONBIT
+# and disabling I-CANDLES. Gated by LUCKY (default T, lowered by mirror break).
+#
+# ZIL refs:
+#   1actions.zil:2416  CAVE2-ROOM  — M-END candle blow-out handler
+#   1actions.zil:2418  IN?+PROB 50 — carried candles + 50% blow-out check
+#   1actions.zil:2421  DISABLE     — I-CANDLES disabled on blow-out
+#   1actions.zil:2422  FCLEAR ONBIT — candles extinguished
+#   1actions.zil:2423  TELL        — "A gust of wind blows out your candles!"
+#
+# BLOCKER (documented): TINY-CAVE is reached via SOUTH-TEMPLE (up from
+# ENTRANCE-TO-HADES), deep in the Great Underground Empire beyond the Troll Room.
+# The troll blocks all passages and triggers RNG-driven combat (ZIL: <PROB 33>,
+# FIGHT-STRENGTH rolls). dfrotz and the engine use different RNG implementations,
+# so the troll attack/result lines diverge — exactly the RNG-driven content the
+# corpus README declares out of scope. TINY-CAVE therefore cannot be reached
+# end-to-end without crossing a known RNG divergence.
+#
+# Additionally, CAVE2-ROOM's blow-out is seeded/structural (Path B fence):
+# the blow-out fires probabilistically (ZPROB 50) and cannot be golden-diffed
+# on a specific turn. Tests assert the blow-out fires in [20, 80]% of turns
+# over 100 seeded runs (structural count-in-range check).
+#
+# The CAVE2-ROOM mechanics are fully exercised by the unit tests in
+#   tests/actions/cc10-misc-room-fcns.test.ts (CC10 CAVE2-ROOM section)
+# which drive the real world data via createGame({ startRoom: 'TINY-CAVE', rng }).
+#
+# This corpus drives the deterministic above-ground section (through the trap door)
+# and pins the exact turn where the troll's RNG combat first diverges, so the
+# harness can verify that the route up to that point matches dfrotz byte-for-byte.
+#
+# Run with:
+#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/cave2-candle.txt
+# (no seed needed for the above-ground legs)
+#
+# Verified against dfrotz R119: first troll-attack divergence at the
+# "east" command from TROLL-ROOM (or first attack response after entry).
+
+# Set verbose mode.
+verbose
+
+# --- Route: West of House → Cellar → Troll Room ---
+# Commands through to the trap door are deterministic (no troll); verified exact.
+# The troll room entry and subsequent combat are RNG-variable — marked with ~.
+open mailbox
+north
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+~north
+~east

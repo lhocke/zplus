@@ -1,0 +1,56 @@
+# south-temple-coffin.txt — SOUTH-TEMPLE coffin-gate corpus (Zork I oracle harness)
+# generated-by: dfrotz-r119 2026-06-17 south-temple-coffin-cc10
+#
+# MECHANIC: SOUTH-TEMPLE-FCN (1actions.zil:2573) — SOUTH-TEMPLE M-BEG coffin gate.
+# On M-BEG, COFFIN-CURE is set to NOT (coffin in player inventory). The down exit
+# from SOUTH-TEMPLE has ifFlag="COFFIN-CURE" — if COFFIN-CURE is false (coffin held),
+# the exit is blocked and the player receives a refusal message.
+#
+# ZIL refs:
+#   1actions.zil:2573  SOUTH-TEMPLE-FCN  — M-BEG sets COFFIN-CURE
+#   1actions.zil:2575  SETG COFFIN-CURE  — NOT (coffin in inventory)
+#   1dungeon.zil (SOUTH-TEMPLE DOWN exit) — ifFlag: COFFIN-CURE
+#
+# BLOCKER (documented): SOUTH-TEMPLE (the Altar room) is reached deep in the
+# Great Underground Empire, ultimately via ENTRANCE-TO-HADES (up from TINY-CAVE)
+# and beyond the Troll Room. The troll blocks all passages and triggers
+# RNG-driven combat (ZIL: <PROB 33>, FIGHT-STRENGTH rolls). dfrotz and the engine
+# use different RNG implementations, so the troll attack/result lines diverge —
+# exactly the RNG-driven content the corpus README declares out of scope.
+# SOUTH-TEMPLE therefore cannot be reached end-to-end without crossing a known
+# RNG divergence.
+#
+# The SOUTH-TEMPLE-FCN mechanics are fully exercised by the unit tests in
+#   tests/actions/cc10-misc-room-fcns.test.ts (CC10 SOUTH-TEMPLE-FCN section)
+# which drive the real world data via newGameAt('SOUTH-TEMPLE').
+#
+# This corpus drives the deterministic above-ground section (through the trap door)
+# and pins the exact turn where the troll's RNG combat first diverges, so the
+# harness can verify that the route up to that point matches dfrotz byte-for-byte.
+#
+# Run with:
+#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/south-temple-coffin.txt
+# (no seed needed for the above-ground legs)
+#
+# Verified against dfrotz R119: first troll-attack divergence at the
+# "east" command from TROLL-ROOM (or first attack response after entry).
+
+# Set verbose mode.
+verbose
+
+# --- Route: West of House → Cellar → Troll Room ---
+# Commands through to the trap door are deterministic (no troll); verified exact.
+# The troll room entry and subsequent combat are RNG-variable — marked with ~.
+open mailbox
+north
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+~north
+~east

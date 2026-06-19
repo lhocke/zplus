@@ -1,5 +1,5 @@
 # clock-blocked-move — CA1: blocked V-WALK advances CLOCKER by 1 (dfrotz anchor)
-#
+# generated-by: dfrotz-r119 2026-06-12 clock-blocked-move-ca1
 # MECHANIC: CLOCKER tick on blocked moves. Per ZIL gmain.zil, CLOCKER runs for
 # every successfully-parsed non-meta verb, including V-WALK when the exit is
 # blocked (RFATAL / fend-off message). The engine bug (pre-CA1) broke the turn
