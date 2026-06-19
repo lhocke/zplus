@@ -103,21 +103,18 @@ describe('F4 death path — jigsUp scores -10 and increments deaths', () => {
     g2.start();
 
     const scoreBefore = g2.view().score;
-    // From MAZE-1 any direction enters another maze cell (dark→dark), grue triggers.
+    // MAZE-1 north loops back to MAZE-1 (dark→dark). grueRng forces PROB 80 to fire.
     const r = g2.turn('north');
     const scoreAfter = g2.view().score;
 
-    // If grue killed:
-    if (r.output.includes('grue')) {
-      expect(scoreAfter).toBe(scoreBefore - 10);
-      // After resurrection, player should be at FOREST-1.
-      expect(g2.view().here).toBe('FOREST-1');
-      // deaths is now 1 — verify via V-DIAGNOSE.
-      const diag = g2.turn('diagnose');
-      expect(diag.output).toContain('killed once');
-    }
-    // If no grue (topology didn't give dark→dark), the test passes vacuously.
-    // Topology-dependent behaviour is fully covered by the grue-specific test below.
+    // Grue must kill with the scripted RNG — if it doesn't, the grue path is broken.
+    expect(r.output, 'grue must trigger on dark→dark with grueRng').toContain('grue');
+    expect(scoreAfter).toBe(scoreBefore - 10);
+    // After resurrection, player should be at FOREST-1.
+    expect(g2.view().here).toBe('FOREST-1');
+    // deaths is now 1 — verify via V-DIAGNOSE.
+    const diag = g2.turn('diagnose');
+    expect(diag.output).toContain('killed once');
   });
 });
 

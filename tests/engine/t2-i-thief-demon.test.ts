@@ -441,10 +441,9 @@ describe('TS-A: iThief() wander bounds', () => {
     // Every wander destination must be !Sacred && Land
     for (const dest of movedDestinations) {
       const rm = rooms.find(r => r.id === dest);
-      if (rm !== undefined) {
-        expect(rm.flags.has(Flag.Sacred)).toBe(false);
-        expect(rm.flags.has(Flag.Land)).toBe(true);
-      }
+      expect(rm, `wander destination ${dest} must be in the fixture rooms array`).toBeDefined();
+      expect(rm!.flags.has(Flag.Sacred)).toBe(false);
+      expect(rm!.flags.has(Flag.Land)).toBe(true);
     }
   });
 
