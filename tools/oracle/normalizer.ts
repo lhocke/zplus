@@ -258,7 +258,7 @@ function looksLikeWrapped(line: string, dfrotzSource = false): boolean {
   // Sentence-boundary and closing-delimiter characters normally end a logical
   // unit — treat them as paragraph terminators unless overridden below.
   const isSentenceBound = /[.!?]/.test(last);
-  if (isSentenceBound || /[“)\-:;'”]/.test(last)) {
+  if (isSentenceBound || /[“)\-:'”]/.test(last)) {
     // dfrotz-only: near-80-col sentence-boundary lines are forced width wraps.
     if (dfrotzSource && isSentenceBound && trimmed.length >= WRAP_THRESHOLD && trimmed.length <= DFROTZ_WRAP_WIDTH) {
       return true;

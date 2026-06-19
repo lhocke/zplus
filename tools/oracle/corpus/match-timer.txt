@@ -1,4 +1,5 @@
 # match-timer corpus — Zork I oracle harness
+# generated-by: dfrotz-r119 2026-06-19 match-timer-ca3
 #
 # MECHANIC: match-timer (I-MATCH, ~2 turns of flame). The matchbook (MATCH)
 # lives in DAM-LOBBY. To light a match and observe its 2-turn burn-down we

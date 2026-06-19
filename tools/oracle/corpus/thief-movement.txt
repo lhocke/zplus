@@ -1,4 +1,5 @@
 # Thief-movement probe — Zork I oracle harness
+# generated-by: dfrotz-r119 2026-06-19 thief-movement-v2
 #
 # MECHANIC: the thief demon (I-THIEF / ROBBER-FUNCTION), enabled at GO.
 #

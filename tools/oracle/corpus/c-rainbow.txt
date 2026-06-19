@@ -1,4 +1,5 @@
 # C-RAINBOW corpus — navigate to Aragain Falls area, test rainbow room descriptions
+# generated-by: dfrotz-r119 2026-06-19 c-rainbow-wave2
 #
 # MECHANIC: From West of House, navigate via canyon route to End of Rainbow.
 # The rainbow crossing and wave-sceptre mechanics require the sceptre, which

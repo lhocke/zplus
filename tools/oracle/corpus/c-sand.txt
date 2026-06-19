@@ -1,4 +1,5 @@
 # C-SAND corpus — dig scarab at Sandy Beach (BDIGS progression + reveal)
+# generated-by: dfrotz-r119 2026-06-19 c-sand-wave2
 #
 # MECHANIC: Shovel is at SANDY-BEACH.  Four digs in SANDY-CAVE (ne of beach):
 #   dig #1 → BDIGS[0]: "You seem to be digging a hole here."

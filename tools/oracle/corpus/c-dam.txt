@@ -1,4 +1,5 @@
 # C-DAM corpus — dam bolt open/close cycle, drain/fill, trunk reveal
+# generated-by: dfrotz-r119 2026-06-19 c-dam-wave2
 #
 # MECHANIC: Push yellow button (unlocks panel), turn bolt with wrench →
 # sluice gates open (I-REMPTY armed); wait 8 turns for reservoir to drain

@@ -235,6 +235,31 @@ describe('normalizer hard-wrap rejoining', () => {
     // Paragraph separator preserved
     expect(leafletTurn?.text).toContain('\n');
   });
+
+  it('rejoins dfrotz line ending with ";" (ZIL clause separator, not paragraph end)', () => {
+    // normalizer.ts:261 — ";" must NOT be in the closing-delimiter char class.
+    // A trailing ";" in ZIL is a statement separator inside a PRINT or TELL block,
+    // meaning the sentence continues on the next line.  Treating it as a paragraph
+    // terminator produces a FALSE diff that can mask a real divergence.
+    // This block exercises both dfrotz-side and engine-side normalisation to confirm
+    // the fix is source-agnostic (rejoinWrapped is called for both transcripts).
+    //
+    // Note: the 75-char WRAP_THRESHOLD gate only applies to sentence-boundary chars
+    // (.!?) — not to ";", which must rejoin regardless of line length.
+    const status = ' West of House                                    Score: 0        Moves: 0';
+    const semicolonLine = 'The way is blocked;';
+    const continuation = 'you cannot pass.';
+
+    // dfrotz-side: line ending with ";" should rejoin (dfrotzSource=true)
+    const dfrotzRaw = [status, '', semicolonLine, continuation].join('\n');
+    const dfrotzTurns = normalizeDfrotz(dfrotzRaw);
+    expect(dfrotzTurns[0]?.text).toBe('The way is blocked; you cannot pass.');
+
+    // engine-side: same behaviour (dfrotzSource=false)
+    const engineRaw = ['> look', semicolonLine, continuation].join('\n');
+    const engineTurns = normalizeEngine(engineRaw);
+    expect(engineTurns[0]?.text).toBe('The way is blocked; you cannot pass.');
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 # C-RIVER corpus — inflate boat, board, launch, drift RIVER-1→5, buoy hint
+# generated-by: dfrotz-r119 2026-06-19 c-river-wave2
 #
 # MECHANIC: Inflate folded plastic (boat) with pump at DAM-BASE; board boat;
 # launch onto Frigid River; drift section-by-section downstream.  The buoy at

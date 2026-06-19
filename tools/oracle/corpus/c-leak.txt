@@ -1,4 +1,5 @@
 # C-LEAK corpus — blue-button leak, DROWNINGS progression, putty repair
+# generated-by: dfrotz-r119 2026-06-19 c-leak-wave2
 #
 # MECHANIC: MAINTENANCE-ROOM has a blue button that starts a leak.  A demon
 # (I-MAINT-ROOM) increments WATER-LEVEL each turn; DROWNINGS[level/2] fires

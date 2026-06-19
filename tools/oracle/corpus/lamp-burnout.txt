@@ -1,4 +1,5 @@
 # Lamp fuel schedule -> burnout corpus (Zork I oracle harness)
+# generated-by: dfrotz-r119 2026-06-19 lamp-burnout-bd1
 #
 # MECHANIC: lamp-burnout. Pins the I-LANTERN fuel-warning schedule and the
 # burnout message against dfrotz, staying in a LIT room (Living Room) the whole
