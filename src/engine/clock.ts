@@ -34,6 +34,11 @@ export interface ClockEntry {
   turnsLeft: number;
   enabled: boolean;
   tick(ctx: ClockTickContext): boolean;
+  // Optional aux hooks — called by Clock.snapshot/restore so entries can
+  // stash private state (e.g. FuelInterrupt.tableIndex) without baking it
+  // into the core Clock schema.
+  snapshotAux?(): Record<string, number>;
+  restoreAux?(aux: Record<string, number>): void;
 }
 
 // Serialisable snapshot shape — matches the SaveState.clock field so Clock
@@ -42,6 +47,9 @@ export interface ClockSnapshot {
   id: string;
   turnsLeft: number;
   enabled: boolean;
+  // Per-entry aux data written by entries that need to stash extra state
+  // (e.g. FuelInterrupt.tableIndex).  Absent for entries that don't use it.
+  aux?: Record<string, number>;
 }
 
 // Clock — the interrupt queue.
@@ -159,11 +167,11 @@ export class Clock {
 
   /** Snapshot for SaveState serialisation. */
   snapshot(): ClockSnapshot[] {
-    return Array.from(this.entries.values()).map((e) => ({
-      id: e.id,
-      turnsLeft: e.turnsLeft,
-      enabled: e.enabled,
-    }));
+    return Array.from(this.entries.values()).map((e) => {
+      const snap: ClockSnapshot = { id: e.id, turnsLeft: e.turnsLeft, enabled: e.enabled };
+      if (e.snapshotAux) snap.aux = e.snapshotAux();
+      return snap;
+    });
   }
 
   // Restore from a snapshot.  Each entry must already be registered (so its
@@ -174,6 +182,7 @@ export class Clock {
       if (entry) {
         entry.turnsLeft = snap.turnsLeft;
         entry.enabled = snap.enabled;
+        if (snap.aux && entry.restoreAux) entry.restoreAux(snap.aux);
       }
     }
   }
@@ -215,6 +224,12 @@ class FuelInterrupt {
       enabled: true,
       tick(ctx): boolean {
         return self.onFire(ctx);
+      },
+      snapshotAux(): Record<string, number> {
+        return { tableIndex: self.tableIndex };
+      },
+      restoreAux(aux: Record<string, number>): void {
+        if (aux['tableIndex'] !== undefined) self.tableIndex = aux['tableIndex'];
       },
     };
     clock.schedule(this.entry);
