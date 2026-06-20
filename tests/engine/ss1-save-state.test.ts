@@ -111,6 +111,44 @@ describe('SS1 children reconstruction', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 2b. Sibling ORDER preserved across restore.
+//
+// printCont does Array.from(container.children).reverse() to match ZIL's
+// prepend-list iteration order (verbs/index.ts:265-267). Insertion order into
+// the children Set is therefore a fidelity-bearing observable: two items dropped
+// in order A-then-B must come back in the same order, not B-then-A.
+// ---------------------------------------------------------------------------
+describe('SS1 sibling order preservation', () => {
+  it('children insertion order is restored faithfully after drop-A-then-drop-B', () => {
+    const g = freshGame();
+
+    // Move TWO objects into the same parent in a deliberate order so we can
+    // verify the order survives the round-trip.
+    const player = g.world.get('PLAYER')!;
+    const rug    = g.world.get('RUG')!;
+    const knife  = g.world.get('KNIFE')!;
+    expect(player).toBeDefined();
+    expect(rug).toBeDefined();
+    expect(knife).toBeDefined();
+
+    // Move rug first, then knife — establishes a specific children Set order.
+    rug.moveTo(player);
+    knife.moveTo(player);
+
+    const before = Array.from(player.children).map(c => c.id);
+    expect(before).toEqual(['RUG', 'KNIFE']);  // rug inserted first
+
+    const s1 = g.snapshot();
+    const g2 = freshGame();
+    g2.restore(s1);
+
+    const player2 = g2.world.get('PLAYER')!;
+    const after = Array.from(player2.children).map(c => c.id);
+    expect(after).toEqual(before);  // same insertion order, not registration order
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 3. MID-COMBAT pStrength: wounded player and villain restore WOUNDED, not full.
 // ---------------------------------------------------------------------------
 describe('SS1 pStrength mid-combat round-trip', () => {
@@ -157,10 +195,16 @@ describe('SS1 fixpoint', () => {
     const s2 = g.snapshot();
 
     // Do NOT assert on the SS1-SEAM placeholder fields — they are known-wrong stubs.
-    // We strip them before comparing.
+    // Also strip display-only fields that legitimately differ between calls:
+    //   savedAt  — ISO timestamp; changes whenever the call crosses a ms boundary.
+    //   buildId  — stamped from __BUILD_ID__ at snapshot time; not a restorable field.
     const strip = (s: SaveState) => {
-      const { rngMain: _rm, rngCombat: _rc, flagStore: _fs, parser: _p, moduleGlobals: _mg, ...rest } = s;
-      void _rm; void _rc; void _fs; void _p; void _mg;
+      const {
+        rngMain: _rm, rngCombat: _rc, flagStore: _fs, parser: _p, moduleGlobals: _mg,
+        savedAt: _sa, buildId: _bi,
+        ...rest
+      } = s;
+      void _rm; void _rc; void _fs; void _p; void _mg; void _sa; void _bi;
       return rest;
     };
 

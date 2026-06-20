@@ -2427,10 +2427,15 @@ export class Game {
     }
 
     // Pass 3: relink via moveTo (maintains both parent and children Set).
-    for (const d of state.objects) {
-      if (d.parent === null) continue;
+    // Sort by siblingOrder so children are re-inserted into the parent's Set
+    // in the same order as the live game — printCont reverses children to
+    // reproduce ZIL's prepend-list iteration, so insertion order is observable.
+    const linked = state.objects
+      .filter(d => d.parent !== null)
+      .sort((a, b) => (a.siblingOrder ?? 0) - (b.siblingOrder ?? 0));
+    for (const d of linked) {
       const obj = this.world.get(d.id);
-      const par = this.world.get(d.parent);
+      const par = this.world.get(d.parent!);
       if (obj === undefined || par === undefined) continue;  // corrupt-save territory
       obj.moveTo(par);
     }

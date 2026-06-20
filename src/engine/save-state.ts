@@ -33,6 +33,10 @@ export interface ObjectDelta {
   id: ObjectId;
   // parentId; restore via moveTo. null = no parent (top-level / detached).
   parent: ObjectId | null;
+  // Position of this object in its parent's children Set (insertion order).
+  // printCont reverses children to match ZIL's prepend-list iteration — so
+  // sibling order is a fidelity-bearing observable. null when parent is null.
+  siblingOrder: number | null;
   // Numeric flag enum values — JSON-safe, lossless (Flag is numeric enum).
   flags: Flag[];
   props: [string, number | string][];
@@ -105,9 +109,16 @@ export interface SaveState {
  * round-trip doesn't break if a Set re-insertion path differs between snapshots.
  */
 export function captureObjectDelta(obj: GameObject): ObjectDelta {
+  // Capture sibling index so restore can re-insert children in the same order.
+  // children is a JS Set (insertion-ordered); indexOf gives the live position.
+  const siblingOrder = obj.parent !== null
+    ? Array.from(obj.parent.children).indexOf(obj)
+    : null;
+
   const delta: ObjectDelta = {
     id: obj.id,
     parent: obj.parent?.id ?? null,
+    siblingOrder,
     flags: Array.from(obj.flags).sort((a, b) => a - b),
     props: Array.from(obj.props.entries()),
     desc: obj.desc,
