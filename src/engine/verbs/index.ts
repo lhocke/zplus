@@ -133,6 +133,25 @@ export interface VerbContext {
    * Optional so test stubs that don't track pronouns can omit it.
    */
   readonly thisIsIt?: (obj: GameObject) => void;
+  /**
+   * Write the current game snapshot to the given slot via SavePort.
+   * Slot is already canonicalized by the session layer (§4.5).
+   * Throws on failure (quota/IO) so V-SAVE catches and emits Failed.
+   * Absent when no SavePort is wired (test contexts without save infra).
+   */
+  readonly saveGame?: (slot: string) => void;
+  /**
+   * Read a snapshot from the given slot and restore game state.
+   * Returns the post-restore room description (for V-FIRST-LOOK) on success;
+   * undefined when the slot is absent, corrupt, or version-mismatched.
+   * Absent when no SavePort is wired.
+   */
+  readonly restoreGame?: (slot: string) => string | undefined;
+  /**
+   * Re-bootstrap the session — shell-level restart (§4.4, OQ-4).
+   * Absent when no restart handler is wired.
+   */
+  readonly restart?: () => void;
 }
 
 export interface VerbResult {
@@ -1023,6 +1042,36 @@ function verbQuit(ctx: VerbContext): VerbResult {
   return result('');
 }
 
+// V-SAVE (gverbs.zil:78–82) — write snapshot to SavePort.
+// Text is byte-exact: Ok. on success, Failed. on any write failure (§4.2, FD-2).
+// Default slot "1" when no session-layer slot resolution is present (§4.5).
+function verbSave(ctx: VerbContext): VerbResult {
+  if (!ctx.saveGame) return result('Failed.');
+  try {
+    ctx.saveGame('1');
+    return result('Ok.');
+  } catch {
+    return result('Failed.');
+  }
+}
+
+// V-RESTORE (gverbs.zil:71–76) — read snapshot from SavePort, restore, re-describe.
+// Ok. + room description on success; Failed. when slot is empty/corrupt/version-skew (§4.3, FD-2).
+function verbRestore(ctx: VerbContext): VerbResult {
+  if (!ctx.restoreGame) return result('Failed.');
+  const roomDesc = ctx.restoreGame('1');
+  if (roomDesc === undefined) return result('Failed.');
+  return result(`Ok.\n${roomDesc}`);
+}
+
+// V-RESTART (gverbs.zil:63–69, web-adapted) — delegate to shell-level restart (§4.4, OQ-4).
+// No synchronous Y/N prompt; shell drives confirmation. Prints nothing here — the
+// session restart replaces the output entirely.
+function verbRestart(ctx: VerbContext): VerbResult {
+  ctx.restart?.();
+  return result('');
+}
+
 // V-SCORE (1actions.zil:4026–4044)
 // Plural rule (1actions.zil:4032): MOVES==1 → "move", else "moves".
 function verbScore(ctx: VerbContext): VerbResult {
@@ -1823,6 +1872,9 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-VERSION':       verbVersion,
   'V-SCRIPT':        verbScript,
   'V-QUIT':          verbQuit,
+  'V-SAVE':          verbSave,
+  'V-RESTORE':       verbRestore,
+  'V-RESTART':       verbRestart,
 
   // Phase-3 dam/river verbs — thin shells; object handlers (IBOAT-FUNCTION etc.)
   // short-circuit before these in the PERFORM chain.

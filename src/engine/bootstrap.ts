@@ -10,6 +10,7 @@ import { SimpleEventEmitter } from './events.js';
 import { Game } from './game.js';
 import type { Rng as RngInterface } from './game.js';
 import type { CombatRng } from './combat.js';
+import type { SavePort } from '../shell/save-port.js';
 import { lookupAction } from '../actions/registry.js';
 import { iMatchTick } from '../actions/light-sources.js';
 import { wireBatDescFcn } from '../actions/bat-garlic.js';
@@ -38,6 +39,8 @@ export function createGame(opts: {
   events?: EventEmitter;
   rng?: RngInterface;
   combatRng?: CombatRng;
+  savePort?: SavePort;
+  restartFn?: () => void;
 } = {}): Game {
   const startRoomId = opts.startRoom ?? DEFAULT_START_ROOM;
   const seed = opts.seed ?? DEFAULT_SEED;
@@ -298,5 +301,5 @@ export function createGame(opts: {
   // Separate RNG stream for combat — same seed, independent state.
   // Prevents I-FIGHT draws from shifting the main stream used by grue / randomizeObjects.
   const combatRng: CombatRng = opts.combatRng ?? new Rng(seed);
-  return new Game(world, { rng, combatRng, clock, events });
+  return new Game(world, { rng, combatRng, clock, events, savePort: opts.savePort, restartFn: opts.restartFn });
 }

@@ -9,6 +9,7 @@ import {
   applyObjectDelta,
   type SaveState,
 } from './save-state.js';
+import type { SavePort } from '../shell/save-port.js';
 import { captureModuleGlobals, applyModuleGlobals } from './module-globals.js';
 import { Rng as ConcreteRng } from './rng.js';
 import { Clock } from './clock.js';
@@ -181,15 +182,22 @@ export class Game {
 
   private readonly visited = new Set<ObjectId>();
 
+  // Persistence port + restart handler — threaded from the session layer (§4.6).
+  // Optional: absent in test contexts that don't need save/restore/restart wiring.
+  private readonly savePort: SavePort | undefined;
+  private readonly restartFn: (() => void) | undefined;
+
   constructor(
     world: World,
-    opts: { rng: Rng; combatRng?: CombatRng; clock: Clock; events: EventEmitter },
+    opts: { rng: Rng; combatRng?: CombatRng; clock: Clock; events: EventEmitter; savePort?: SavePort; restartFn?: () => void },
   ) {
     this.world = world;
     this.clock = opts.clock;
     this.rng = opts.rng;
     this.combatRng = opts.combatRng ?? (opts.rng as unknown as CombatRng);
     this.events = opts.events;
+    this.savePort = opts.savePort;
+    this.restartFn = opts.restartFn;
     this.parser = new Parser();
     this.flags = new FlagStore();
 
@@ -787,6 +795,18 @@ export class Game {
           disableClock: (id) => this.clock.disable(id),
           finish: () => this.doFinish((text) => handled.push(text)),
           thisIsIt: (obj) => { this.parser.setItRef(obj.id); },
+          saveGame: this.savePort
+            ? (slot) => { this.savePort!.write(slot, this.snapshot()); }
+            : undefined,
+          restoreGame: this.savePort
+            ? (slot) => {
+                const state = this.savePort!.read(slot);
+                if (state === undefined) return undefined;
+                this.restore(state);
+                return this.describeCurrentRoom(true);
+              }
+            : undefined,
+          restart: this.restartFn,
           heroBlow: (targetId, weaponId) => {
             const out: string[] = [];
             const entry = this.getVillainEntry(targetId, (s) => out.push(s));
