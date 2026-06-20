@@ -62,6 +62,30 @@ export function resetSingSong(): void {
   singSong = false;
 }
 
+// ---------------------------------------------------------------------------
+// SS6 — serialization surface (spec §3.4)
+// ---------------------------------------------------------------------------
+
+export interface AboveGroundStateSnapshot {
+  kitchenWindowFlag: boolean;
+  rugMoved: boolean;
+  grateRevealed: boolean;
+  grunlock: boolean;
+  singSong: boolean;
+}
+
+export function snapshotAboveGroundState(): AboveGroundStateSnapshot {
+  return { kitchenWindowFlag, rugMoved, grateRevealed, grunlock, singSong };
+}
+
+export function restoreAboveGroundState(s: AboveGroundStateSnapshot): void {
+  kitchenWindowFlag = s.kitchenWindowFlag;
+  rugMoved          = s.rugMoved;
+  grateRevealed     = s.grateRevealed;
+  grunlock          = s.grunlock;
+  singSong          = s.singSong;
+}
+
 // Room ACTION routines
 
 /** WEST-HOUSE — zil/1actions.zil:7 */

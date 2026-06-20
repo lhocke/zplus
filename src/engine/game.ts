@@ -9,6 +9,7 @@ import {
   applyObjectDelta,
   type SaveState,
 } from './save-state.js';
+import { captureModuleGlobals, applyModuleGlobals } from './module-globals.js';
 import { Rng as ConcreteRng } from './rng.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
@@ -2381,7 +2382,7 @@ export class Game {
       flagStore:     this.flags.snapshot(),  // SS4
       objects:       this.world.all().map(captureObjectDelta),
       parser:        this.parser.snapshotState(),  // SS5
-      moduleGlobals: {},  // SS1-SEAM:SS6 — captureModuleGlobals() not yet created
+      moduleGlobals: captureModuleGlobals(),        // SS6
     };
   }
 
@@ -2408,8 +2409,7 @@ export class Game {
     this.flags.restore(state.flagStore);  // SS4
     this.scoring.restoreState(state.scoring);  // SS3
     this.clock.restore(state.clock);
-    // SS1-SEAM:SS5     — restore Parser.itRef
-    // SS1-SEAM:SS6     — applyModuleGlobals(state.moduleGlobals)
+    applyModuleGlobals(state.moduleGlobals);  // SS6
 
     // 3. Object tree — three passes (mirrors World.fromData's build-then-link).
 

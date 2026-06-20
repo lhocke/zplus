@@ -13,17 +13,13 @@ import { Actor } from '../domain/actor.js';
 import type { Flag } from '../domain/flags.js';
 import type { ClockSnapshot } from './clock.js';
 import type { GameObject } from '../domain/game-object.js';
+import type { ModuleGlobals } from './module-globals.js';
 
 // Bump whenever a breaking schema change lands that makes old saves unreadable.
 export const SAVE_FORMAT_VERSION = 1;
 
-/**
- * ModuleGlobals — placeholder alias for SS6.
- * SS6 imports this name and populates it; do not redeclare.
- * Declared here so the type travels with SaveState in SS1.
- */
-// SS1-SEAM:SS6 — SS6 will replace Record<string, unknown> with a concrete type.
-export type ModuleGlobals = Record<string, unknown>;
+// SS6 supplies the concrete type; re-export so consumers importing SaveState get it too.
+export type { ModuleGlobals } from './module-globals.js';
 
 /**
  * Per-object mutable-state delta. All immutable structure (id/synonyms/exits/

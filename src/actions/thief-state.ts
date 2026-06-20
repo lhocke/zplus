@@ -61,3 +61,33 @@ export function resetThiefState(): void {
   _cyclowrath     = 0;
   _thiefLdesc     = ROBBER_C_DESC;
 }
+
+// ---------------------------------------------------------------------------
+// SS6 — serialization surface (spec §3.4)
+// ---------------------------------------------------------------------------
+
+export interface ThiefStateSnapshot {
+  thiefHere: boolean;
+  thiefEngrossed: boolean;
+  eggSolve: boolean;
+  cyclowrath: number;
+  thiefLdesc: string;
+}
+
+export function snapshotThiefState(): ThiefStateSnapshot {
+  return {
+    thiefHere:      _thiefHere,
+    thiefEngrossed: _thiefEngrossed,
+    eggSolve:       _eggSolve,
+    cyclowrath:     _cyclowrath,
+    thiefLdesc:     _thiefLdesc,
+  };
+}
+
+export function restoreThiefState(s: ThiefStateSnapshot): void {
+  _thiefHere      = s.thiefHere;
+  _thiefEngrossed = s.thiefEngrossed;
+  _eggSolve       = s.eggSolve;
+  _cyclowrath     = s.cyclowrath;
+  _thiefLdesc     = s.thiefLdesc;
+}
