@@ -426,3 +426,45 @@ describe('CC9 — I-FOREST-ROOM: disables when leaving forest (1actions.zil:2997
     expect(afterLeave!.enabled, 'I-FOREST-ROOM must self-disable outside forest').toBe(false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// SONGBIRD-F verb dispatch — 1actions.zil:82
+// dfrotz R119: FIND/TAKE → "not here but nearby"; LISTEN → "can't hear now";
+// FOLLOW → "can't be followed"; everything else (EXAMINE, SMELL) falls to the
+// T-branch "You can't see any songbird here."
+// ---------------------------------------------------------------------------
+
+describe('CC9 — SONGBIRD-F: verb dispatch (1actions.zil:82)', () => {
+  it('find songbird → not here but probably nearby', () => {
+    const g = newGameAt('FOREST-1');
+    g.start();
+    expect(g.turn('find songbird').output).toContain(
+      'The songbird is not here but is probably nearby.',
+    );
+  });
+
+  it('listen to songbird → cannot hear it now', () => {
+    const g = newGameAt('FOREST-1');
+    g.start();
+    expect(g.turn('listen to songbird').output).toContain(
+      "You can't hear the songbird now.",
+    );
+  });
+
+  it('examine and smell songbird → fall through to "can\'t see any songbird here"', () => {
+    const g = newGameAt('FOREST-1');
+    g.start();
+    expect(g.turn('examine songbird').output).toContain(
+      "You can't see any songbird here.",
+    );
+    expect(g.turn('smell songbird').output).toContain(
+      "You can't see any songbird here.",
+    );
+  });
+
+  it('follow songbird → cannot be followed', () => {
+    const g = newGameAt('FOREST-1');
+    g.start();
+    expect(g.turn('follow songbird').output).toContain("It can't be followed.");
+  });
+});

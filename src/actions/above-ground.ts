@@ -1139,11 +1139,11 @@ function isForestRoom(id: string): boolean {
 
 /** SONGBIRD-F — zil/1actions.zil:82 */
 export const songbirdF: ActionHandler = (ctx) => {
-  if (ctx.action === 'V-EXAMINE' || ctx.action === 'V-TAKE') {
+  if (ctx.action === 'V-FIND' || ctx.action === 'V-TAKE') {
     ctx.tell('The songbird is not here but is probably nearby.');
     return true;
   }
-  if (ctx.action === 'V-SMELL') {
+  if (ctx.action === 'V-LISTEN') {
     ctx.tell("You can't hear the songbird now.");
     return true;
   }
