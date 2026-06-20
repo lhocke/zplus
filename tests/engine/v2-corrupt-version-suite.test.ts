@@ -627,7 +627,110 @@ describe('V2 — no throw guarantee (stress)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 8. Distinction: empty-slot Failed. vs corrupt in-voice (spec OQ-3)
+// 8. Typed-but-malformed array entries — the class the suite previously missed.
+//    Each of flagStore / clock / visited allows Array.isArray() but the entries
+//    themselves may carry wrong shapes that reach restore() and throw.
+//    §10.2 "never throws to the player" + §5.1 hand-edited-localStorage threat.
+// ---------------------------------------------------------------------------
+
+describe('V2 — typed-but-malformed array entries (validator + no-throw)', () => {
+  // flagStore — must be [string, boolean][] but any array passes isArray()
+  it('flagStore with numeric entries: validator rejects', () => {
+    expect(validateSaveState(minState({ flagStore: [12345, 'wat', null] as unknown as [] }))).not.toBe(VALIDATION_OK);
+  });
+
+  it('flagStore with bad entries: game.turn restore does not throw', () => {
+    const storage = new MapStorage();
+    const game = makeGame(storage);
+    game.turn('save');
+    rawMangle(storage, '1', o => { o.flagStore = [12345, 'wat', null]; });
+    expect(() => game.turn('restore')).not.toThrow();
+  });
+
+  it('flagStore with bad entries: restore returns in-voice corrupt message', () => {
+    const storage = new MapStorage();
+    const game = makeGame(storage);
+    game.turn('save');
+    rawMangle(storage, '1', o => { o.flagStore = [12345, 'wat', null]; });
+    const r = game.turn('restore');
+    expect(r.output).not.toBe('Failed.');
+    expect(r.output.toLowerCase()).toMatch(/damaged|corrupt/);
+  });
+
+  it('flagStore entry that is a plain object (not a pair): validator rejects', () => {
+    expect(validateSaveState(minState({ flagStore: [{ key: 'WON-FLAG', val: true }] as unknown as [] }))).not.toBe(VALIDATION_OK);
+  });
+
+  it('flagStore entry where second element is not boolean: validator rejects', () => {
+    expect(validateSaveState(minState({ flagStore: [['WON-FLAG', 1]] as unknown as [] }))).not.toBe(VALIDATION_OK);
+  });
+
+  it('flagStore entry where first element is not string: validator rejects', () => {
+    expect(validateSaveState(minState({ flagStore: [[42, true]] as unknown as [] }))).not.toBe(VALIDATION_OK);
+  });
+
+  // clock — must be ClockSnapshot[] (objects with id/turnsLeft/enabled)
+  it('clock with primitive entries: validator rejects', () => {
+    expect(validateSaveState(minState({ clock: [99, 'bad'] as unknown as [] }))).not.toBe(VALIDATION_OK);
+  });
+
+  it('clock entry missing id: validator rejects', () => {
+    expect(validateSaveState(minState({ clock: [{ turnsLeft: 1, enabled: true }] as unknown as [] }))).not.toBe(VALIDATION_OK);
+  });
+
+  it('clock entry with numeric id: validator rejects', () => {
+    expect(validateSaveState(minState({ clock: [{ id: 42, turnsLeft: 1, enabled: true }] as unknown as [] }))).not.toBe(VALIDATION_OK);
+  });
+
+  it('clock entry with string-valued turnsLeft: validator rejects', () => {
+    expect(validateSaveState(minState({ clock: [{ id: 'I-FIGHT', turnsLeft: 'bad', enabled: true }] as unknown as [] }))).not.toBe(VALIDATION_OK);
+  });
+
+  it('clock with bad entries: game.turn restore does not throw', () => {
+    const storage = new MapStorage();
+    const game = makeGame(storage);
+    game.turn('save');
+    rawMangle(storage, '1', o => { o.clock = [99, 'oops']; });
+    expect(() => game.turn('restore')).not.toThrow();
+  });
+
+  // visited — must be string[]
+  it('visited with numeric entries: validator rejects', () => {
+    expect(validateSaveState(minState({ visited: [42, null] as unknown as string[] }))).not.toBe(VALIDATION_OK);
+  });
+
+  it('visited with non-string entries: game.turn restore does not throw', () => {
+    const storage = new MapStorage();
+    const game = makeGame(storage);
+    game.turn('save');
+    rawMangle(storage, '1', o => { o.visited = [42, null]; });
+    expect(() => game.turn('restore')).not.toThrow();
+  });
+
+  // Unknown string hereId — §5.1 clamp: must not throw, room stays unchanged
+  it('hereId with unknown string: game.turn restore does not throw', () => {
+    const storage = new MapStorage();
+    const game = makeGame(storage);
+    game.turn('north');  // move away from start
+    game.turn('save');
+    rawMangle(storage, '1', o => { o.hereId = 'NONEXISTENT-ROOM-XYZ'; });
+    expect(() => game.turn('restore')).not.toThrow();
+  });
+
+  // Unknown string object id — §5.1: skipped, never throws
+  it('objects entry with unknown string id: game.turn restore does not throw', () => {
+    const storage = new MapStorage();
+    const game = makeGame(storage);
+    game.turn('save');
+    rawMangle(storage, '1', o => {
+      (o.objects as unknown[]).push({ id: 'TOTALLY-FAKE-OBJ', parent: null, siblingOrder: null, flags: [], props: [] });
+    });
+    expect(() => game.turn('restore')).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 9. Distinction: empty-slot Failed. vs corrupt in-voice (spec OQ-3)
 // ---------------------------------------------------------------------------
 
 describe('V2 — empty-slot vs corrupt distinction', () => {

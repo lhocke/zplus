@@ -105,8 +105,11 @@ export function validateSaveState(v: unknown): ValidationResult {
   if (typeof v.loadMax !== 'number')                         return 'loadMax not a number';
   if (typeof v.waterLevel !== 'number')                      return 'waterLevel not a number';
   if (typeof v.beachDig !== 'number')                        return 'beachDig not a number';
-  if (typeof v.hereId !== 'string')                          return 'hereId not a string';
-  if (!Array.isArray(v.visited))                             return 'visited not an array';
+  if (typeof v.hereId !== 'string')    return 'hereId not a string';
+  if (!Array.isArray(v.visited))       return 'visited not an array';
+  for (const e of v.visited as unknown[]) {
+    if (typeof e !== 'string') return 'visited entry not a string';
+  }
 
   // M-END stashed command fields
   if (typeof v.lastVerb !== 'string')   return 'lastVerb not a string';
@@ -120,9 +123,29 @@ export function validateSaveState(v: unknown): ValidationResult {
   if (typeof v.rngMain !== 'number')   return 'rngMain not a number';
   if (typeof v.rngCombat !== 'number') return 'rngCombat not a number';
 
-  // Subsystems — shape check only
-  if (!Array.isArray(v.clock))     return 'clock not an array';
+  // Subsystems — shape check + entry validation.
+  // Array.isArray() is necessary but not sufficient: a hand-edited value
+  // such as flagStore=[12345,"wat",null] passes isArray() but reaches
+  // FlagStore.restore()'s destructuring loop and throws.  Validate entries
+  // here so the port boundary stays the only place that can throw.
+
+  if (!Array.isArray(v.clock)) return 'clock not an array';
+  for (const e of v.clock as unknown[]) {
+    if (!isObj(e) || typeof e.id !== 'string' ||
+        typeof e.turnsLeft !== 'number' || typeof e.enabled !== 'boolean') {
+      return 'clock entry invalid';
+    }
+  }
+
   if (!Array.isArray(v.flagStore)) return 'flagStore not an array';
+  for (const e of v.flagStore as unknown[]) {
+    // Each entry must be a [string, boolean] tuple.
+    if (!Array.isArray(e) || e.length < 2 ||
+        typeof e[0] !== 'string' || typeof e[1] !== 'boolean') {
+      return 'flagStore entry invalid';
+    }
+  }
+
   if (!Array.isArray(v.objects))   return 'objects not an array';
 
   // Scoring
