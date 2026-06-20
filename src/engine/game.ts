@@ -2406,7 +2406,7 @@ export class Game {
     if (this.rng instanceof ConcreteRng)       this.rng.setState(state.rngMain);
     if (this.combatRng instanceof ConcreteRng) (this.combatRng as ConcreteRng).setState(state.rngCombat);
     // SS1-SEAM:SS4     — restore FlagStore entries
-    // SS1-SEAM:SS3     — restore Scoring accumulators
+    this.scoring.restoreState(state.scoring);  // SS3
     this.clock.restore(state.clock);
     // SS1-SEAM:SS5     — restore Parser.itRef
     // SS1-SEAM:SS6     — applyModuleGlobals(state.moduleGlobals)

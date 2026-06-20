@@ -118,6 +118,22 @@ export class Scoring {
     return 'Beginner';
   }
 
+  // SS3 — save/restore surface (spec §3.5).
+  // snapshotState/restoreState are the only path to read or write the three
+  // private accumulators from outside this class; no public setters exist.
+  snapshotState(): { baseScore: number; score: number; wonFlag: boolean } {
+    return { baseScore: this._baseScore, score: this._score, wonFlag: this._wonFlag };
+  }
+
+  // Reinstate accumulators directly, bypassing checkWonFlag entirely.
+  // The world effects (whisper, FCLEAR) already happened in the saved game and
+  // are captured in the object/flag deltas — re-firing would double-emit them.
+  restoreState(s: { baseScore: number; score: number; wonFlag: boolean }): void {
+    this._baseScore = s.baseScore;
+    this._score     = s.score;
+    this._wonFlag   = s.wonFlag;
+  }
+
   private checkWonFlag(tell?: (s: string) => void): void {
     if (!this._wonFlag && this._score === 350) {
       this._wonFlag = true;
