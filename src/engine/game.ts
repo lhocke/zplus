@@ -9,6 +9,7 @@ import {
   applyObjectDelta,
   type SaveState,
 } from './save-state.js';
+import { Rng as ConcreteRng } from './rng.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
@@ -2362,8 +2363,12 @@ export class Game {
       lastIobjId:  this.lastIobj?.id,
       lastPrep:    this.lastPrep,
 
-      rngMain:   0,  // SS1-SEAM:SS-RNG — Rng.getState() not yet exposed
-      rngCombat: 0,  // SS1-SEAM:SS-RNG
+      rngMain:   this.rng instanceof ConcreteRng
+        ? this.rng.getState()
+        : (() => { throw new Error('snapshot(): rng is non-serializable (no getState); use a concrete Rng instance'); })(),
+      rngCombat: this.combatRng instanceof ConcreteRng
+        ? (this.combatRng as ConcreteRng).getState()
+        : (() => { throw new Error('snapshot(): combatRng is non-serializable (no getState); use a concrete Rng instance'); })(),
 
       clock:   this.clock.snapshot(),
 
@@ -2398,7 +2403,8 @@ export class Game {
 
     // 2. Subsystem seams — siblings wire these; each seam runs BEFORE the object tree
     //    so closures and `here` resolve against restored subsystem state.
-    // SS1-SEAM:SS-RNG  — restore rng/combatRng state
+    if (this.rng instanceof ConcreteRng)       this.rng.setState(state.rngMain);
+    if (this.combatRng instanceof ConcreteRng) (this.combatRng as ConcreteRng).setState(state.rngCombat);
     // SS1-SEAM:SS4     — restore FlagStore entries
     // SS1-SEAM:SS3     — restore Scoring accumulators
     this.clock.restore(state.clock);
