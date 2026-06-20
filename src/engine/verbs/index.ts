@@ -1078,12 +1078,12 @@ function verbRestore(ctx: VerbContext): VerbResult {
   return result(`Ok.\n${r}`);
 }
 
-// V-RESTART (gverbs.zil:63–69, web-adapted) — delegate to shell-level restart (§4.4, OQ-4).
-// No synchronous Y/N prompt; shell drives confirmation. Prints nothing here — the
-// session restart replaces the output entirely.
+// V-RESTART (gverbs.zil:63–69, web-adapted) — re-bootstrap via ctx.restart (§4.4, OQ-4).
+// Confirmation is shell-level; the engine verb always prints "Restarting." (gverbs.zil:67)
+// then delegates to ctx.restart() which the session wires to re-bootstrap the game.
 function verbRestart(ctx: VerbContext): VerbResult {
   ctx.restart?.();
-  return result('');
+  return result('Restarting.');
 }
 
 // V-SCORE (1actions.zil:4026–4044)

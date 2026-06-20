@@ -312,7 +312,10 @@ export class Game {
    * FINISH — gverbs.zil:33–53, web-shell form (B7).
    *
    * Renders V-SCORE (score + moves + rank), emits the terminal string, and
-   * sets gameOver.  RESTART/RESTORE are no-ops (save slots deferred).
+   * sets gameOver.  The engine does not run the ZIL blocking RESTART/RESTORE/QUIT
+   * READ loop — the shell surfaces a RESTART / RESTORE affordance on gameOver,
+   * wired to the same session.restart() / session.restore() substrate the verbs
+   * use (spec §4.4, §7; Phase-2 B7 ratified omitting the loop).
    * The tell callback receives the text so callers can route it to their output
    * buffer; when tell is not provided the output is discarded (death paths that
    * call finish() only care about gameOver).

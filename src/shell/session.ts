@@ -36,6 +36,12 @@ export interface GameSession {
   start(): string;
   submit(command: string): string;
   snapshot(): GameView;
+  /**
+   * Re-bootstrap the game: reset module globals and create a fresh Game.
+   * Equivalent to a page reload.  Confirmation is handled at the shell/UI level
+   * before this is called (spec §4.4, OQ-4).
+   */
+  restart(): void;
   close(): void;
 }
 
@@ -56,8 +62,7 @@ function parseSaveCommand(raw: string): { verb: string; slot: string } | undefin
   return { verb: m[1].toLowerCase(), slot: m[2] ?? '1' };
 }
 
-export function createSession(opts: { sink: PlaytestSink; seed?: number; savePort?: SavePort }): GameSession {
-  // Reset module-level ZIL globals so each session starts clean (§2 C1).
+function resetModuleGlobals(): void {
   resetKitchenWindowFlag();
   resetRugMoved();
   resetGrateRevealed();
@@ -65,13 +70,26 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
   resetSingSong();
   resetMatchCount();
   resetThiefState();
+}
 
-  const game = createGame({ seed: opts.seed ?? DEFAULT_SEED, savePort: opts.savePort });
+export function createSession(opts: { sink: PlaytestSink; seed?: number; savePort?: SavePort }): GameSession {
+  // Reset module-level ZIL globals so each session starts clean (§2 C1).
+  resetModuleGlobals();
+
+  // Mutable so restart() can replace the live game with a fresh one.
+  let game = createGame({ seed: opts.seed ?? DEFAULT_SEED, savePort: opts.savePort, restartFn: doRestart });
   const sink = opts.sink;
   const sessionId = freshSessionId();
   const buildId = getBuildId();
   let turnCount = 0;
   let closed = false;
+
+  // Re-bootstrap: reset module globals + fresh game.  Called by ctx.restart()
+  // inside the engine when V-RESTART fires (§4.4, OQ-4).
+  function doRestart(): void {
+    resetModuleGlobals();
+    game = createGame({ seed: opts.seed ?? DEFAULT_SEED, savePort: opts.savePort, restartFn: doRestart });
+  }
 
   return {
     start(): string {
@@ -137,6 +155,10 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
 
     snapshot(): GameView {
       return game.view();
+    },
+
+    restart(): void {
+      doRestart();
     },
 
     close(): void {
