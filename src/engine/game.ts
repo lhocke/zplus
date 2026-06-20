@@ -2378,7 +2378,7 @@ export class Game {
         wonFlag:   this.scoring.wonFlag,
       },
 
-      flagStore:     [],  // SS1-SEAM:SS4 — FlagStore.entries() not yet exposed
+      flagStore:     this.flags.snapshot(),  // SS4
       objects:       this.world.all().map(captureObjectDelta),
       parser:        this.parser.snapshotState(),  // SS5
       moduleGlobals: {},  // SS1-SEAM:SS6 — captureModuleGlobals() not yet created
@@ -2405,7 +2405,7 @@ export class Game {
     //    so closures and `here` resolve against restored subsystem state.
     if (this.rng instanceof ConcreteRng)       this.rng.setState(state.rngMain);
     if (this.combatRng instanceof ConcreteRng) (this.combatRng as ConcreteRng).setState(state.rngCombat);
-    // SS1-SEAM:SS4     — restore FlagStore entries
+    this.flags.restore(state.flagStore);  // SS4
     this.scoring.restoreState(state.scoring);  // SS3
     this.clock.restore(state.clock);
     // SS1-SEAM:SS5     — restore Parser.itRef
