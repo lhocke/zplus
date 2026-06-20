@@ -600,7 +600,7 @@ export class Game {
   }
 
   /** Execute one command line (may contain chained commands via "then" / "."). */
-  turn(input: string): TurnResult {
+  turn(input: string, opts?: { saveSlot?: string }): TurnResult {
     if (this.gameOver) return { output: '', moved: false };
     this.fatalPending = false;
 
@@ -807,6 +807,7 @@ export class Game {
               }
             : undefined,
           restart: this.restartFn,
+          saveSlot: opts?.saveSlot,
           heroBlow: (targetId, weaponId) => {
             const out: string[] = [];
             const entry = this.getVillainEntry(targetId, (s) => out.push(s));

@@ -152,6 +152,12 @@ export interface VerbContext {
    * Absent when no restart handler is wired.
    */
   readonly restart?: () => void;
+  /**
+   * Resolved save slot for V-SAVE / V-RESTORE (§4.5).
+   * Pre-parsed by the session layer from the raw command ("save 2" → "2").
+   * Verb bodies read this instead of hardcoding a slot; defaults to "1" when absent.
+   */
+  readonly saveSlot?: string;
 }
 
 export interface VerbResult {
@@ -1044,11 +1050,12 @@ function verbQuit(ctx: VerbContext): VerbResult {
 
 // V-SAVE (gverbs.zil:78–82) — write snapshot to SavePort.
 // Text is byte-exact: Ok. on success, Failed. on any write failure (§4.2, FD-2).
-// Default slot "1" when no session-layer slot resolution is present (§4.5).
+// Slot is pre-resolved by the session layer (§4.5); defaults to "1" when absent.
 function verbSave(ctx: VerbContext): VerbResult {
   if (!ctx.saveGame) return result('Failed.');
+  const slot = ctx.saveSlot ?? '1';
   try {
-    ctx.saveGame('1');
+    ctx.saveGame(slot);
     return result('Ok.');
   } catch {
     return result('Failed.');
@@ -1057,9 +1064,11 @@ function verbSave(ctx: VerbContext): VerbResult {
 
 // V-RESTORE (gverbs.zil:71–76) — read snapshot from SavePort, restore, re-describe.
 // Ok. + room description on success; Failed. when slot is empty/corrupt/version-skew (§4.3, FD-2).
+// Slot is pre-resolved by the session layer (§4.5); defaults to "1" when absent.
 function verbRestore(ctx: VerbContext): VerbResult {
   if (!ctx.restoreGame) return result('Failed.');
-  const roomDesc = ctx.restoreGame('1');
+  const slot = ctx.saveSlot ?? '1';
+  const roomDesc = ctx.restoreGame(slot);
   if (roomDesc === undefined) return result('Failed.');
   return result(`Ok.\n${roomDesc}`);
 }

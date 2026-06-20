@@ -15,8 +15,12 @@ import {
 import { resetMatchCount } from '../actions/light-sources.js';
 import { resetThiefState } from '../actions/thief-state.js';
 import type { PlaytestSink, SessionStart, TurnEvent } from './sink.js';
+import type { SavePort } from './save-port.js';
 
 const DEFAULT_SEED = 42;
+
+// Valid manual slot numbers (spec §6: 3 named manual slots).
+const VALID_SLOTS = new Set(['1', '2', '3']);
 
 // Injected at Vite build time; falls back to 'dev' in Node/test runs.
 declare const __BUILD_ID__: string;
@@ -40,7 +44,19 @@ function freshSessionId(): string {
   return crypto.randomUUID();
 }
 
-export function createSession(opts: { sink: PlaytestSink; seed?: number }): GameSession {
+// Parse "save [N]" / "restore [N]" → { verb: 'save'|'restore', slot: string }
+// Returns undefined when the command doesn't match the save/restore pattern.
+// Slot defaults to "1" when no number is given.  Invalid slots are caught by
+// the caller, which emits the in-voice message and skips verb dispatch.
+const SAVE_RESTORE_RE = /^(save|restore)(?:\s+(\S+))?$/i;
+
+function parseSaveCommand(raw: string): { verb: string; slot: string } | undefined {
+  const m = SAVE_RESTORE_RE.exec(raw.trim());
+  if (m === null) return undefined;
+  return { verb: m[1].toLowerCase(), slot: m[2] ?? '1' };
+}
+
+export function createSession(opts: { sink: PlaytestSink; seed?: number; savePort?: SavePort }): GameSession {
   // Reset module-level ZIL globals so each session starts clean (§2 C1).
   resetKitchenWindowFlag();
   resetRugMoved();
@@ -50,7 +66,7 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number }): Game
   resetMatchCount();
   resetThiefState();
 
-  const game = createGame({ seed: opts.seed ?? DEFAULT_SEED });
+  const game = createGame({ seed: opts.seed ?? DEFAULT_SEED, savePort: opts.savePort });
   const sink = opts.sink;
   const sessionId = freshSessionId();
   const buildId = getBuildId();
@@ -80,7 +96,25 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number }): Game
       if (closed) return '';
       // Empty/blank input: no-op per spec §9 ("Empty submit('') emits no TurnEvent").
       if (command.trim() === '') return '';
-      const { output } = game.turn(command);
+
+      // Pre-process save/restore commands: extract slot, validate, strip from command.
+      // spec §4.5: "save 2" → slot "2", command word "save"; invalid slot → in-voice.
+      const parsed = parseSaveCommand(command);
+      let dispatchCommand = command;
+      let saveSlot: string | undefined;
+
+      if (parsed !== undefined) {
+        const slot = parsed.slot;
+        if (!VALID_SLOTS.has(slot)) {
+          // Out-of-range slot: in-voice message, never dispatches the verb body.
+          // spec §4.5: "There is no save slot N." — not Failed.
+          return `There is no save slot ${slot}.`;
+        }
+        saveSlot = slot;
+        dispatchCommand = parsed.verb;  // stripped: "save" not "save 2"
+      }
+
+      const { output } = game.turn(dispatchCommand, saveSlot !== undefined ? { saveSlot } : undefined);
       turnCount++;
       const v = game.view();
       const event: TurnEvent = {
