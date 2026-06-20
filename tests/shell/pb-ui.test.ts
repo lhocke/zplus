@@ -273,4 +273,53 @@ describe('PB-UI — Restore from gameOver affordance', () => {
     // Moves should be back near the pre-quit count
     expect(session.snapshot().moves).toBeLessThanOrEqual(movesBefore + 1);
   });
+
+  // §6 mandated disclosure: affordance text must explain start-of-fatal-turn semantics.
+  it('affordance text discloses that Restore returns to the START of the fatal turn', async () => {
+    const { mountShell } = await import('../../src/ui/shell.js');
+    const app = document.createElement('div');
+    mountShell(app);
+
+    submitCommand(app, 'quit');
+    await Promise.resolve();
+
+    const affordance = app.querySelector('[data-testid="game-over-affordance"]') as HTMLElement;
+    expect(affordance).not.toBeNull();
+    const text = affordance.textContent ?? '';
+    // Must mention the "start of" / "beginning of" the turn semantics so the player
+    // understands that replaying the same command will re-kill deterministically (§6).
+    expect(text).toMatch(/start of|beginning of/i);
+  });
+
+  // Strand guard: when the autosave slot is absent, clicking Restore must NOT remove
+  // the affordance — the player must still be able to Restart (house-style no-hard-lock).
+  it('clicking Restore when autosave is absent keeps the affordance visible and game still gameOver', async () => {
+    const { mountShell } = await import('../../src/ui/shell.js');
+    const app = document.createElement('div');
+    const { session } = mountShell(app);
+
+    // Trigger gameOver immediately (no prior move → autosave slot has no useful content
+    // because quit is the very first command; the autosave written for that turn is pre-quit
+    // which would restore to the same quit state — but we need to test the "slot truly absent"
+    // path, so we clear localStorage after gameOver fires to simulate quota-emptied state).
+    submitCommand(app, 'quit');
+    await Promise.resolve();
+    expect(session.snapshot().gameOver).toBe(true);
+
+    // Clear autosave slot to simulate quota-eviction / missing autosave.
+    localStorage.removeItem('zork-save-autosave');
+
+    const affordance = app.querySelector('[data-testid="game-over-affordance"]') as HTMLElement;
+    expect(affordance).not.toBeNull();
+
+    const restoreBtn = Array.from(affordance.querySelectorAll('button')).find(
+      b => /restore/i.test(b.textContent ?? ''),
+    ) as HTMLButtonElement;
+    restoreBtn.click();
+
+    // Failed restore: game still gameOver and affordance still in the DOM.
+    expect(session.snapshot().gameOver).toBe(true);
+    const affordanceAfter = app.querySelector('[data-testid="game-over-affordance"]');
+    expect(affordanceAfter).not.toBeNull();
+  });
 });

@@ -1260,6 +1260,10 @@ function buildSlotPickerModal(
 // Appended into the scrollback once gameOver fires (§7.1).  Two actions:
 //   Restore — restores from the autosave slot (the pre-turn snapshot before death).
 //   Restart — shell-level confirm, then session.restart() (OQ-4).
+//
+// §6 mandated disclosure: restoring puts the player at the START of the fatal turn.
+// Replaying the identical command re-kills deterministically (same RNG position).
+// The affordance text must make this clear so the player knows to choose differently.
 function buildGameOverAffordance(
   onRestore: () => void,
   onRestart: () => void,
@@ -1272,6 +1276,14 @@ function buildGameOverAffordance(
   const msg = el('p', 'mb-2 opacity-75 text-xs');
   msg.textContent = 'What would you like to do?';
   wrap.appendChild(msg);
+
+  // §6: disclose the start-of-fatal-turn semantics — the player must understand
+  // that Restore rewinds to the start of that turn, and the same command re-kills.
+  const note = el('p', 'mb-2 opacity-60 text-xs');
+  note.textContent =
+    'Restore returns you to the start of the turn you died on. ' +
+    'Replaying the same command will re-kill you — choose differently.';
+  wrap.appendChild(note);
 
   const btnRow = el('div', 'flex gap-2');
 
@@ -1401,8 +1413,11 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
     mapState.update(snap, null);
     void map.refresh();
     pathsPanel.refresh();
-    // Remove the affordance now that the player is back in the game.
-    if (currentGameOverAffordance) {
+    // Only remove the affordance when the restore actually worked — if the autosave
+    // slot was absent (quota eviction, first turn, etc.) the session stays gameOver
+    // and the player still needs the Restart option.  Removing it unconditionally
+    // would strand the player with no recovery path (house-style no-hard-lock).
+    if (!snap.gameOver && currentGameOverAffordance) {
       currentGameOverAffordance.remove();
       currentGameOverAffordance = null;
     }
