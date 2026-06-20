@@ -137,7 +137,7 @@ function parseDfrotzTurns(rawLines: string[]): NormalizedTurn[] {
       .filter((l) => !QUIT_PROMPT_RE.test(l))
       .filter((l) => !AMBIENT_LINE_RE.test(l));
 
-    const text = rejoinWrapped(filtered, true).trim();
+    const text = rejoinWrapped(filtered).trim();
     if (text.length > 0) {
       turns.push({ command: '', text });
     }
@@ -228,54 +228,39 @@ function parseEngineTurns(rawLines: string[]): NormalizedTurn[] {
  * In that case they are joined with a space.  Blank lines (paragraph
  * separators) are preserved as a '\n' boundary between paragraphs.
  */
-// dfrotz terminal wrap width.  Lines at or near this length that end with a
-// sentence-boundary character were likely cut by a hard width wrap, not at a
-// genuine paragraph break.  The threshold is conservative: a 75-char line is
-// very unlikely to be a naturally short paragraph ending in '.'.
-const DFROTZ_WRAP_WIDTH = 80;
-const WRAP_THRESHOLD = 75; // >= this and ending with '.' → treat as forced wrap
-
 /**
- * Returns true if the source line was likely cut mid-sentence by a hard wrap.
+ * Returns true if the line was cut mid-sentence (a continuation to rejoin),
+ * false if it ends a logical unit (a paragraph boundary to preserve).
  *
- * The `dfrotzSource` flag enables an additional heuristic for dfrotz output:
- * a line ending with a sentence-boundary character ('.' '!' '?') whose length
- * is between WRAP_THRESHOLD and DFROTZ_WRAP_WIDTH is treated as a forced
- * width-80 wrap, not a genuine paragraph break.  dfrotz word-wraps single-string
- * ZIL LDESCs at column 80; a line that fills 75-80 cols before '.' is almost
- * certainly a wrap artifact, not the end of an independent paragraph.
- * (1dungeon.zil:2149-2152 DAM-LOBBY; :2161-2166 MAINTENANCE-ROOM — spec R6.)
+ * Both transcripts are wrap-free: the engine never width-wraps, and dfrotz is
+ * run wide (see dfrotz-runner) so every newline it emits is a genuine game
+ * newline, not a column-80 artifact.  So the rule is purely structural and
+ * source-agnostic — terminal punctuation or a closing delimiter ends a
+ * paragraph; anything else is a mid-sentence continuation.
  *
- * This heuristic must NOT apply to engine output: the engine's own line-breaks
- * can land at any length and a near-80-col '.' is not a width-wrap signal.
+ * This used to carry a dfrotz-only "75-80 cols ending in '.' is a forced width
+ * wrap" heuristic.  Guessing structure from line length manufactured false
+ * divergences whenever a paragraph legitimately ended in that band (e.g. the
+ * Gallery room ldesc before the painting fdesc — 75 chars) and could mask real
+ * ones by over-merging.  Running dfrotz wide removes the wraps it existed to
+ * undo, so the guess is gone and structure is verified, not inferred.
  */
-function looksLikeWrapped(line: string, dfrotzSource = false): boolean {
+function looksLikeWrapped(line: string): boolean {
   const trimmed = line.trimEnd();
   if (trimmed.length === 0) return false;
   // Ellipsis: mid-sentence pause in ZIL, not a terminal stop.
   if (trimmed.endsWith('...')) return true;
   const last = trimmed[trimmed.length - 1]!;
-  // Sentence-boundary and closing-delimiter characters normally end a logical
-  // unit — treat them as paragraph terminators unless overridden below.
-  const isSentenceBound = /[.!?]/.test(last);
-  if (isSentenceBound || /[“)\-:'”]/.test(last)) {
-    // dfrotz-only: near-80-col sentence-boundary lines are forced width wraps.
-    if (dfrotzSource && isSentenceBound && trimmed.length >= WRAP_THRESHOLD && trimmed.length <= DFROTZ_WRAP_WIDTH) {
-      return true;
-    }
-    return false;
-  }
-  return true; // mid-sentence — always rejoin
+  // Terminal punctuation / closing delimiter ends a logical unit → paragraph break.
+  if (/[.!?]/.test(last) || /[“)\-:'”]/.test(last)) return false;
+  return true; // mid-sentence — rejoin
 }
 
-function rejoinWrapped(lines: string[], dfrotzSource = false): string {
+function rejoinWrapped(lines: string[]): string {
   if (lines.length === 0) return '';
 
   const paragraphs: string[] = [];
   let current = '';
-  // Track the raw source line that ended `current` so looksLikeWrapped can
-  // test its original length (not the accumulated-string length, which grows
-  // past 80 as lines are joined and would suppress the sentence-boundary gate).
   let lastSourceLine = '';
 
   for (const line of lines) {
@@ -288,7 +273,7 @@ function rejoinWrapped(lines: string[], dfrotzSource = false): string {
     } else if (current.length === 0) {
       current = line;
       lastSourceLine = line;
-    } else if (looksLikeWrapped(lastSourceLine, dfrotzSource)) {
+    } else if (looksLikeWrapped(lastSourceLine)) {
       current = current.trimEnd() + ' ' + line.trimStart();
       lastSourceLine = line;
     } else {

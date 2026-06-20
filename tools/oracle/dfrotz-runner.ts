@@ -5,7 +5,12 @@
  * captures the raw transcript.
  *
  * dfrotz invocation pattern:
- *   printf '<cmds>\nquit\ny\n' | dfrotz -p -w 80 <story>
+ *   printf '<cmds>\nquit\ny\n' | dfrotz -p -w <wide> <story>
+ *
+ * dfrotz is run at a deliberately wide column width so it never word-wraps:
+ * every newline it emits is then a genuine game newline, giving the normalizer
+ * real paragraph structure to compare against the (never-wrapping) engine
+ * rather than guessing wraps from line length.
  *
  * The story file path is resolved from env ZORK_STORY, defaulting to
  * /Users/lhocke/Code/zork-oracle-prep/zork1.z3.
@@ -18,13 +23,19 @@ export const DEFAULT_STORY_PATH =
   process.env['ZORK_STORY'] ??
   '/Users/lhocke/Code/zork-oracle-prep/zork1.z3';
 
+// Run dfrotz far wider than any real game line so it never width-wraps — every
+// newline is then a genuine game newline, and the normalizer compares real
+// structure instead of un-guessing column-80 wraps.
+const WIDE_OUTPUT_WIDTH = 1000;
+
 export interface DfrotzRunOptions {
   /**
    * Path to the story file.  Defaults to DEFAULT_STORY_PATH.
    */
   storyPath?: string;
   /**
-   * Max line width for dfrotz output.  Defaults to 80.
+   * Column width passed to dfrotz (-w).  Defaults to WIDE_OUTPUT_WIDTH so dfrotz
+   * never width-wraps and its line breaks are real game structure.
    */
   width?: number;
   /**
@@ -54,7 +65,7 @@ export function runDfrotz(
   opts: DfrotzRunOptions = {},
 ): string {
   const storyPath = opts.storyPath ?? DEFAULT_STORY_PATH;
-  const width = opts.width ?? 80;
+  const width = opts.width ?? WIDE_OUTPUT_WIDTH;
   const timeoutMs = opts.timeoutMs ?? 15_000;
 
   if (!existsSync(storyPath)) {
