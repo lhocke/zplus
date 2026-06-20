@@ -10,6 +10,9 @@ import {
   type SaveState,
 } from './save-state.js';
 import type { SavePort } from '../shell/save-port.js';
+// In-voice messages for web-native restore failures (§5.3, OQ-3, FD-3).
+const MSG_RESTORE_VERSION = 'This saved game is from an incompatible version of the story and cannot be restored.';
+const MSG_RESTORE_CORRUPT = 'That saved game appears to be damaged.';
 import { captureModuleGlobals, applyModuleGlobals } from './module-globals.js';
 import { Rng as ConcreteRng } from './rng.js';
 import { Clock } from './clock.js';
@@ -800,9 +803,12 @@ export class Game {
             : undefined,
           restoreGame: this.savePort
             ? (slot) => {
-                const state = this.savePort!.read(slot);
-                if (state === undefined) return undefined;
-                this.restore(state);
+                const r = this.savePort!.readWithReason(slot);
+                if (r === 'empty')   return undefined;
+                if (r === 'version') return { inVoice: MSG_RESTORE_VERSION };
+                if (r === 'corrupt') return { inVoice: MSG_RESTORE_CORRUPT };
+                // SaveState: mutate in place, then re-describe (V-FIRST-LOOK).
+                this.restore(r);
                 return this.describeCurrentRoom(true);
               }
             : undefined,

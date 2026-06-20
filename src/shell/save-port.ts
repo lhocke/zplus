@@ -25,6 +25,9 @@ export interface SaveSlotMeta {
   moves: number;
 }
 
+/** Reason a restore failed — verb body maps these to the right player message (§5.3, OQ-3). */
+export type RestoreFailReason = 'empty' | 'corrupt' | 'version';
+
 export interface SavePort {
   /** Persist state to slot. May throw on quota/IO — caller surfaces as Failed. */
   write(slot: string, state: SaveState): void;
@@ -37,6 +40,11 @@ export interface SavePort {
    * buildId mismatch on same formatVersion is warn-allow (OQ-1).
    */
   read(slot: string): SaveState | undefined;
+  /**
+   * Like read(), but surfaces the failure reason so callers can emit
+   * distinct player messages for empty/corrupt/version (OQ-3, §5.3).
+   */
+  readWithReason(slot: string): SaveState | RestoreFailReason;
   /** Metadata for all occupied slots — for the slot picker (§7). */
   list(): SaveSlotMeta[];
   /** Remove a slot.  No-op if absent. */
@@ -164,31 +172,31 @@ export class LocalStorageSavePort implements SavePort {
   }
 
   read(slot: string): SaveState | undefined {
+    const r = this.readWithReason(slot);
+    return typeof r === 'string' ? undefined : r;
+  }
+
+  readWithReason(slot: string): SaveState | RestoreFailReason {
     const raw = this.storage.getItem(slotKey(slot));
-    if (raw === null) return undefined;
+    if (raw === null) return 'empty';
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
     } catch {
-      // Malformed JSON — treat as absent/corrupt; caller gives in-voice message.
-      return undefined;
+      return 'corrupt';
     }
 
-    // Schema validation first — reject before any further inspection.
+    // Schema validation — reject before further inspection.
     const verdict = validateSaveState(parsed);
-    if (verdict !== VALIDATION_OK) return undefined;
+    if (verdict !== VALIDATION_OK) return 'corrupt';
 
     const state = parsed as SaveState;
 
     // formatVersion mismatch — refuse before mutating anything (spec §5.3).
-    if (state.formatVersion !== SAVE_FORMAT_VERSION) return undefined;
+    if (state.formatVersion !== SAVE_FORMAT_VERSION) return 'version';
 
     // buildId mismatch on same formatVersion — warn-allow (OQ-1).
-    // The mismatch is logged to console so devs can see it; gameplay continues.
-    // (In production a content patch shouldn't brick saves.)
-    // No console.warn here — the caller's context has the right message channel.
-
     return state;
   }
 

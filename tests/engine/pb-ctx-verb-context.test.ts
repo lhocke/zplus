@@ -18,6 +18,7 @@ function makeStubPort(): SavePort & { store: Map<string, SaveState> } {
     store,
     write(slot, state) { store.set(slot, state); },
     read(slot) { return store.get(slot); },
+    readWithReason(slot) { return store.get(slot) ?? 'empty'; },
     list() { return []; },
     remove(slot) { store.delete(slot); },
   };

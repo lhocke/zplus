@@ -142,11 +142,13 @@ export interface VerbContext {
   readonly saveGame?: (slot: string) => void;
   /**
    * Read a snapshot from the given slot and restore game state.
-   * Returns the post-restore room description (for V-FIRST-LOOK) on success;
-   * undefined when the slot is absent, corrupt, or version-mismatched.
-   * Absent when no SavePort is wired.
+   * Returns:
+   *   - string: post-restore room description (success — emit Ok. then this)
+   *   - { inVoice: string }: in-voice refusal message (corrupt/version — emit as-is)
+   *   - undefined: slot was empty (emit "Failed.")
+   * Absent when no SavePort is wired (emit "Failed.").
    */
-  readonly restoreGame?: (slot: string) => string | undefined;
+  readonly restoreGame?: (slot: string) => string | { inVoice: string } | undefined;
   /**
    * Re-bootstrap the session — shell-level restart (§4.4, OQ-4).
    * Absent when no restart handler is wired.
@@ -1063,14 +1065,17 @@ function verbSave(ctx: VerbContext): VerbResult {
 }
 
 // V-RESTORE (gverbs.zil:71–76) — read snapshot from SavePort, restore, re-describe.
-// Ok. + room description on success; Failed. when slot is empty/corrupt/version-skew (§4.3, FD-2).
+// Ok. + room re-describe on success; Failed. when slot is empty (§4.3, FD-2, OQ-3);
+// in-voice message for corrupt/version (§5.3, OQ-3) — never "Failed." for those.
 // Slot is pre-resolved by the session layer (§4.5); defaults to "1" when absent.
 function verbRestore(ctx: VerbContext): VerbResult {
   if (!ctx.restoreGame) return result('Failed.');
   const slot = ctx.saveSlot ?? '1';
-  const roomDesc = ctx.restoreGame(slot);
-  if (roomDesc === undefined) return result('Failed.');
-  return result(`Ok.\n${roomDesc}`);
+  const r = ctx.restoreGame(slot);
+  if (r === undefined) return result('Failed.');
+  if (typeof r === 'object') return result(r.inVoice);
+  // string: success — Ok. then V-FIRST-LOOK room description
+  return result(`Ok.\n${r}`);
 }
 
 // V-RESTART (gverbs.zil:63–69, web-adapted) — delegate to shell-level restart (§4.4, OQ-4).
