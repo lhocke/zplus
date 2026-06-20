@@ -149,6 +149,17 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
       // Empty/blank input: no-op per spec §9 ("Empty submit('') emits no TurnEvent").
       if (command.trim() === '') return '';
 
+      // Rolling pre-turn autosave (spec §6, OQ-2): snapshot BEFORE the turn runs so
+      // the player can recover the state at the START of any turn — including the one
+      // that killed them.  Skipped when already gameOver (engine ignores the turn anyway).
+      if (wrappedPort !== undefined && !game.view().gameOver) {
+        try {
+          wrappedPort.write('autosave', game.snapshot());
+        } catch {
+          // Quota/IO failure silently skipped — autosave is best-effort (spec §6).
+        }
+      }
+
       // Pre-process save/restore commands: extract slot, validate, strip from command.
       // spec §4.5: "save 2" → slot "2", command word "save"; invalid slot → in-voice.
       const parsed = parseSaveCommand(command);

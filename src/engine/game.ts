@@ -74,6 +74,8 @@ export interface GameView {
   readonly maxScore: number;
   readonly moves: number;
   readonly inMaze: boolean;
+  /** True once doFinish() fires (victory or resurrections exhausted). Shell uses this to surface the RESTART/RESTORE affordance (spec §7.1). */
+  readonly gameOver: boolean;
 }
 
 /**
@@ -1055,6 +1057,7 @@ export class Game {
       maxScore: 350,
       moves: this.moveCount,
       inMaze: this.here.has(Flag.Maze),
+      gameOver: this.gameOver,
     };
   }
 

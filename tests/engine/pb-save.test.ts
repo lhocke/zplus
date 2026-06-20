@@ -186,21 +186,22 @@ describe('PB-SAVE — session-layer slot resolution via createSession', () => {
     expect(storage.getItem('zork-save-1')).not.toBeNull();
   });
 
-  it('invalid slot "save 0" returns in-voice message, nothing written', () => {
+  it('invalid slot "save 0" returns in-voice message, slot 0 not written', () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
     const output = session.submit('save 0');
     // In-voice: "There is no save slot 0." — NOT "Ok." and NOT "Failed."
     expect(output).toContain('no save slot');
-    expect(storage.length).toBe(0);
+    // The invalid manual slot must not be written (autosave slot may be written by rolling autosave)
+    expect(storage.getItem('zork-save-0')).toBeNull();
   });
 
-  it('invalid slot "save 4" returns in-voice message, nothing written', () => {
+  it('invalid slot "save 4" returns in-voice message, slot 4 not written', () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
     const output = session.submit('save 4');
     expect(output).toContain('no save slot');
-    expect(storage.length).toBe(0);
+    expect(storage.getItem('zork-save-4')).toBeNull();
   });
 
   it('SAVE is meta — move count does not advance', () => {

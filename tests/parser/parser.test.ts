@@ -184,6 +184,7 @@ describe('GameView shape', () => {
       maxScore: 350,
       moves: 0,
       inMaze: false,
+      gameOver: false,
     };
     expect(view.here).toBe('WEST-OF-HOUSE');
     expect(view.maxScore).toBe(350);
