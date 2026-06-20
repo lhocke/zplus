@@ -2,7 +2,13 @@ import type { ObjectId, Dir, GameObject, ActionContext } from '../domain/game-ob
 import type { World } from '../domain/world.js';
 import { Flag } from '../domain/flags.js';
 import { Room } from '../domain/room.js';
-import type { Actor } from '../domain/actor.js';
+import { Actor } from '../domain/actor.js';
+import {
+  SAVE_FORMAT_VERSION,
+  captureObjectDelta,
+  applyObjectDelta,
+  type SaveState,
+} from './save-state.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
@@ -2313,4 +2319,156 @@ export class Game {
       rng:   this.rng,
     };
   }
+
+  // ---------------------------------------------------------------------------
+  // Save / Restore (SS1 — serialization surface)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Produce a SaveState capturing all mutable game state.
+   *
+   * Fields owned by sibling tasks are stubs marked // SS1-SEAM:<task>; tests
+   * must NOT assert on those fields until the owning task lands.
+   */
+  snapshot(): SaveState {
+    // Injected at Vite build time; falls back to 'dev' in Node/test.
+    let buildId = 'dev';
+    try {
+      buildId = __BUILD_ID__;
+    } catch { /* node / test: no injected constant */ }
+
+    return {
+      formatVersion: SAVE_FORMAT_VERSION,
+      buildId,
+      savedAt: new Date().toISOString(),
+
+      moveCount:   this.moveCount,
+      deaths:      this.deaths,
+      dead:        this.dead,
+      alwaysLit:   this.alwaysLit,
+      gameOver:    this.gameOver,
+      lucky:       this.lucky,
+      loadAllowed: this.loadAllowed,
+      loadMax:     this.loadMax,
+      waterLevel:  this.waterLevel,
+      beachDig:    this.beachDig,
+
+      hereId:  this.here.id,
+      visited: Array.from(this.visited),
+
+      lastVerb:    this.lastVerb,
+      lastAction:  this.lastAction,
+      lastDobjId:  this.lastDobj?.id,
+      lastIobjId:  this.lastIobj?.id,
+      lastPrep:    this.lastPrep,
+
+      rngMain:   0,  // SS1-SEAM:SS-RNG — Rng.getState() not yet exposed
+      rngCombat: 0,  // SS1-SEAM:SS-RNG
+
+      clock:   this.clock.snapshot(),
+
+      scoring: {
+        baseScore: this.scoring.baseScore,
+        score:     this.scoring.score,
+        wonFlag:   this.scoring.wonFlag,
+      },
+
+      flagStore:     [],  // SS1-SEAM:SS4 — FlagStore.entries() not yet exposed
+      objects:       this.world.all().map(captureObjectDelta),
+      parser:        {},  // SS1-SEAM:SS5 — Parser.snapshotState() not yet exposed
+      moduleGlobals: {},  // SS1-SEAM:SS6 — captureModuleGlobals() not yet created
+    };
+  }
+
+  /**
+   * Restore game state from a SaveState, mutating this instance in place.
+   *
+   * Fixed order: version guard → subsystem seams → object tree → instance refs → scalars.
+   * restore() is synchronous and NOT re-entrant; Pass 2 transiently empties the world tree.
+   */
+  restore(state: SaveState): void {
+    // 1. Version guard — runs BEFORE mutating anything (no partial restore).
+    //    Full buildId/corruption/in-voice policy owned by PB-VER/PB-PORT (spec §5.3);
+    //    SS1 ships only the formatVersion hard-refuse so ordering is correct.
+    if (state.formatVersion !== SAVE_FORMAT_VERSION) {
+      throw new Error(
+        `SaveState formatVersion ${state.formatVersion} does not match engine version ${SAVE_FORMAT_VERSION}; cannot restore.`,
+      );
+    }
+
+    // 2. Subsystem seams — siblings wire these; each seam runs BEFORE the object tree
+    //    so closures and `here` resolve against restored subsystem state.
+    // SS1-SEAM:SS-RNG  — restore rng/combatRng state
+    // SS1-SEAM:SS4     — restore FlagStore entries
+    // SS1-SEAM:SS3     — restore Scoring accumulators
+    this.clock.restore(state.clock);
+    // SS1-SEAM:SS5     — restore Parser.itRef
+    // SS1-SEAM:SS6     — applyModuleGlobals(state.moduleGlobals)
+
+    // 3. Object tree — three passes (mirrors World.fromData's build-then-link).
+
+    // Pass 1: scalar reinstate, no link changes.
+    // Unknown ids are skipped (untrusted-input posture per spec §5.1).
+    const warnings: string[] = [];
+    for (const d of state.objects) {
+      const obj = this.world.get(d.id);
+      if (obj === undefined) {
+        warnings.push(`restore: unknown object id "${d.id}" skipped`);
+        continue;
+      }
+      applyObjectDelta(obj, d);
+    }
+    // Warnings surface to PB-PORT's validator; ignored in SS1 (no port yet).
+    void warnings;
+
+    // Pass 2: detach ALL objects so Pass 3 is order-independent and idempotent.
+    for (const obj of this.world.all()) {
+      obj.moveTo(null);
+    }
+
+    // Pass 3: relink via moveTo (maintains both parent and children Set).
+    for (const d of state.objects) {
+      if (d.parent === null) continue;
+      const obj = this.world.get(d.id);
+      const par = this.world.get(d.parent);
+      if (obj === undefined || par === undefined) continue;  // corrupt-save territory
+      obj.moveTo(par);
+    }
+
+    // 4. Re-resolve instance refs by id (AFTER tree rebuild so refs bind correctly).
+    const hereObj = this.world.get(state.hereId);
+    if (hereObj instanceof Room) {
+      this.here = hereObj;
+    }
+    // PLAYER always flows through the delta loop; re-bind the typed reference.
+    const playerObj = this.world.get('PLAYER');
+    if (playerObj instanceof Actor) {
+      this.player = playerObj;
+    }
+    this.lastDobj = state.lastDobjId ? this.world.get(state.lastDobjId) : undefined;
+    this.lastIobj = state.lastIobjId ? this.world.get(state.lastIobjId) : undefined;
+
+    // 5. Core scalars.
+    this.moveCount   = state.moveCount;
+    this.deaths      = state.deaths;
+    this.dead        = state.dead;
+    this.alwaysLit   = state.alwaysLit;
+    this.gameOver    = state.gameOver;
+    this.lucky       = state.lucky;
+    this.loadAllowed = state.loadAllowed;
+    this.loadMax     = state.loadMax;
+    this.waterLevel  = state.waterLevel;
+    this.beachDig    = state.beachDig;
+
+    this.visited.clear();
+    for (const id of state.visited) this.visited.add(id);
+
+    this.lastVerb   = state.lastVerb;
+    this.lastAction = state.lastAction;
+    this.lastPrep   = state.lastPrep;
+
+    // 6. Parser itRef seam (SS5; placeholder block).
+    // SS1-SEAM:SS5 — this.parser.restoreState({ itRef: state.parser.itRef })
+  }
 }
+
