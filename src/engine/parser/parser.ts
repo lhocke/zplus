@@ -162,7 +162,7 @@ export class Parser {
     const expanded = this.tryExpandAll(tokens, room, player, world);
     if (expanded !== null) {
       if (expanded.length === 0) {
-        return { kind: 'fail', message: "There's nothing here to take." };
+        return { kind: 'fail', message: "There's nothing here you can take." };
       }
       if (expanded.length > 1) {
         this.parsedQueue = expanded.slice(1);

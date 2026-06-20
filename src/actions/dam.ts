@@ -461,12 +461,11 @@ export const reservoirFcn: ActionHandler = (ctx) => {
     const lowTide = ctx.getGlobal?.('LOW-TIDE') ?? false;
     if (lowTide) {
       // :1453–1456 — drained: mud pile.  The ZIL source newline after "large"
-      // inside the string literal is a word-separator, not a paragraph break
-      // (dfrotz renders it as a space then word-wraps the 118-char string at
-      // col 80).  One tell — normalizer handles the dfrotz width-wrap. (R6.)
+      // inside the string literal is a word-separator, not a paragraph break, so
+      // it's one TELL (one paragraph) — matching dfrotz. (R6.)
       ctx.tell('You are on what used to be a large lake, but which is now a large mud pile. There are "shores" to the north and south.');
     } else {
-      // :1457–1461 — filled: lake.  One <TELL> block; dfrotz word-wraps to one paragraph.
+      // :1457–1461 — filled: lake.  One <TELL> block — one paragraph.
       ctx.tell(
         'You are on the lake. Beaches can be seen north and south. Upstream a small stream enters the lake through a narrow cleft in the rocks. The dam can be seen downstream.',
       );
@@ -497,7 +496,7 @@ export const reservoirNorthFcn: ActionHandler = (ctx) => {
   if (lowTide && gatesOpen) {
     // :1466 — S3 drained
     ctx.tell(
-      'You are in a large cavernous room, the south of which was formerly a lake.\nHowever, with the water level lowered, there is merely a wide stream running through there.',
+      'You are in a large cavernous room, the south of which was formerly a lake. However, with the water level lowered, there is merely a wide stream running through there.',
     );
   } else if (gatesOpen) {
     // :1471 — S2 draining

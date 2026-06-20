@@ -140,15 +140,8 @@ export const garlicF: ActionHandler = (ctx) => {
 // BAT-D — 1actions.zil:2469–2476
 // ---------------------------------------------------------------------------
 
-/**
- * BAT-D — DESCFCN for the deranged vampire bat.
- *
- * Sets the bat object's `descFcn` to the BAT-D routine, which runs in place
- * of the generic "There is a bat here." whenever DESCRIBE-OBJECTS lists the bat.
- * The closure captures the world so the garlic-location check is live.
- *
- * Call once from bootstrap after the world is built.
- */
+// Wire once from bootstrap after the world is built; the captured world keeps
+// the garlic-location check live.
 export function wireBatDescFcn(bat: GameObject, world: World): void {
   bat.descFcn = (player: GameObject, tell: (s: string) => void) => {
     const garlic = world.get('GARLIC');

@@ -60,8 +60,13 @@ describe('seam test — golden through facade', () => {
     expect(run1).toBe(run2);
 
     const rawGolden = readFileSync(GOLDEN_PATH, 'utf8');
-    // Strip the provenance header (L41) before comparing — it's metadata, not game output.
+    // Strip the provenance header (L41) before comparing — but ASSERT it first, so
+    // a missing or forged provenance line fails loudly instead of being silently sliced.
     const firstNewline = rawGolden.indexOf('\n');
+    const firstLine = rawGolden.slice(0, firstNewline);
+    expect(firstLine, 'golden must carry its dfrotz-r119 provenance header (L41)').toMatch(
+      /^# generated-by: dfrotz-r119 /,
+    );
     const golden = rawGolden.slice(firstNewline + 1);
     expect(run1).toBe(golden);
   });
