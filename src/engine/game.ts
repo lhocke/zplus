@@ -2514,5 +2514,16 @@ export class Game {
     // 6. Parser state (SS5).
     this.parser.restoreState(state.parser);
   }
+
+  /**
+   * Restore from a SaveState and return the room re-describe text (V-FIRST-LOOK).
+   * Used by the shell's gameOver affordance, which cannot go through turn() because
+   * turn() gates on gameOver.  The verb body uses this.restore() + describeCurrentRoom()
+   * internally; this method makes the same pair reachable from outside the class.
+   */
+  restoreAndDescribe(state: SaveState): string {
+    this.restore(state);
+    return this.describeCurrentRoom(true);
+  }
 }
 

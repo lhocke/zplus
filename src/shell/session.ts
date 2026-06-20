@@ -42,6 +42,13 @@ export interface GameSession {
    * before this is called (spec §4.4, OQ-4).
    */
   restart(): void;
+  /**
+   * Restore from the autosave slot, bypassing the gameOver gate so the shell's
+   * RESTORE affordance works even after doFinish() sets gameOver.  Returns the
+   * room re-describe text on success, or an empty string when no autosave exists.
+   * The caller owns any confirmation / user-facing message.
+   */
+  restoreFromAutosave(): string;
   close(): void;
 }
 
@@ -245,6 +252,14 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
 
     restart(): void {
       doRestart();
+    },
+
+    restoreFromAutosave(): string {
+      if (!wrappedPort) return '';
+      // Read the autosave directly; bypass game.turn() which gates on gameOver.
+      const r = wrappedPort.readWithReason('autosave');
+      if (typeof r === 'string') return ''; // empty/corrupt/version — nothing to restore
+      return game.restoreAndDescribe(r);
     },
 
     close(): void {
