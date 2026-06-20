@@ -188,7 +188,6 @@
     "kind": "thing",
     "desc": "kitchen window",
     "flags": [
-      "Climbable",
       "Door",
       "NonDescript"
     ],
@@ -1769,8 +1768,7 @@
     "flags": [
       "Takeable",
       "Sacred",
-      "TryTake",
-      "Tool"
+      "TryTake"
     ],
     "props": {
       "SIZE": 10
