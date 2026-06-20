@@ -973,11 +973,10 @@ export const whiteHouseF: ActionHandler = (ctx) => {
       }
       return true;
     }
-    if (ctx.action === 'V-WALK-AROUND') {
-      ctx.tell("You're not at the house.");
-      return true;
-    }
-    return false;
+    // ZIL T catch-all (1actions.zil:106): every non-FIND verb at a non-side room
+    // (walk-around, examine, knock, …) prints this, not a fall-through.
+    ctx.tell("You're not at the house.");
+    return true;
   }
 
   // At a house-adjacent room (the four cardinal sides).

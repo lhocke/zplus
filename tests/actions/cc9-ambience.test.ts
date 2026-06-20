@@ -101,6 +101,23 @@ describe('CC9 — WHITE-HOUSE-F: V-FIND (1actions.zil:107)', () => {
   });
 });
 
+describe('CC9 — WHITE-HOUSE-F: non-side catch-all (1actions.zil:106)', () => {
+  // ZIL's non-sides inner COND is (FIND ...) then (T → "You're not at the house.")
+  // — a catch-all for EVERY non-FIND verb. dfrotz R119 at the Forest: examine and
+  // walk-around house both → "You're not at the house." (not a fall-through).
+  it('examine house from forest → "You\'re not at the house."', () => {
+    const g = newGameAt('FOREST-1');
+    g.start();
+    expect(g.turn('examine house').output).toContain("You're not at the house.");
+  });
+
+  it('walk around house from forest → "You\'re not at the house."', () => {
+    const g = newGameAt('FOREST-1');
+    g.start();
+    expect(g.turn('walk around house').output).toContain("You're not at the house.");
+  });
+});
+
 describe('CC9 — WHITE-HOUSE-F: V-BURN (1actions.zil:127)', () => {
   it('burn house → "You must be joking."', () => {
     const g = newGameAt('WEST-OF-HOUSE');
