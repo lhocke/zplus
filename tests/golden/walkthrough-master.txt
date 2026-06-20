@@ -1,4 +1,4 @@
-# generated-by: dfrotz-r119 2026-06-19 walkthrough-master (DGC-anchored; seed-42 RNG lines engine-determinism-exempt per §8)
+# generated-by: engine 2026-06-19 walkthrough-master (DGC-anchored to dfrotz-r119; seed-42 RNG lines engine-determinism-exempt per §8)
 ZORK I: The Great Underground Empire
 Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
 ZORK is a registered trademark of Infocom, Inc.

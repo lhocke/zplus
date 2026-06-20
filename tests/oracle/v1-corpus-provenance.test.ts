@@ -78,11 +78,11 @@ describe('V1/V2 — §10.1/§8 corpus files carry dfrotz-r119 provenance header 
 
 const GOLDEN_DIR = join(import.meta.dirname, '../golden');
 
-describe('V2 — dfrotz-provenance golden + transcript headers (L41)', () => {
-  it('walkthrough-master.txt line 1 is "# generated-by: dfrotz-r119 ..."', () => {
+describe('V2 — provenance headers: engine golden + dfrotz transcript (L41)', () => {
+  it('walkthrough-master.txt line 1 is "# generated-by: engine ..." (engine bytes, DGC-anchored)', () => {
     const raw = readFileSync(join(GOLDEN_DIR, 'walkthrough-master.txt'), 'utf8');
     const firstLine = raw.split('\n')[0]!;
-    expect(firstLine).toMatch(/^# generated-by: dfrotz-r119 /);
+    expect(firstLine).toMatch(/^# generated-by: engine /);
   });
 
   it('walkthrough-dfrotz.transcript.txt line 1 is "# generated-by: dfrotz-r119 ..."', () => {

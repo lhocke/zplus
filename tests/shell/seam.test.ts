@@ -64,8 +64,8 @@ describe('seam test — golden through facade', () => {
     // a missing or forged provenance line fails loudly instead of being silently sliced.
     const firstNewline = rawGolden.indexOf('\n');
     const firstLine = rawGolden.slice(0, firstNewline);
-    expect(firstLine, 'golden must carry its dfrotz-r119 provenance header (L41)').toMatch(
-      /^# generated-by: dfrotz-r119 /,
+    expect(firstLine, 'golden must carry its engine provenance header (L41)').toMatch(
+      /^# generated-by: engine /,
     );
     const golden = rawGolden.slice(firstNewline + 1);
     expect(run1).toBe(golden);

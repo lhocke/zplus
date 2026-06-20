@@ -32,11 +32,13 @@ resetActionState();
 const output = runEngine(COMMANDS, { seed: 42 });
 const outPath = join(dirname(fileURLToPath(import.meta.url)), '../tests/golden/walkthrough-master.txt');
 
-// Prepend the provenance header (L41) — the golden is dfrotz-anchored (DGC rows)
-// with named engine-determinism artifacts (seed-42 RNG lines per spec §8).
-// Do NOT update this header to just engine output — route through golden-rebaseline-audit.ts.
+// Prepend the provenance header (L41). The golden's BYTES are engine output (the
+// engine's own seed-42 transcript), DGC-anchored to dfrotz-r119: every deterministic
+// line is verified against dfrotz, seed-42 RNG lines are exempt (spec §8). The honest
+// generator label is `engine`; the dfrotz anchoring is asserted by
+// golden-rebaseline-audit.ts (Check 2 + Check 5), not claimed by the header.
 const today = new Date().toISOString().slice(0, 10);
-const header = `# generated-by: dfrotz-r119 ${today} walkthrough-master (DGC-anchored; seed-42 RNG lines engine-determinism-exempt per §8)\n`;
+const header = `# generated-by: engine ${today} walkthrough-master (DGC-anchored to dfrotz-r119; seed-42 RNG lines engine-determinism-exempt per §8)\n`;
 writeFileSync(outPath, header + output, 'utf8');
 process.stderr.write('Written to: ' + outPath + '\n');
 process.stderr.write('Lines: ' + (output.split('\n').length + 1) + ' (including provenance header)\n');

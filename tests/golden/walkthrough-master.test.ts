@@ -82,11 +82,12 @@ const GOLDEN_PATH = join(import.meta.dirname, 'walkthrough-master.txt');
 const COMMANDS = GOLDEN_COMMANDS;
 
 describe('golden master walkthrough', () => {
-  it('golden file carries dfrotz-r119 provenance header (L41)', () => {
+  it('golden file carries engine provenance header (L41)', () => {
     const raw = readFileSync(GOLDEN_PATH, 'utf8');
     const firstLine = raw.split('\n')[0]!;
-    // L41: dfrotz-provenance files must assert their generator before any byte comparison.
-    expect(firstLine).toMatch(/^# generated-by: dfrotz-r119 /);
+    // L41: a file asserts its generator before any byte comparison. The golden's
+    // bytes are engine output (DGC-anchored to dfrotz), so the generator is `engine`.
+    expect(firstLine).toMatch(/^# generated-by: engine /);
   });
 
   it('transcript is byte-identical to the committed golden', () => {
@@ -98,9 +99,9 @@ describe('golden master walkthrough', () => {
     // Fails if any module-level state or non-seeded randomness leaks between runs.
     expect(run1).toBe(run2);
 
-    // UPDATE_GOLDEN is BANNED for dfrotz-provenance files (spec §8).
-    // The write-path has been removed; regeneration must route through
-    // golden-rebaseline-audit.ts which re-derives from dfrotz R119.
+    // UPDATE_GOLDEN is BANNED for the golden (spec §8): regeneration must route
+    // through gen-walkthrough.mjs + golden-rebaseline-audit.ts (which re-confirms the
+    // DGC anchoring against dfrotz R119), never a casual test-side rewrite.
 
     const raw = readFileSync(GOLDEN_PATH, 'utf8');
     // Strip the provenance header before comparing — the header is metadata, not

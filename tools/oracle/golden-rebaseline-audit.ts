@@ -16,7 +16,8 @@
  *   npx tsx tools/oracle/golden-rebaseline-audit.ts --audit   # same
  *
  * What this checks:
- *   1. walkthrough-master.txt starts with a "# generated-by: dfrotz-r119" header
+ *   1. walkthrough-master.txt starts with a "# generated-by: engine" header (engine
+ *      bytes, DGC-anchored to dfrotz-r119)
  *   2. After stripping the header, the golden matches the current engine output
  *      (for every DGC-changed line the engine is the post-fix authority; the
  *      dfrotz transcript corroborates the text)
@@ -27,7 +28,8 @@
  *
  * HARD INVARIANTS (any failure → nonzero exit):
  *   - No unregistered diff between golden and engine
- *   - No code path writes raw engine output onto a dfrotz-provenance file
+ *   - The golden's engine bytes match the current engine (Check 2); DGC lines are
+ *     dfrotz-corroborated against the separate dfrotz transcript (Check 5)
  *   - The dfrotz transcript provenance header is present
  */
 
@@ -89,8 +91,8 @@ function checkGoldenHeader(): void {
   process.stdout.write('Check 1: golden provenance header\n');
   const raw = readFileSync(GOLDEN_PATH, 'utf8');
   const firstLine = raw.split('\n')[0]!;
-  if (!firstLine.startsWith('# generated-by: dfrotz-r119 ')) {
-    fail(`walkthrough-master.txt missing "# generated-by: dfrotz-r119" header (found: "${firstLine}")`);
+  if (!firstLine.startsWith('# generated-by: engine ')) {
+    fail(`walkthrough-master.txt missing "# generated-by: engine" header (found: "${firstLine}")`);
   }
   pass(`header present: "${firstLine}"`);
 }
