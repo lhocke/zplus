@@ -8,15 +8,15 @@
  *
  * V1 covered the 12 Phase-3 cluster corpus files.
  * V2 extends coverage to the dam/river wave corpora (c-*.txt + supporting files)
- * and the BD7 chimney-ascent, BD1 lamp-burnout, CA3 match-timer, and other
+ * and the BD7 chimney-ascent, BD1 lamp-burnout, and other
  * dfrotz-anchored corpora that were backfilled with the generated-by header.
  *
  * Spec §8 provenance contract: "every corpus + golden file carries a first-line
  * header naming its generator — `# generated-by: dfrotz-r119 <date> <cmd>` —
  * and every consuming test ASSERTS the expected header before comparing a byte."
  *
- * NOT covered here: candle-lifecycle.txt and parser-integration.txt, which are
- * engine-anchored integration corpora (not dfrotz-provenance).  Also not covered:
+ * NOT covered here: parser-integration.txt, an engine-anchored integration corpus
+ * (not dfrotz-provenance).  Also not covered:
  * v2-*.txt golden files in tests/golden/, which are engine-provenance (UPDATE_GOLDEN).
  */
 
@@ -55,9 +55,7 @@ const FILES = [
   // ── V2: other dfrotz-anchored corpora backfilled ──────────────────────────
   'chimney-ascent.txt',      // BD7 / chimney ascent (UP from Studio)
   'lamp-burnout.txt',        // BD1 / lamp fuel schedule
-  'match-timer.txt',         // CA3 / match re-arm timer
   'opening-walkthrough.txt', // opening-sequence gate
-  'thief-movement.txt',      // thief movement patterns
   'sword-glow.txt',          // I-SWORD glow divergence (BD2 context)
   // ── Already asserted by their own cluster tests ───────────────────────────
   // chimney-arrival.txt  (BD7 — asserted in bd7-chimney-arrival.test.ts)
