@@ -207,17 +207,28 @@ function describeObject(
 ): void {
   if (level === 0) {
     if (obj.descFcn !== undefined) {
-      // ZIL DESCFCN — replaces the generic description (gverbs.zil:1707–1711).
+      // ZIL DESCFCN — replaces the generic description and returns before the
+      // vehicle-suffix code (gverbs.zil:1707–1711), so descFcn objects get none.
       obj.descFcn(player, tell);
-    } else if (!obj.has(Flag.Touched) && obj.fdesc !== undefined) {
-      tell(obj.fdesc);
-    } else if (obj.ldesc !== undefined) {
-      tell(obj.ldesc);
     } else {
-      // gverbs.zil:1730 — room-level "There is a X here. (providing light)"
-      let line = `There is a ${obj.desc} here`;
-      if (obj.has(Flag.OnFire)) line += ' (providing light)';
-      tell(`${line}.`);
+      let line: string;
+      if (!obj.has(Flag.Touched) && obj.fdesc !== undefined) {
+        line = obj.fdesc;
+      } else if (obj.ldesc !== undefined) {
+        line = obj.ldesc;
+      } else {
+        // gverbs.zil:1730 — room-level "There is a X here. (providing light)"
+        line = `There is a ${obj.desc} here`;
+        if (obj.has(Flag.OnFire)) line += ' (providing light)';
+        line += '.';
+      }
+      // gverbs.zil:1722–1725 — an object at room level while the player is in a
+      // vehicle gets " (outside the <vehicle>)".
+      const wloc = player.parent;
+      if (wloc != null && wloc.has(Flag.Vehicle)) {
+        line += ` (outside the ${wloc.desc})`;
+      }
+      tell(line);
     }
   } else {
     // gverbs.zil:1707–1715 — inventory/nested level: "  A X (providing light)"
