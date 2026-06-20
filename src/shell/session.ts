@@ -14,8 +14,8 @@ import {
 } from '../actions/above-ground.js';
 import { resetMatchCount } from '../actions/light-sources.js';
 import { resetThiefState } from '../actions/thief-state.js';
-import type { PlaytestSink, SessionStart, TurnEvent } from './sink.js';
-import type { SavePort } from './save-port.js';
+import type { PlaytestSink, SessionStart, TurnEvent, SaveEvent, RestoreEvent, RestartEvent } from './sink.js';
+import type { SavePort, RestoreFailReason } from './save-port.js';
 
 const DEFAULT_SEED = 42;
 
@@ -76,20 +76,54 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
   // Reset module-level ZIL globals so each session starts clean (§2 C1).
   resetModuleGlobals();
 
-  // Mutable so restart() can replace the live game with a fresh one.
-  let game = createGame({ seed: opts.seed ?? DEFAULT_SEED, savePort: opts.savePort, restartFn: doRestart });
   const sink = opts.sink;
   const sessionId = freshSessionId();
   const buildId = getBuildId();
   let turnCount = 0;
   let closed = false;
 
+  // Wrap the SavePort so the session can observe the restore outcome for telemetry
+  // without coupling to the output text.  Only readWithReason() is intercepted;
+  // write() failures are captured separately via try/catch in submit().
+  let lastRestoreReason: RestoreFailReason | 'ok' | undefined;
+  let lastSaveOk: boolean | undefined;
+
+  const wrappedPort: SavePort | undefined = opts.savePort
+    ? {
+        write(slot, state) {
+          // write() may throw (quota/IO); let the exception propagate so the verb
+          // catches it and emits "Failed." — but record the outcome first.
+          try {
+            opts.savePort!.write(slot, state);
+            lastSaveOk = true;
+          } catch (err) {
+            lastSaveOk = false;
+            throw err;   // re-throw so verbSave emits "Failed."
+          }
+        },
+        read(slot) {
+          return opts.savePort!.read(slot);
+        },
+        readWithReason(slot) {
+          const r = opts.savePort!.readWithReason(slot);
+          // r is SaveState on success, or a RestoreFailReason string on failure
+          lastRestoreReason = typeof r === 'object' ? 'ok' : r;
+          return r;
+        },
+        list() { return opts.savePort!.list(); },
+        remove(slot) { opts.savePort!.remove(slot); },
+      }
+    : undefined;
+
   // Re-bootstrap: reset module globals + fresh game.  Called by ctx.restart()
   // inside the engine when V-RESTART fires (§4.4, OQ-4).
   function doRestart(): void {
     resetModuleGlobals();
-    game = createGame({ seed: opts.seed ?? DEFAULT_SEED, savePort: opts.savePort, restartFn: doRestart });
+    game = createGame({ seed: opts.seed ?? DEFAULT_SEED, savePort: wrappedPort, restartFn: doRestart });
   }
+
+  // Mutable so restart() can replace the live game with a fresh one.
+  let game = createGame({ seed: opts.seed ?? DEFAULT_SEED, savePort: wrappedPort, restartFn: doRestart });
 
   return {
     start(): string {
@@ -132,9 +166,50 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
         dispatchCommand = parsed.verb;  // stripped: "save" not "save 2"
       }
 
+      // Reset port-level outcome trackers before the turn so stale values
+      // from a prior turn don't bleed into this one's telemetry.
+      lastSaveOk = undefined;
+      lastRestoreReason = undefined;
+
+      const isRestart = /^restart$/i.test(command.trim());
       const { output } = game.turn(dispatchCommand, saveSlot !== undefined ? { saveSlot } : undefined);
       turnCount++;
+      const ts = new Date().toISOString();
       const v = game.view();
+
+      // --- telemetry: save/restore/restart boundary events (spec §7.2) ---
+      if (parsed?.verb === 'save' && saveSlot !== undefined) {
+        const saveEv: SaveEvent = {
+          type: 'save',
+          sessionId,
+          buildId,
+          turn: turnCount,
+          slot: saveSlot,
+          ok: lastSaveOk ?? (output === 'Ok.'),
+          ts,
+        };
+        sink.emit(saveEv);
+      } else if (parsed?.verb === 'restore' && saveSlot !== undefined) {
+        const ok = lastRestoreReason === 'ok';
+        const restoreEv: RestoreEvent = {
+          type: 'restore',
+          sessionId,
+          buildId,
+          slot: saveSlot,
+          ok,
+          reason: lastRestoreReason ?? 'empty',
+          ts,
+        };
+        sink.emit(restoreEv);
+      } else if (isRestart) {
+        const restartEv: RestartEvent = {
+          type: 'restart',
+          sessionId,
+          ts,
+        };
+        sink.emit(restartEv);
+      }
+
       const event: TurnEvent = {
         type: 'turn',
         sessionId,
@@ -147,7 +222,7 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
         moves: v.moves,
         room: v.here,
         hereName: v.hereName,
-        ts: new Date().toISOString(),
+        ts,
       };
       sink.emit(event);
       return output;
