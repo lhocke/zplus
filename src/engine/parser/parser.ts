@@ -1166,6 +1166,27 @@ export class Parser {
     };
   }
 
+  // Capture the parser's serializable state for save (spec §3.6 / SS5).
+  // Throws if called mid-continuation or mid-disambiguation-await (OQ-5):
+  // those conditions are transient and non-serializable.
+  snapshotState(): { itRef?: ObjectId } {
+    if (this.hasContinuation()) {
+      throw new Error('snapshotState: cannot snapshot mid-continuation; save at a clean turn boundary');
+    }
+    if (this.isAwaitingInput()) {
+      throw new Error('snapshotState: cannot snapshot mid-disambiguation; resolve the pending prompt first');
+    }
+    const snap: { itRef?: ObjectId } = {};
+    if (this.itRef !== undefined) snap.itRef = this.itRef;
+    return snap;
+  }
+
+  // Reinstate parser state from a saved snapshot (spec §3.6 / SS5).
+  // itRef=undefined explicitly clears any prior binding.
+  restoreState(snap: { itRef?: ObjectId }): void {
+    this.itRef = snap.itRef;
+  }
+
   // Update pronoun state from a successfully resolved command.
   // The direct object becomes the new "it" / "them" referent.
   //

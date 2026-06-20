@@ -2380,7 +2380,7 @@ export class Game {
 
       flagStore:     [],  // SS1-SEAM:SS4 — FlagStore.entries() not yet exposed
       objects:       this.world.all().map(captureObjectDelta),
-      parser:        {},  // SS1-SEAM:SS5 — Parser.snapshotState() not yet exposed
+      parser:        this.parser.snapshotState(),  // SS5
       moduleGlobals: {},  // SS1-SEAM:SS6 — captureModuleGlobals() not yet created
     };
   }
@@ -2478,8 +2478,8 @@ export class Game {
     this.lastAction = state.lastAction;
     this.lastPrep   = state.lastPrep;
 
-    // 6. Parser itRef seam (SS5; placeholder block).
-    // SS1-SEAM:SS5 — this.parser.restoreState({ itRef: state.parser.itRef })
+    // 6. Parser state (SS5).
+    this.parser.restoreState(state.parser);
   }
 }
 
