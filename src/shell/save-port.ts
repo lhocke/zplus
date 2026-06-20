@@ -160,13 +160,30 @@ export function validateSaveState(v: unknown): ValidationResult {
     return 'parser.itRef not a string';
   }
 
-  // moduleGlobals — present and is an object
+  // moduleGlobals — object with sub-objects whose fields the restore consumers
+  // destructure by name; a null or primitive sub-object throws on first access.
   if (!isObj(v.moduleGlobals)) return 'moduleGlobals not an object';
+  const mg = v.moduleGlobals;
+  if (!isObj(mg.thiefState))        return 'moduleGlobals.thiefState not an object';
+  if (!isObj(mg.aboveGroundState))  return 'moduleGlobals.aboveGroundState not an object';
+  if (!isObj(mg.lightSourceState))  return 'moduleGlobals.lightSourceState not an object';
 
-  // objects entries — id must be a string
+  // objects entries — full shape check.  applyObjectDelta destructures flags
+  // (for-of into Set.add), props (for-of [k,v] into Map.set), and text fields.
+  // A numeric prop entry throws when destructured as [k, v]; validate to block it here.
   for (const entry of v.objects as unknown[]) {
     if (!isObj(entry) || typeof entry.id !== 'string') {
       return 'objects entry has non-string id';
+    }
+    if (!Array.isArray(entry.flags)) return 'objects entry: flags not an array';
+    if (!Array.isArray(entry.props)) return 'objects entry: props not an array';
+    for (const p of entry.props as unknown[]) {
+      // Each prop must be a [string, number|string] tuple.
+      if (!Array.isArray(p) || p.length < 2 ||
+          typeof p[0] !== 'string' ||
+          (typeof p[1] !== 'number' && typeof p[1] !== 'string')) {
+        return 'objects entry: props entry invalid';
+      }
     }
   }
 

@@ -761,3 +761,100 @@ describe('V2 — empty-slot vs corrupt distinction', () => {
     expect(r.output).toBe('Failed.');
   });
 });
+
+// ---------------------------------------------------------------------------
+// 10. objects entry full-shape validation (trust-boundary sweep)
+//     applyObjectDelta destructures .flags (for-of), .props (for-of [k,v]),
+//     and text fields.  A numeric props entry throws when JS destructures it
+//     as [k, v]; validator must reject before it reaches the consumer.
+// ---------------------------------------------------------------------------
+
+describe('V2 — objects entry deep validation (props/flags shape)', () => {
+  it('objects entry with numeric prop item: validator rejects (positive-control)', () => {
+    const bad = minState({ objects: [{ id: 'LAMP', parent: null, siblingOrder: null, flags: [], props: [42] as unknown as [] }] });
+    expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
+  });
+
+  it('objects entry with numeric prop item: game.turn restore does not throw', () => {
+    const storage = new MapStorage();
+    const game = makeGame(storage);
+    game.turn('save');
+    rawMangle(storage, '1', o => {
+      (o.objects as unknown[])[0] = { ...(o.objects as unknown[])[0] as object, props: [42] };
+    });
+    expect(() => game.turn('restore')).not.toThrow();
+  });
+
+  it('objects entry with non-tuple prop ([k] only): validator rejects', () => {
+    const bad = minState({ objects: [{ id: 'LAMP', parent: null, siblingOrder: null, flags: [], props: [['only-key']] as unknown as [] }] });
+    expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
+  });
+
+  it('objects entry with non-string prop key: validator rejects', () => {
+    const bad = minState({ objects: [{ id: 'LAMP', parent: null, siblingOrder: null, flags: [], props: [[42, 'val']] as unknown as [] }] });
+    expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
+  });
+
+  it('objects entry with flags as string (not array): validator rejects', () => {
+    const bad = minState({ objects: [{ id: 'LAMP', parent: null, siblingOrder: null, flags: 'bad' as unknown as [], props: [] }] });
+    expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
+  });
+
+  it('objects entry with props as object (not array): validator rejects', () => {
+    const bad = minState({ objects: [{ id: 'LAMP', parent: null, siblingOrder: null, flags: [], props: { key: 1 } as unknown as [] }] });
+    expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11. moduleGlobals sub-object validation
+//     restoreThiefState / restoreAboveGroundState / restoreLightSourceState
+//     all read fields from their argument directly; null throws on first access.
+// ---------------------------------------------------------------------------
+
+describe('V2 — moduleGlobals sub-object validation', () => {
+  it('moduleGlobals.thiefState = null: validator rejects (positive-control)', () => {
+    const bad = minState({ moduleGlobals: { ...minState().moduleGlobals, thiefState: null as unknown as SaveState['moduleGlobals']['thiefState'] } });
+    expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
+  });
+
+  it('moduleGlobals.thiefState = null: game.turn restore does not throw', () => {
+    const storage = new MapStorage();
+    const game = makeGame(storage);
+    game.turn('save');
+    rawMangle(storage, '1', o => {
+      (o.moduleGlobals as Record<string, unknown>).thiefState = null;
+    });
+    expect(() => game.turn('restore')).not.toThrow();
+  });
+
+  it('moduleGlobals.aboveGroundState = null: validator rejects (positive-control)', () => {
+    const bad = minState({ moduleGlobals: { ...minState().moduleGlobals, aboveGroundState: null as unknown as SaveState['moduleGlobals']['aboveGroundState'] } });
+    expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
+  });
+
+  it('moduleGlobals.aboveGroundState = null: game.turn restore does not throw', () => {
+    const storage = new MapStorage();
+    const game = makeGame(storage);
+    game.turn('save');
+    rawMangle(storage, '1', o => {
+      (o.moduleGlobals as Record<string, unknown>).aboveGroundState = null;
+    });
+    expect(() => game.turn('restore')).not.toThrow();
+  });
+
+  it('moduleGlobals.lightSourceState = null: validator rejects (positive-control)', () => {
+    const bad = minState({ moduleGlobals: { ...minState().moduleGlobals, lightSourceState: null as unknown as SaveState['moduleGlobals']['lightSourceState'] } });
+    expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
+  });
+
+  it('moduleGlobals.lightSourceState = null: game.turn restore does not throw', () => {
+    const storage = new MapStorage();
+    const game = makeGame(storage);
+    game.turn('save');
+    rawMangle(storage, '1', o => {
+      (o.moduleGlobals as Record<string, unknown>).lightSourceState = null;
+    });
+    expect(() => game.turn('restore')).not.toThrow();
+  });
+});
