@@ -532,6 +532,27 @@ describe('V3 I-XB/I-XC/I-XBH: forced slot state after ring (CC1)', () => {
 
     expect(flagsOf(g).get('XB'), 'XB must be cleared when I-XB fires').toBe(false);
   });
+
+  it('I-XB/I-XBH slots survive firing — re-armable for a second ceremony (no soft-lock)', () => {
+    // ZIL C-TABLE slots are statically allocated: I-XB/I-XBH park at turnsLeft=0
+    // when they fire, they do NOT vanish, so a second <QUEUE I-XB 6> on a second
+    // RING BELL re-arms them.  A return-false tick deletes the clock entry, making
+    // the re-arm a silent dead letter — I-XBH never re-fires, BELL never returns,
+    // and the bell soft-locks.  (1actions.zil:1131-1147.)
+    const g = hadesGame({ candles: false });
+    g.turn('ring bell'); // arms I-XB(6) + I-XBH(20)
+
+    // Lapse the whole ceremony: I-XB fires ~turn 6, I-XBH ~turn 20.
+    for (let i = 0; i < 20; i++) g.turn('look');
+
+    const ixb = clockOf(g).getEntry('I-XB');
+    const ixbh = clockOf(g).getEntry('I-XBH');
+    expect(ixb, 'I-XB slot must survive firing (re-armable)').toBeDefined();
+    expect(ixbh, 'I-XBH slot must survive firing (re-armable)').toBeDefined();
+    // Parked, not running.
+    expect(ixb!.turnsLeft).toBe(0);
+    expect(ixbh!.turnsLeft).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------

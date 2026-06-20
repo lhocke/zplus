@@ -2210,7 +2210,9 @@ export class Game {
 
   // I-XB — ceremony timeout (6 ticks). 1actions.zil:1131–1138.
   // Fires when XC was never set: prints break message if player is at the gate,
-  // then clears XB.  Returns false (one-shot; slot stays registered but parked).
+  // then clears XB.  Returns true to park (turnsLeft=0) and stay registered — the
+  // ZIL C-TABLE slot is re-armable by a later RING BELL; returning false would
+  // delete the entry and soft-lock a second ceremony.
   private makeIXbEntry(): import('./clock.js').ClockEntry {
     return {
       id: 'I-XB',
@@ -2226,7 +2228,7 @@ export class Game {
           );
         }
         this.flags.set('XB', false);
-        return false;
+        return true; // stay registered + parked — re-armable by a later RING BELL
       },
     };
   }
@@ -2248,7 +2250,7 @@ export class Game {
           );
         }
         this.flags.set('XB', false);
-        return false;
+        return true; // stay registered + parked — re-armable by a later RING BELL
       },
     };
   }
@@ -2272,7 +2274,7 @@ export class Game {
         if (this.here.id === 'ENTRANCE-TO-HADES') {
           ctx.tell('The bell appears to have cooled down.');
         }
-        return false;
+        return true; // stay registered + parked — re-armable by a later RING BELL
       },
     };
   }
