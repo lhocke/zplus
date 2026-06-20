@@ -1,3 +1,4 @@
+# generated-by: engine 2026-06-19 walkthrough-master (DGC-anchored to dfrotz-r119; seed-42 RNG lines engine-determinism-exempt per §8)
 ZORK I: The Great Underground Empire
 Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.
 ZORK is a registered trademark of Infocom, Inc.
@@ -36,7 +37,7 @@ The small mailbox is closed.
 
 > inventory
 You are carrying:
-  leaflet
+  A leaflet
 
 > score
 Your score is 0 (total of 350 points), in 8 moves.
@@ -55,20 +56,18 @@ North of House
 You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
 
 > examine house
-There's nothing special about the white house.
+The house is a beautiful colonial house which is painted white.
+It is clear that the owners must have been extremely wealthy.
 
 > south
 The windows are all boarded.
 
 > west
 West of House
-You are standing in an open field west of a white house, with a boarded
-front door.
 There is a small mailbox here.
 
 > north
 North of House
-You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
 
 > east
 Behind House
@@ -100,16 +99,14 @@ South of House
 You are facing the south side of a white house. There is no door here, and all the windows are boarded.
 
 > examine house
-There's nothing special about the white house.
+The house is a beautiful colonial house which is painted white.
+It is clear that the owners must have been extremely wealthy.
 
 > north
 The windows are all boarded.
 
 > east
 Behind House
-You are behind the white house. A path leads into the forest
-to the east. In one corner of the house there is a small window
-which is open.
 
 > west
 Kitchen
@@ -159,8 +156,10 @@ The chimney leads downward, and looks climbable.
 
 > inventory
 You are carrying:
-  leaflet
-  glass bottle
+  A glass bottle
+  The glass bottle contains:
+    A quantity of water
+  A leaflet
 
 > drop bottle
 Dropped.
@@ -177,11 +176,6 @@ It is pitch black. You are likely to be eaten by a grue.
 
 > down
 Kitchen
-You are in the kitchen of the white house. A table seems to
-have been used recently for the preparation of food. A passage
-leads to the west and a dark staircase can be seen leading
-upward. A dark chimney leads down and to the east is a small
-window which is open.
 There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
@@ -229,19 +223,19 @@ Taken.
 
 > inventory
 You are carrying:
-  leaflet
-  sword
-  brass lantern
+  A brass lantern
+  A sword
+  A leaflet
 
 > score
-Your score is 10 (total of 350 points), in 43 moves.
+Your score is 10 (total of 350 points), in 46 moves.
 This gives you the rank of Beginner.
 
 > verbose
 Maximum verbosity.
 
 > brief
-I don't know how to "brief".
+Brief descriptions.
 
 > xyzzy
 A hollow voice says "Fool."
@@ -272,9 +266,9 @@ nailed shut, a trophy case, and a large oriental rug in the center of the room.
 
 > inventory. diagnose
 You are carrying:
-  leaflet
-  sword
-  brass lantern
+  A brass lantern
+  A sword
+  A leaflet
 You are in perfect health.
 You can be killed by a serious wound.
 
@@ -310,7 +304,7 @@ north, and a crawlway to the south. On the west is the bottom of a
 steep metal ramp which is unclimbable.
 
 > score
-Your score is 35 (total of 350 points), in 55 moves.
+Your score is 35 (total of 350 points), in 58 moves.
 This gives you the rank of Amateur Adventurer.
 
 > examine ramp
@@ -334,132 +328,11 @@ The troll's axe barely misses your ear.
 
 > east
 The troll fends you off with a menacing gesture.
-
-> west
-The troll fends you off with a menacing gesture.
-
-> south
-Cellar
-You are in a dark and damp cellar with a narrow passageway leading
-north, and a crawlway to the south. On the west is the bottom of a
-steep metal ramp which is unclimbable.
-Your sword is glowing with a faint blue glow.
-
-> south
-East of Chasm
-You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east.
-Your sword is no longer glowing.
-
-> look
-East of Chasm
-You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east.
-
-> examine chasm
-Examine what?
-
-> east
-Gallery
-This is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits.
-Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
-
-> look
-Gallery
-This is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits.
-Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.
-
-> examine painting
-A painting by a neglected genius is here.
-
-> take painting
-Taken.
-
-> score
-Your score is 39 (total of 350 points), in 67 moves.
-This gives you the rank of Amateur Adventurer.
-
-> inventory
-You are carrying:
-  leaflet
-  sword
-  brass lantern
-  painting
-
-> drop painting
-Dropped.
-
-> take painting
-Taken.
-
-> north
-Studio
-This appears to have been an artist's studio. The walls and floors are splattered with paints of 69 different colors. Strangely enough, nothing of value is hanging here. At the south end of the room is an open door (also covered with paint). A dark and narrow chimney leads up from a fireplace; although you might be able to get up it, it seems unlikely you could get back down.
-Loosely attached to a wall is a small piece of paper.
-
-> look
-Studio
-This appears to have been an artist's studio. The walls and floors are splattered with paints of 69 different colors. Strangely enough, nothing of value is hanging here. At the south end of the room is an open door (also covered with paint). A dark and narrow chimney leads up from a fireplace; although you might be able to get up it, it seems unlikely you could get back down.
-Loosely attached to a wall is a small piece of paper.
-
-> examine studio
-I don't know the word "studio".
-
-> south
-Gallery
-This is an art gallery. Most of the paintings have been stolen by vandals with exceptional taste. The vandals left through either the north or west exits.
-
-> west
-East of Chasm
-You are on the east edge of a chasm, the bottom of which cannot be seen. A narrow passage goes north, and the path you are on continues to the east.
-
-> examine east of chasm
-Examine what?
-
-> north
-Cellar
-You are in a dark and damp cellar with a narrow passageway leading
-north, and a crawlway to the south. On the west is the bottom of a
-steep metal ramp which is unclimbable.
-Your sword is glowing with a faint blue glow.
-
-> look
-Cellar
-You are in a dark and damp cellar with a narrow passageway leading
-north, and a crawlway to the south. On the west is the bottom of a
-steep metal ramp which is unclimbable.
-
-> inventory
-You are carrying:
-  leaflet
-  sword
-  brass lantern
-  painting
-
-> north
-The Troll Room
-This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
-A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
-Your sword has begun to glow very brightly.
-
-> look
-The Troll Room
-This is a small room with passages to the east and south and a forbidding hole leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the walls.
-A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the room.
-
-> south
-Cellar
-You are in a dark and damp cellar with a narrow passageway leading
-north, and a crawlway to the south. On the west is the bottom of a
-steep metal ramp which is unclimbable.
-Your sword is glowing with a faint blue glow.
-
-> turn off lamp
-The brass lantern is now off.
-
-> look
-It is pitch black. You are likely to be eaten by a grue.
-
-> south
-Oh, no! A lurking grue slithered into the room and devoured you!
+The flat of the troll's axe hits you delicately on the head, knocking
+you out.
+Conquering his fears, the troll puts you to death.
+It appears that that last blow was too much for you. I'm afraid you
+are dead.
 
     ****  You have died  ****
 
@@ -469,52 +342,157 @@ up completely, but you can't have everything.
 Forest
 This is a forest, with trees in all directions. To the east, there appears to be sunlight.
 
+> west
+You would need a machete to go further west.
+
+> south
+Forest
+This is a dimly lit forest, with large trees all around.
+A small leaflet is on the ground.
+
+> south
+Storm-tossed trees block your way.
+
 > look
 Forest
-This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+This is a dimly lit forest, with large trees all around.
+A small leaflet is on the ground.
+
+> examine chasm
+I don't know the word "chasm".
+
+> east
+The rank undergrowth prevents eastward movement.
+
+> look
+Forest
+This is a dimly lit forest, with large trees all around.
+A small leaflet is on the ground.
+
+> examine painting
+You can't see any painting here!
+
+> take painting
+You can't see any painting here!
+
+> score
+Your score is 25 (total of 350 points), in 69 moves.
+This gives you the rank of Beginner.
+
+> inventory
+You are empty-handed.
+
+> drop painting
+You can't see any painting here!
+
+> take painting
+You can't see any painting here!
+
+> north
+Clearing
+You are in a small clearing in a well marked forest path that extends to the east and west.
+
+> look
+Clearing
+You are in a small clearing in a well marked forest path that extends to the east and west.
+
+> examine studio
+I don't know the word "studio".
+
+> south
+Forest
+A small leaflet is on the ground.
+
+> west
+Forest
+You hear in the distance the chirping of a song bird.
+
+> examine east of chasm
+I don't know the word "chasm".
+
+> north
+Clearing
+You are in a clearing, with a forest surrounding you on all sides. A
+path leads south.
+On the ground is a pile of leaves.
+
+> look
+Clearing
+You are in a clearing, with a forest surrounding you on all sides. A
+path leads south.
+On the ground is a pile of leaves.
+
+> inventory
+You are empty-handed.
+
+> north
+The forest becomes impenetrable to the north.
+
+> look
+Clearing
+You are in a clearing, with a forest surrounding you on all sides. A
+path leads south.
+On the ground is a pile of leaves.
+
+> south
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> turn off lamp
+You can't see any lamp here!
+
+> look
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+
+> south
+North of House
+
+> look
+North of House
+You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
 
 > inventory
 You are empty-handed.
 
 > diagnose
-You are in perfect health.
-You can be killed by a serious wound.
+You have a light wound, which will be cured after 8 moves.
+You can be killed by one more light wound.
 You have been killed once.
 
 > score
-Your score is 29 (total of 350 points), in 86 moves.
-This gives you the rank of Amateur Adventurer.
+Your score is 25 (total of 350 points), in 85 moves.
+This gives you the rank of Beginner.
 
 > examine forest
 There's nothing special about the forest.
 
 > east
-Forest Path
-This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+Behind House
+There is a sword here.
 
 > look
-Forest Path
-This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+Behind House
+You are behind the white house. A path leads into the forest
+to the east. In one corner of the house there is a small window
+which is open.
+There is a sword here.
 
 > examine tree
-There's nothing special about the tree.
+You can't see any tree here!
 
 > examine path
 I don't know the word "path".
 
 > up
-Up a Tree
-You are about 10 feet above the ground nestled among some large
-branches. The nearest branch above you is above your reach.
-Beside you on the branch is a small bird's nest.
-In the bird's nest is a large egg encrusted with precious jewels, apparently scavenged by a childless songbird. The egg is covered with fine gold inlay, and ornamented in lapis lazuli and mother-of-pearl. Unlike most eggs, this one is hinged and closed with a delicate looking clasp. The egg appears extremely fragile.
+You can't go that way.
 
 > look
-Up a Tree
-You are about 10 feet above the ground nestled among some large
-branches. The nearest branch above you is above your reach.
-Beside you on the branch is a small bird's nest.
-In the bird's nest is a large egg encrusted with precious jewels, apparently scavenged by a childless songbird. The egg is covered with fine gold inlay, and ornamented in lapis lazuli and mother-of-pearl. Unlike most eggs, this one is hinged and closed with a delicate looking clasp. The egg appears extremely fragile.
+Behind House
+You are behind the white house. A path leads into the forest
+to the east. In one corner of the house there is a small window
+which is open.
+There is a sword here.
 
 > examine view
 I don't know the word "view".
@@ -523,20 +501,14 @@ I don't know the word "view".
 You can't see any birds here!
 
 > down
-Forest Path
-This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+You can't go that way.
 
 > north
-Clearing
-You are in a clearing, with a forest surrounding you on all sides. A
-path leads south.
-On the ground is a pile of leaves.
+North of House
 
 > look
-Clearing
-You are in a clearing, with a forest surrounding you on all sides. A
-path leads south.
-On the ground is a pile of leaves.
+North of House
+You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
 
 > examine grate
 You can't see any grate here!
@@ -545,30 +517,26 @@ You can't see any grate here!
 You can't see any grate here!
 
 > south
-Forest Path
-This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+The windows are all boarded.
 
 > west
-Forest
-This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+West of House
+There is a small mailbox here.
 
 > look
-Forest
-This is a forest, with trees in all directions. To the east, there appears to be sunlight.
+West of House
+You are standing in an open field west of a white house, with a boarded
+front door.
+There is a small mailbox here.
 
 > north
-Clearing
-You are in a clearing, with a forest surrounding you on all sides. A
-path leads south.
-On the ground is a pile of leaves.
-
-> south
-Forest Path
-This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
-
-> south
 North of House
-You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
+
+> south
+The windows are all boarded.
+
+> south
+The windows are all boarded.
 
 > look
 North of House
@@ -582,7 +550,6 @@ There's nothing special about the forest.
 
 > north
 Forest Path
-This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
 
 > look
 Forest Path
@@ -590,7 +557,6 @@ This is a path winding through a dimly lit forest. The path heads north-south he
 
 > south
 North of House
-You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
 
 > nw
 You can't go that way.
@@ -600,19 +566,15 @@ North of House
 You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
 
 > examine house
-There's nothing special about the white house.
+The house is a beautiful colonial house which is painted white.
+It is clear that the owners must have been extremely wealthy.
 
 > east
 Behind House
-You are behind the white house. A path leads into the forest
-to the east. In one corner of the house there is a small window
-which is open.
 There is a sword here.
-A small leaflet is on the ground.
 
 > east
 Clearing
-You are in a small clearing in a well marked forest path that extends to the east and west.
 
 > look
 Clearing
@@ -645,33 +607,26 @@ The mountains are impassable.
 
 > west
 Forest
-This is a dimly lit forest, with large trees all around.
 
 > west
 Forest Path
-This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
+You hear in the distance the chirping of a song bird.
 
 > north
 Clearing
-You are in a clearing, with a forest surrounding you on all sides. A
-path leads south.
 On the ground is a pile of leaves.
 
 > west
 Forest
-This is a forest, with trees in all directions. To the east, there appears to be sunlight.
 
 > east
 Forest Path
-This is a path winding through a dimly lit forest. The path heads north-south here. One particularly large tree with some low branches stands at the edge of the path.
 
 > east
 Forest
-This is a dimly lit forest, with large trees all around.
 
 > south
 Clearing
-You are in a small clearing in a well marked forest path that extends to the east and west.
 
 > east
 Canyon View
@@ -717,11 +672,9 @@ You are beneath the walls of the river canyon which may be climbable here. The l
 
 > up
 Rocky Ledge
-You are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable.
 
 > down
 Canyon Bottom
-You are beneath the walls of the river canyon which may be climbable here. The lesser part of the runoff of Aragain Falls flows by below. To the north is a narrow path.
 
 > north
 End of Rainbow
@@ -762,31 +715,22 @@ You can't go that way.
 
 > sw
 Canyon Bottom
-You are beneath the walls of the river canyon which may be climbable here. The lesser part of the runoff of Aragain Falls flows by below. To the north is a narrow path.
 
 > up
 Rocky Ledge
-You are on a ledge about halfway up the wall of the river canyon. You can see from here that the main flow from Aragain Falls twists along a passage which it is impossible for you to enter. Below you is the canyon bottom. Above you is more cliff, which appears climbable.
 
 > up
 Canyon View
-You are at the top of the Great Canyon on its west wall. From here there is a marvelous view of the canyon and parts of the Frigid River upstream. Across the canyon, the walls of the White Cliffs join the mighty ramparts of the Flathead Mountains to the east. Following the Canyon upstream to the north, Aragain Falls may be seen, complete with rainbow. The mighty Frigid River flows out from a great dark cavern. To the west and south can be seen an immense forest, stretching for miles around. A path leads northwest. It is possible to climb down into the canyon from here.
 
 > nw
 Clearing
-You are in a small clearing in a well marked forest path that extends to the east and west.
 
 > west
 Behind House
-You are behind the white house. A path leads into the forest
-to the east. In one corner of the house there is a small window
-which is open.
 There is a sword here.
-A small leaflet is on the ground.
 
 > south
 South of House
-You are facing the south side of a white house. There is no door here, and all the windows are boarded.
 
 > look
 South of House
@@ -794,8 +738,6 @@ You are facing the south side of a white house. There is no door here, and all t
 
 > west
 West of House
-You are standing in an open field west of a white house, with a boarded
-front door.
 There is a small mailbox here.
 
 > look
@@ -809,15 +751,10 @@ The door is boarded and you can't remove the boards.
 
 > north
 North of House
-You are facing the north side of a white house. There is no door here, and all the windows are boarded up. To the north a narrow path winds through the trees.
 
 > east
 Behind House
-You are behind the white house. A path leads into the forest
-to the east. In one corner of the house there is a small window
-which is open.
 There is a sword here.
-A small leaflet is on the ground.
 
 > look
 Behind House
@@ -825,15 +762,9 @@ You are behind the white house. A path leads into the forest
 to the east. In one corner of the house there is a small window
 which is open.
 There is a sword here.
-A small leaflet is on the ground.
 
 > west
 Kitchen
-You are in the kitchen of the white house. A table seems to
-have been used recently for the preparation of food. A passage
-leads to the west and a dark staircase can be seen leading
-upward. A dark chimney leads down and to the east is a small
-window which is open.
 There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
@@ -856,19 +787,10 @@ You can't see any bag here!
 
 > east
 Behind House
-You are behind the white house. A path leads into the forest
-to the east. In one corner of the house there is a small window
-which is open.
 There is a sword here.
-A small leaflet is on the ground.
 
 > west
 Kitchen
-You are in the kitchen of the white house. A table seems to
-have been used recently for the preparation of food. A passage
-leads to the west and a dark staircase can be seen leading
-upward. A dark chimney leads down and to the east is a small
-window which is open.
 There is a glass bottle here.
 The glass bottle contains:
   A quantity of water
@@ -876,9 +798,6 @@ On the table is an elongated brown sack, smelling of hot peppers.
 
 > west
 Living Room
-You are in the living room. There is a doorway to the east, a wooden
-door with strange gothic lettering to the west, which appears to be
-nailed shut, a trophy case, and a closed trap door at your feet.
 There is a brass lantern (battery-powered) here.
 
 > open trap door
@@ -892,8 +811,8 @@ Opened.
 You can't see any painting here!
 
 > score
-Your score is 29 (total of 350 points), in 157 moves.
-This gives you the rank of Amateur Adventurer.
+Your score is 25 (total of 350 points), in 163 moves.
+This gives you the rank of Beginner.
 
 > examine trophy case
 The trophy case is empty.
@@ -926,8 +845,8 @@ You can't see any painting here!
 You can't see any painting here!
 
 > score
-Your score is 29 (total of 350 points), in 162 moves.
-This gives you the rank of Amateur Adventurer.
+Your score is 25 (total of 350 points), in 168 moves.
+This gives you the rank of Beginner.
 
 > turn off lamp
 (Taken)
@@ -953,14 +872,14 @@ Living Room
 You are in the living room. There is a doorway to the east, a wooden
 door with strange gothic lettering to the west, which appears to be
 nailed shut, a trophy case, and a rug lying beside an open trap door.
-Your score is 29 (total of 350 points), in 167 moves.
-This gives you the rank of Amateur Adventurer.
+Your score is 25 (total of 350 points), in 173 moves.
+This gives you the rank of Beginner.
 You are carrying:
-  brass lantern
+  A brass lantern (providing light)
 
 > score
-Your score is 29 (total of 350 points), in 168 moves.
-This gives you the rank of Amateur Adventurer.
+Your score is 25 (total of 350 points), in 174 moves.
+This gives you the rank of Beginner.
 
 > diagnose
 You are in perfect health.
@@ -969,4 +888,4 @@ You have been killed once.
 
 > inventory
 You are carrying:
-  brass lantern
+  A brass lantern (providing light)

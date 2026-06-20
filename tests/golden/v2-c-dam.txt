@@ -87,14 +87,9 @@ Lying half buried in the mud is an old trunk, bulging with jewels.
 
 > south
 Reservoir South
-You are in a long room, to the north of which was formerly a lake. However, with the water level lowered, there is merely a wide stream running through the center of the room.
-There is a path along the stream to the east or west, a steep pathway climbing southwest along the edge of a chasm, and a path leading into a canyon to the southeast.
 
 > east
 Dam
-You are standing on the top of the Flood Control Dam #3, which was quite a tourist attraction in times far distant. There are paths to the north, south, and west, and a scramble down.
-The water level behind the dam is low: The sluice gates have been opened. Water rushes through the dam and downstream.
-There is a control panel here, on which a large metal bolt is mounted. Directly above the bolt is a small green plastic bubble which is glowing serenely.
 
 > turn bolt with wrench
 The sluice gates close and water starts to collect behind the dam.

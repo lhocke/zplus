@@ -183,9 +183,11 @@ describe('golden-preserving guards', () => {
     if (lamp  && player) { lamp.moveTo(player);  lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
     if (sword && player) { sword.moveTo(player); }
     g.turn('attack troll with sword');
-    // Missed blow: TROLL-FLAG stays unset, east still fends off
+    // Missed blow: TROLL-FLAG stays unset, east still fends off.
+    // CA1: blocked move now ticks CLOCKER, so the troll's I-FIGHT demon may also
+    // fire a counter-attack in the same output — use toContain, not toBe.
     const r = g.turn('east');
-    expect(r.output).toBe(FEND_OFF);
+    expect(r.output).toContain(FEND_OFF);
   });
 });
 
@@ -238,21 +240,38 @@ describe('Phase-2 coexistence guard — markers gone, combat module present', ()
  *     STAGGER + dweapon present → prob(25) draw; need ≥0.25 to preserve STAGGER.
  *     → villain staggered, pStrength unchanged; trollFlag stays false
  *     randomElement(HERO_MELEE[STAGGER-1=5], rng): 5 variants → next()=0.1 → variant 0
- *   Clock I-FIGHT: troll STAGGERED → villainBlow skips ("regains feet"), no RNG draw.
+ *   Clock I-FIGHT (round 1 tick): troll STAGGERED → "regains feet", 0 draws.
  *
- *   Round 2: nextInt(9)=7 → KILLED (DEF1[1+7]=DEF1[8]=KILLED)
+ *   east blocked tick: I-FIGHT fires; troll un-staggered; I-FIGHT passes prsiId=null →
+ *     att = villainStrength(TROLL,2,entry,null,false,false) = 2 (no vBest reduction)
+ *     def = fightStrength(true,35,0) = 2
+ *     selectWindow(att=2, def=2, rng): DEF2_RES[1]=DEF2B@0 → DEF2B[0+nextInt(9)]
+ *       next()=0.05 → nextInt(9)=0 → DEF2B[0]=MISSED
+ *     slot = TROLL_MELEE[MISSED-1=0] has 4 variants → randomElement: nextInt(4)
+ *       next()=0.80 → nextInt(4)=3 → variant 3 ("The axe crashes against the rock...")
+ *
+ *   Round 2: selectWindow(ATT=2,DEF=1): DEF1_RES[1]=DEF1@1 → DEF1[1+nextInt(9)]
+ *     next()=0.80 → nextInt(9)=7 → DEF1[1+7]=DEF1[8]=KILLED
  *     → def=0, villainResult fires F_DEAD → trollFlag=true
  *     randomElement(HERO_MELEE[KILLED-1=2], rng): 3 variants → next()=0.1 → variant 0
  */
 describe('troll-kill walkthrough (test H)', () => {
   function makeTrollKillRng() {
+    // CA1 fix: "east" (blocked move) ticks CLOCKER → I-FIGHT fires an extra villain blow.
+    // I-FIGHT uses prsiId=null so troll ATT=2 (no vBest reduction); DEF=2 → DEF2B@0 → MISSED.
+    // TROLL_MELEE[MISSED-1=0] has 4 variants, consuming an extra randomElement draw.
     return new ScriptedRng([
-      0.34,  // round 1 selectWindow: nextInt(9)=3 → STAGGER
-      0.90,  // round 1 prob(25): 90≥25 → false → STAGGER preserved (no LOSE_WEAPON)
-      0.1,   // round 1 randomElement HERO_MELEE[5]: pick variant 0
-      // clock I-FIGHT: troll STAGGERED → skips blow ("regains feet"), no RNG draw
-      0.80,  // round 2 selectWindow: nextInt(9)=7 → KILLED
-      0.1,   // round 2 randomElement HERO_MELEE[2]: pick variant 0
+      0.34,  // round 1 hero selectWindow: nextInt(9)=3 → STAGGER
+      0.90,  // round 1 hero prob(25): 90*100≥25 → false → STAGGER preserved (no LOSE_WEAPON)
+      0.1,   // round 1 hero randomElement HERO_MELEE[5] (5 variants): nextInt(5)=0 → variant 0
+      // I-FIGHT (round 1 tick): troll STAGGERED → "regains feet", 0 draws
+      // east blocked tick: I-FIGHT fires, troll un-staggered; prsiId=null; ATT=2,DEF=2 → DEF2B@0
+      0.05,  // east villain selectWindow: nextInt(9)=0 → DEF2B[0]=MISSED
+      0.80,  // east villain randomElement TROLL_MELEE[0] (4 variants): nextInt(4)=3 → variant 3
+      // round 2 attack: ATT=2,DEF=1 (sword=vBest) → DEF1@1 → DEF1[1+nextInt(9)]
+      0.80,  // round 2 hero selectWindow: nextInt(9)=7 → DEF1[8]=KILLED
+      0.1,   // round 2 hero randomElement HERO_MELEE[2] (3 variants): nextInt(3)=0 → variant 0
+      // I-FIGHT (round 2 tick): troll KILLED (pStrength=0) → no villain blow (FIGHTBIT cleared)
       0.5,   // padding
     ]);
   }
@@ -278,9 +297,10 @@ describe('troll-kill walkthrough (test H)', () => {
     expect(r1.output.length).toBeGreaterThan(0);
     expect(r1.output).not.toContain(SIGN_FRAGMENT);
 
-    // After round 1: troll staggered but alive — exits still blocked
+    // After round 1: troll staggered but alive — exits still blocked.
+    // CA1: blocked move now ticks CLOCKER, so the troll's I-FIGHT demon may also fire.
     const eastAfter1 = g.turn('east');
-    expect(eastAfter1.output).toBe(FEND_OFF);
+    expect(eastAfter1.output).toContain(FEND_OFF);
 
     // Round 2: KILLED — F_DEAD fires
     const r2 = g.turn('attack troll with sword');

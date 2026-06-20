@@ -17,6 +17,13 @@ import { boatActions } from './boat.js';
 import { riverObjActions } from './river-obj.js';
 import { beachActions } from './beach.js';
 import { rainbowActions } from './rainbow.js';
+import { hadesActions } from './hades.js';
+import { domeRopeActions } from './dome-rope.js';
+import { batGarlicActions } from './bat-garlic.js';
+import { skeletonActions } from './skeleton.js';
+import { mirrorActions } from './mirror.js';
+import { bottleWaterActions } from './bottle-water.js';
+import { weaponsActions } from './weapons.js';
 import {
   treasureRoomFcnAction,
   chaliceFcnAction,
@@ -24,6 +31,7 @@ import {
   largeBagFAction,
   dumbContainerAction,
 } from './treasure-room.js';
+import { trollRoomFcn } from './troll-fcn.js';
 import { cyclopsFcnAction, cyclopsRoomFcnAction } from './cyclops.js';
 import {
   preBoardHandler,
@@ -54,11 +62,19 @@ const ACTIONS: Record<string, ActionHandler> = {
   'DUMB-CONTAINER':    dumbContainerAction,
   'CYCLOPS-FCN':       cyclopsFcnAction,
   'CYCLOPS-ROOM-FCN':  cyclopsRoomFcnAction,
+  'TROLL-ROOM-F':      trollRoomFcn,
   ...damActions,
   ...boatActions,
   ...riverObjActions,
   ...beachActions,
   ...rainbowActions,
+  ...hadesActions,
+  ...domeRopeActions,
+  ...batGarlicActions,
+  ...skeletonActions,
+  ...mirrorActions,
+  ...bottleWaterActions,
+  ...weaponsActions,
 };
 
 const PER_ROUTINES: Record<string, PerRoutine> = {

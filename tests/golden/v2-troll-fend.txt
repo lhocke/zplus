@@ -10,3 +10,4 @@ The troll fends you off with a menacing gesture.
 
 > west
 The troll fends you off with a menacing gesture.
+The troll swings his axe, but it misses.

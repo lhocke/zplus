@@ -296,14 +296,13 @@ describe('syntaxCheck() — DRIVE fallbacks', () => {
     // Check ATTACK 2-obj with no prep1:
     const attackForms = getForms('ATTACK');
     const twoPrepNullForm = attackForms.find(f => f.numObjects === 2 && f.prep1 === undefined);
-    if (twoPrepNullForm !== undefined) {
-      // "attack troll with ?" where we only have 1 noun (ncn=1), no prep.
-      const r = syntaxCheck('ATTACK', 1, undefined, undefined);
-      expect(r.kind).toBe('needGwim');
-      if (r.kind === 'needGwim') {
-        // drive2 should be the ATTACK 2-obj no-prep1 form (last qualifying).
-        expect(r.drive2).toBeDefined();
-      }
+    expect(twoPrepNullForm, 'ATTACK must have a 2-obj no-prep1 form in the syntax schema').toBeDefined();
+    // "attack troll with ?" where we only have 1 noun (ncn=1), no prep.
+    const r = syntaxCheck('ATTACK', 1, undefined, undefined);
+    expect(r.kind).toBe('needGwim');
+    if (r.kind === 'needGwim') {
+      // drive2 should be the ATTACK 2-obj no-prep1 form (last qualifying).
+      expect(r.drive2).toBeDefined();
     }
   });
 

@@ -1,0 +1,124 @@
+# mirror.txt — mirror oracle corpus (Zork I oracle harness)
+# generated-by: dfrotz-r119 2026-06-12 mirror-cc6
+#
+# MECHANIC: MIRROR-MIRROR / MIRROR-ROOM — CC6.
+# Routines: MIRROR-ROOM (room FCN for MIRROR-ROOM-1/2), MIRROR-MIRROR (object FCN on MIRROR-1/2).
+# Globals: MIRROR-MUNG (broken flag), LUCKY (luck flag → Phase-2 zprob denom).
+#
+# ZIL refs:
+#   1actions.zil:958   MIRROR-ROOM     — M-LOOK: base ldesc + optional mung addendum
+#   1actions.zil:971   MIRROR-MIRROR   — object FCN: RUB→swap+teleport; MUNG/THROW/ATTACK→break
+#   1actions.zil:968   <GLOBAL MIRROR-MUNG <>>  — broken flag (false at start)
+#   1actions.zil:969   <GLOBAL LUCKY T>         — luck flag (true at start)
+#
+# RUB mirror (no instrument) — 1actions.zil:972–993:
+#   swap ALL contents of MIRROR-ROOM-1 ↔ MIRROR-ROOM-2 + GOTO other room.
+#   Message: "There is a rumble from deep within the earth and the room shakes."
+#   ZIL GOTO .RM2 <> passes V?=false → V-FIRST-LOOK skipped (gverbs.zil:2134–2136).
+#   Engine respects this via ctx.suppressArrivalLook() — no room description after teleport.
+#
+# RUB mirror WITH <instrument> — 1actions.zil:973–976:
+#   PRSI set and ≠ HANDS → "You feel a faint tingling transmitted through the <desc>."
+#   No swap; player stays put.
+#
+# EXAMINE / LOOK-INSIDE — 1actions.zil:994–999:
+#   intact  → "There is an ugly person staring back at you."
+#   munged → "The mirror is broken into many pieces."
+#
+# TAKE — 1actions.zil:1000–1002:
+#   "The mirror is many times your size. Give up."
+#
+# V-MUNG (break/smash/destroy mirror WITH weapon) — 1actions.zil:1003–1012:
+#   intact  → SETG MIRROR-MUNG T; SETG LUCKY <>;
+#             "You have broken the mirror. I hope you have a seven years' supply of\ngood luck handy."
+#   munged → "Haven't you done enough damage already?"
+#
+# LUCKY seam with Phase 2 (spec §6.6):
+#   zprob (combat.ts:687) reads getLucky() → this.lucky; when LUCKY=false, LOSE-WEAPON
+#   fires at denom=300 (~1/3 as likely as denom=100). Breaking the mirror intentionally
+#   degrades the player's combat luck. Faithful and intended.
+#
+# MIRROR-ROOM M-LOOK — 1actions.zil:958–966:
+#   Always prints base ldesc. Appends mung addendum when MIRROR-MUNG=true.
+#
+# BLOCKER (documented): MIRROR-ROOM-1 and MIRROR-ROOM-2 are in the lower dungeon,
+# reached through MAGIC-MIRROR-ROOM (west from MIRROR-ROOM) via a route that crosses
+# the Troll Room. The troll blocks passage and triggers RNG-driven combat (ZIL: <PROB 33>,
+# FIGHT-STRENGTH rolls). dfrotz and the engine use different RNG implementations, so
+# the troll's attack/result lines diverge — exactly the RNG-driven content the corpus
+# README declares out of scope. The mirror rooms therefore cannot be reached end-to-end
+# without crossing a known RNG divergence.
+#
+# The mirror mechanics are fully exercised by the unit tests in
+#   tests/actions/cc6-mirror.test.ts
+# which drive the real world data via newGameAt('MIRROR-ROOM-1').
+#
+# This corpus drives the deterministic above-ground section (through the trap door)
+# and pins the exact turn where the troll's RNG combat first diverges, so the
+# harness can verify that the route up to that point matches dfrotz byte-for-byte.
+#
+# State-table coverage (all cells exercised by cc6-mirror.test.ts unit tests):
+#
+# Cell 1 — RUB intact mirror (no instrument): swap + teleport + rumble
+#   → "There is a rumble from deep within the earth and the room shakes."
+#   → MIRROR-1 moves to MIRROR-ROOM-2; MIRROR-2 moves to MIRROR-ROOM-1
+#   → player in MIRROR-ROOM-2
+#   cc6 tests: "rub mirror: MIRROR-1 moves to MIRROR-ROOM-2", "player teleports", "rumble"
+#
+# Cell 2 — RUB intact mirror WITH lamp: tingling, no swap
+#   → "You feel a faint tingling transmitted through the lantern."
+#   cc6 test: "rub mirror with lamp: tingling message"
+#
+# Cell 3 — EXAMINE intact mirror:
+#   → "There is an ugly person staring back at you."
+#   cc6 test: "examine intact mirror: ugly person message"
+#
+# Cell 4 — TAKE mirror:
+#   → "The mirror is many times your size. Give up."
+#   cc6 test: "take mirror: many times your size message"
+#
+# Cell 5 — break (V-MUNG) intact mirror WITH sword:
+#   → MIRROR-MUNG=true, LUCKY=false
+#   → "You have broken the mirror. I hope you have a seven years' supply of good luck handy."
+#   cc6 tests: "break mirror: bad-luck message", "LUCKY is false after break"
+#
+# Cell 6 — EXAMINE broken mirror:
+#   → "The mirror is broken into many pieces."
+#   cc6 test: "examine broken mirror: broken-pieces message"
+#
+# Cell 7 — break already-broken mirror:
+#   → "Haven't you done enough damage already?"
+#   cc6 test: "break mirror twice: second break yields enough damage message"
+#
+# Cell 8 — MIRROR-ROOM M-LOOK intact:
+#   → base ldesc (no mung addendum)
+#   cc6 test: "MIRROR-ROOM-1 look when intact: no mung addendum"
+#
+# Cell 9 — MIRROR-ROOM M-LOOK after break:
+#   → base ldesc + "Unfortunately, the mirror has been destroyed by your recklessness."
+#   cc6 test: "MIRROR-ROOM-1 look after break: mung addendum present"
+#
+# dfrotz R119 above-ground route (deterministic through trap door):
+# Verified against dfrotz R119: first troll-attack divergence at the
+# "east" command from TROLL-ROOM (or first attack response after entry).
+#
+# Run with:
+#   dfrotz /path/to/zork1.z3 < tools/oracle/corpus/mirror.txt
+# (no seed needed for the above-ground legs)
+
+# Set verbose mode.
+verbose
+
+# --- Route: West of House → Cellar → North of Troll Room ---
+open mailbox
+north
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+~north

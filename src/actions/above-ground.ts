@@ -11,7 +11,6 @@ import { Flag } from '../domain/flags.js';
 import { M_LOOK, M_ENTER, M_END, M_BEG } from '../engine/messages.js';
 import type { PerRoutine } from './registry.js';
 import { pick, dummy, type PickRng } from '../engine/game-messages.js';
-import { isLookInsideDispatch } from './treasure-room.js';
 
 function pickDummy(rng: PickRng | undefined): string {
   if (rng !== undefined) return pick(dummy, rng);
@@ -152,9 +151,9 @@ export const livingRoomFcn: ActionHandler = (ctx) => {
   }
 
   if (ctx.rarg === M_END) {
-    const isTake = ctx.verb === 'take';
+    const isTake = ctx.action === 'V-TAKE';
     const isPutToCase =
-      ctx.verb === 'put' &&
+      ctx.action === 'V-PUT' &&
       ctx.iobj !== undefined &&
       ctx.iobj.id === 'TROPHY-CASE';
 
@@ -233,8 +232,9 @@ export const maze11Fcn: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
     const grate = ctx.world.get('GRATE');
     const grateOpen = grate !== undefined && ctx.hasFlag(grate, Flag.Open);
+    // ZIL source newline within a string segment normalizes to a single space.
     let text =
-      'You are in a small room near the maze. There are twisty passages\nin the immediate vicinity.';
+      'You are in a small room near the maze. There are twisty passages in the immediate vicinity.';
     if (grateOpen) {
       text += '\nAbove you is an open grating with sunlight pouring in.';
     } else if (grunlock) {
@@ -247,6 +247,22 @@ export const maze11Fcn: ActionHandler = (ctx) => {
   }
   return false;
 };
+
+// Shared DO-WALK simulation for FOREST-ROOM / TREE-ROOM M-BEG climb intercepts.
+// Finds the exit in `dir`, moves the actor if passable, prints elseMessage if blocked.
+// Returns true (handled) when the exit exists; false to fall through to verb dispatch.
+// Mirrors ZIL DO-WALK for simple to/elseMessage exits (per/ifFlag not needed here).
+function doWalkSimple(dir: string, ctx: Parameters<ActionHandler>[0]): boolean {
+  const exit = ctx.here.exits.find(e => e.dir === dir);
+  if (exit === undefined) return false;
+  if (exit.to !== undefined) {
+    const dest = ctx.world.get(exit.to);
+    if (dest !== undefined) ctx.moveTo(ctx.actor, dest);
+  } else if (exit.elseMessage !== undefined) {
+    ctx.tell(exit.elseMessage);
+  }
+  return true;
+}
 
 /** TREE-ROOM — zil/1actions.zil:2880 */
 export const treeRoom: ActionHandler = (ctx) => {
@@ -273,6 +289,19 @@ export const treeRoom: ActionHandler = (ctx) => {
     ctx.enableClock('I-FOREST-ROOM');
     return false;
   }
+  // M-BEG: 1actions.zil:2890-2895
+  // climb down + PRSO=TREE or PRSO=ROOMS → DO-WALK down
+  // climb up/foo + PRSO=TREE → DO-WALK up
+  if (ctx.rarg === M_BEG) {
+    if (ctx.action === 'V-CLIMB-DOWN' &&
+        (ctx.dobj?.id === 'TREE' || ctx.dobjIsRooms === true)) {
+      return doWalkSimple('down', ctx);
+    }
+    if ((ctx.action === 'V-CLIMB-FOO' || ctx.action === 'V-CLIMB-UP') &&
+        ctx.dobj?.id === 'TREE') {
+      return doWalkSimple('up', ctx);
+    }
+  }
   return false;
 };
 
@@ -285,6 +314,14 @@ export const forestRoom: ActionHandler = (ctx) => {
   if (ctx.rarg === M_LOOK) {
     return false;
   }
+  // M-BEG: 1actions.zil:3006-3009
+  // climb up/foo + PRSO=TREE → DO-WALK up (structured for CC9 to extend with SONGBIRD/I-FOREST-ROOM)
+  if (ctx.rarg === M_BEG) {
+    if ((ctx.action === 'V-CLIMB-FOO' || ctx.action === 'V-CLIMB-UP') &&
+        ctx.dobj?.id === 'TREE') {
+      return doWalkSimple('up', ctx);
+    }
+  }
   return false;
 };
 
@@ -292,7 +329,7 @@ export const forestRoom: ActionHandler = (ctx) => {
 
 /** MAILBOX-F — zil/1actions.zil:2259 */
 export const mailboxF: ActionHandler = (ctx) => {
-  if (ctx.verb === 'take' && ctx.dobj === ctx.self) {
+  if (ctx.action === 'V-TAKE' && ctx.dobj === ctx.self) {
     ctx.tell('It is securely anchored.');
     return true;
   }
@@ -301,7 +338,7 @@ export const mailboxF: ActionHandler = (ctx) => {
 
 /** BOARD-F — zil/1actions.zil:44 */
 export const boardF: ActionHandler = (ctx) => {
-  if (ctx.verb === 'take' || ctx.verb === 'examine') {
+  if (ctx.action === 'V-TAKE' || ctx.action === 'V-EXAMINE') {
     ctx.tell('The boards are securely fastened.');
     return true;
   }
@@ -310,15 +347,15 @@ export const boardF: ActionHandler = (ctx) => {
 
 /** FRONT-DOOR-FCN — zil/1actions.zil:2163 */
 export const frontDoorFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'open') {
+  if (ctx.action === 'V-OPEN') {
     ctx.tell('The door cannot be opened.');
     return true;
   }
-  if (ctx.verb === 'burn') {
+  if (ctx.action === 'V-BURN') {
     ctx.tell('You cannot burn this door.');
     return true;
   }
-  if (ctx.verb === 'destroy') {
+  if (ctx.action === 'V-MUNG') {
     ctx.tell("You can't seem to damage the door.");
     return true;
   }
@@ -327,11 +364,11 @@ export const frontDoorFcn: ActionHandler = (ctx) => {
 
 /** BOARDED-WINDOW-FCN — zil/1actions.zil:370 */
 export const boardedWindowFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'open') {
+  if (ctx.action === 'V-OPEN') {
     ctx.tell("The windows are boarded and can't be opened.");
     return true;
   }
-  if (ctx.verb === 'destroy') {
+  if (ctx.action === 'V-MUNG') {
     ctx.tell("You can't break the windows open.");
     return true;
   }
@@ -342,9 +379,9 @@ export const boardedWindowFcn: ActionHandler = (ctx) => {
 export const kitchenWindowF: ActionHandler = (ctx) => {
   const win = ctx.self;
 
-  if (ctx.verb === 'open' || ctx.verb === 'close') {
+  if (ctx.action === 'V-OPEN' || ctx.action === 'V-CLOSE') {
     kitchenWindowFlag = true;
-    if (ctx.verb === 'open') {
+    if (ctx.action === 'V-OPEN') {
       if (ctx.hasFlag(win, Flag.Open)) {
         ctx.tell(pickDummy(ctx.rng));
       } else {
@@ -364,17 +401,20 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'examine' && !kitchenWindowFlag) {
+  if (ctx.action === 'V-EXAMINE' && !kitchenWindowFlag) {
     ctx.tell(
       'The window is slightly ajar, but not enough to allow entry.',
     );
     return true;
   }
 
+  // V-WALK / V-ENTER / V-THROUGH — entering through the window.
+  // "enter window" (ENTER + 1 obj) → V-THROUGH; bare "enter" (ENTER + 0 obj) → V-ENTER.
+  // ZIL: VERB? WALK BOARD THROUGH (1actions.zil:251) — V-CLIMB-FOO not intercepted.
   if (
-    ctx.verb === 'walk' ||
-    ctx.verb === 'enter' ||
-    ctx.verb === 'climb'
+    ctx.action === 'V-WALK' ||
+    ctx.action === 'V-ENTER' ||
+    ctx.action === 'V-THROUGH'
   ) {
     const dir = ctx.here.id === 'KITCHEN' ? 'east' : 'west';
     const exit = ctx.here.exits.find((e) => e.dir === dir);
@@ -396,7 +436,7 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
   }
 
   // ZIL: VERB? LOOK-INSIDE only (1actions.zil:257) — look-under/behind/on fall through.
-  if (isLookInsideDispatch(ctx.verb, ctx.prep)) {
+  if (ctx.action === 'V-LOOK-INSIDE') {
     if (ctx.here.id === 'KITCHEN') {
       ctx.tell('You can see a clear area leading towards a forest.');
     } else {
@@ -410,7 +450,7 @@ export const kitchenWindowF: ActionHandler = (ctx) => {
 
 /** CHIMNEY-F — zil/1actions.zil:545 */
 export const chimneyF: ActionHandler = (ctx) => {
-  if (ctx.verb === 'examine') {
+  if (ctx.action === 'V-EXAMINE') {
     const dir = ctx.here.id === 'KITCHEN' ? 'down' : 'up';
     ctx.tell(`The chimney leads ${dir}ward, and looks climbable.`);
     return true;
@@ -420,7 +460,7 @@ export const chimneyF: ActionHandler = (ctx) => {
 
 /** TROPHY-CASE-FCN — zil/1actions.zil:442 */
 export const trophyCaseFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'take' && ctx.dobj === ctx.self) {
+  if (ctx.action === 'V-TAKE' && ctx.dobj === ctx.self) {
     ctx.tell('The trophy case is securely fastened to the wall.');
     return true;
   }
@@ -429,7 +469,7 @@ export const trophyCaseFcn: ActionHandler = (ctx) => {
 
 /** RUG-FCN — zil/1actions.zil:579 */
 export const rugFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'raise') {
+  if (ctx.action === 'V-RAISE') {
     if (rugMoved) {
       ctx.tell('The rug is too heavy to lift.');
     } else {
@@ -441,7 +481,8 @@ export const rugFcn: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'move' || ctx.verb === 'push') {
+  // V-MOVE covers "move"; V-PUSH covers "push/press".
+  if (ctx.action === 'V-MOVE' || ctx.action === 'V-PUSH') {
     if (rugMoved) {
       ctx.tell(
         'Having moved the carpet previously, you find it impossible to move\nit again.',
@@ -458,13 +499,13 @@ export const rugFcn: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'take') {
+  if (ctx.action === 'V-TAKE') {
     ctx.tell('The rug is extremely heavy and cannot be carried.');
     return true;
   }
 
   // ZIL: VERB? LOOK-UNDER only (1actions.zil:603) — look-in/behind/on fall through.
-  if (ctx.verb === 'look' && ctx.prep === 'UNDER') {
+  if (ctx.action === 'V-LOOK-UNDER') {
     if (!rugMoved) {
       const trapDoor = ctx.world.get('TRAP-DOOR');
       const trapOpen = trapDoor !== undefined && ctx.hasFlag(trapDoor, Flag.Open);
@@ -479,7 +520,8 @@ export const rugFcn: ActionHandler = (ctx) => {
     return false;
   }
 
-  if (ctx.verb === 'climb') {
+  // V-CLIMB-FOO is the bare CLIMB (CLIMB ON is V-CLIMB-ON, but "sit" maps to V-CLIMB-FOO).
+  if (ctx.action === 'V-CLIMB-FOO' || ctx.action === 'V-CLIMB-ON') {
     if (!rugMoved) {
       const trapDoor = ctx.world.get('TRAP-DOOR');
       const trapOpen = trapDoor !== undefined && ctx.hasFlag(trapDoor, Flag.Open);
@@ -501,7 +543,7 @@ export const rugFcn: ActionHandler = (ctx) => {
 export const trapDoorFcn: ActionHandler = (ctx) => {
   const door = ctx.self;
 
-  if (ctx.verb === 'raise') {
+  if (ctx.action === 'V-RAISE') {
     if (ctx.here.id === 'LIVING-ROOM') {
       if (!ctx.hasFlag(door, Flag.Open)) {
         ctx.tell(
@@ -516,8 +558,8 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
   }
 
   if (ctx.here.id === 'LIVING-ROOM') {
-    if (ctx.verb === 'open' || ctx.verb === 'close') {
-      if (ctx.verb === 'open') {
+    if (ctx.action === 'V-OPEN' || ctx.action === 'V-CLOSE') {
+      if (ctx.action === 'V-OPEN') {
         if (ctx.hasFlag(door, Flag.Open)) {
           ctx.tell(pickDummy(ctx.rng));
         } else {
@@ -538,7 +580,7 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
     }
 
     // ZIL: VERB? LOOK-UNDER only (1actions.zil:514) — look-in/behind/on fall through.
-    if (ctx.verb === 'look' && ctx.prep === 'UNDER') {
+    if (ctx.action === 'V-LOOK-UNDER') {
       if (ctx.hasFlag(door, Flag.Open)) {
         ctx.tell('You see a rickety staircase descending into darkness.');
       } else {
@@ -549,11 +591,11 @@ export const trapDoorFcn: ActionHandler = (ctx) => {
   }
 
   if (ctx.here.id === 'CELLAR') {
-    if ((ctx.verb === 'open' || ctx.verb === 'unlock') && !ctx.hasFlag(door, Flag.Open)) {
+    if ((ctx.action === 'V-OPEN' || ctx.action === 'V-UNLOCK') && !ctx.hasFlag(door, Flag.Open)) {
       ctx.tell('The door is locked from above.');
       return true;
     }
-    if (ctx.verb === 'close' && !ctx.hasFlag(door, Flag.Open)) {
+    if (ctx.action === 'V-CLOSE' && !ctx.hasFlag(door, Flag.Open)) {
       ctx.clearFlag(door, Flag.Touched);
       ctx.clearFlag(door, Flag.Open);
       ctx.tell('The door closes and locks.');
@@ -570,7 +612,7 @@ export const grateFunction: ActionHandler = (ctx) => {
   const keys = ctx.world.get('KEYS');
   const iobj = ctx.iobj;
 
-  if (ctx.verb === 'lock') {
+  if (ctx.action === 'V-LOCK') {
     if (ctx.here.id === 'GRATING-ROOM') {
       grunlock = false;
       ctx.tell('The grate is locked.');
@@ -582,7 +624,7 @@ export const grateFunction: ActionHandler = (ctx) => {
     }
   }
 
-  if (ctx.verb === 'unlock' && ctx.dobj === grate) {
+  if (ctx.action === 'V-UNLOCK' && ctx.dobj === grate) {
     if (ctx.here.id === 'GRATING-ROOM' && iobj === keys) {
       grunlock = true;
       ctx.tell('The grate is unlocked.');
@@ -596,12 +638,12 @@ export const grateFunction: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'open' || ctx.verb === 'close') {
+  if (ctx.action === 'V-OPEN' || ctx.action === 'V-CLOSE') {
     if (!grunlock) {
       ctx.tell('The grating is locked.');
       return true;
     }
-    if (ctx.verb === 'open') {
+    if (ctx.action === 'V-OPEN') {
       if (ctx.hasFlag(grate, Flag.Open)) {
         ctx.tell(pickDummy(ctx.rng));
       } else {
@@ -634,7 +676,7 @@ export const grateFunction: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'put' && ctx.iobj === grate) {
+  if (ctx.action === 'V-PUT' && ctx.iobj === grate) {
     const item = ctx.dobj;
     if (item !== undefined) {
       const size = item.props.get('SIZE');
@@ -654,12 +696,12 @@ export const grateFunction: ActionHandler = (ctx) => {
 
 /** LEAF-PILE — zil/1actions.zil:786 */
 export const leafPile: ActionHandler = (ctx) => {
-  if (ctx.verb === 'count') {
+  if (ctx.action === 'V-COUNT') {
     ctx.tell('There are 69,105 leaves here.');
     return true;
   }
 
-  if (ctx.verb === 'burn') {
+  if (ctx.action === 'V-BURN') {
     leavesAppear(ctx);
     const item = ctx.dobj;
     if (item !== undefined) {
@@ -669,21 +711,21 @@ export const leafPile: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'cut') {
+  if (ctx.action === 'V-CUT') {
     ctx.tell('You rustle the leaves around, making quite a mess.');
     leavesAppear(ctx);
     return true;
   }
 
-  if (ctx.verb === 'move' || ctx.verb === 'take') {
-    if (ctx.verb === 'move') ctx.tell('Done.');
-    if (grateRevealed) return ctx.verb === 'take' ? false : true;
+  if (ctx.action === 'V-MOVE' || ctx.action === 'V-TAKE') {
+    if (ctx.action === 'V-MOVE') ctx.tell('Done.');
+    if (grateRevealed) return ctx.action === 'V-TAKE' ? false : true;
     leavesAppear(ctx);
-    return ctx.verb === 'take' ? false : true;
+    return ctx.action === 'V-TAKE' ? false : true;
   }
 
   // ZIL: VERB? LOOK-UNDER only (1actions.zil:809) — look-in/behind/on fall through.
-  if (ctx.verb === 'look' && ctx.prep === 'UNDER') {
+  if (ctx.action === 'V-LOOK-UNDER') {
     if (!grateRevealed) {
       ctx.tell(
         'Underneath the pile of leaves is a grating. As you release the leaves,\n' +
@@ -699,7 +741,7 @@ export const leafPile: ActionHandler = (ctx) => {
 function leavesAppear(ctx: Parameters<ActionHandler>[0]): void {
   const grate = ctx.world.get('GRATE');
   if (!grateRevealed) {
-    if (ctx.verb === 'move' || ctx.verb === 'take') {
+    if (ctx.action === 'V-MOVE' || ctx.action === 'V-TAKE') {
       ctx.tell('In disturbing the pile of leaves, a grating is revealed.');
     } else {
       ctx.tell('With the leaves moved, a grating is revealed.');
@@ -711,7 +753,7 @@ function leavesAppear(ctx: Parameters<ActionHandler>[0]): void {
 
 /** PAINTING-FCN — zil/1actions.zil:2207 */
 export const paintingFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'destroy') {
+  if (ctx.action === 'V-MUNG') {
     ctx.self.props.set('TVALUE', 0);
     ctx.self.ldesc = 'There is a worthless piece of canvas here.';
     ctx.tell(
@@ -725,11 +767,11 @@ export const paintingFcn: ActionHandler = (ctx) => {
 
 /** SWORD-FCN — zil/1actions.zil:2432 */
 export const swordFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'take') {
+  if (ctx.action === 'V-TAKE') {
     ctx.enableClock('I-SWORD');
     return false; // let default TAKE execute
   }
-  if (ctx.verb === 'examine') {
+  if (ctx.action === 'V-EXAMINE') {
     const g = ctx.self.props.get('TVALUE');
     if (g === 1) {
       ctx.tell('Your sword is glowing with a faint blue glow.');
@@ -757,7 +799,7 @@ export const eggObject: ActionHandler = (ctx) => {
   const egg = ctx.self;
 
   if (
-    (ctx.verb === 'open' || ctx.verb === 'destroy') &&
+    (ctx.action === 'V-OPEN' || ctx.action === 'V-MUNG') &&
     ctx.dobj === egg
   ) {
     if (ctx.hasFlag(egg, Flag.Open)) {
@@ -791,7 +833,8 @@ export const eggObject: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'climb') {
+  // V-CLIMB-FOO = bare CLIMB, V-CLIMB-ON = "sit on/climb on".
+  if (ctx.action === 'V-CLIMB-FOO' || ctx.action === 'V-CLIMB-ON') {
     ctx.tell(
       'There is a noticeable crunch from beneath you, and inspection reveals\n' +
         'that the egg is lying open, badly damaged.',
@@ -800,8 +843,9 @@ export const eggObject: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'open' || ctx.verb === 'destroy' || ctx.verb === 'throw') {
-    if (ctx.verb === 'throw' && ctx.dobj !== undefined) {
+  // Second open/mung/throw branch: egg not dobj (e.g. thrown with egg nearby).
+  if (ctx.action === 'V-OPEN' || ctx.action === 'V-MUNG' || ctx.action === 'V-THROW') {
+    if (ctx.action === 'V-THROW' && ctx.dobj !== undefined) {
       ctx.moveTo(ctx.dobj, ctx.here);
     }
     ctx.tell(
@@ -843,7 +887,8 @@ function badEgg(ctx: Parameters<ActionHandler>[0]): void {
 
 /** CANARY-OBJECT — zil/1actions.zil:2970 */
 export const canaryObject: ActionHandler = (ctx) => {
-  if (ctx.verb === 'wind' || ctx.verb === 'turn') {
+  // V-WIND covers "wind"; V-TURN covers "turn/set/flip".
+  if (ctx.action === 'V-WIND' || ctx.action === 'V-TURN') {
     const canary = ctx.self;
     if (ctx.dobj === canary) {
       if (!singSong && isForestRoom(ctx.here.id)) {
@@ -877,6 +922,210 @@ export const canaryObject: ActionHandler = (ctx) => {
   return false;
 };
 
+// Rooms adjacent to the white house — the four cardinal sides.
+const HOUSE_SIDES = new Set(['WEST-OF-HOUSE', 'NORTH-OF-HOUSE', 'EAST-OF-HOUSE', 'SOUTH-OF-HOUSE']);
+
+// Inside rooms (IN-HOUSE-AROUND table) — WALK-AROUND cycles through these.
+const IN_HOUSE_AROUND = ['LIVING-ROOM', 'KITCHEN', 'ATTIC', 'KITCHEN'];
+
+// Exterior house walk cycle (HOUSE-AROUND table from 1dungeon.zil:2620).
+const HOUSE_AROUND = ['WEST-OF-HOUSE', 'NORTH-OF-HOUSE', 'EAST-OF-HOUSE', 'SOUTH-OF-HOUSE', 'WEST-OF-HOUSE'];
+
+// Forest walk cycle (FOREST-AROUND table from 1dungeon.zil:2624).
+const FOREST_AROUND = ['FOREST-1', 'FOREST-2', 'FOREST-3', 'PATH', 'CLEARING', 'FOREST-1'];
+
+// ZIL GO-NEXT: find current room in table, move to the next entry.
+// Returns true if moved, false if current room not in table.
+function goNext(table: string[], ctx: Parameters<ActionHandler>[0]): boolean {
+  const idx = table.indexOf(ctx.here.id);
+  if (idx === -1) return false;
+  const next = table[idx + 1];
+  if (next === undefined) return false;
+  const dest = ctx.world.get(next);
+  if (dest !== undefined) ctx.moveTo(ctx.actor, dest);
+  return true;
+}
+
+/** WHITE-HOUSE-F — zil/1actions.zil:92 */
+export const whiteHouseF: ActionHandler = (ctx) => {
+  const here = ctx.here.id;
+
+  // Inside the house (KITCHEN, LIVING-ROOM, ATTIC) — walk around the interior.
+  if (here === 'KITCHEN' || here === 'LIVING-ROOM' || here === 'ATTIC') {
+    if (ctx.action === 'V-FIND') {
+      ctx.tell('Why not find your brains?');
+      return true;
+    }
+    if (ctx.action === 'V-WALK-AROUND') {
+      goNext(IN_HOUSE_AROUND, ctx);
+      return true;
+    }
+    return false;
+  }
+
+  // Not at a house-adjacent room (i.e., not one of the four sides).
+  if (!HOUSE_SIDES.has(here)) {
+    if (ctx.action === 'V-FIND') {
+      if (here === 'CLEARING') {
+        ctx.tell('It seems to be to the west.');
+      } else {
+        ctx.tell('It was here just a minute ago....');
+      }
+      return true;
+    }
+    // ZIL T catch-all (1actions.zil:106): every non-FIND verb at a non-side room
+    // (walk-around, examine, knock, …) prints this, not a fall-through.
+    ctx.tell("You're not at the house.");
+    return true;
+  }
+
+  // At a house-adjacent room (the four cardinal sides).
+  if (ctx.action === 'V-FIND') {
+    ctx.tell("It's right here! Are you blind or something?");
+    return true;
+  }
+  if (ctx.action === 'V-WALK-AROUND') {
+    goNext(HOUSE_AROUND, ctx);
+    return true;
+  }
+  if (ctx.action === 'V-EXAMINE') {
+    ctx.tell(
+      'The house is a beautiful colonial house which is painted white.\n' +
+      'It is clear that the owners must have been extremely wealthy.',
+    );
+    return true;
+  }
+  // V-THROUGH + V-OPEN: enter the house via the kitchen window from the east.
+  if (ctx.action === 'V-THROUGH' || ctx.action === 'V-OPEN') {
+    if (here === 'EAST-OF-HOUSE') {
+      const win = ctx.world.get('KITCHEN-WINDOW');
+      if (win !== undefined && ctx.hasFlag(win, Flag.Open)) {
+        const kitchen = ctx.world.get('KITCHEN');
+        if (kitchen !== undefined) ctx.moveTo(ctx.actor, kitchen);
+      } else {
+        ctx.tell('The window is closed.');
+        // ZIL: <THIS-IS-IT ,KITCHEN-WINDOW> — rebind "it" to window.
+        const kwin = ctx.world.get('KITCHEN-WINDOW');
+        if (kwin !== undefined) ctx.thisIsIt?.(kwin);
+      }
+    } else {
+      ctx.tell("I can't see how to get in from here.");
+    }
+    return true;
+  }
+  if (ctx.action === 'V-BURN') {
+    ctx.tell('You must be joking.');
+    return true;
+  }
+  return false;
+};
+
+/** FOREST-F — zil/1actions.zil:136 */
+export const forestF: ActionHandler = (ctx) => {
+  const here = ctx.here.id;
+  if (ctx.action === 'V-WALK-AROUND') {
+    // House-side rooms: print the message, then fall through to GO-NEXT which
+    // returns false (they're not in FOREST-AROUND) → routine returns false →
+    // V-WALK-AROUND default ("Use compass directions for movement.") fires.
+    // ZIL: no trailing T after <GO-NEXT ,FOREST-AROUND> (unlike WHITE-HOUSE-F).
+    if (
+      here === 'WEST-OF-HOUSE' || here === 'NORTH-OF-HOUSE' ||
+      here === 'SOUTH-OF-HOUSE' || here === 'EAST-OF-HOUSE'
+    ) {
+      ctx.tell('You aren\'t even in the forest.');
+    }
+    return goNext(FOREST_AROUND, ctx);
+  }
+  if (ctx.action === 'V-DISEMBARK') {
+    ctx.tell('You will have to specify a direction.');
+    return true;
+  }
+  if (ctx.action === 'V-FIND') {
+    ctx.tell('You cannot see the forest for the trees.');
+    return true;
+  }
+  if (ctx.action === 'V-LISTEN') {
+    ctx.tell('The pines and the hemlocks seem to be murmuring.');
+    return true;
+  }
+  return false;
+};
+
+/** GRANITE-WALL-F — zil/1actions.zil:64 */
+export const graniteWallF: ActionHandler = (ctx) => {
+  const here = ctx.here.id;
+  if (here === 'NORTH-TEMPLE') {
+    if (ctx.action === 'V-FIND') {
+      ctx.tell('The west wall is solid granite here.');
+      return true;
+    }
+    if (ctx.action === 'V-TAKE' || ctx.action === 'V-RAISE' || ctx.action === 'V-LOWER') {
+      ctx.tell("It's solid granite.");
+      return true;
+    }
+    return false;
+  }
+  if (here === 'TREASURE-ROOM') {
+    if (ctx.action === 'V-FIND') {
+      ctx.tell('The east wall is solid granite here.');
+      return true;
+    }
+    if (ctx.action === 'V-TAKE' || ctx.action === 'V-RAISE' || ctx.action === 'V-LOWER') {
+      ctx.tell("It's solid granite.");
+      return true;
+    }
+    return false;
+  }
+  if (here === 'SLIDE-ROOM') {
+    if (ctx.action === 'V-FIND' || ctx.action === 'V-READ') {
+      ctx.tell('It only SAYS "Granite Wall".');
+      return true;
+    }
+    ctx.tell("The wall isn't granite.");
+    return true;
+  }
+  ctx.tell('There is no granite wall here.');
+  return true;
+};
+
+/** WCLIF-OBJECT (WHITE-CLIFF) — zil/1actions.zil:3011 */
+export const wclifObject: ActionHandler = (ctx) => {
+  if (
+    ctx.action === 'V-CLIMB-UP' ||
+    ctx.action === 'V-CLIMB-DOWN' ||
+    ctx.action === 'V-CLIMB-FOO'
+  ) {
+    ctx.tell('The cliff is too steep for climbing.');
+    return true;
+  }
+  return false;
+};
+
+/** CLIFF-OBJECT (CLIMBABLE-CLIFF) — zil/1actions.zil:3015 */
+export const cliffObject: ActionHandler = (ctx) => {
+  // V-LEAP or PUT-self-on-cliff → "very unwise"
+  if (ctx.action === 'V-LEAP') {
+    ctx.tell('That would be very unwise. Perhaps even fatal.');
+    return true;
+  }
+  if (ctx.action === 'V-PUT' && ctx.dobj !== undefined && ctx.dobj === ctx.actor) {
+    ctx.tell('That would be very unwise. Perhaps even fatal.');
+    return true;
+  }
+  // PRSI = CLIMBABLE-CLIFF: throw/put something off the cliff into the river.
+  if (ctx.iobj !== undefined && ctx.iobj === ctx.self) {
+    if (ctx.action === 'V-PUT' || ctx.action === 'V-THROW-OFF') {
+      const target = ctx.dobj;
+      if (target !== undefined) {
+        ctx.tell(`The ${target.desc} tumbles into the river and is seen no more.`);
+        target.moveTo(null);  // REMOVE-CAREFULLY: remove from world
+      }
+      return true;
+    }
+  }
+  return false;
+};
+
 function isForestRoom(id: string): boolean {
   return (
     id === 'FOREST-1' ||
@@ -889,15 +1138,15 @@ function isForestRoom(id: string): boolean {
 
 /** SONGBIRD-F — zil/1actions.zil:82 */
 export const songbirdF: ActionHandler = (ctx) => {
-  if (ctx.verb === 'examine' || ctx.verb === 'take') {
+  if (ctx.action === 'V-FIND' || ctx.action === 'V-TAKE') {
     ctx.tell('The songbird is not here but is probably nearby.');
     return true;
   }
-  if (ctx.verb === 'smell') {
+  if (ctx.action === 'V-LISTEN') {
     ctx.tell("You can't hear the songbird now.");
     return true;
   }
-  if (ctx.verb === 'follow') {
+  if (ctx.action === 'V-FOLLOW') {
     ctx.tell("It can't be followed.");
     return true;
   }
@@ -907,7 +1156,7 @@ export const songbirdF: ActionHandler = (ctx) => {
 
 /** BARROW-DOOR-FCN — zil/1actions.zil:432 */
 export const barrowDoorFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'open' || ctx.verb === 'close') {
+  if (ctx.action === 'V-OPEN' || ctx.action === 'V-CLOSE') {
     ctx.tell('The door is too heavy.');
     return true;
   }
@@ -916,7 +1165,7 @@ export const barrowDoorFcn: ActionHandler = (ctx) => {
 
 /** BARROW-FCN — zil/1actions.zil:436 */
 export const barrowFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'enter') {
+  if (ctx.action === 'V-ENTER') {
     const exit = ctx.here.exits.find((e) => e.dir === 'west');
     if (exit?.to !== undefined) {
       const dest = ctx.world.get(exit.to);
@@ -931,7 +1180,7 @@ export const barrowFcn: ActionHandler = (ctx) => {
 
 /** CRACK-FCN — zil/1actions.zil:381 */
 export const crackFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'enter') {
+  if (ctx.action === 'V-ENTER') {
     ctx.tell("You can't fit through the crack.");
     return true;
   }
@@ -1082,6 +1331,12 @@ export const aboveGroundActions: Record<string, ActionHandler> = {
   'BARROW-FCN': barrowFcn,
   'CRACK-FCN': crackFcn,
   'STONE-BARROW-FCN': stoneBarrowFcn,
+  // CC9 — scenery/ambience
+  'WHITE-HOUSE-F':  whiteHouseF,
+  'FOREST-F':       forestF,
+  'GRANITE-WALL-F': graniteWallF,
+  'WCLIF-OBJECT':   wclifObject,
+  'CLIFF-OBJECT':   cliffObject,
 };
 
 /** PER (exit-resolution) routines for the above-ground region. */

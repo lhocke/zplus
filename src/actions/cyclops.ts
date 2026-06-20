@@ -276,7 +276,7 @@ export function cyclopsRoomFcn(ctx: CyclopsCtx): boolean {
 function makeCtxFromAction(ac: ActionContext): CyclopsCtx {
   return {
     hereId:  ac.here.id,
-    action:  ac.action ?? ac.verb,   // ZIL PRSA; fall back to verb word when absent
+    action:  ac.action ?? '',          // ZIL PRSA; always populated at dispatch
     verb:    ac.verb,
     prsoId:  ac.dobj?.id,
     prsiId:  ac.iobj?.id,

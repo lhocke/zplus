@@ -51,12 +51,30 @@ function gameFlags(g: Game) {
 import { Flag as F } from '../../src/domain/flags.js';
 import type { GameObject } from '../../src/domain/game-object.js';
 
+/** Derive ZIL PRSA action id from canonical verb word. Used in bareCtx. */
+function verbAction(verb: string, prep?: string): string {
+  const p = prep?.toUpperCase();
+  switch (verb) {
+    case 'inflat': case 'inflate': return 'V-INFLATE';
+    case 'fill':   return 'V-FILL';
+    case 'deflate': return 'V-DEFLATE';
+    case 'board':  return 'V-BOARD';
+    case 'launch': return 'V-LAUNCH';
+    case 'plug':   return 'V-PLUG';
+    case 'put':    return p === 'ON' ? 'V-PUT-ON' : 'V-PUT';
+    case 'put-on': return 'V-PUT-ON';
+    default:       return 'V-' + verb.toUpperCase();
+  }
+}
+
 function bareCtx(
   overrides: Pick<ActionContext, 'self' | 'verb' | 'world' | 'here'> &
     Partial<ActionContext> & { _out: string[] },
 ): ActionContext {
   const { _out, ...rest } = overrides;
   const globals: Record<string, boolean> = {};
+  // Derive action from verb if not explicitly provided.
+  const derivedAction = rest.action ?? verbAction(rest.verb ?? '', rest.prep);
   return {
     actor: new Actor('PLAYER', 'you'),
     rng: undefined,
@@ -78,6 +96,7 @@ function bareCtx(
     getGlobal: (n: string) => globals[n] ?? false,
     setGlobal: (n: string, v = true) => { globals[n] = v; },
     ...rest,
+    action: derivedAction,
   } as unknown as ActionContext;
 }
 

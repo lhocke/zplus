@@ -1,0 +1,1170 @@
+# generated-by: dfrotz-r119 2026-06-19 walkthrough-master 218cmd
+Using normal formatting.
+Loading /Users/lhocke/Code/zork-oracle-prep/zork1.z3.
+ West of House                                    Score: 0        Moves: 0
+
+ZORK I: The Great Underground Empire
+Infocom interactive fiction - a fantasy story
+Copyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom, Inc. All rights
+reserved.
+ZORK is a registered trademark of Infocom, Inc.
+Release 119 / Serial number 880429
+
+West of House
+You are standing in an open field west of a white house, with a boarded front
+door.
+There is a small mailbox here.
+
+> West of House                                    Score: 0        Moves: 1
+
+West of House
+You are standing in an open field west of a white house, with a boarded front
+door.
+There is a small mailbox here.
+
+> West of House                                    Score: 0        Moves: 2
+
+The small mailbox is closed.
+
+> West of House                                    Score: 0        Moves: 3
+
+Opening the small mailbox reveals a leaflet.
+
+> West of House                                    Score: 0        Moves: 4
+
+Taken.
+
+> West of House                                    Score: 0        Moves: 5
+
+"WELCOME TO ZORK!
+
+ZORK is a game of adventure, danger, and low cunning. In it you will explore
+some of the most amazing territory ever seen by mortals. No computer should be
+without one!"
+
+> West of House                                    Score: 0        Moves: 6
+
+Closed.
+
+> West of House                                    Score: 0        Moves: 7
+
+The small mailbox is closed.
+
+> West of House                                    Score: 0        Moves: 8
+
+You are carrying:
+  A leaflet
+
+>Your score is 0 (total of 350 points), in 8 moves.
+This gives you the rank of Beginner.
+
+> West of House                                    Score: 0        Moves: 9
+
+You are in perfect health.
+You can be killed by a serious wound.
+
+> North of House                                   Score: 0        Moves: 10
+
+North of House
+You are facing the north side of a white house. There is no door here, and all
+the windows are boarded up. To the north a narrow path winds through the trees.
+
+> North of House                                   Score: 0        Moves: 11
+
+North of House
+You are facing the north side of a white house. There is no door here, and all
+the windows are boarded up. To the north a narrow path winds through the trees.
+
+> North of House                                   Score: 0        Moves: 12
+
+The house is a beautiful colonial house which is painted white. It is clear that
+the owners must have been extremely wealthy.
+
+> North of House                                   Score: 0        Moves: 13
+
+The windows are all boarded.
+
+> West of House                                    Score: 0        Moves: 14
+
+West of House
+There is a small mailbox here.
+
+> North of House                                   Score: 0        Moves: 15
+
+North of House
+
+> Behind House                                     Score: 0        Moves: 16
+
+Behind House
+You are behind the white house. A path leads into the forest to the east. In one
+corner of the house there is a small window which is slightly ajar.
+
+> Behind House                                     Score: 0        Moves: 17
+
+Behind House
+You are behind the white house. A path leads into the forest to the east. In one
+corner of the house there is a small window which is slightly ajar.
+
+> Behind House                                     Score: 0        Moves: 18
+
+The window is slightly ajar, but not enough to allow entry.
+
+> Behind House                                     Score: 0        Moves: 19
+
+With great effort, you open the window far enough to allow entry.
+
+> Behind House                                     Score: 0        Moves: 20
+
+The kitchen window is open, but I can't tell what's beyond it.
+
+> South of House                                   Score: 0        Moves: 21
+
+South of House
+You are facing the south side of a white house. There is no door here, and all
+the windows are boarded.
+
+> South of House                                   Score: 0        Moves: 22
+
+South of House
+You are facing the south side of a white house. There is no door here, and all
+the windows are boarded.
+
+> South of House                                   Score: 0        Moves: 23
+
+The house is a beautiful colonial house which is painted white. It is clear that
+the owners must have been extremely wealthy.
+
+> South of House                                   Score: 0        Moves: 24
+
+The windows are all boarded.
+
+> Behind House                                     Score: 0        Moves: 25
+
+Behind House
+
+> Kitchen                                          Score: 10       Moves: 26
+
+Kitchen
+You are in the kitchen of the white house. A table seems to have been used
+recently for the preparation of food. A passage leads to the west and a dark
+staircase can be seen leading upward. A dark chimney leads down and to the east
+is a small window which is open.
+A bottle is sitting on the table.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> Kitchen                                          Score: 10       Moves: 27
+
+Kitchen
+You are in the kitchen of the white house. A table seems to have been used
+recently for the preparation of food. A passage leads to the west and a dark
+staircase can be seen leading upward. A dark chimney leads down and to the east
+is a small window which is open.
+A bottle is sitting on the table.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> Kitchen                                          Score: 10       Moves: 28
+
+A bottle is sitting on the table.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> Kitchen                                          Score: 10       Moves: 29
+
+The glass bottle contains:
+  A quantity of water
+
+> Kitchen                                          Score: 10       Moves: 30
+
+Taken.
+
+>That sentence isn't one I recognize.
+
+>That sentence isn't one I recognize.
+
+> Kitchen                                          Score: 10       Moves: 31
+
+The chimney leads downward, and looks climbable.
+
+> Kitchen                                          Score: 10       Moves: 32
+
+You are carrying:
+  A glass bottle
+  The glass bottle contains:
+    A quantity of water
+  A leaflet
+
+> Kitchen                                          Score: 10       Moves: 33
+
+Dropped.
+
+>That sentence isn't one I recognize.
+
+> Attic                                            Score: 10       Moves: 34
+
+You have moved into a dark place.
+It is pitch black. You are likely to be eaten by a grue.
+
+> Attic                                            Score: 10       Moves: 35
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> Kitchen                                          Score: 10       Moves: 36
+
+Kitchen
+There is a glass bottle here.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> Living Room                                      Score: 10       Moves: 37
+
+Living Room
+You are in the living room. There is a doorway to the east, a wooden door with
+strange gothic lettering to the west, which appears to be nailed shut, a trophy
+case, and a large oriental rug in the center of the room.
+Above the trophy case hangs an elvish sword of great antiquity.
+A battery-powered brass lantern is on the trophy case.
+
+> Living Room                                      Score: 10       Moves: 38
+
+Living Room
+You are in the living room. There is a doorway to the east, a wooden door with
+strange gothic lettering to the west, which appears to be nailed shut, a trophy
+case, and a large oriental rug in the center of the room.
+Above the trophy case hangs an elvish sword of great antiquity.
+A battery-powered brass lantern is on the trophy case.
+
+> Living Room                                      Score: 10       Moves: 39
+
+The trophy case is empty.
+
+> Living Room                                      Score: 10       Moves: 40
+
+There's nothing special about the carpet.
+
+> Living Room                                      Score: 10       Moves: 41
+
+You can't see any trap door here!
+
+> Living Room                                      Score: 10       Moves: 42
+
+There's nothing special about the sword.
+
+> Living Room                                      Score: 10       Moves: 43
+
+The engravings translate to "This space intentionally left blank."
+
+> Living Room                                      Score: 10       Moves: 44
+
+Taken.
+
+> Living Room                                      Score: 10       Moves: 45
+
+The door is nailed shut.
+
+> Living Room                                      Score: 10       Moves: 46
+
+Taken.
+
+> Living Room                                      Score: 10       Moves: 47
+
+You are carrying:
+  A brass lantern
+  A sword
+  A leaflet
+
+>Your score is 10 (total of 350 points), in 47 moves.
+This gives you the rank of Beginner.
+
+>Maximum verbosity.
+
+>Brief descriptions.
+
+> Living Room                                      Score: 10       Moves: 48
+
+A hollow voice says "Fool."
+
+> Living Room                                      Score: 10       Moves: 49
+
+A hollow voice says "Fool."
+
+> Living Room                                      Score: 10       Moves: 50
+
+The FROBOZZ Corporation created, owns, and operates this dungeon.
+
+>I don't know the word "zorkify".
+
+>What do you want to take?
+
+>I don't know the word "frotz".
+
+>What do you want to examine?
+
+> Living Room                                      Score: 10       Moves: 51
+
+Living Room
+You are in the living room. There is a doorway to the east, a wooden door with
+strange gothic lettering to the west, which appears to be nailed shut, a trophy
+case, and a large oriental rug in the center of the room.
+
+Your score is 10 (total of 350 points), in 51 moves.
+This gives you the rank of Beginner.
+
+> Living Room                                      Score: 10       Moves: 53
+
+You are carrying:
+  A brass lantern
+  A sword
+  A leaflet
+
+You are in perfect health.
+You can be killed by a serious wound.
+
+> Living Room                                      Score: 10       Moves: 54
+
+With a great effort, the rug is moved to one side of the room, revealing the
+dusty cover of a closed trap door.
+
+> Living Room                                      Score: 10       Moves: 55
+
+The door reluctantly opens to reveal a rickety staircase descending into
+darkness.
+
+> Living Room                                      Score: 10       Moves: 56
+
+The brass lantern is now on.
+
+> Living Room                                      Score: 10       Moves: 57
+
+Living Room
+You are in the living room. There is a doorway to the east, a wooden door with
+strange gothic lettering to the west, which appears to be nailed shut, a trophy
+case, and a rug lying beside an open trap door.
+
+> Cellar                                           Score: 35       Moves: 58
+
+The trap door crashes shut, and you hear someone barring it.
+
+Cellar
+You are in a dark and damp cellar with a narrow passageway leading north, and a
+crawlway to the south. On the west is the bottom of a steep metal ramp which is
+unclimbable.
+Your sword is glowing with a faint blue glow.
+
+> Cellar                                           Score: 35       Moves: 59
+
+Cellar
+You are in a dark and damp cellar with a narrow passageway leading north, and a
+crawlway to the south. On the west is the bottom of a steep metal ramp which is
+unclimbable.
+
+>Your score is 35 (total of 350 points), in 59 moves.
+This gives you the rank of Amateur Adventurer.
+
+> Cellar                                           Score: 35       Moves: 60
+
+There's nothing special about the chute.
+
+> The Troll Room                                   Score: 35       Moves: 61
+
+The Troll Room
+This is a small room with passages to the east and south and a forbidding hole
+leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the
+walls.
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the
+room.
+Your sword has begun to glow very brightly.
+The troll swings his axe, but it misses.
+
+> The Troll Room                                   Score: 35       Moves: 62
+
+The Troll Room
+This is a small room with passages to the east and south and a forbidding hole
+leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the
+walls.
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the
+room.
+The flat of the troll's axe hits you delicately on the head, knocking you out.
+
+> The Troll Room                                   Score: 35       Moves: 63
+
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the
+room.
+The troll's axe barely misses your ear.
+
+> The Troll Room                                   Score: 35       Moves: 64
+
+The troll fends you off with a menacing gesture.
+The troll's axe barely misses your ear.
+
+> The Troll Room                                   Score: 35       Moves: 65
+
+The troll fends you off with a menacing gesture.
+The troll's mighty blow drops you to your knees.
+
+> Cellar                                           Score: 35       Moves: 66
+
+Cellar
+Your sword is glowing with a faint blue glow.
+
+> East of Chasm                                    Score: 35       Moves: 67
+
+East of Chasm
+You are on the east edge of a chasm, the bottom of which cannot be seen. A
+narrow passage goes north, and the path you are on continues to the east.
+Your sword is no longer glowing.
+
+> East of Chasm                                    Score: 35       Moves: 68
+
+East of Chasm
+You are on the east edge of a chasm, the bottom of which cannot be seen. A
+narrow passage goes north, and the path you are on continues to the east.
+
+> East of Chasm                                    Score: 35       Moves: 69
+
+There's nothing special about the chasm.
+
+> Gallery                                          Score: 35       Moves: 70
+
+Gallery
+This is an art gallery. Most of the paintings have been stolen by vandals with
+exceptional taste. The vandals left through either the north or west exits.
+Fortunately, there is still one chance for you to be a vandal, for on the far
+wall is a painting of unparalleled beauty.
+
+> Gallery                                          Score: 35       Moves: 71
+
+Gallery
+This is an art gallery. Most of the paintings have been stolen by vandals with
+exceptional taste. The vandals left through either the north or west exits.
+Fortunately, there is still one chance for you to be a vandal, for on the far
+wall is a painting of unparalleled beauty.
+
+> Gallery                                          Score: 35       Moves: 72
+
+There's nothing special about the painting.
+
+> Gallery                                          Score: 39       Moves: 73
+
+Taken.
+
+>Your score is 39 (total of 350 points), in 73 moves.
+This gives you the rank of Amateur Adventurer.
+
+> Gallery                                          Score: 39       Moves: 74
+
+You are carrying:
+  A painting
+  A brass lantern (providing light)
+  A sword
+  A leaflet
+
+> Gallery                                          Score: 39       Moves: 75
+
+Dropped.
+
+> Gallery                                          Score: 39       Moves: 76
+
+Taken.
+
+> Studio                                           Score: 39       Moves: 77
+
+Studio
+This appears to have been an artist's studio. The walls and floors are
+splattered with paints of 69 different colors. Strangely enough, nothing of
+value is hanging here. At the south end of the room is an open door (also
+covered with paint). A dark and narrow chimney leads up from a fireplace;
+although you might be able to get up it, it seems unlikely you could get back
+down.
+Loosely attached to a wall is a small piece of paper.
+
+> Studio                                           Score: 39       Moves: 78
+
+Studio
+This appears to have been an artist's studio. The walls and floors are
+splattered with paints of 69 different colors. Strangely enough, nothing of
+value is hanging here. At the south end of the room is an open door (also
+covered with paint). A dark and narrow chimney leads up from a fireplace;
+although you might be able to get up it, it seems unlikely you could get back
+down.
+Loosely attached to a wall is a small piece of paper.
+
+>I don't know the word "studio".
+
+> Gallery                                          Score: 39       Moves: 79
+
+Gallery
+
+> East of Chasm                                    Score: 39       Moves: 80
+
+East of Chasm
+
+>You used the word "east" in a way that I don't understand.
+
+> Cellar                                           Score: 39       Moves: 81
+
+Cellar
+Your sword is glowing with a faint blue glow.
+
+> Cellar                                           Score: 39       Moves: 82
+
+Cellar
+You are in a dark and damp cellar with a narrow passageway leading north, and a
+crawlway to the south. On the west is the bottom of a steep metal ramp which is
+unclimbable.
+
+> Cellar                                           Score: 39       Moves: 83
+
+You are carrying:
+  A painting
+  A brass lantern (providing light)
+  A sword
+  A leaflet
+
+> The Troll Room                                   Score: 39       Moves: 84
+
+The Troll Room
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the
+room.
+Your sword has begun to glow very brightly.
+
+> The Troll Room                                   Score: 39       Moves: 85
+
+The Troll Room
+This is a small room with passages to the east and south and a forbidding hole
+leading west. Bloodstains and deep scratches (perhaps made by an axe) mar the
+walls.
+A nasty-looking troll, brandishing a bloody axe, blocks all passages out of the
+room.
+
+> Cellar                                           Score: 39       Moves: 86
+
+Cellar
+Your sword is glowing with a faint blue glow.
+
+> Cellar                                           Score: 39       Moves: 87
+
+The brass lantern is now off.
+It is now pitch black.
+
+> Cellar                                           Score: 39       Moves: 88
+
+It is pitch black. You are likely to be eaten by a grue.
+
+> Forest                                           Score: 29       Moves: 89
+
+Oh, no! A lurking grue slithered into the room and devoured you!
+
+    ****  You have died  ****
+
+Now, let's take a look here... Well, you probably deserve another chance. I
+can't quite fix you up completely, but you can't have everything.
+
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be
+sunlight.
+
+> Forest                                           Score: 29       Moves: 90
+
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be
+sunlight.
+
+> Forest                                           Score: 29       Moves: 91
+
+You are empty-handed.
+
+> Forest                                           Score: 29       Moves: 92
+
+You are in perfect health.
+You can be killed by a serious wound.
+You have been killed once.
+
+>Your score is 29 (total of 350 points), in 92 moves.
+This gives you the rank of Amateur Adventurer.
+
+> Forest                                           Score: 29       Moves: 93
+
+There's nothing special about the forest.
+
+> Forest Path                                      Score: 29       Moves: 94
+
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south
+here. One particularly large tree with some low branches stands at the edge of
+the path.
+A small leaflet is on the ground.
+
+> Forest Path                                      Score: 29       Moves: 95
+
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south
+here. One particularly large tree with some low branches stands at the edge of
+the path.
+A small leaflet is on the ground.
+You hear in the distance the chirping of a song bird.
+
+> Forest Path                                      Score: 29       Moves: 96
+
+There's nothing special about the tree.
+
+> Forest Path                                      Score: 29       Moves: 97
+
+There's nothing special about the passage.
+
+> Up a Tree                                        Score: 29       Moves: 98
+
+Up a Tree
+You are about 10 feet above the ground nestled among some large branches. The
+nearest branch above you is above your reach.
+Beside you on the branch is a small bird's nest.
+In the bird's nest is a large egg encrusted with precious jewels, apparently
+scavenged by a childless songbird. The egg is covered with fine gold inlay, and
+ornamented in lapis lazuli and mother-of-pearl. Unlike most eggs, this one is
+hinged and closed with a delicate looking clasp. The egg appears extremely
+fragile.
+
+> Up a Tree                                        Score: 29       Moves: 99
+
+Up a Tree
+You are about 10 feet above the ground nestled among some large branches. The
+nearest branch above you is above your reach.
+Beside you on the branch is a small bird's nest.
+In the bird's nest is a large egg encrusted with precious jewels, apparently
+scavenged by a childless songbird. The egg is covered with fine gold inlay, and
+ornamented in lapis lazuli and mother-of-pearl. Unlike most eggs, this one is
+hinged and closed with a delicate looking clasp. The egg appears extremely
+fragile.
+
+>I don't know the word "view".
+
+>There seems to be a noun missing in that sentence!
+
+> Forest Path                                      Score: 29       Moves: 100
+
+Forest Path
+A small leaflet is on the ground.
+
+> Clearing                                         Score: 29       Moves: 101
+
+Clearing
+You are in a clearing, with a forest surrounding you on all sides. A path leads
+south.
+There is a sword here.
+On the ground is a pile of leaves.
+
+> Clearing                                         Score: 29       Moves: 102
+
+Clearing
+You are in a clearing, with a forest surrounding you on all sides. A path leads
+south.
+There is a sword here.
+On the ground is a pile of leaves.
+
+> Clearing                                         Score: 29       Moves: 103
+
+You can't see any grate here!
+
+> Clearing                                         Score: 29       Moves: 104
+
+You can't see any grate here!
+
+> Forest Path                                      Score: 29       Moves: 105
+
+Forest Path
+A small leaflet is on the ground.
+
+> Forest                                           Score: 29       Moves: 106
+
+Forest
+
+> Forest                                           Score: 29       Moves: 107
+
+Forest
+This is a forest, with trees in all directions. To the east, there appears to be
+sunlight.
+
+> Clearing                                         Score: 29       Moves: 108
+
+Clearing
+There is a sword here.
+On the ground is a pile of leaves.
+
+> Forest Path                                      Score: 29       Moves: 109
+
+Forest Path
+A small leaflet is on the ground.
+
+> North of House                                   Score: 29       Moves: 110
+
+North of House
+
+> North of House                                   Score: 29       Moves: 111
+
+North of House
+You are facing the north side of a white house. There is no door here, and all
+the windows are boarded up. To the north a narrow path winds through the trees.
+
+> North of House                                   Score: 29       Moves: 112
+
+There's nothing special about the forest.
+
+> North of House                                   Score: 29       Moves: 113
+
+There's nothing special about the forest.
+
+> Forest Path                                      Score: 29       Moves: 114
+
+Forest Path
+A small leaflet is on the ground.
+You hear in the distance the chirping of a song bird.
+
+> Forest Path                                      Score: 29       Moves: 115
+
+Forest Path
+This is a path winding through a dimly lit forest. The path heads north-south
+here. One particularly large tree with some low branches stands at the edge of
+the path.
+A small leaflet is on the ground.
+
+> North of House                                   Score: 29       Moves: 116
+
+North of House
+
+> North of House                                   Score: 29       Moves: 117
+
+You can't go that way.
+
+> North of House                                   Score: 29       Moves: 118
+
+North of House
+You are facing the north side of a white house. There is no door here, and all
+the windows are boarded up. To the north a narrow path winds through the trees.
+
+> North of House                                   Score: 29       Moves: 119
+
+The house is a beautiful colonial house which is painted white. It is clear that
+the owners must have been extremely wealthy.
+
+> Behind House                                     Score: 29       Moves: 120
+
+Behind House
+
+> Clearing                                         Score: 29       Moves: 121
+
+Clearing
+You are in a small clearing in a well marked forest path that extends to the
+east and west.
+
+> Clearing                                         Score: 29       Moves: 122
+
+Clearing
+You are in a small clearing in a well marked forest path that extends to the
+east and west.
+
+>I don't know the word "clearing".
+
+> Forest                                           Score: 29       Moves: 123
+
+Forest
+This is a dimly lit forest, with large trees all around.
+
+> Forest                                           Score: 29       Moves: 124
+
+Forest
+This is a dimly lit forest, with large trees all around.
+
+> Forest                                           Score: 29       Moves: 125
+
+Forest
+The forest thins out, revealing impassable mountains.
+
+> Forest                                           Score: 29       Moves: 126
+
+Forest
+The forest thins out, revealing impassable mountains.
+
+> Forest                                           Score: 29       Moves: 127
+
+There's nothing special about the mountain range.
+
+> Forest                                           Score: 29       Moves: 128
+
+The mountains are impassable.
+
+> Forest                                           Score: 29       Moves: 129
+
+Forest
+
+> Forest Path                                      Score: 29       Moves: 130
+
+Forest Path
+A small leaflet is on the ground.
+
+> Clearing                                         Score: 29       Moves: 131
+
+Clearing
+There is a sword here.
+On the ground is a pile of leaves.
+
+> Forest                                           Score: 29       Moves: 132
+
+Forest
+
+> Forest Path                                      Score: 29       Moves: 133
+
+Forest Path
+A small leaflet is on the ground.
+
+> Forest                                           Score: 29       Moves: 134
+
+Forest
+
+> Clearing                                         Score: 29       Moves: 135
+
+Clearing
+
+> Canyon View                                      Score: 29       Moves: 136
+
+Canyon View
+You are at the top of the Great Canyon on its west wall. From here there is a
+marvelous view of the canyon and parts of the Frigid River upstream. Across the
+canyon, the walls of the White Cliffs join the mighty ramparts of the Flathead
+Mountains to the east. Following the Canyon upstream to the north, Aragain Falls
+may be seen, complete with rainbow. The mighty Frigid River flows out from a
+great dark cavern. To the west and south can be seen an immense forest,
+stretching for miles around. A path leads northwest. It is possible to climb
+down into the canyon from here.
+
+> Canyon View                                      Score: 29       Moves: 137
+
+Canyon View
+You are at the top of the Great Canyon on its west wall. From here there is a
+marvelous view of the canyon and parts of the Frigid River upstream. Across the
+canyon, the walls of the White Cliffs join the mighty ramparts of the Flathead
+Mountains to the east. Following the Canyon upstream to the north, Aragain Falls
+may be seen, complete with rainbow. The mighty Frigid River flows out from a
+great dark cavern. To the west and south can be seen an immense forest,
+stretching for miles around. A path leads northwest. It is possible to climb
+down into the canyon from here.
+
+>I don't know the word "canyon".
+
+> Canyon View                                      Score: 29       Moves: 138
+
+There's nothing special about the river.
+
+>I don't know the word "view".
+
+> Canyon View                                      Score: 29       Moves: 139
+
+Storm-tossed trees block your way.
+
+> Rocky Ledge                                      Score: 29       Moves: 140
+
+Rocky Ledge
+You are on a ledge about halfway up the wall of the river canyon. You can see
+from here that the main flow from Aragain Falls twists along a passage which it
+is impossible for you to enter. Below you is the canyon bottom. Above you is
+more cliff, which appears climbable.
+
+> Rocky Ledge                                      Score: 29       Moves: 141
+
+Rocky Ledge
+You are on a ledge about halfway up the wall of the river canyon. You can see
+from here that the main flow from Aragain Falls twists along a passage which it
+is impossible for you to enter. Below you is the canyon bottom. Above you is
+more cliff, which appears climbable.
+
+> Rocky Ledge                                      Score: 29       Moves: 142
+
+There's nothing special about the cliff.
+
+>I don't know the word "falls".
+
+> Canyon Bottom                                    Score: 29       Moves: 143
+
+Canyon Bottom
+You are beneath the walls of the river canyon which may be climbable here. The
+lesser part of the runoff of Aragain Falls flows by below. To the north is a
+narrow path.
+
+> Canyon Bottom                                    Score: 29       Moves: 144
+
+Canyon Bottom
+You are beneath the walls of the river canyon which may be climbable here. The
+lesser part of the runoff of Aragain Falls flows by below. To the north is a
+narrow path.
+
+> Rocky Ledge                                      Score: 29       Moves: 145
+
+Rocky Ledge
+
+> Canyon Bottom                                    Score: 29       Moves: 146
+
+Canyon Bottom
+
+> End of Rainbow                                   Score: 29       Moves: 147
+
+End of Rainbow
+You are on a small, rocky beach on the continuation of the Frigid River past the
+Falls. The beach is narrow due to the presence of the White Cliffs. The river
+canyon opens here and sunlight shines in from above. A rainbow crosses over the
+falls to the east and a narrow path continues to the southwest.
+
+> End of Rainbow                                   Score: 29       Moves: 148
+
+End of Rainbow
+You are on a small, rocky beach on the continuation of the Frigid River past the
+Falls. The beach is narrow due to the presence of the White Cliffs. The river
+canyon opens here and sunlight shines in from above. A rainbow crosses over the
+falls to the east and a narrow path continues to the southwest.
+
+> End of Rainbow                                   Score: 29       Moves: 149
+
+There's nothing special about the rainbow.
+
+>I don't know the word "beach".
+
+>I don't know the word "falls".
+
+> End of Rainbow                                   Score: 29       Moves: 150
+
+You can't go that way.
+
+> End of Rainbow                                   Score: 29       Moves: 151
+
+End of Rainbow
+You are on a small, rocky beach on the continuation of the Frigid River past the
+Falls. The beach is narrow due to the presence of the White Cliffs. The river
+canyon opens here and sunlight shines in from above. A rainbow crosses over the
+falls to the east and a narrow path continues to the southwest.
+
+> End of Rainbow                                   Score: 29       Moves: 152
+
+You can't go that way.
+
+> End of Rainbow                                   Score: 29       Moves: 153
+
+End of Rainbow
+You are on a small, rocky beach on the continuation of the Frigid River past the
+Falls. The beach is narrow due to the presence of the White Cliffs. The river
+canyon opens here and sunlight shines in from above. A rainbow crosses over the
+falls to the east and a narrow path continues to the southwest.
+
+> End of Rainbow                                   Score: 29       Moves: 154
+
+You can't go that way.
+
+> End of Rainbow                                   Score: 29       Moves: 155
+
+You can't go that way.
+
+> Canyon Bottom                                    Score: 29       Moves: 156
+
+Canyon Bottom
+
+> Rocky Ledge                                      Score: 29       Moves: 157
+
+Rocky Ledge
+
+> Canyon View                                      Score: 29       Moves: 158
+
+Canyon View
+
+> Clearing                                         Score: 29       Moves: 159
+
+Clearing
+
+> Behind House                                     Score: 29       Moves: 160
+
+Behind House
+
+> South of House                                   Score: 29       Moves: 161
+
+South of House
+
+> South of House                                   Score: 29       Moves: 162
+
+South of House
+You are facing the south side of a white house. There is no door here, and all
+the windows are boarded.
+
+> West of House                                    Score: 29       Moves: 163
+
+West of House
+There is a small mailbox here.
+
+> West of House                                    Score: 29       Moves: 164
+
+West of House
+You are standing in an open field west of a white house, with a boarded front
+door.
+There is a small mailbox here.
+
+> West of House                                    Score: 29       Moves: 165
+
+The door is boarded and you can't remove the boards.
+
+> North of House                                   Score: 29       Moves: 166
+
+North of House
+
+> Behind House                                     Score: 29       Moves: 167
+
+Behind House
+
+> Behind House                                     Score: 29       Moves: 168
+
+Behind House
+You are behind the white house. A path leads into the forest to the east. In one
+corner of the house there is a small window which is open.
+
+> Kitchen                                          Score: 29       Moves: 169
+
+Kitchen
+There is a glass bottle here.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> Kitchen                                          Score: 29       Moves: 170
+
+Kitchen
+You are in the kitchen of the white house. A table seems to have been used
+recently for the preparation of food. A passage leads to the west and a dark
+staircase can be seen leading upward. A dark chimney leads down and to the east
+is a small window which is open.
+There is a glass bottle here.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+>That sentence isn't one I recognize.
+
+> Behind House                                     Score: 29       Moves: 171
+
+Behind House
+
+> Kitchen                                          Score: 29       Moves: 172
+
+Kitchen
+There is a glass bottle here.
+The glass bottle contains:
+  A quantity of water
+On the table is an elongated brown sack, smelling of hot peppers.
+
+> Living Room                                      Score: 29       Moves: 173
+
+Living Room
+There is a brass lantern (battery-powered) here.
+
+> Living Room                                      Score: 29       Moves: 174
+
+The door reluctantly opens to reveal a rickety staircase descending into
+darkness.
+
+> Living Room                                      Score: 29       Moves: 175
+
+Opened.
+
+>You don't have that!
+
+>Your score is 29 (total of 350 points), in 175 moves.
+This gives you the rank of Amateur Adventurer.
+
+> Living Room                                      Score: 29       Moves: 176
+
+The trophy case is empty.
+
+> Living Room                                      Score: 29       Moves: 177
+
+You are in perfect health.
+You can be killed by a serious wound.
+You have been killed once.
+
+> Living Room                                      Score: 29       Moves: 178
+
+Living Room
+You are in the living room. There is a doorway to the east, a wooden door with
+strange gothic lettering to the west, which appears to be nailed shut, a trophy
+case, and a rug lying beside an open trap door.
+There is a brass lantern (battery-powered) here.
+
+> Living Room                                      Score: 29       Moves: 179
+
+Closed.
+
+> Living Room                                      Score: 29       Moves: 180
+
+Opened.
+
+> Living Room                                      Score: 29       Moves: 181
+
+You can't see any painting here!
+
+>You don't have that!
+
+>You don't have that!
+
+>Your score is 29 (total of 350 points), in 181 moves.
+This gives you the rank of Amateur Adventurer.
+
+> Living Room                                      Score: 29       Moves: 182
+
+(Taken)
+It is already off.
+
+> Living Room                                      Score: 29       Moves: 183
+
+Living Room
+You are in the living room. There is a doorway to the east, a wooden door with
+strange gothic lettering to the west, which appears to be nailed shut, a trophy
+case, and a rug lying beside an open trap door.
+
+> Living Room                                      Score: 29       Moves: 184
+
+The brass lantern is now on.
+
+> Living Room                                      Score: 29       Moves: 185
+
+Living Room
+You are in the living room. There is a doorway to the east, a wooden door with
+strange gothic lettering to the west, which appears to be nailed shut, a trophy
+case, and a rug lying beside an open trap door.
+
+> Living Room                                      Score: 29       Moves: 187
+
+Living Room
+You are in the living room. There is a doorway to the east, a wooden door with
+strange gothic lettering to the west, which appears to be nailed shut, a trophy
+case, and a rug lying beside an open trap door.
+
+Your score is 29 (total of 350 points), in 186 moves.
+This gives you the rank of Amateur Adventurer.
+
+You are carrying:
+  A brass lantern (providing light)
+
+>Your score is 29 (total of 350 points), in 187 moves.
+This gives you the rank of Amateur Adventurer.
+
+> Living Room                                      Score: 29       Moves: 188
+
+You are in perfect health.
+You can be killed by a serious wound.
+You have been killed once.
+
+> Living Room                                      Score: 29       Moves: 189
+
+You are carrying:
+  A brass lantern (providing light)
+
+>Your score is 29 (total of 350 points), in 189 moves.
+This gives you the rank of Amateur Adventurer.
+Do you wish to leave the game? (Y is affirmative): >

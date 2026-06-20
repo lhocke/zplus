@@ -232,9 +232,9 @@ describe('rooms.json — NONLANDBIT rooms do not carry NonDescript', () => {
   for (const id of nonLandRoomIds) {
     test(`${id} has NonLand, not NonDescript`, () => {
       const room = rooms.find(r => r.id === id);
-      if (room === undefined) return; // skip if not in data
-      expect(room.flags).toContain('NonLand');
-      expect(room.flags).not.toContain('NonDescript');
+      expect(room, `${id} must be present in rooms.json`).toBeDefined();
+      expect(room!.flags).toContain('NonLand');
+      expect(room!.flags).not.toContain('NonDescript');
     });
   }
 });

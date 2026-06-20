@@ -1,4 +1,5 @@
 # C-PUNCTURE corpus — board boat with sword → puncture; putty repair
+# generated-by: dfrotz-r119 2026-06-19 c-puncture-wave2
 #
 # MECHANIC: If the player boards the inflatable boat while carrying a sharp
 # object (sword, knife, axe, sceptre, stiletto, rusty-knife), the boat is

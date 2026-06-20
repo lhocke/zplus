@@ -17,12 +17,13 @@ import type { ActionHandler } from '../domain/game-object.js';
 import { fmt, vLampOn, vLampOff } from '../engine/game-messages.js';
 import type { World } from '../domain/world.js';
 import { Flag } from '../domain/flags.js';
+import { lit } from '../engine/parser/scope.js';
 
 /** LANTERN — zil/1actions.zil:2230 */
 export const lantern: ActionHandler = (ctx) => {
   const lamp = ctx.self;
 
-  if (ctx.verb === 'throw') {
+  if (ctx.action === 'V-THROW') {
     ctx.tell('The lamp has smashed into the floor, and the light has gone out.');
     ctx.disableClock('I-LANTERN');
     ctx.clearFlag(lamp, Flag.OnFire);
@@ -36,7 +37,7 @@ export const lantern: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'turn' && ctx.prep === 'ON') {
+  if (ctx.action === 'V-LAMP-ON') {
     if (ctx.hasFlag(lamp, Flag.Burned)) {
       ctx.tell("A burned-out lamp won't light.");
       return true;
@@ -49,7 +50,7 @@ export const lantern: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'OFF')) {
+  if (ctx.action === 'V-LAMP-OFF') {
     if (ctx.hasFlag(lamp, Flag.Burned)) {
       ctx.tell('The lamp has already burned out.');
       return true;
@@ -58,10 +59,14 @@ export const lantern: ActionHandler = (ctx) => {
     ctx.clearFlag(lamp, Flag.OnFire);
     // ZIL: V-LAMP-OFF "The [PRSO] is now off." (gverbs.zil:779)
     ctx.tell(fmt(vLampOff.turnedOff, lamp.desc));
+    // gverbs.zil:780-781: if room went dark, say so.
+    if (!lit(ctx.here, ctx.actor, ctx.world)) {
+      ctx.tell('It is now pitch black.');
+    }
     return true;
   }
 
-  if (ctx.verb === 'examine') {
+  if (ctx.action === 'V-EXAMINE') {
     if (ctx.hasFlag(lamp, Flag.Burned)) {
       ctx.tell('The lamp has burned out.');
     } else if (ctx.hasFlag(lamp, Flag.OnFire)) {
@@ -92,11 +97,9 @@ export const matchFunction: ActionHandler = (ctx) => {
   // candles with match"), skip and let the candles handler take it.
   const matchIsDobj = ctx.dobj === match;
 
-  const isLampOn =
-    ctx.verb === 'turn' && ctx.prep === 'ON' ||
-    ctx.verb === 'activate' ||
-    ctx.verb === 'light';
-  if (matchIsDobj && (ctx.verb === 'burn' || isLampOn)) {
+  // V-LAMP-ON covers turn-ON / activate / light; V-BURN covers burn/incinerate/ignite.
+  const isLampOn = ctx.action === 'V-LAMP-ON';
+  if (matchIsDobj && (ctx.action === 'V-BURN' || isLampOn)) {
     if (matchCount > 0) matchCount--;
 
     if (matchCount <= 0) {
@@ -112,12 +115,13 @@ export const matchFunction: ActionHandler = (ctx) => {
 
     ctx.setFlag(match, Flag.OnFire);
     ctx.setFlag(match, Flag.Light);
-    ctx.enableClock('I-MATCH');
+    // Re-arm the 2-tick countdown; idempotent if not yet burned (QUEUE I-MATCH 2 in ZIL).
+    ctx.queueClock?.('I-MATCH', 2, true);
     ctx.tell('One of the matches starts to burn.');
     return true;
   }
 
-  if (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'OFF')) {
+  if (ctx.action === 'V-LAMP-OFF') {
     if (!ctx.hasFlag(match, Flag.OnFire)) return false;
     ctx.tell('The match is out.');
     ctx.clearFlag(match, Flag.OnFire);
@@ -126,7 +130,8 @@ export const matchFunction: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'count' || ctx.verb === 'open') {
+  // V-COUNT and V-OPEN both show the match count (ZIL: open matchbook = count).
+  if (ctx.action === 'V-COUNT' || ctx.action === 'V-OPEN') {
     const cnt = matchCount - 1;
     if (cnt <= 0) {
       ctx.tell('You have no matches.');
@@ -138,7 +143,7 @@ export const matchFunction: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'examine') {
+  if (ctx.action === 'V-EXAMINE') {
     if (ctx.hasFlag(match, Flag.OnFire)) {
       ctx.tell('The match is burning.');
     } else {
@@ -170,10 +175,17 @@ export function iMatchTick(world: World, tell: (text: string) => void): void {
 export const candlesFcn: ActionHandler = (ctx) => {
   const candles = ctx.self;
 
+  // First-touch arming: if the candles have never been touched (no TOUCHBIT),
+  // enable I-CANDLES so the burn countdown starts.  ZIL 1actions.zil:2343 —
+  // this fires before the PRSI check, on any interaction with the candles.
+  if (!ctx.hasFlag(candles, Flag.Touched)) {
+    ctx.enableClock('I-CANDLES');
+  }
+
   // When candles are the indirect object, fall through to the other handler.
   if (ctx.iobj === candles) return false;
 
-  if (ctx.verb === 'burn' || (ctx.verb === 'turn' && ctx.prep === 'ON')) {
+  if (ctx.action === 'V-BURN' || ctx.action === 'V-LAMP-ON') {
     if (ctx.hasFlag(candles, Flag.Burned)) {
       ctx.tell(
         "Alas, there's not much left of the candles. Certainly not enough to burn.",
@@ -242,14 +254,14 @@ export const candlesFcn: ActionHandler = (ctx) => {
     return true;
   }
 
-  if (ctx.verb === 'count') {
+  if (ctx.action === 'V-COUNT') {
     ctx.tell(
       "Let's see, how many objects in a pair? Don't tell me, I'll get it.",
     );
     return true;
   }
 
-  if (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'OFF')) {
+  if (ctx.action === 'V-LAMP-OFF') {
     ctx.disableClock('I-CANDLES');
     if (ctx.hasFlag(candles, Flag.OnFire)) {
       ctx.clearFlag(candles, Flag.OnFire);
@@ -262,13 +274,13 @@ export const candlesFcn: ActionHandler = (ctx) => {
   }
 
   // ZIL: <AND <VERB? PUT> <FSET? ,PRSI ,BURNBIT>> → "That wouldn't be smart."
-  if (ctx.verb === 'put' && ctx.iobj !== undefined &&
+  if (ctx.action === 'V-PUT' && ctx.iobj !== undefined &&
       ctx.hasFlag(ctx.iobj, Flag.Flammable)) {
     ctx.tell("That wouldn't be smart.");
     return true;
   }
 
-  if (ctx.verb === 'examine') {
+  if (ctx.action === 'V-EXAMINE') {
     if (ctx.hasFlag(candles, Flag.OnFire)) {
       ctx.tell('The candles are burning.');
     } else {
@@ -284,20 +296,19 @@ export const candlesFcn: ActionHandler = (ctx) => {
 export const torchObject: ActionHandler = (ctx) => {
   const torch = ctx.self;
 
-  if (ctx.verb === 'examine') {
+  if (ctx.action === 'V-EXAMINE') {
     ctx.tell('The torch is burning.');
     return true;
   }
 
-  if (ctx.verb === 'pour' && ctx.iobj === torch) {
+  // ZIL: POUR water onto torch (PRSI = torch) → evaporates.
+  // V-POUR-ON covers "pour X on Y"; torch is the iobj here.
+  if (ctx.action === 'V-POUR-ON' && ctx.iobj === torch) {
     ctx.tell('The water evaporates before it gets close.');
     return true;
   }
 
-  if (
-    (ctx.verb === 'extinguish' || (ctx.verb === 'turn' && ctx.prep === 'OFF')) &&
-    ctx.hasFlag(torch, Flag.OnFire)
-  ) {
+  if (ctx.action === 'V-LAMP-OFF' && ctx.hasFlag(torch, Flag.OnFire)) {
     ctx.tell('You nearly burn your hand trying to extinguish the flame.');
     return true;
   }

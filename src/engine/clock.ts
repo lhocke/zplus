@@ -92,26 +92,42 @@ export class Clock {
 
   // Called once per player turn, after the command executes.
   //
-  // Returns any transcript text pushed by interrupt tick() callbacks via
-  // ctx.tell().  Callers that ignore the return value are unaffected.
+  // Returns lines: transcript text pushed via ctx.tell(), and interrupted: true
+  // when any interrupt routine returned true (mirrors CLOCKER's return value in
+  // ZIL: true = an interrupt fired and should stop V-WAIT's REPEAT).
+  //
+  // The interrupted flag differs from lines.length > 0: a burnout sentinel may
+  // push text (the "You'd better have more light..." message) while returning
+  // false — lines has content but interrupted stays false, so V-WAIT continues.
   //
   // Three regimes keyed on the SIGN of turnsLeft (the ZIL tick==-1 convention):
   //   turnsLeft === 0  → DORMANT: skip entirely (ZIL parked slot).
   //   turnsLeft < 0    → DEMON: fire every advance(), never decrement.
   //                      tick() returning false self-removes permanently.
   //   turnsLeft > 0    → COUNTDOWN: decrement then fire at zero.
-  advance(): string[] {
+  advance(): { lines: string[]; interrupted: boolean } {
     const lines: string[] = [];
-    const ctx: ClockTickContext = { tell: (t) => { if (t) lines.push(t); } };
     const toRemove: string[] = [];
+    let interrupted = false;
 
     for (const entry of this.entries.values()) {
       if (!entry.enabled) continue;
       if (entry.turnsLeft === 0) continue;  // dormant: parked slot (ZIL behaviour)
 
+      // Per-entry tell tracker: interrupted only when tick() returns true AND
+      // the routine pushed output — matches ZIL CLOCKER (FLG set on APPLY return
+      // truthy) but uses tell() as the proxy for "the routine actually did something
+      // the player sees" so silent keep-alive returns (engine daemons returning true
+      // to stay registered without printing) don't falsely stop V-WAIT.
+      let entryTold = false;
+      const entryCtx: ClockTickContext = {
+        tell: (t) => { if (t) { lines.push(t); entryTold = true; } },
+      };
+
       if (entry.turnsLeft < 0) {
         // Demon: fire every turn, never decrement turnsLeft.
-        const keep = entry.tick(ctx);
+        const keep = entry.tick(entryCtx);
+        if (keep && entryTold) interrupted = true;
         if (!keep) toRemove.push(entry.id);
         continue;
       }
@@ -119,7 +135,8 @@ export class Clock {
       entry.turnsLeft -= 1;
 
       if (entry.turnsLeft === 0) {
-        const rescheduled = entry.tick(ctx);
+        const rescheduled = entry.tick(entryCtx);
+        if (rescheduled && entryTold) interrupted = true;
         if (!rescheduled) {
           toRemove.push(entry.id);
         }
@@ -130,7 +147,7 @@ export class Clock {
       this.entries.delete(id);
     }
 
-    return lines;
+    return { lines, interrupted };
   }
 
   /** Read-only state for a single entry by id (undefined if not registered). */
@@ -187,6 +204,9 @@ class FuelInterrupt {
     private readonly eventType: 'lantern-fuel' | 'candle-fuel',
     private readonly id: string,
     initialTicks: number,
+    // Definite object name for the burnout line — matches ZIL's <D .OBJ>
+    // in LIGHT-INT (1actions.zil:2335): "the <name>" follows "more light than from".
+    private readonly burnoutName: string,
   ) {
     const self = this;
     this.entry = {
@@ -216,8 +236,15 @@ class FuelInterrupt {
     const stage = this.table[this.tableIndex]!;
 
     // The trailing zero-tick row is the burnout sentinel — the source is spent.
+    // LIGHT-INT (1actions.zil:2333–2335) prints "You'd better have more light
+    // than from the <OBJ>." when the object is held or in the room.  The
+    // FuelInterrupt has no world-state access, so the proximity check is elided
+    // here (same as the warning path above, which also skips it).  Return false
+    // so CLOCKER returns false and V-WAIT's REPEAT does NOT stop early — burnout
+    // is not a "fired interrupt" in the ZIL sense (gverbs.zil:1518).
     if (stage.ticks === 0) {
       this.emitter.emit({ type: this.eventType, remaining: 0, dark: true });
+      ctx.tell(`You'd better have more light than from the ${this.burnoutName}.`);
       return false;
     }
 
@@ -262,7 +289,7 @@ const LAMP_INITIAL_TICKS = 200;
 // 1actions.zil:4026.
 export class LanternInterrupt extends FuelInterrupt {
   constructor(clock: Clock, emitter: EventEmitter, initialTicks = LAMP_INITIAL_TICKS) {
-    super(clock, emitter, LAMP_TABLE, 'lantern-fuel', 'I-LANTERN', initialTicks);
+    super(clock, emitter, LAMP_TABLE, 'lantern-fuel', 'I-LANTERN', initialTicks, 'brass lantern');
   }
 }
 
@@ -286,6 +313,6 @@ const CANDLE_INITIAL_TICKS = 40;
 // <ENABLE>); CANDLES-FCN arms it on lighting and disables it on extinguish.
 export class CandleInterrupt extends FuelInterrupt {
   constructor(clock: Clock, emitter: EventEmitter, initialTicks = CANDLE_INITIAL_TICKS) {
-    super(clock, emitter, CANDLE_TABLE, 'candle-fuel', 'I-CANDLES', initialTicks);
+    super(clock, emitter, CANDLE_TABLE, 'candle-fuel', 'I-CANDLES', initialTicks, 'candles');
   }
 }

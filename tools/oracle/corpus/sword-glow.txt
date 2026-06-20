@@ -1,4 +1,5 @@
 # sword-glow corpus — pins the I-SWORD demon divergence (keystone underground blocker)
+# generated-by: dfrotz-r119 2026-06-19 sword-glow-bd2
 #
 # Real Zork: entering a "fearful" location (the Cellar, which is near the troll)
 # with the elvish sword in inventory makes the I-SWORD demon fire and print

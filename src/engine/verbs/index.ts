@@ -14,13 +14,39 @@ import type { GameObject } from '../../domain/game-object.js';
 import { Room } from '../../domain/room.js';
 import type { World } from '../../domain/world.js';
 import { Flag } from '../../domain/flags.js';
-import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, goto, vTieUp, describeRoom as describeRoomMsgs, type PickRng } from '../game-messages.js';
+import { fmt, pick, vAdvent, vFrobozz, vOpen, vClose, vRead, vExamine, vLookInside, vLookBehind, vLookOn, vLookUnder, vPut, vPutOn, preTake, preGive, yuks, hoHum, vInflate, vDeflate, vDig, vLaunch, vVerbose, vBrief, vSuperBrief, vVersion, vScript, goto, vTieUp, vTie, vUntie, vRing, preBurn, vBurn, vThrow, vGive, vWear, preMove, vMove, vTake, hackHack, tellNoPrsi, vLock, describeRoom as describeRoomMsgs, vLeap, jumploss, wheeeee, vShake, vWalkAround, vWalk, type PickRng } from '../game-messages.js';
 import { lit } from '../parser/scope.js';
+import { ROOM_GLOBAL_IDS } from '../parser/room-globals.js';
 import { CURE_WAIT } from '../combat.js';
+
+// All object IDs that appear in any room's LOCAL-GLOBALS list (zil/1dungeon.zil "(IN LOCAL-GLOBALS)").
+// LOCAL-GLOBALS objects are not IN GLOBAL-OBJECTS per ZIL, so HACK-HACK must not fire
+// "isn't here!" for them — they get the HO-HUM suffix instead.
+const LOCAL_GLOBAL_IDS: ReadonlySet<string> = (() => {
+  const s = new Set<string>();
+  for (const ids of ROOM_GLOBAL_IDS.values()) {
+    for (const id of ids) s.add(id);
+  }
+  return s;
+})();
 
 export interface VerbContext {
   readonly verb: string;
+  /**
+   * ZIL PRSA — parsed action id, e.g. 'V-ATTACK', 'V-LAMP-ON'.
+   * Multiple verb words map to the same action (kill/stab/strike → V-ATTACK;
+   * turn-ON/activate/light → V-LAMP-ON). Handlers must compare this, not `verb`.
+   * Populated at every dispatch site; never absent when called from game.ts.
+   */
+  readonly action?: string;
   readonly dobj?: GameObject;
+  /**
+   * True when ZIL PRSO == ROOMS (bare climb/climb-down with no noun).
+   * V-CLIMB-DOWN and V-CLIMB-FOO pass PRSO=ROOMS as OBJ so branch 1 fires;
+   * V-CLIMB-UP direct has OBJ=<> (nil) so branch 1 is skipped.
+   * gverbs.zil:300–302, gsyntax.zil:130–137 RMUNGBIT/GWIM.
+   */
+  readonly dobjIsRooms?: boolean;
   readonly iobj?: GameObject;
   readonly prep?: string;
   readonly player: GameObject;
@@ -98,6 +124,15 @@ export interface VerbContext {
   readonly heroBlow?: (targetId: string, weaponId: string | null) => VerbResult;
   /** DISABLE <INT id> — used by V-ODYSSEUS to stop the wrath timer. */
   readonly disableClock?: (id: string) => void;
+  /** Render the end-of-game score block and set gameOver (V-QUIT / gverbs.zil:55–61 web form). */
+  readonly finish?: () => void;
+  /**
+   * ZIL THIS-IS-IT — re-point the "it" pronoun referent to the given object.
+   * verbOpen calls this when PRINT-CONTENTS reveals exactly one item
+   * (gverbs.zil:1747: THIS-IS-IT at end of PRINT-CONTENTS loop).
+   * Optional so test stubs that don't track pronouns can omit it.
+   */
+  readonly thisIsIt?: (obj: GameObject) => void;
 }
 
 export interface VerbResult {
@@ -135,12 +170,24 @@ function seeInside(obj: GameObject): boolean {
 }
 
 // FIRSTER (gverbs.zil:1818) — print the header before the first pass-2 item.
-// Rooms are skipped (no "X contains:" header at room level).
-function firster(obj: GameObject, level: number, tell: (s: string) => void): void {
+// Rooms are skipped (no header at room level).
+// WINNER (player) always prints "You are carrying:" regardless of ACTORBIT.
+function firster(obj: GameObject, player: GameObject, level: number, tell: (s: string) => void): void {
   if (obj instanceof Room) return;
 
-  // Non-room containers: indent if level > 0, then print container header.
   const indent = level > 0 ? '  '.repeat(level) : '';
+
+  // ZIL: EQUAL? .OBJ ,WINNER → "You are carrying:"
+  if (obj === player) {
+    tell(`${indent}You are carrying:`);
+    return;
+  }
+
+  // ZIL: EQUAL? .OBJ ,TROPHY-CASE → "Your collection of treasures consists of:"
+  if (obj.id === 'TROPHY-CASE') {
+    tell(`${indent}Your collection of treasures consists of:`);
+    return;
+  }
 
   if (obj.has(Flag.Surface)) {
     tell(`${indent}On the ${obj.desc} is:`);
@@ -159,16 +206,40 @@ function describeObject(
   tell: (s: string) => void,
 ): void {
   if (level === 0) {
-    if (!obj.has(Flag.Touched) && obj.fdesc !== undefined) {
-      tell(obj.fdesc);
-    } else if (obj.ldesc !== undefined) {
-      tell(obj.ldesc);
+    if (obj.descFcn !== undefined) {
+      // ZIL DESCFCN — replaces the generic description and returns before the
+      // vehicle-suffix code (gverbs.zil:1707–1711), so descFcn objects get none.
+      obj.descFcn(player, tell);
     } else {
-      tell(`There is a ${obj.desc} here.`);
+      let line: string;
+      if (!obj.has(Flag.Touched) && obj.fdesc !== undefined) {
+        line = obj.fdesc;
+      } else if (obj.ldesc !== undefined) {
+        line = obj.ldesc;
+      } else {
+        // gverbs.zil:1730 — room-level "There is a X here. (providing light)"
+        line = `There is a ${obj.desc} here`;
+        if (obj.has(Flag.OnFire)) line += ' (providing light)';
+        line += '.';
+      }
+      // gverbs.zil:1722–1725 — an object at room level while the player is in a
+      // vehicle gets " (outside the <vehicle>)".
+      const wloc = player.parent;
+      if (wloc != null && wloc.has(Flag.Vehicle)) {
+        line += ` (outside the ${wloc.desc})`;
+      }
+      tell(line);
     }
   } else {
+    // gverbs.zil:1707–1715 — inventory/nested level: "  A X (providing light)"
     const indent = '  '.repeat(level);
-    tell(`${indent}A ${obj.desc}`);
+    let line = `${indent}A ${obj.desc}`;
+    if (obj.has(Flag.OnFire)) {
+      line += ' (providing light)';
+    } else if (obj.has(Flag.Wearable) && obj.parent === player) {
+      line += ' (being worn)';
+    }
+    tell(line);
   }
 
   if (seeInside(obj) && obj.children.size > 0) {
@@ -181,6 +252,10 @@ function describeObject(
 // Pass 2: touched/no-FDESC children printed via DESCRIBE-OBJECT; first item
 // triggers FIRSTER to emit the container header. NDESCBIT items are skipped
 // in pass 2 but still recursed if SEE-INSIDE?.
+//
+// INV? (gverbs.zil:1757-1760): when container == player OR player == container's
+// parent (i.e., we're listing inventory), all non-invisible items appear in pass
+// 2 regardless of Touched/FDESC state.
 function printCont(
   container: GameObject,
   player: GameObject,
@@ -203,22 +278,29 @@ function printCont(
     : null;
   let vehicleSeen = false;  // PV? — vehicle was encountered during iteration
 
-  // Pass 1: untouched items with an FDESC
-  for (const child of children) {
-    if (child === player) continue;
-    if (child === playerVehicle) { vehicleSeen = true; continue; }  // :1775 skip AV
-    if (child.has(Flag.Invisible)) continue;
-    if (!child.has(Flag.Touched) && child.fdesc !== undefined) {
-      if (!child.has(Flag.NonDescript)) {
-        tell(child.fdesc);
-      }
-      if (seeInside(child) && child.children.size > 0) {
-        printCont(child, player, level + 1, tell);
+  // INV? — printing the player's own inventory (or a container they're carrying).
+  // ZIL: EQUAL? WINNER OBJ <LOC OBJ> — player === container OR player === container.parent.
+  const inv = container === player || container.parent === player;
+
+  // Pass 1: untouched items with an FDESC — skipped entirely in inventory context
+  // (INV? overrides, making everything land in pass 2).
+  if (!inv) {
+    for (const child of children) {
+      if (child === player) continue;
+      if (child === playerVehicle) { vehicleSeen = true; continue; }
+      if (child.has(Flag.Invisible)) continue;
+      if (!child.has(Flag.Touched) && child.fdesc !== undefined) {
+        if (!child.has(Flag.NonDescript)) {
+          tell(child.fdesc);
+        }
+        if (seeInside(child) && child.children.size > 0) {
+          printCont(child, player, level + 1, tell);
+        }
       }
     }
   }
 
-  // Pass 2: touched / no-FDESC objects
+  // Pass 2: touched / no-FDESC objects (or ALL when INV?).
   let firsterFired = false;
   let currentLevel = level;
 
@@ -226,15 +308,29 @@ function printCont(
     if (child === player) continue;
     if (child === playerVehicle) continue;  // :1797 skip AV
     if (child.has(Flag.Invisible)) continue;
-    if (!child.has(Flag.Touched) && child.fdesc !== undefined) continue;
+    // ZIL: <OR .INV? <FSET? .Y ,TOUCHBIT> <NOT <GETP .Y ,P?FDESC>>>
+    if (!inv && !child.has(Flag.Touched) && child.fdesc !== undefined) continue;
 
     if (!child.has(Flag.NonDescript)) {
-      if (!firsterFired) {
+      // ZIL: NDESCBIT *surfaces* are "transparent" — their contents appear at the
+      // parent level without a container header (e.g. kitchen table, altar, pedestal).
+      // The trophy case is NonDescript+Transparent but NOT a Surface; it must keep
+      // its "Your collection of treasures consists of:" FIRSTER header.
+      // ZIL keys NDESCBIT on the CHILD (gverbs.zil:1802); here we key on the
+      // CONTAINER being a Surface to restrict to the four true ndesc surfaces.
+      const ndescContainer =
+        container.has(Flag.NonDescript) &&
+        container.has(Flag.Surface) &&
+        !(container === player);
+      if (!firsterFired && !ndescContainer) {
         firsterFired = true;
         currentLevel = level + 1;
-        firster(container, level, tell);
+        firster(container, player, level, tell);
       }
-      describeObject(child, player, currentLevel, tell);
+      // ndescContainer: items on a transparent surface appear at the room-contents
+      // level (0), not at the surface's own level. level=-1 is the room pseudo-level
+      // used by describeRoomObjects; level+1 gives the correct room-contents indent.
+      describeObject(child, player, ndescContainer ? Math.max(0, level + 1) : currentLevel, tell);
     } else {
       if (seeInside(child) && child.children.size > 0) {
         printCont(child, player, level, tell);
@@ -275,48 +371,107 @@ export function describeVehicleObjects(
   }
 }
 
-// Produce the room description: name, ldesc/M-LOOK, and DESCRIBE-OBJECTS listing.
-// When dark (gverbs.zil:1637-1649), returns the pitch-black message and skips the rest.
-function describeRoom(
+/**
+ * DESCRIBE-ROOM faithful port — gverbs.zil:1635–1679 (Zork I branches).
+ *
+ * Shared by both the verb path (verbLook/verbGo) and the engine path
+ * (describeCurrentRoom/runMLook in game.ts) so both stay byte-identical.
+ *
+ * lookFlag (LOOK? param): true for explicit LOOK and first-look semantics;
+ * false for movement arrivals. V? = lookFlag OR VERBOSE-global.
+ *
+ * Side effects on room: sets Flag.Touched on first visit; maze rooms clear
+ * it again so they always force-verbose (gverbs.zil:1653–1655).
+ */
+export function describeRoomShared(
   room: Room,
   player: GameObject,
+  lookFlag: boolean,
   mlookRunner?: (r: Room) => string,
   world?: World,
   getGlobal?: (name: string) => boolean,
+  alwaysLit?: boolean,
 ): string {
-  if (world !== undefined && !lit(room, player, world)) {
+  // gverbs.zil:1636 — V? = LOOK? OR VERBOSE
+  let vFlag = lookFlag || (getGlobal?.('VERBOSE') ?? false);
+
+  // gverbs.zil:1637-1649 — darkness gate (RFALSE path)
+  if (world !== undefined && !(alwaysLit ?? false) && !lit(room, player, world)) {
     const sprayed = getGlobal?.('SPRAYED?') ?? false;
     return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
   }
 
-  // ZIL gverbs.zil:1649–1679: when player is in a vehicle, the room title
-  // becomes "<room>, in the <vehicle>" and the vehicle is NOT listed as a room
-  // object; instead the vehicle's contents are shown (PRINT-CONT on the vehicle).
+  // gverbs.zil:1650-1652 — TOUCHBIT: set on first visit, force V?=true
+  if (!room.has(Flag.Touched)) {
+    room.set(Flag.Touched);
+    vFlag = true;
+  }
+
+  // gverbs.zil:1653-1655 — Zork I: maze rooms clear TOUCHBIT so every
+  // arrival is forced-verbose (maze rooms have no stable ldesc).
+  if (room.has(Flag.Maze)) {
+    room.clear(Flag.Touched);
+  }
+
+  // gverbs.zil:1658-1663 — room title line (always printed, outside the V? gate).
+  // When player is in a vehicle: "<room>, in the <vehicle>".
   const vehicle = (player.parent !== null && player.parent !== undefined &&
+                   !(player.parent instanceof Room) &&
                    player.parent.has(Flag.Vehicle))
     ? player.parent
     : null;
 
-  const lines: string[] = [];
-  lines.push(vehicle !== null ? `${room.desc}, in the ${vehicle.desc}` : room.desc);
+  const lines: string[] = [
+    vehicle !== null ? `${room.desc}, in the ${vehicle.desc}` : room.desc,
+  ];
 
-  if (room.ldesc) {
-    lines.push(room.ldesc);
-  } else if (mlookRunner !== undefined) {
-    const dynamic = mlookRunner(room);
-    if (dynamic.length > 0) lines.push(dynamic);
+  // gverbs.zil:1664-1667 — SUPER-BRIEF body gate.
+  // The M-LOOK/LDESC block only runs when LOOK? OR NOT SUPER-BRIEF.
+  // V-FIRST-LOOK (gverbs.zil:1632) gates DESCRIBE-OBJECTS the same way:
+  // objects are suppressed when NOT SUPER-BRIEF fails, so title-only here.
+  const superBrief = getGlobal?.('SUPER-BRIEF') ?? false;
+  if (!lookFlag && superBrief) {
+    return lines.join('\n');
   }
 
-  // ZIL DESCRIBE-OBJECTS (gverbs.zil:1681-1684) — always calls PRINT-CONT on
-  // HERE. When player is in a vehicle, PRINT-CONT internally skips the vehicle
-  // (PV? path :1753-1795), shows room objects first, then vehicle contents.
-  describeRoomObjects(room, player, (s) => lines.push(s));
+  // gverbs.zil:1671-1676 — THE PRECEDENCE FLIP (handler-wins-with-ldesc-fallback).
+  // ZIL Zork I: M-LOOK first; if it emits output, done. Otherwise ldesc; otherwise M-FLASH.
+  if (vFlag) {
+    if (mlookRunner !== undefined) {
+      const handlerOut = mlookRunner(room);
+      if (handlerOut.length > 0) {
+        lines.push(handlerOut);
+        // gverbs.zil:1677-1678 — vehicle M-LOOK (if player is in vehicle)
+        describeRoomObjects(room, player, (s) => lines.push(s));
+        return lines.join('\n');
+      }
+    }
+    if (room.ldesc) {
+      lines.push(room.ldesc);
+    }
+    // else M-FLASH — no-op in Zork I for most rooms
+  }
+  // V?=false (touched, brief, no explicit look): body skipped — title-only
 
+  // gverbs.zil:1681-1684 — DESCRIBE-OBJECTS always runs after
+  describeRoomObjects(room, player, (s) => lines.push(s));
   return lines.join('\n');
 }
 
+function describeRoom(
+  room: Room,
+  player: GameObject,
+  lookFlag: boolean,
+  mlookRunner?: (r: Room) => string,
+  world?: World,
+  getGlobal?: (name: string) => boolean,
+  alwaysLit?: boolean,
+): string {
+  return describeRoomShared(room, player, lookFlag, mlookRunner, world, getGlobal, alwaysLit);
+}
+
 function verbLook(ctx: VerbContext): VerbResult {
-  return result(describeRoom(ctx.here, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal));
+  return result(describeRoom(ctx.here, ctx.player, /*lookFlag*/true, ctx.mlookRunner, ctx.world, ctx.getGlobal, ctx.alwaysLit));
 }
 
 // Map ZIL VTYPE prop string to the Flag it names.  Only NONLANDBIT is used in
@@ -334,12 +489,21 @@ function verbGo(ctx: VerbContext): VerbResult {
   const exit = ctx.here.exits.find(e => e.dir === dir);
 
   if (!exit) {
-    // No exit in this direction: RFATAL (ZIL V-WALK NEXIT/no-exit path).
-    // M-FATAL clears the continuation queue and skips M-END.
-    return result("You can't go that way.", /*moved*/false, /*fatal*/true);
+    // V-WALK no-exit fallthrough (gverbs.zil:1562–1580).
+    // Before "You can't go that way.", ZIL checks dark + PROB 80 for grue death.
+    const prob = ctx.prob ?? (() => false);
+    const roomLit = (ctx.alwaysLit ?? false) || lit(ctx.here, ctx.player, ctx.world);
+    if (!roomLit && !ctx.here.has(Flag.NonLand) && prob(80)) {
+      if (ctx.getGlobal?.('SPRAYED?')) {
+        return result(vWalk.grueSpray, /*moved*/false, /*fatal*/true);
+      }
+      ctx.jigsUp?.(vWalk.grueNoSpray);
+      return result('', /*moved*/false, /*fatal*/true);
+    }
+    return result(vWalk.cantGoThatWay, /*moved*/false, /*fatal*/true);
   }
 
-  const prob = ctx.prob ?? (() => false);
+  const prob = ctx.prob ?? (() => false);  // used in enterDest (GOTO grue gate)
 
   // ZIL GOTO vehicle interlock (gverbs.zil:2045–2088).
   // WLOC = LOC(WINNER): the player's immediate container (vehicle or room).
@@ -391,7 +555,8 @@ function verbGo(ctx: VerbContext): VerbResult {
       return result(goto.darkPlaceEntered, true, false, /*movedIntoDark*/true);
     }
 
-    const roomDesc = describeRoom(dest, ctx.player, ctx.mlookRunner, ctx.world, ctx.getGlobal);
+    // Movement arrival — lookFlag=false: brief mode when room already touched.
+    const roomDesc = describeRoom(dest, ctx.player, /*lookFlag*/false, ctx.mlookRunner, ctx.world, ctx.getGlobal, ctx.alwaysLit);
     const parts = [landingMsg, roomDesc].filter(s => s.length > 0);
     return result(parts.join('\n'), true);
   };
@@ -484,10 +649,10 @@ function verbGo(ctx: VerbContext): VerbResult {
 }
 
 // WEIGHT — gverbs.zil:1988: SIZE(obj) + recursive sum over all children.
-// ZIL GETP returns 0 when the property is absent, so objects with no SIZE
-// contribute 0 to the total (the player object has no SIZE, for example).
+// ZIL <PROPDEF SIZE 5> (zork1.zil:24) makes GETP P?SIZE return 5 when the
+// property is absent — NOT 0.  Use 5 as the fallback to match ZIL semantics.
 function weight(obj: GameObject): number {
-  const size = (obj.props.get('SIZE') as number | undefined) ?? 0;
+  const size = (obj.props.get('SIZE') as number | undefined) ?? 5;
   let w = size;
   for (const child of obj.children) {
     w += weight(child);
@@ -576,7 +741,9 @@ function verbOpen(ctx: VerbContext): VerbResult {
   }
 
   // CONTBIT path (gverbs.zil:974-985)
-  const contents = Array.from(item.children).filter(c => !c.has(Flag.Invisible));
+  // ZIL children are a prepend-list (FIRST? = last-defined in source).
+  // Reverse so the listing order matches dfrotz / ZIL iteration order.
+  const contents = Array.from(item.children).reverse().filter(c => !c.has(Flag.Invisible));
 
   if (contents.length === 0 || item.has(Flag.Transparent)) {
     return result(vOpen.opened);
@@ -594,10 +761,13 @@ function verbOpen(ctx: VerbContext): VerbResult {
   let contentStr: string;
   if (articled.length === 1) {
     contentStr = articled[0]!;
+    // PRINT-CONTENTS (gverbs.zil:1747): single-item reveal binds IT to that item.
+    ctx.thisIsIt?.(contents[0]!);
   } else {
     const last = articled[articled.length - 1];
     const rest = articled.slice(0, -1);
     contentStr = rest.join(', ') + ', and ' + last;
+    // ZIL TWO? clears IT? when 2+ items — no rebind.
   }
   return result(fmt(vOpen.opensRevealing, item.desc, contentStr));
 }
@@ -643,14 +813,15 @@ function verbRead(ctx: VerbContext): VerbResult {
 }
 
 function verbInventory(ctx: VerbContext): VerbResult {
-  const carried = Array.from(ctx.player.children).filter(c => !c.has(Flag.Invisible));
-
-  if (carried.length === 0) {
+  // ZIL V-INVENTORY (gverbs.zil:29-31): <FIRST? ,WINNER> → PRINT-CONT, else empty-handed.
+  const visibleItems = Array.from(ctx.player.children).filter(c => !c.has(Flag.Invisible));
+  if (visibleItems.length === 0) {
     return result("You are empty-handed.");
   }
 
-  const list = carried.map(c => `  ${c.desc}`).join('\n');
-  return result(`You are carrying:\n${list}`);
+  const lines: string[] = [];
+  printCont(ctx.player, ctx.player, 0, (s) => lines.push(s));
+  return result(lines.join('\n'));
 }
 
 // V-LOOK-INSIDE core — gverbs.zil:865-890.
@@ -741,22 +912,47 @@ function verbPut(ctx: VerbContext): VerbResult {
   if (item === undefined) return result("Put what?");
   if (container === undefined) return result("Put it where?");
 
-  // Not HELD? (gverbs.zil:710–711)
+  // Gate: NOT (OPENBIT OR OPENABLE? OR VEHBIT) → "You can't do that." (gverbs.zil:1088–1091)
+  // OPENABLE? = has CONTBIT or DOORBIT.
+  const canReceive = container.has(Flag.Open) ||
+                     container.has(Flag.Container) ||
+                     container.has(Flag.Door) ||
+                     container.has(Flag.Vehicle);
+  if (!canReceive) {
+    return result(vPut.cantDoThat);
+  }
+
+  // Openable/vehicle but not yet open → "The X isn't open." (gverbs.zil:1092–1094)
+  if (!container.has(Flag.Open)) {
+    ctx.thisIsIt?.(container);
+    return result(fmt(vPut.notOpen, container.desc));
+  }
+
+  // Self-containment (gverbs.zil:1096)
+  if (item === container) {
+    return result(vPut.how);
+  }
+
+  // Already inside (gverbs.zil:1098)
+  if (item.parent === container) {
+    return result(fmt(vPut.alreadyIn, item.desc, container.desc));
+  }
+
+  // Capacity: (WEIGHT(PRSI) + WEIGHT(PRSO) - SIZE(PRSI)) > CAPACITY(PRSI) (gverbs.zil:1099–1102)
+  const capacity = (container.props.get('CAPACITY') as number | undefined) ?? 0;
+  const containerSize = (container.props.get('SIZE') as number | undefined) ?? 5;
+  if (weight(container) + weight(item) - containerSize > capacity) {
+    return result(vPut.noRoom);
+  }
+
+  // Not HELD? (gverbs.zil:1105–1110) — simplified: reject if not in player's hands
   if (item.parent !== ctx.player) {
     return result(fmt(preGive.notHoldingIt, item.desc));
   }
 
-  // PRSI not a container/surface (gverbs.zil:1090)
-  if (!container.has(Flag.Container) && !container.has(Flag.Surface)) {
-    return result(vPut.cantDoThat);
-  }
-
-  // PRSI not open (gverbs.zil:1093)
-  if (!container.has(Flag.Open)) {
-    return result(fmt(vPut.notOpen, container.desc));
-  }
-
   item.moveTo(container);
+  item.set(Flag.Touched);          // FSET TOUCHBIT (gverbs.zil:1112)
+  ctx.scoreObj?.(item);            // SCORE-OBJ (gverbs.zil:1113)
   return result(vPut.done);
 }
 
@@ -785,10 +981,46 @@ function verbPutOn(ctx: VerbContext): VerbResult {
   return result(vPut.done);
 }
 
-// V-VERBOSE (gverbs.zil:13–16) — set VERBOSE=T, clear SUPER-BRIEF, print the string.
-// The engine is always verbose; the state-set is a no-op here but the message is faithful.
-function verbVerbose(_ctx: VerbContext): VerbResult {
+// V-VERBOSE (gverbs.zil:13–16) — SETG VERBOSE T, SETG SUPER-BRIEF <>, print the string.
+function verbVerbose(ctx: VerbContext): VerbResult {
+  ctx.setGlobal?.('VERBOSE', true);
+  ctx.setGlobal?.('SUPER-BRIEF', false);
   return result(vVerbose.response);
+}
+
+// V-BRIEF (gverbs.zil:18–21) — SETG VERBOSE <>, SETG SUPER-BRIEF <>, print the string.
+function verbBrief(ctx: VerbContext): VerbResult {
+  ctx.setGlobal?.('VERBOSE', false);
+  ctx.setGlobal?.('SUPER-BRIEF', false);
+  return result(vBrief.response);
+}
+
+// V-SUPER-BRIEF (gverbs.zil:23–25) — SETG SUPER-BRIEF T, print the string.
+function verbSuperBrief(ctx: VerbContext): VerbResult {
+  ctx.setGlobal?.('SUPER-BRIEF', true);
+  return result(vSuperBrief.response);
+}
+
+// V-VERSION (gverbs.zil:99–121) — the full Zork I banner.
+// Release/Serial pinned to 88/840726 (OQ-5) — dfrotz emits R119 but the
+// golden encodes the pinned divergence, so we hardcode rather than read
+// the Z-machine header.
+function verbVersion(_ctx: VerbContext): VerbResult {
+  return result(vVersion.banner);
+}
+
+// V-SCRIPT (gverbs.zil:86–90) — prints the transcript header + version banner.
+// The DIROUT/PUT-0-8 bit is a Z-machine output-stream op with no web equivalent;
+// dropped here. RTRUE.
+function verbScript(_ctx: VerbContext): VerbResult {
+  return result(`${vScript.header}\n${vVersion.banner}`);
+}
+
+// V-QUIT (gverbs.zil:55–61) — web form: render score + set gameOver.
+// No Y/N prompt (RESTART/RESTORE deferred per spec §1).
+function verbQuit(ctx: VerbContext): VerbResult {
+  ctx.finish?.();
+  return result('');
 }
 
 // V-SCORE (1actions.zil:4026–4044)
@@ -805,14 +1037,21 @@ function verbScore(ctx: VerbContext): VerbResult {
   return result(`${line1}\n${line2}`);
 }
 
-// V-DIAGNOSE (1actions.zil:3993–4024)
+// V-DIAGNOSE (1actions.zil:3993–4025)
+//
+// CB6 audit result — all lines match ZIL except one documented divergence:
+//   ZIL survival COND: <0? .RS> → "expect death soon"
+//   We use: rs <= 0 → "expect death soon"
+//   ZIL gap: RS < 0 has no COND branch → would emit "You can ." (blank desc).
+//   Intent-faithful fix: treat RS <= 0 as "expect death soon". Not reverted.
+//
 // FIGHT-STRENGTH base = 2 + floor(SCORE/70) (1actions.zil:3375–3381).
 // WD / RS follow the ZIL exactly:
 //   MS = FIGHT-STRENGTH(false) — base only
 //   WD = player pStrength  (raw, still negative at this point)
 //   RS = MS + WD           (so wounds lower RS — ZIL: <+ .MS .WD>)
 //   if !C-ENABLED?: WD = 0   else: WD = -WD  (negate to positive wound depth)
-// Cured-after: CURE_WAIT*(WD-1) + C-TICK  (1actions.zil:4011–4014)
+// Cured-after: CURE_WAIT*(WD-1) + C-TICK  (1actions.zil:4008–4010)
 function verbDiagnose(ctx: VerbContext): VerbResult {
   const deaths = ctx.deaths          ?? 0;
   const score  = ctx.score           ?? 0;
@@ -824,7 +1063,7 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
   const rs = ms + rawPs;                      // RS = MS + pStrength (1actions.zil:3994)
 
   // WD: 0 when I-CURE is disabled; positive wound depth when armed.
-  const wd = cureOn ? -rawPs : 0;             // 1actions.zil:3995–3998
+  const wd = cureOn ? -rawPs : 0;             // 1actions.zil:3996–3997
 
   const lines: string[] = [];
 
@@ -836,10 +1075,12 @@ function verbDiagnose(ctx: VerbContext): VerbResult {
       wd === 2 ? 'a serious wound,' :
       wd === 3 ? 'several wounds,' :
       /* wd>3 */ 'serious wounds,';
-    const curedAfter = CURE_WAIT * (wd - 1) + cureTick;  // 1actions.zil:4011–4014
+    const curedAfter = CURE_WAIT * (wd - 1) + cureTick;  // 1actions.zil:4008–4010
     lines.push(`You have ${woundDesc} which will be cured after ${curedAfter} moves.`);
   }
 
+  // ZIL: <0? .RS> → "expect death soon"; RS<0 has no branch (gap — emits "You can .").
+  // We guard rs<=0 to cover the RS<0 case faithfully (see CB6 audit note above).
   const survDesc =
     rs <= 0 ? 'expect death soon' :
     rs === 1 ? 'be killed by one more light wound' :
@@ -990,15 +1231,216 @@ function verbDig(ctx: VerbContext): VerbResult {
   return result(fmt(vDig.withNonTool, inst!.desc));
 }
 
-// V-WAVE (gverbs.zil:1594-1595) — fall-through via HACK-HACK "Waving the ".
-// HACK-HACK: "Waving the " + D(PRSO) + PICK-ONE(HO-HUM). gverbs.zil:2024-2036.
-// (The global-object "isn't here" branch of HACK-HACK is unreachable here:
-//  parser scoping only surfaces a global object when it passes GWIM's WAVE check,
-//  and globally-scoped wave targets will be intercepted by their ACTION handlers.)
-function verbWave(ctx: VerbContext): VerbResult {
-  const name = ctx.dobj?.desc ?? '';
+// V-RING (gverbs.zil:1162–1163) — default when no object FCN claims it.
+function verbRing(_ctx: VerbContext): VerbResult {
+  return result(vRing.response);
+}
+
+// V-TIE (gverbs.zil:1465–1469) — PRSI=WINNER → "to yourself"; else "to that".
+function verbTie(ctx: VerbContext): VerbResult {
+  if (ctx.iobj === ctx.player) return result(vTie.toSelf);
+  return result(fmt(vTie.toOther, ctx.dobj?.desc ?? ''));
+}
+
+// V-UNTIE (gverbs.zil:1511–1512) — one-liner fallback.
+function verbUntie(_ctx: VerbContext): VerbResult {
+  return result(vUntie.response);
+}
+
+// V-SHAKE (gverbs.zil:1213–1240).
+// ACTORBIT → no effect; NOT TAKEBIT → can't shake it; CONTBIT:
+//   open + contents → SHAKE-LOOP + spill; open + empty → "Shaken.";
+//   closed + contents → sounds like something inside; closed + empty → sounds empty.
+// Non-container → "Shaken."
+function verbShake(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result('Shake what?');
+  if (dobj.has(Flag.Actor)) return result(vShake.actor);
+  if (!dobj.has(Flag.Takeable)) return result(vShake.cantTakeIt);
+  if (dobj.has(Flag.Container)) {
+    if (dobj.has(Flag.Open)) {
+      // Shake open container — move contents to floor or pseudo-object.
+      const contents = [...dobj.children];
+      if (contents.length > 0) {
+        const land = ctx.here.has(Flag.Land);
+        for (const item of contents) {
+          item.set(Flag.Touched);
+          item.moveTo(land ? ctx.here : null);
+        }
+        if (land) {
+          return result(fmt(vShake.openContainerSpills, dobj.desc));
+        }
+        return result(`The contents of the ${dobj.desc} spill out and disappears.`);
+      }
+      return result(vShake.shaken);
+    }
+    // Closed container — rattle check.
+    if ([...dobj.children].length > 0) {
+      return result(fmt(vShake.soundsLikeSomethingInside, dobj.desc));
+    }
+    return result(fmt(vShake.soundsEmpty, dobj.desc));
+  }
+  return result(vShake.shaken);
+}
+
+// PRE-BURN (gverbs.zil:243–249) — flame-source guard.
+// No PRSI → TELL-NO-PRSI; PRSI not FLAMING? → "With a X??!?"; FLAMING → pass (RFALSE).
+function verbPreBurn(ctx: VerbContext): VerbResult {
+  const inst = ctx.iobj;
+  if (inst === undefined) return result(tellNoPrsi.response);
+  // FLAMING? = OnFire AND Light (preactions.ts:25–27 — the engine's FLAMING? port)
+  if (inst.has(Flag.OnFire) && inst.has(Flag.Light)) return result('');
+  return result(fmt(preBurn.notAFlame, inst.desc));
+}
+
+// IDROP (gverbs.zil:1966–1977) — drop PRSO to LOC(WINNER), return success/failure.
+// Returns true and moves the item to the room on success; false if not-carried or closed.
+function idrop(item: GameObject, player: GameObject, room: Room): boolean {
+  const loc = item.parent;
+  const inPlayer = loc === player;
+  const inHeldContainer = loc !== null && loc !== undefined && (loc as GameObject).parent === player;
+  if (!inPlayer && !inHeldContainer) return false;
+  if (!inPlayer && !(loc as GameObject).has(Flag.Open)) return false;
+  item.moveTo(room);
+  return true;
+}
+
+// V-BURN (gverbs.zil:251–274, Zork-1 branch).
+// BURNBIT + held-or-inside → REMOVE-CAREFULLY + partial msg + JIGS-UP.
+// BURNBIT + not held → consumed msg.
+// No BURNBIT → "You can't burn a X."
+function verbBurn(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result("Burn what?");
+  if (!dobj.has(Flag.Flammable)) return result(fmt(vBurn.cantBurn, dobj.desc));
+
+  const playerHoldsIt = dobj.parent === ctx.player;
+  const playerInsideIt = ctx.player.parent === dobj;
+  if (playerHoldsIt || playerInsideIt) {
+    // REMOVE-CAREFULLY: move obj out of world (player drops it; it burns)
+    dobj.moveTo(null);
+    const suffix = playerInsideIt
+      ? fmt(vBurn.burningHeldIn, dobj.desc)
+      : fmt(vBurn.burningHeldHolding, dobj.desc);
+    // jigsUp prints the message; verb returns empty output (mirrors grue pattern).
+    ctx.jigsUp?.(suffix);
+    return result('', false, true);
+  }
+  // Not held — consume in place
+  dobj.moveTo(null);
+  return result(fmt(vBurn.consumed, dobj.desc));
+}
+
+// V-THROW (gverbs.zil:1445–1460).
+// IDROP first; on success: PRSI=ME → death; PRSI actor → "ducks"; else "Thrown."
+function verbThrow(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result('Huh?');
+  // idrop: drop to LOC(WINNER)
+  if (!idrop(dobj, ctx.player, ctx.here)) return result(vThrow.notCarrying);
+  // PRSI=ME (throw at self) — full death message via jigsUp; empty output (grue pattern).
+  if (ctx.iobj === ctx.player) {
+    ctx.jigsUp?.(fmt(vThrow.thrownAtSelf, dobj.desc));
+    return result('', false, true);
+  }
+  if (ctx.iobj !== undefined && ctx.iobj.has(Flag.Actor)) {
+    return result(fmt(vThrow.actorDucks, ctx.iobj.desc, dobj.desc));
+  }
+  return result(vThrow.thrown);
+}
+
+// PRE-GIVE (gverbs.zil:708–711) — HELD? check.
+function verbPreGive(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result('');
+  if (dobj.parent !== ctx.player) return result(fmt(preGive.notHoldingIt, dobj.desc));
+  return result('');
+}
+
+// V-GIVE (gverbs.zil:713–717).
+function verbGive(ctx: VerbContext): VerbResult {
+  const iobj = ctx.iobj;
+  if (iobj === undefined || !iobj.has(Flag.Actor)) {
+    return result(fmt(vGive.prsiNotActor, ctx.dobj?.desc ?? '', iobj?.desc ?? ''));
+  }
+  return result(fmt(vGive.refusesPolitely, iobj.desc));
+}
+
+// V-WEAR (gverbs.zil:1597–1602) — WEARBIT check; on pass, PERFORM V-TAKE.
+// V-TAKE with WEARBIT prints "You are now wearing the X." (gverbs.zil:1384–1385).
+function verbWear(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result('Wear what?');
+  if (!dobj.has(Flag.Wearable)) return result(fmt(vWear.cantWear, dobj.desc));
+  // PERFORM V-TAKE: move to player + apply TOUCHBIT + scoring side-effects.
+  // V-TAKE with WEARBIT prints the wearing message (gverbs.zil:1384–1385).
+  const takeResult = verbTake(ctx);
+  if (takeResult.output === 'Taken.') {
+    return { ...takeResult, output: fmt(vTake.takenWearing, dobj.desc) };
+  }
+  return takeResult;
+}
+
+// PRE-MOVE (gverbs.zil:910–912) — block if PRSO is held.
+function verbPreMove(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj !== undefined && dobj.parent === ctx.player) return result(preMove.holdingIt);
+  return result('');
+}
+
+// V-MOVE (gverbs.zil:914–918) — TAKEBIT → "reveals nothing"; else "can't move".
+function verbMove(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  if (dobj === undefined) return result("Move what?");
+  if (dobj.has(Flag.Takeable)) return result(fmt(vMove.nothingRevealed, dobj.desc));
+  return result(fmt(vMove.notMoveable, dobj.desc));
+}
+
+// HACK-HACK (gverbs.zil:2024–2029) — shared helper for RAISE/LOWER/WAVE/RUB/etc.
+// ZIL gates "isn't here!" on <AND <IN? PRSO GLOBAL-OBJECTS> <VERB? WAVE RAISE LOWER>>.
+// Only WAVE/RAISE/LOWER trigger that branch; KICK/PUSH/RUB fall through to HO-HUM even
+// for global objects. LOCAL-GLOBALS (WHITE-HOUSE etc.) are not IN GLOBAL-OBJECTS in ZIL,
+// so they also get HO-HUM regardless.
+function hackHackVerb(prefix: string, ctx: VerbContext, waveRaiseLower: boolean): VerbResult {
+  const dobj = ctx.dobj;
+  const name = dobj?.desc ?? '';
+  // GLOBAL-OBJECTS: parentless non-room AND not a LOCAL-GLOBALS object.
+  const isGlobalObj = dobj !== undefined
+    && dobj.parent === null
+    && !('exits' in dobj)
+    && !LOCAL_GLOBAL_IDS.has(dobj.id);
+  if (isGlobalObj && waveRaiseLower) return result(fmt(hackHack.notHere, name));
   const suffix = ctx.rng !== undefined ? pick(hoHum, ctx.rng) : hoHum.entries[0]!;
-  return result(`Waving the ${name}${suffix}`);
+  return result(`${prefix}${name}${suffix}`);
+}
+
+// V-LOWER (gverbs.zil:902) — HACK-HACK "Playing in this way with the ".
+function verbLower(ctx: VerbContext): VerbResult {
+  return hackHackVerb('Playing in this way with the ', ctx, true);
+}
+
+// V-WAVE (gverbs.zil:1594-1595) — HACK-HACK "Waving the ".
+// WAVE is in <VERB? WAVE RAISE LOWER> → global-objects gets "isn't here!".
+function verbWave(ctx: VerbContext): VerbResult {
+  return hackHackVerb('Waving the ', ctx, true);
+}
+
+// V-KICK (gverbs.zil:760) — HACK-HACK "Kicking the ".
+// KICK not in <VERB? WAVE RAISE LOWER> → global-objects falls to HO-HUM.
+function verbKick(ctx: VerbContext): VerbResult {
+  return hackHackVerb('Kicking the ', ctx, false);
+}
+
+// V-PUSH (gverbs.zil:1070) — HACK-HACK "Pushing the ".
+// PUSH not in <VERB? WAVE RAISE LOWER> → global-objects falls to HO-HUM.
+function verbPush(ctx: VerbContext): VerbResult {
+  return hackHackVerb('Pushing the ', ctx, false);
+}
+
+// V-RUB (gverbs.zil:1165) — HACK-HACK "Fiddling with the ".
+// RUB not in <VERB? WAVE RAISE LOWER> → global-objects falls to HO-HUM.
+function verbRub(ctx: VerbContext): VerbResult {
+  return hackHackVerb('Fiddling with the ', ctx, false);
 }
 
 // V-ECHO (gverbs.zil:526) — the "echo echo ..." fallback.
@@ -1013,9 +1455,89 @@ function verbCross(_ctx: VerbContext): VerbResult {
   return result("You can't cross that!");
 }
 
-// V-RAISE (gverbs.zil:1131) — fall-through when object handler doesn't claim it.
-function verbRaise(_ctx: VerbContext): VerbResult {
-  return result("You can't raise that.");
+// V-SKIP (gverbs.zil:1269–1270) — safe jump, PICK-ONE from WHEEEEE.
+function verbSkip(ctx: VerbContext): VerbResult {
+  const msg = ctx.rng !== undefined ? pick(wheeeee, ctx.rng) : wheeeee.entries[0]!;
+  return result(msg);
+}
+
+// V-LEAP (gverbs.zil:813–842) — JUMP / LEAP / DIVE.
+//
+// With PRSO (jumping over/in/across/off something):
+//   object in HERE + ACTORBIT → "too big to jump over"
+//   object in HERE, not actor  → V-SKIP
+//   object not in HERE          → "That would be a good trick."
+//
+// Without PRSO (bare jump):
+//   No DOWN property (downExit absent) → GETPT=0 → (T <V-SKIP>) — SAFE
+//   NEXIT (elseMessage-only, no to/per/ifFlag) → death
+//   CEXIT flag-false (ifFlag, flag not set) → death
+//   Zork-1 UP-A-TREE special: text + DO-WALK DOWN
+//   otherwise (passable, not UP-A-TREE) → V-SKIP
+//
+// Fatal jump ZIL order (gverbs.zil:828–830): TELL unsafeJump FIRST, then JIGS-UP.
+// Engine: pass unsafeJump as prefix of the deathMessage so jigsUp emits it first.
+//
+// Dome death/skip emerge from exit structure — no dome-specific code here.
+// (ZIL's DOME-ROOM-FCN M-ENTER VERB?LEAP branch is unreachable in this engine
+// because M-ENTER always fires with action='V-WALK'.)
+function verbLeap(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+
+  if (dobj !== undefined) {
+    // Object present in scope but not in HERE → good trick message.
+    const inHere = dobj.parent === ctx.here || dobj.parent === ctx.player;
+    if (!inHere) return result(vLeap.goodTrick);
+    // Object is in HERE — actor vs non-actor.
+    if (dobj.has(Flag.Actor)) return result(fmt(vLeap.actorTooBig, dobj.desc));
+    return verbSkip(ctx);
+  }
+
+  // No PRSO — inspect the DOWN exit.
+  const downExit = ctx.here.exits.find(e => e.dir === 'down');
+
+  // No DOWN property (GETPT returns 0): falls to (T <V-SKIP>) in ZIL — safe jump.
+  // gverbs.zil:823: <SET TX <GETPT ,HERE ,P?DOWN>> — TX=0 when no property.
+  // The PTSIZE(0) check (S==2 NEXIT or S==4 CEXIT) fails, so V-SKIP runs.
+  if (downExit === undefined) return verbSkip(ctx);
+
+  // NEXIT: a down entry that only carries an elseMessage (PTSIZE==2 in ZIL).
+  // gverbs.zil:825: <EQUAL? .S 2>
+  const isNexit = downExit.to === undefined && downExit.per === undefined && downExit.ifFlag === undefined;
+  if (isNexit) {
+    const jlPick = pick(jumploss, ctx.rng ?? { next: () => 0 });
+    ctx.jigsUp?.(vLeap.unsafeJump + '\n' + jlPick);
+    return result('', false, /*fatal*/true);
+  }
+
+  // CEXIT with false flag — blocked conditional exit (PTSIZE==4, flag false).
+  // gverbs.zil:826–827: <AND <EQUAL? .S 4> <NOT <VALUE <GETB .TX 1>>>>
+  if (downExit.ifFlag !== undefined) {
+    const gateObj = ctx.world.get(downExit.ifFlag);
+    const open = gateObj !== undefined
+      ? gateObj.has(Flag.Open)
+      : (ctx.getGlobal?.(downExit.ifFlag) ?? false);
+    if (!open) {
+      const jlPick = pick(jumploss, ctx.rng ?? { next: () => 0 });
+      ctx.jigsUp?.(vLeap.unsafeJump + '\n' + jlPick);
+      return result('', false, /*fatal*/true);
+    }
+  }
+
+  // Zork-1 special: at UP-A-TREE, the passable exit leads safely down.
+  // gverbs.zil:831–837 — "unaccustomed daring" text + DO-WALK DOWN.
+  if (ctx.here.id === 'UP-A-TREE') {
+    const walkResult = doWalk('down', ctx);
+    return result(vLeap.upATreeDaring + (walkResult.output ? '\n' + walkResult.output : ''), walkResult.moved);
+  }
+
+  // Passable exit, not UP-A-TREE → V-SKIP.
+  return verbSkip(ctx);
+}
+
+// V-RAISE (gverbs.zil:1131–1132) — V-LOWER (same HACK-HACK route).
+function verbRaise(ctx: VerbContext): VerbResult {
+  return verbLower(ctx);
 }
 
 
@@ -1039,6 +1561,161 @@ function verbBreathe(ctx: VerbContext): VerbResult {
   if (dobj === punctured) return result('No chance. Some moron punctured it.');
   // Non-boat: V-INFLATE default (gverbs.zil:757–758)
   return result(vInflate.response);
+}
+
+// V-LOCK (gverbs.zil:855–856) — default when no object handler claims it.
+// Object FCNs (grate, dam) override at PERFORM step 6; this is the step-7 fallback.
+function verbLock(_ctx: VerbContext): VerbResult {
+  return result(vLock.response);
+}
+
+// V-UNLOCK (gverbs.zil:1508–1509) — calls V-LOCK.
+const verbUnlock = verbLock;
+
+// DO-WALK helper: run verbGo with a synthesized direction prep.
+// V-ENTER and V-CLIMB-* delegate here rather than re-implementing movement.
+function doWalk(dir: string, ctx: VerbContext): VerbResult {
+  return verbGo({ ...ctx, prep: dir });
+}
+
+// V-ENTER (gverbs.zil:620–621) — DO-WALK P?IN.
+function verbEnter(ctx: VerbContext): VerbResult {
+  return doWalk('in', ctx);
+}
+
+// V-EXIT (gverbs.zil:632–641) — vehicle → V-DISEMBARK; else DO-WALK P?OUT.
+// ZIL: PRSO=<>/ROOMS and WINNER in vehicle → PERFORM V?DISEMBARK; else DO-WALK P?OUT.
+function verbExit(ctx: VerbContext): VerbResult {
+  const wloc = ctx.player.parent;
+  if (wloc !== null && wloc !== undefined && wloc.has(Flag.Vehicle)) {
+    return verbDisembark(ctx);
+  }
+  return doWalk('out', ctx);
+}
+
+// V-CLIMB-ON (gverbs.zil:290–298) — VEHBIT → V?BOARD; else "You can't climb onto the X."
+function verbClimbOn(ctx: VerbContext): VerbResult {
+  if (ctx.dobj?.has(Flag.Vehicle)) {
+    return verbBoard(ctx);
+  }
+  return result(`You can't climb onto the ${ctx.dobj?.desc ?? 'that'}.`);
+}
+
+// GLOBAL-IN? port (gverbs.zil:305–316): is obj a LOCAL-GLOBAL in destRoomId?
+// ZIL checks this for CEXIT/DEXIT/UEXIT exits — if the object the player names
+// is not a global in the destination room, it "doesn't lead that way."
+// Falls back to the room's GLOBAL prop (unit-test rooms not in ROOM_GLOBAL_IDS).
+function globalInDest(objId: string, destRoomId: string, world: World): boolean {
+  const tableIds = ROOM_GLOBAL_IDS.get(destRoomId);
+  if (tableIds !== undefined) return tableIds.includes(objId);
+  // Fallback for test rooms not in the compile-time table.
+  const destRoom = world.get(destRoomId);
+  if (destRoom !== undefined) {
+    const gProp = destRoom.props.get('GLOBAL');
+    if (typeof gProp === 'string') return gProp === objId;
+    if (Array.isArray(gProp)) return (gProp as string[]).includes(objId);
+  }
+  return false;
+}
+
+// V-CLIMB-UP (gverbs.zil:300–334) — core climb logic.
+// DIR defaults to P?UP ('up'); V-CLIMB-DOWN passes 'down'.
+// objIsRooms: true when the caller was V-CLIMB-DOWN or V-CLIMB-FOO with no noun
+//   (ZIL: OBJ=ROOMS because V-CLIMB-DOWN passes ,PRSO=ROOMS explicitly).
+//   V-CLIMB-UP direct has OBJ=<> (nil) even when PRSO=ROOMS — gverbs.zil:300–302.
+//
+// ZIL branch order (gverbs.zil:300–334):
+//   1. OBJ set AND exit in DIR:
+//        NEXIT ({elseMessage}-only, no to/per) OR
+//        (exit has to/per AND NOT GLOBAL-IN? OBJ dest)
+//        → "The <OBJ> does/don't lead up/downward."
+//   2. OBJ nil AND exit in DIR → DO-WALK (verbGo handles all exit types)
+//   3. No exit + OBJ has W?WALL → "Climbing the walls is to no avail."
+//   4. No exit + Zork-1: HERE!=PATH, OBJ nil-or-TREE, TREE global in HERE
+//      → "There are no climbable trees here."
+//   5. OBJ nil or ROOMS → "You can't go that way."
+//   6. else → "You can't do that!"
+function verbClimbUp(dir: string, ctx: VerbContext, objIsRooms: boolean): VerbResult {
+  const dobj = ctx.dobj;
+  // OBJ is set when: (a) named noun (dobj !== undefined), or (b) ROOMS sentinel
+  // (objIsRooms=true). ROOMS has empty desc → produces "The  doesn't lead Xward."
+  const objSet = dobj !== undefined || objIsRooms;
+  const objDesc = dobj?.desc ?? '';
+  const objId   = dobj?.id;
+
+  const exit = ctx.here.exits.find(e => e.dir === dir);
+  const dir2 = dir === 'up' ? 'up' : 'down';
+
+  if (exit !== undefined) {
+    if (objSet) {
+      // NEXIT: elseMessage-only (no to, no per) — always refuse when OBJ set.
+      // gverbs.zil:305–306: PTSIZE==NEXIT → refuse.
+      const isNexit = exit.to === undefined && exit.per === undefined;
+      if (isNexit) {
+        const doesnt = objId === 'STAIRS' ? "don't" : "doesn't";
+        return result(`The ${objDesc} ${doesnt} lead ${dir2}ward.`);
+      }
+      // CEXIT/DEXIT/UEXIT (exit has to or per): GLOBAL-IN? OBJ dest.
+      // gverbs.zil:307–316: NOT GLOBAL-IN? → refuse.
+      // For per exits the dest isn't known statically; use per's first-pass dest
+      // (fallback: HERE) — in practice all per exits at climbable rooms go to
+      // known dests and PRSO is nil/ROOMS when per fires, so this branch is moot.
+      const destId = exit.to ?? ctx.here.id;
+      if (!globalInDest(objId ?? '__ROOMS__', destId, ctx.world)) {
+        const doesnt = objId === 'STAIRS' ? "don't" : "doesn't";
+        return result(`The ${objDesc} ${doesnt} lead ${dir2}ward.`);
+      }
+    }
+    // OBJ nil, or OBJ is global in dest — proceed with DO-WALK.
+    // verbGo handles all exit types (elseMessage, ifFlag, per, to).
+    return doWalk(dir, ctx);
+  }
+
+  // No exit in that direction.
+  // gverbs.zil:320–323: OBJ set AND OBJ has W?WALL synonym.
+  if (objSet && dobj !== undefined && dobj.synonyms.includes('WALL')) {
+    return result('Climbing the walls is to no avail.');
+  }
+
+  // Zork-1 tree branch (gverbs.zil:324–330): HERE!=PATH, OBJ nil-or-TREE,
+  // TREE is a LOCAL-GLOBAL of HERE.
+  const treeGlobal = globalInDest('TREE', ctx.here.id, ctx.world);
+  const objIsNilOrTree = !objSet || objId === 'TREE';
+  if (treeGlobal && objIsNilOrTree && ctx.here.id !== 'PATH') {
+    return result('There are no climbable trees here.');
+  }
+
+  // gverbs.zil:331: OBJ nil or ROOMS → "You can't go that way."
+  if (!objSet || objIsRooms) {
+    return result("You can't go that way.");
+  }
+
+  return result("You can't do that!");
+}
+
+// V-CLIMB-FOO (gverbs.zil:281–288) — bare CLIMB: V-CLIMB-UP P?UP PRSO.
+// When no noun given, PRSO=ROOMS → objIsRooms=true.
+function verbClimbFoo(ctx: VerbContext): VerbResult {
+  return verbClimbUp('up', ctx, ctx.dobjIsRooms ?? false);
+}
+
+// V-CLIMB-DOWN (gverbs.zil:279–280) — V-CLIMB-UP P?DOWN PRSO.
+// When no noun given, PRSO=ROOMS → objIsRooms=true.
+function verbClimbDown(ctx: VerbContext): VerbResult {
+  return verbClimbUp('down', ctx, ctx.dobjIsRooms ?? false);
+}
+
+// V-CLIMB-UP entry (gverbs.zil:300) — upward direction.
+// Direct climb up: OBJ=<> (nil) regardless of PRSO — gverbs.zil:300–302.
+// ZIL's V-CLIMB-UP routine takes OBJ as an OPTIONAL parameter defaulting to <>
+// (nil); it only sets OBJ from PRSO when the caller explicitly passes it (as
+// V-CLIMB-DOWN/V-CLIMB-FOO do). When dispatched as the top-level action, OBJ
+// is ALWAYS nil — so we pass a ctx with dobj=undefined and objIsRooms=false,
+// ignoring whatever PRSO the parser resolved (e.g. CLIMBABLE-CLIFF for
+// "climb up cliff").  gverbs.zil:300–302, gsyntax.zil:130.
+function verbClimbUpAction(ctx: VerbContext): VerbResult {
+  const nilCtx: VerbContext = { ...ctx, dobj: undefined, dobjIsRooms: false };
+  return verbClimbUp('up', nilCtx, false);
 }
 
 type VerbHandler = (ctx: VerbContext) => VerbResult;
@@ -1078,6 +1755,34 @@ function verbOdysseus(ctx: VerbContext): VerbResult {
   return result("Wasn't he a sailor?");
 }
 
+// V-POUR-ON (gverbs.zil:1024–1044) — pour water onto a target.
+// Fires when dobj=WATER and iobj=target ("pour water on X").
+// FLAMING? — gmacros.zil:145: FSET? FLAMEBIT (Flag.OnFire) AND FSET? ONBIT (Flag.Light).
+function verbPourOn(ctx: VerbContext): VerbResult {
+  const dobj = ctx.dobj;
+  const iobj = ctx.iobj;
+
+  // Not water → "You can't pour that." — gverbs.zil:1043–1044.
+  if (dobj === undefined || (dobj.id !== 'WATER' && dobj.id !== 'GLOBAL-WATER')) {
+    return result("You can't pour that.");
+  }
+
+  // Consume water — gverbs.zil:1026 REMOVE-CAREFULLY.
+  if (dobj.id !== 'GLOBAL-WATER') dobj.moveTo(null);
+
+  if (iobj !== undefined && iobj.has(Flag.OnFire) && iobj.has(Flag.Light)) {
+    // FLAMING? — extinguish — gverbs.zil:1027–1034.
+    iobj.clear(Flag.OnFire);
+    iobj.clear(Flag.Light);
+    if (iobj.id === 'CANDLES') ctx.disableClock?.('I-CANDLES');
+    return result(`The ${iobj.desc} is extinguished.`);
+  }
+
+  // Non-flaming — evaporates — gverbs.zil:1035–1037.
+  const target = iobj !== undefined ? `the ${iobj.desc}` : 'the floor';
+  return result(`The water spills over ${target}, to the floor, and evaporates.`);
+}
+
 // Primary dispatch on V-* action id (ZIL PERFORM dispatches on PRSA, gmain.zil:283–284).
 const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LOOK':      verbLook,
@@ -1106,12 +1811,21 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LOOK-ON':     verbLookOn,           // gverbs.zil:892-897
   // gverbs.zil:1471 — default when no object handler claims V-TIE-UP.
   'V-TIE-UP': () => result(vTieUp.response),
+  // gverbs.zil:1583–1584 — V-WALK-AROUND default when no room/object handler moved the player.
+  'V-WALK-AROUND': () => result(vWalkAround.response),
   // gverbs.zil:945–961 — ODYSSEUS / ULYSSES (gsyntax.zil:334–335).
   'V-ODYSSEUS': verbOdysseus,
 
+  // Meta-verb bodies — gverbs.zil:13-25, 55-121.
+  'V-VERBOSE':       verbVerbose,
+  'V-BRIEF':         verbBrief,
+  'V-SUPER-BRIEF':   verbSuperBrief,
+  'V-VERSION':       verbVersion,
+  'V-SCRIPT':        verbScript,
+  'V-QUIT':          verbQuit,
+
   // Phase-3 dam/river verbs — thin shells; object handlers (IBOAT-FUNCTION etc.)
   // short-circuit before these in the PERFORM chain.
-  'V-VERBOSE':   verbVerbose,
   'V-BREATHE':   verbBreathe, // BLOW IN OBJECT → PERFORM V?INFLATE PRSO LUNGS
   'V-INFLATE':   verbInflate,
   'V-DEFLATE':   verbDeflate,
@@ -1121,9 +1835,42 @@ const ACTION_HANDLERS: Record<string, VerbHandler> = {
   'V-LAND':      verbLand,
   'V-DIG':       verbDig,
   'V-WAVE':       verbWave,
+  'V-KICK':       verbKick,
+  'V-PUSH':       verbPush,
+  'V-RUB':        verbRub,
   'V-ECHO':       verbEcho,
   'V-CROSS':      verbCross,
   'V-RAISE':      verbRaise,
+  'V-LEAP':       verbLeap,    // gverbs.zil:813–842
+
+  // CB1 — gverbs.zil:855–856, 1508–1509, 620–621, 632–641, 279–335
+  'V-LOCK':       verbLock,
+  'V-UNLOCK':     verbUnlock,
+  'V-ENTER':      verbEnter,
+  'V-EXIT':       verbExit,
+  'V-CLIMB-UP':   verbClimbUpAction,
+  'V-CLIMB-DOWN': verbClimbDown,
+  'V-CLIMB-FOO':  verbClimbFoo,
+  'V-CLIMB-ON':   verbClimbOn,
+
+  // CB2 — gverbs.zil:1162, 1465–1469, 1511–1512, 1213–1240, 243–274, 1445–1460,
+  //        708–717, 1597–1602, 910–918, 902, 1131–1132
+  'V-RING':     verbRing,
+  'V-TIE':      verbTie,
+  'V-UNTIE':    verbUntie,
+  'V-SHAKE':    verbShake,
+  'PRE-BURN':   verbPreBurn,
+  'V-BURN':     verbBurn,
+  'V-THROW':    verbThrow,
+  'PRE-GIVE':   verbPreGive,
+  'V-GIVE':     verbGive,
+  'V-WEAR':     verbWear,
+  'PRE-MOVE':   verbPreMove,
+  'V-MOVE':     verbMove,
+  'V-LOWER':    verbLower,
+
+  // CC7 — gverbs.zil:1024–1044
+  'V-POUR-ON':  verbPourOn,
 };
 
 // Fallback keyed on verb word — for callers that pass only a verb word.

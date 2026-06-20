@@ -12,6 +12,7 @@ import type { Rng as RngInterface } from './game.js';
 import type { CombatRng } from './combat.js';
 import { lookupAction } from '../actions/registry.js';
 import { iMatchTick } from '../actions/light-sources.js';
+import { wireBatDescFcn } from '../actions/bat-garlic.js';
 
 import roomsData from '../data/rooms.json';
 import objectsData from '../data/objects.json';
@@ -54,6 +55,11 @@ export function createGame(opts: {
       if (handler !== undefined) obj.handler = handler;
     }
   }
+
+  // BAT-D (1actions.zil:2469): set the bat's DESCFCN so DESCRIBE-OBJECTS
+  // emits the dynamic vampire-bat description instead of "There is a bat here."
+  const bat = world.get('BAT');
+  if (bat !== undefined) wireBatDescFcn(bat, world);
 
   const player = new Actor('PLAYER', 'cretin', {
     synonyms: ['me', 'myself'],
@@ -112,13 +118,15 @@ export function createGame(opts: {
   });
 
   // I-MATCH: queued for 2 turns when a match is lit; starts disabled.
+  // ZIL I-MATCH returns RTRUE (stay registered) so the slot can be re-armed
+  // by a subsequent light via queueClock('I-MATCH', 2, true).
   const iMatchEntry: ClockEntry = {
     id: 'I-MATCH',
     turnsLeft: 2,
     enabled: false,
     tick(ctx): boolean {
       iMatchTick(world, ctx.tell);
-      return false;
+      return true;  // keep slot alive for re-arm (ZIL I-MATCH: RTRUE)
     },
   };
   clock.schedule(iMatchEntry);
@@ -234,6 +242,20 @@ export function createGame(opts: {
     },
   });
 
+  // I-XB / I-XC / I-XBH — Hades exorcism timers (1actions.zil:1131–1147).
+  // Stubs registered parked; LLD-ROOM M-BEG arms them via queueClock.
+  // Real tick bodies wired in the Game constructor.
+  // KILL-INTERRUPTS already lists I-XB/I-XC — once registered they become live.
+  clock.schedule({ id: 'I-XB',  turnsLeft: 0, enabled: false, tick(_ctx): boolean { return false; } });
+  clock.schedule({ id: 'I-XC',  turnsLeft: 0, enabled: false, tick(_ctx): boolean { return false; } });
+  clock.schedule({ id: 'I-XBH', turnsLeft: 0, enabled: false, tick(_ctx): boolean { return false; } });
+
+
+  // Clear ENTRANCE-TO-HADES static ldesc — LLD-ROOM M-LOOK renders it dynamically
+  // (spirit-bar line is conditional on LLD-FLAG; the ldesc bakes in the pre-exorcism form).
+  const lldRoom = world.get('ENTRANCE-TO-HADES');
+  if (lldRoom !== undefined) lldRoom.ldesc = undefined;
+
   // Several dam rooms carry a static ldesc in rooms.json (the H2 hotfix S0 baseline).
   // Their FCNs handle all water-level states via M-LOOK, so clear the static ldescs
   // so the dynamic handlers fire instead.
@@ -243,6 +265,36 @@ export function createGame(opts: {
   }
 
   const rng = opts.rng ?? new Rng(seed);
+
+  // I-FOREST-ROOM — per-turn demon (1actions.zil:2996–3002).
+  // Registered after rng is available so the tick body can call rng.prob(15).
+  // Arms to turnsLeft=-1 (demon); FOREST-ROOM / TREE-ROOM M-ENTER call enableClock
+  // to activate it.  Self-disables when the player leaves the forest.
+  //
+  // Forest rooms mirror FOREST-ROOM? (1actions.zil:2992): FOREST-1..3, PATH, UP-A-TREE.
+  // KILL-INTERRUPTS already names this slot (death.ts:115); once registered it goes live.
+  clock.schedule({
+    id: 'I-FOREST-ROOM',
+    turnsLeft: -1,   // demon: fires every advance() while enabled
+    enabled: false,  // FOREST-ROOM / TREE-ROOM M-ENTER arm via enableClock
+    tick(ctx): boolean {
+      const here = player.parent;
+      if (here === null || here === undefined) return true;
+      const hereId = here.id;
+      const inForest =
+        hereId === 'FOREST-1' || hereId === 'FOREST-2' || hereId === 'FOREST-3' ||
+        hereId === 'PATH'     || hereId === 'UP-A-TREE';
+      if (!inForest) {
+        clock.disable('I-FOREST-ROOM');
+        return true;
+      }
+      if (rng.prob(15)) {
+        ctx.tell('You hear in the distance the chirping of a song bird.');
+      }
+      return true;
+    },
+  });
+
   // Separate RNG stream for combat — same seed, independent state.
   // Prevents I-FIGHT draws from shifting the main stream used by grue / randomizeObjects.
   const combatRng: CombatRng = opts.combatRng ?? new Rng(seed);

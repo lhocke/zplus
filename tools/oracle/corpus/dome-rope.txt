@@ -1,0 +1,100 @@
+# dome-rope.txt — rope/dome descent gate
+# generated-by: dfrotz-r119 2026-06-17 dome-rope-cc2
+#
+# MECHANIC: rope/dome descent gate.
+# Global flag: DOME-FLAG — set when rope is tied to the railing in DOME-ROOM.
+# Rooms: DOME-ROOM (down exit gated by DOME-FLAG), TORCH-ROOM (up always blocked).
+# Object: ROPE (actionRoutine: ROPE-FUNCTION) — intercepts V-TIE, V-UNTIE, V-TAKE, V-DROP.
+#
+# ZIL refs: 1actions.zil:3030–3078 (ROPE-FUNCTION), :1030–1050 (DOME-ROOM-FCN),
+#           :1018–1028 (TORCH-ROOM-FCN). 1dungeon.zil:2081-2082 (DOME-ROOM exit).
+#
+# Route (seed -s 1):
+#   West of House → North of House → Behind House → Kitchen → Living Room
+#   → Attic (take knife + rope) → back down → Cellar → Troll Room
+#   (kill troll with knife, 4 hits at -s 1, RNG-variable)
+#   → East-West Passage → Round Room (se) → Engravings Cave (east) → Dome Room
+#   → tie rope to railing (DOME-FLAG set) → down → Torch Room
+#
+# Mechanic exercise (this corpus):
+#   Enters DOME-ROOM, executes `tie rope to railing`, verifies the flag-setting
+#   response ("The rope drops over the side…"), then takes the now-unblocked DOWN
+#   exit to TORCH-ROOM. DOME-FLAG is confirmed visible in both the post-tie LOOK
+#   (rope-hanging line) and the TORCH-ROOM description (rope-descends line).
+#
+# State-table coverage notes (cells 13 / 15 / 16)
+# -----------------------------------------------
+# Cell 13 (untied → flag-false CEXIT → death):
+#   DOME-FLAG=false: DOWN exit has ifFlag="DOME-FLAG" and flag is false.
+#   V-LEAP checks → CEXIT flag-false → "This was not a very safe place to try
+#   jumping." + JIGS-UP(PICK-ONE JUMPLOSS).  Death is RNG-text: unit tests assert
+#   branch (jigsUp fires / "You have died" present), not the specific draw.
+#   dfrotz: from DOME-ROOM without rope tied, `jump` kills the player with one of
+#   the three JUMPLOSS strings.  ZIL ref: gverbs.zil:823–830.
+#
+# Cell 15 (tied → passable exit → V-SKIP):
+#   DOME-FLAG=true: DOWN exit is passable.  V-LEAP sees passable exit, not at
+#   UP-A-TREE → V-SKIP → PICK-ONE from WHEEEEE table (4 entries).  Player does
+#   not move (V-SKIP has no DO-WALK).
+#   dfrotz: from DOME-ROOM with rope tied, `jump` prints one of the WHEEEEE strings.
+#   ZIL ref: gverbs.zil:840, 1269–1276.
+#
+# Cell 16 (bare "climb rope" → V-CLIMB-FOO, NOT descent):
+#   1actions.zil:3050 is <VERB? CLIMB-DOWN> ONLY — ROPE-FUNCTION does not match
+#   V-CLIMB-FOO.  Bare "climb rope" falls through to verbClimbFoo default
+#   "You can't do that!"  Engine previously had the fabricated || V-CLIMB-FOO
+#   disjunct; removed in this commit.
+#   dfrotz: from DOME-ROOM with rope tied, `climb rope` produces "You can't do that!"
+#   ZIL ref: 1actions.zil:3050, gverbs.zil:281.
+#
+# Run with:
+#   dfrotz -s 1 /path/to/zork1.z3 < tools/oracle/corpus/dome-rope.txt
+
+# Set verbose mode.
+verbose
+
+# --- West of House → Kitchen → Attic: acquire knife and rope ---
+open mailbox
+north
+east
+open window
+west
+west
+take lantern
+turn on lantern
+east
+up
+take knife
+take rope
+down
+west
+
+# --- Living Room: open trap door ---
+move rug
+open trap door
+
+# --- Cellar → Troll Room ---
+down
+north
+
+# --- Kill troll (seed -s 1: 4 hits with knife; RNG-variable turns) ---
+~kill troll with knife
+~kill troll with knife
+~kill troll with knife
+~kill troll with knife
+@resync East-West Passage
+
+# --- East-West Passage → Round Room → Engravings Cave → Dome Room ---
+east
+east
+se
+east
+
+# --- MECHANIC: tie rope to railing → sets DOME-FLAG; rope drops over side ---
+tie rope to railing
+
+# --- DOME-FLAG now true: look shows rope hanging from railing ---
+look
+
+# --- Take the now-unblocked down exit → Torch Room ---
+down

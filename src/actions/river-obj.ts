@@ -24,7 +24,7 @@ import { M_END, M_LOOK } from '../engine/messages.js';
 // ---------------------------------------------------------------------------
 
 export const treasureInside: ActionHandler = (ctx) => {
-  if (ctx.verb !== 'open') return false;
+  if (ctx.action !== 'V-OPEN') return false;
   const emerald = ctx.world.get('EMERALD');
   if (emerald !== undefined) ctx.scoreObj(emerald);
   return false;  // RFALSE — normal OPEN proceeds

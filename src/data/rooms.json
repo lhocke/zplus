@@ -44,6 +44,11 @@
         "dir": "sw",
         "to": "STONE-BARROW",
         "ifFlag": "WON-FLAG"
+      },
+      {
+        "dir": "in",
+        "to": "STONE-BARROW",
+        "ifFlag": "WON-FLAG"
       }
     ]
   },
@@ -192,7 +197,14 @@
       {
         "dir": "west",
         "to": "KITCHEN",
-        "ifFlag": "KITCHEN-WINDOW"
+        "ifFlag": "KITCHEN-WINDOW",
+        "elseMessage": "The kitchen window is closed."
+      },
+      {
+        "dir": "in",
+        "to": "KITCHEN",
+        "ifFlag": "KITCHEN-WINDOW",
+        "elseMessage": "The kitchen window is closed."
       }
     ]
   },
@@ -517,7 +529,8 @@
       {
         "dir": "east",
         "to": "EAST-OF-HOUSE",
-        "ifFlag": "KITCHEN-WINDOW"
+        "ifFlag": "KITCHEN-WINDOW",
+        "elseMessage": "The kitchen window is closed."
       },
       {
         "dir": "west",
@@ -526,7 +539,8 @@
       {
         "dir": "out",
         "to": "EAST-OF-HOUSE",
-        "ifFlag": "KITCHEN-WINDOW"
+        "ifFlag": "KITCHEN-WINDOW",
+        "elseMessage": "The kitchen window is closed."
       },
       {
         "dir": "up",
@@ -629,7 +643,8 @@
       {
         "dir": "up",
         "to": "LIVING-ROOM",
-        "ifFlag": "TRAP-DOOR"
+        "ifFlag": "TRAP-DOOR",
+        "elseMessage": "The trap door is closed."
       },
       {
         "dir": "west",
@@ -1362,6 +1377,10 @@
         "to": "CYCLOPS-ROOM"
       },
       {
+        "dir": "in",
+        "to": "CYCLOPS-ROOM"
+      },
+      {
         "dir": "east",
         "to": "LIVING-ROOM"
       }
@@ -2062,6 +2081,12 @@
       },
       {
         "dir": "south",
+        "to": "LAND-OF-LIVING-DEAD",
+        "ifFlag": "LLD-FLAG",
+        "elseMessage": "Some invisible force prevents you from passing through the gate."
+      },
+      {
+        "dir": "in",
         "to": "LAND-OF-LIVING-DEAD",
         "ifFlag": "LLD-FLAG",
         "elseMessage": "Some invisible force prevents you from passing through the gate."
@@ -2905,6 +2930,10 @@
       },
       {
         "dir": "west",
+        "to": "SQUEEKY-ROOM"
+      },
+      {
+        "dir": "in",
         "to": "SQUEEKY-ROOM"
       }
     ]

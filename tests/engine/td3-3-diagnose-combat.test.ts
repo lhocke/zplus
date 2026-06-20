@@ -127,6 +127,15 @@ describe('TD3-3-C: survival line reflects actual RS (score+pStrength)', () => {
     const out = diagnose({ playerPStrength: -2, iCureEnabled: true, iCureTick: 30 });
     expect(out).toContain('You can expect death soon.');
   });
+
+  it('score=0, pStrength=-3 → RS=-1 → "expect death soon" (rs<=0 guard, not ZIL <0?)', () => {
+    // CB6 audit: ZIL uses <0? .RS> which only matches RS=0 exactly; RS<0 falls through
+    // the COND with no branch and prints "You can ." — an unintended ZIL coverage gap.
+    // We keep rs<=0 → "expect death soon" as the faithful-intent fix.
+    // MS=2, pStrength=-3, RS=2+(-3)=-1.
+    const out = diagnose({ playerPStrength: -3, iCureEnabled: true, iCureTick: 20 });
+    expect(out).toContain('You can expect death soon.');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -195,5 +204,22 @@ describe('TD3-3-E: integration — game.turn("diagnose") reflects live pStrength
     expect(out.output).toContain('You are in perfect health.');
     expect(out.output).not.toContain('You have ');  // no wound possession line
     expect(out.output).not.toContain('cured');
+  });
+
+  it('cure-moves arithmetic matches live C-TICK after I-CURE re-queue', () => {
+    // CB6 audit: verify CURE_WAIT*(WD-1)+C-TICK against live clock.queue output.
+    // pStrength=-2 (WD=2), I-CURE queued fresh at CURE_WAIT=30 → curedAfter = 30*(2-1)+30 = 60.
+    const emitter = new SimpleEventEmitter();
+    const game = createGame({ startRoom: 'WEST-OF-HOUSE', events: emitter });
+    game.start();
+
+    const player = (game as unknown as { player: { pStrength: number } }).player;
+    player.pStrength = -2;
+    const clock = (game as unknown as { clock: { queue(id: string, period: number, enabled: boolean): void } }).clock;
+    clock.queue('I-CURE', 30, true);  // fresh arm: turnsLeft=30 = C-TICK
+
+    const out = game.turn('diagnose');
+    // CURE_WAIT*(2-1)+30 = 60
+    expect(out.output).toContain('which will be cured after 60 moves.');
   });
 });

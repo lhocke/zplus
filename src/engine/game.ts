@@ -7,9 +7,8 @@ import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
 import { tokenize } from './parser/tokenizer.js';
-import { executeVerb, describeRoomObjects, META_ACTIONS } from './verbs/index.js';
-import { lit } from './parser/scope.js';
-import { describeRoom as describeRoomMsgs } from './game-messages.js';
+import { ROOMS_SENTINEL } from './parser/gwim.js';
+import { executeVerb, describeRoomObjects, describeRoomShared, META_ACTIONS } from './verbs/index.js';
 import { Scoring } from './scoring.js';
 import { FlagStore } from './flag-store.js';
 import { lookupPer, lookupPreAction } from '../actions/registry.js';
@@ -158,6 +157,11 @@ export class Game {
   // Cleared at the start of each new turn. (B3)
   private fatalPending = false;
 
+  // Set by a handler that teleports the player with GOTO V?=false (look-flag off).
+  // Prevents the post-handler move-detection from firing describeCurrentRoom.
+  // Cleared at the start of each command segment. gverbs.zil:2134–2136.
+  private suppressNextArrivalLook = false;
+
   // Stashed command context for M-END (gmain.zil:151–161).
   // LIVING-ROOM-FCN's M-END branch reads VERB?/PRSO/PRSI (1actions.zil:478–482)
   // to detect a treasure deposit, so M-END needs the just-executed command's values.
@@ -184,6 +188,8 @@ export class Game {
     // Phase-3 dam/river boolean globals — non-default (true) init values.
     // BUOY-FLAG: buoy hint not yet given. 1actions.zil:2842 <GLOBAL BUOY-FLAG T>.
     this.flags.set('BUOY-FLAG', true);
+    // CAGE-TOP: basket is raised at start. 1actions.zil:275 <GLOBAL CAGE-TOP T>.
+    this.flags.set('CAGE-TOP', true);
 
     // WON-FLAG world effects — gverbs.zil:1858–1862.
     // Fired once when SCORE first reaches 350 inside scoreUpd or recomputeTrophy.
@@ -235,6 +241,7 @@ export class Game {
         const tell = (s: string) => outBuf.push(s);
         const ctx = this.buildRobberFcnCtx(this.here.id, tell);
         const vd: VerbDispatch = {
+          action:   actCtx.action,
           verb:     actCtx.verb.toUpperCase(),
           prep:     actCtx.prep,
           prsoId:   actCtx.dobj?.id,
@@ -265,11 +272,19 @@ export class Game {
     // Starts parked; LAUNCH arms it via queueClock(RIVER-SPEEDS[dest], true).
     // 1actions.zil:2708–2720.
     this.clock.schedule(this.makeIRiverEntry());
+
+    // I-XB / I-XC / I-XBH — Hades exorcism timers (1actions.zil:1131–1147, CC1).
+    // Stubs registered parked in bootstrap.ts; overwritten here with closures
+    // that can reach game state (flags, world, here).
+    this.clock.schedule(this.makeIXbEntry());
+    this.clock.schedule(this.makeIXcEntry());
+    this.clock.schedule(this.makeIXbhEntry());
   }
 
   /** Print the intro banner and describe the initial room. */
   start(): string {
-    const roomDesc = this.describeCurrentRoom();
+    // First visit to starting room — lookFlag=true (always verbose on start).
+    const roomDesc = this.describeCurrentRoom(true);
     this.emitRoomEntered(this.here.id);
     return INTRO + '\n' + roomDesc;
   }
@@ -304,25 +319,28 @@ export class Game {
    * The ZIL routine's final T-clause fires RFATAL + clears P-CONT; we replicate
    * that by returning a result and not continuing the turn loop.
    */
-  private ghostDispatch(input: string): TurnResult | undefined {
+  private ghostDispatch(input: string): (TurnResult & { action?: string }) | undefined {
     // Parse to get the action. We need the action id to route the ghost table.
     // A minimal parse is sufficient — we only need the verb.
     const pr = this.parser.parseSegment(input, this.here, this.player, this.world);
 
-    // On parse error / orphan, let the error message through as-is.
+    // On parse error / orphan, let the error message through without a tick
+    // (parse failure never ticks CLOCKER — ZIL gmain.zil:169 P-WON gate).
     if (pr.kind !== 'ok') {
       return { output: pr.message, moved: false };
     }
     const action = pr.command.action;
     const outputs: string[] = [];
     const tell = (s: string): void => { outputs.push(s); };
+    // wrap(r): attach parsed action so turn() can tick for non-meta intercepted commands.
+    const wrap = (r: TurnResult): TurnResult & { action: string } => ({ ...r, action });
 
     // 1actions.zil:3114–3117 — WALK: block west from TIMBER-ROOM only.
     if (action === 'V-WALK') {
       const dir = pr.command.prep;
       if (this.here.id === 'TIMBER-ROOM' && dir === 'west') {
         this.parser.clearContinuation();
-        return { output: 'You cannot enter in your condition.', moved: false };
+        return wrap({ output: 'You cannot enter in your condition.', moved: false });
       }
       // All other movement: pass-through (normal walk).
       return undefined;
@@ -330,9 +348,11 @@ export class Game {
 
     // 1actions.zil:3132–3133 — SCORE: checked before meta pass-through because
     // V-SCORE is in META_ACTIONS but the ghost table intercepts it explicitly.
+    // V-SCORE is meta, so wrap() carries action='V-SCORE'; turn() skips the tick
+    // because META_ACTIONS.has('V-SCORE') is true.
     if (action === 'V-SCORE') {
       this.parser.clearContinuation();
-      return { output: "You're dead! How can you think of your score?", moved: false };
+      return wrap({ output: "You're dead! How can you think of your score?", moved: false });
     }
 
     // 1actions.zil:3118–3120 — meta verbs pass through (BRIEF/VERBOSE/VERSION/SAVE/etc).
@@ -343,43 +363,43 @@ export class Game {
     // 1actions.zil:3121–3122 — attacks are vain.
     if (GHOST_ATTACK_ACTIONS.has(action)) {
       this.parser.clearContinuation();
-      return { output: 'All such attacks are vain in your condition.', moved: false };
+      return wrap({ output: 'All such attacks are vain in your condition.', moved: false });
     }
 
     // 1actions.zil:3123–3127 — physical actions beyond capability.
     if (GHOST_BEYOND_ACTIONS.has(action)) {
       this.parser.clearContinuation();
-      return { output: 'Even such an action is beyond your capabilities.', moved: false };
+      return wrap({ output: 'Even such an action is beyond your capabilities.', moved: false });
     }
 
     // 1actions.zil:3128–3129 — WAIT.
     if (action === 'V-WAIT') {
       this.parser.clearContinuation();
-      return { output: "Might as well. You've got an eternity.", moved: false };
+      return wrap({ output: "Might as well. You've got an eternity.", moved: false });
     }
 
     // 1actions.zil:3130–3131 — LAMP-ON.
     if (action === 'V-LAMP-ON') {
       this.parser.clearContinuation();
-      return { output: 'You need no light to guide you.', moved: false };
+      return wrap({ output: 'You need no light to guide you.', moved: false });
     }
 
     // 1actions.zil:3134–3135 — TAKE or RUB (hand passes through).
     if (action === 'V-TAKE' || action === 'V-RUB') {
       this.parser.clearContinuation();
-      return { output: 'Your hand passes through its object.', moved: false };
+      return wrap({ output: 'Your hand passes through its object.', moved: false });
     }
 
     // 1actions.zil:3136–3137 — DROP / THROW / INVENTORY.
     if (action === 'V-DROP' || action === 'V-THROW' || action === 'V-INVENTORY') {
       this.parser.clearContinuation();
-      return { output: 'You have no possessions.', moved: false };
+      return wrap({ output: 'You have no possessions.', moved: false });
     }
 
     // 1actions.zil:3138–3139 — DIAGNOSE.
     if (action === 'V-DIAGNOSE') {
       this.parser.clearContinuation();
-      return { output: 'You are dead.', moved: false };
+      return wrap({ output: 'You are dead.', moved: false });
     }
 
     // 1actions.zil:3140–3151 — LOOK only (<VERB? LOOK> tests PRSA==V?LOOK).
@@ -397,7 +417,7 @@ export class Game {
       if (!this.here.has(Flag.On)) {
         lines.push('Although there is no light, the room seems dimly illuminated.');
       }
-      return { output: lines.join('\n'), moved: false };
+      return wrap({ output: lines.join('\n'), moved: false });
     }
 
     // 1actions.zil:3152–3169 — PRAY: South-Temple resurrection or "not heard".
@@ -430,18 +450,18 @@ export class Game {
           this.player.moveTo(forest1);
           const enterOut = this.onRoomEntered(forest1);
           if (enterOut) tell(enterOut);
-          tell(this.describeCurrentRoom());
+          tell(this.describeCurrentRoom(false)); // movement arrival
         }
-        return { output: outputs.join('\n'), moved: true };
+        return wrap({ output: outputs.join('\n'), moved: true });
       }
       // 1actions.zil:3168–3169 — elsewhere.
-      return { output: 'Your prayers are not heard.', moved: false };
+      return wrap({ output: 'Your prayers are not heard.', moved: false });
     }
 
     // 1actions.zil:3170–3173 — T (fallback): "You can't even do that."
     // ZIL: SETG P-CONT <>; RFATAL.
     this.parser.clearContinuation();
-    return { output: "You can't even do that.", moved: false };
+    return wrap({ output: "You can't even do that.", moved: false });
   }
 
   /**
@@ -546,14 +566,14 @@ export class Game {
     const mEndNewRoom = mEndNewParent instanceof Room ? mEndNewParent : null;
     if (mEndNewRoom !== null && mEndNewRoom !== mEndPrevHere) {
       const enterOut = this.onRoomEntered(mEndNewRoom);
-      const roomDesc = this.describeCurrentRoom();
+      const roomDesc = this.describeCurrentRoom(false); // movement arrival
       const parts = [enterOut, roomDesc].filter(s => s.length > 0);
       if (parts.length > 0) outputs.push(parts.join('\n'));
     }
 
     // Clock tick — each intercepted command consumes a turn.
     this.moveCount += 1;
-    const clockLines = this.clock.advance();
+    const { lines: clockLines } = this.clock.advance();
     if (clockLines.length > 0) outputs.push(clockLines.join('\n'));
     this.events.emit({ type: 'turn-complete', moves: this.moveCount });
     if (this.fatalPending) {
@@ -575,6 +595,19 @@ export class Game {
     if (this.dead) {
       const ghostResult = this.ghostDispatch(input);
       if (ghostResult !== undefined) {
+        // ZIL: DEAD-FUNCTION returns RFATAL for intercepted commands, which still ticks
+        // CLOCKER (RFATAL suppresses M-END not CLOCKER — gmain.zil:151 vs :169–172).
+        // Parse-failure ghost returns carry no `action` — they skip the tick.
+        // Meta-action intercepts (V-SCORE) carry action but META_ACTIONS.has() filters them.
+        const ga = ghostResult.action;
+        if (ga !== undefined && !META_ACTIONS.has(ga)) {
+          const ghostOutputs = [ghostResult.output];
+          // Ghost intercepts are always single-tick: DEAD-FUNCTION does a bare TELL
+          // and returns before any multi-tick loop (e.g. V-WAIT's 3-tick REPEAT)
+          // can run — dfrotz R119: ghost wait → Moves +1, not +3.
+          this.runSegmentTick(ga, ghostOutputs, false, true);
+          return { output: ghostOutputs[0] ?? ghostResult.output, moved: ghostResult.moved };
+        }
         return ghostResult;
       }
       // undefined → pass-through (movement or meta verbs); fall into normal parse
@@ -597,6 +630,9 @@ export class Game {
 
     let isFirstCall = true;
     while (true) {
+      // Reset per-segment flags.
+      let fatalExit = false;
+      this.suppressNextArrivalLook = false;
       const rawLine = isFirstCall ? input : '';
       isFirstCall = false;
 
@@ -619,7 +655,13 @@ export class Game {
       // Meta-verbs don't consume time (ZIL gmain.zil:171-172 VERB? guard around CLOCKER).
       const segmentConsumesTime = !META_ACTIONS.has(cmd.action);
 
-      const dobj = cmd.dobjIds?.[0] !== undefined ? this.world.get(cmd.dobjIds[0]!) : undefined;
+      const dobjId0 = cmd.dobjIds?.[0];
+      const dobj = dobjId0 !== undefined ? this.world.get(dobjId0) : undefined;
+      // ROOMS_SENTINEL: bare climb/climb-down with no noun; GWIM returns __ROOMS__
+      // which world.get can't resolve. Flag it so verb handlers distinguish nil from
+      // ROOMS (gverbs.zil:300–302 — V-CLIMB-DOWN passes PRSO=ROOMS as OBJ; branch 1
+      // fires only when OBJ is set, including the ROOMS case).
+      const dobjIsRooms = dobjId0 === ROOMS_SENTINEL;
       const iobj = cmd.iobjIds?.[0] !== undefined ? this.world.get(cmd.iobjIds[0]!) : undefined;
 
       // Stash for M-END (gmain.zil:151–161) — LIVING-ROOM-FCN reads these.
@@ -661,18 +703,19 @@ export class Game {
       // runActionChain covers steps 1–6; step 7 (executeVerb) is caller-side,
       // gated on !handled && !fatal.
       const chainResult = this.runActionChain(
-        cmd.verb, cmd.action, dobj, iobj, cmd.prep, cmd.preAction,
+        cmd.verb, cmd.action, dobj, dobjIsRooms, iobj, cmd.prep, cmd.preAction,
         (text) => handled.push(text),
       );
 
       if (chainResult.fatal) {
-        // M-FATAL: skip M-END and abort remaining chained commands (gmain.zil:161).
+        // M-FATAL: skip M-END, still tick CLOCKER (ZIL: RFATAL skips M-END not CLOCKER).
         this.parser.setLastWon(false);
         this.parser.clearContinuation();
         outputs.push(handled.join('\n'));
-        break;
+        fatalExit = true;
       }
 
+      if (!fatalExit) {
       this.parser.setLastWon(true);
 
       if (chainResult.handled) {
@@ -689,7 +732,11 @@ export class Game {
           moved = true;
           const targetRoom = newCurrentRoom ?? (newRoomAfterHandler as Room);
           const enterOut = this.onRoomEntered(targetRoom);
-          const roomDesc = this.describeCurrentRoom();
+          // Skip room desc when the handler used GOTO V?=false (suppressArrivalLook).
+          // ZIL GOTO gverbs.zil:2134–2136: V-FIRST-LOOK only fires when V? is true.
+          const roomDesc = this.suppressNextArrivalLook
+            ? ''
+            : this.describeCurrentRoom(false); // handler-triggered arrival
           const parts = [...handled, ...(enterOut ? [enterOut] : []), roomDesc].filter(s => s.length > 0);
           const cmdOut = parts.join('\n');
           outputs.push(allIterPrefix ? allIterPrefix + cmdOut : cmdOut);
@@ -702,7 +749,9 @@ export class Game {
         // Dispatch on cmd.action (ZIL PRSA), not cmd.verb (verb word) — gmain.zil:283–284.
         const verbResult = executeVerb({
           verb: cmd.verb,
+          action: cmd.action,
           dobj,
+          dobjIsRooms,
           iobj,
           prep: cmd.prep,
           player: this.player,
@@ -728,6 +777,8 @@ export class Game {
           iCureEnabled: this.clock.getEntry('I-CURE')?.enabled ?? false,
           iCureTick: this.clock.getEntry('I-CURE')?.turnsLeft ?? 0,
           disableClock: (id) => this.clock.disable(id),
+          finish: () => this.doFinish((text) => handled.push(text)),
+          thisIsIt: (obj) => { this.parser.setItRef(obj.id); },
           heroBlow: (targetId, weaponId) => {
             const out: string[] = [];
             const entry = this.getVillainEntry(targetId, (s) => out.push(s));
@@ -757,6 +808,7 @@ export class Game {
         }, cmd.action);
 
         if (verbResult.fatal) {
+          // M-FATAL from verb: skip M-END, still tick CLOCKER (RFATAL skips M-END not CLOCKER).
           this.parser.setLastWon(false);
           this.parser.clearContinuation();
           if (verbResult.moved) {
@@ -767,125 +819,121 @@ export class Game {
             }
           }
           outputs.push([...handled, verbResult.output].filter(s => s.length > 0).join('\n'));
-          break;
+          fatalExit = true;
         }
 
-        const parts = [...handled, verbResult.output].filter(s => s.length > 0);
-        const cmdOut = parts.join('\n');
-        outputs.push(allIterPrefix ? allIterPrefix + cmdOut : cmdOut);
+        if (!fatalExit) {
+          const parts = [...handled, verbResult.output].filter(s => s.length > 0);
+          const cmdOut = parts.join('\n');
+          outputs.push(allIterPrefix ? allIterPrefix + cmdOut : cmdOut);
 
-        if (verbResult.moved) {
-          moved = true;
-          const newRoom = this.currentRoom();
+          if (verbResult.moved) {
+            moved = true;
+            const newRoom = this.currentRoom();
 
-          if (verbResult.movedIntoDark) {
-            // Dark destination (ZIL GOTO order): darkPlaceEntered notice, then M-ENTER,
-            // then describeCurrentRoom() → pitch-black message.
-            let enterOut = '';
-            if (newRoom !== null && newRoom !== this.here) {
-              enterOut = this.onRoomEntered(newRoom);
-            }
-            const roomDesc = this.describeCurrentRoom();
-            const mergedParts = [
-              outputs[outputs.length - 1] ?? '',
-              enterOut,
-              roomDesc,
-            ].filter(s => s.length > 0);
-            const idx = outputs.length - 1;
-            if (idx >= 0) {
-              outputs[idx] = mergedParts.join('\n');
-            } else {
-              outputs.push(mergedParts.join('\n'));
-            }
-          } else if (newRoom !== null && newRoom !== this.here) {
-            // Lit destination: fire M-ENTER and prepend its output before room description.
-            const enterOut = this.onRoomEntered(newRoom);
-            if (enterOut.length > 0) {
+            if (verbResult.movedIntoDark) {
+              // Dark destination (ZIL GOTO order): darkPlaceEntered notice, then M-ENTER,
+              // then describeCurrentRoom() → pitch-black message.
+              let enterOut = '';
+              if (newRoom !== null && newRoom !== this.here) {
+                enterOut = this.onRoomEntered(newRoom);
+              }
+              const roomDesc = this.describeCurrentRoom(false); // darkness returns early anyway
+              const mergedParts = [
+                outputs[outputs.length - 1] ?? '',
+                enterOut,
+                roomDesc,
+              ].filter(s => s.length > 0);
               const idx = outputs.length - 1;
               if (idx >= 0) {
-                outputs[idx] = [enterOut, outputs[idx]].join('\n');
+                outputs[idx] = mergedParts.join('\n');
               } else {
-                outputs.push(enterOut);
+                outputs.push(mergedParts.join('\n'));
+              }
+            } else if (newRoom !== null && newRoom !== this.here) {
+              // Lit destination: fire M-ENTER then merge with room description.
+              const enterOut = this.onRoomEntered(newRoom);
+              const idx = outputs.length - 1;
+              if (this.suppressNextArrivalLook) {
+                // M-ENTER returned RTRUE — suppresses V-FIRST-LOOK (gverbs.zil:2134–2136).
+                // The room desc V-WALK embedded is discarded; only the M-ENTER tell survives.
+                if (idx >= 0) {
+                  outputs[idx] = enterOut;
+                } else if (enterOut.length > 0) {
+                  outputs.push(enterOut);
+                }
+              } else if (enterOut.length > 0) {
+                if (idx >= 0) {
+                  // BAT-ROOM only: ZIL 1actions.zil:2484–2486 does <V-LOOK> <CRLF> <FLY-ME>,
+                  // so the room description must precede the M-ENTER output (fweep/grab).
+                  // All other M-ENTER handlers do NOT call V-LOOK so the default ordering
+                  // applies: M-ENTER output before the room description.
+                  const batRoomFirst = newRoom.id === 'BAT-ROOM';
+                  outputs[idx] = batRoomFirst
+                    ? [outputs[idx], enterOut].join('\n')
+                    : [enterOut, outputs[idx]].join('\n');
+                } else {
+                  outputs.push(enterOut);
+                }
+              }
+            }
+          }
+        }
+      } // closes: else (verbResult dispatch path)
+      } // end if (!fatalExit) — non-fatal path: chainResult.handled / verbResult dispatch
+
+      // M-END (gmain.zil:151–161): unconditional post-turn room callback on the
+      // current room (post-GOTO). Passes stashed verb/dobj/iobj/prep so handlers
+      // like LIVING-ROOM-FCN can read VERB?/PRSO/PRSI.
+      // Skipped on M-FATAL (RFATAL suppresses M-END per ZIL gmain.zil:151).
+      if (!fatalExit) {
+        const mEndOut = this.runMEnd(this.here);
+        if (mEndOut.length > 0) {
+          const idx = outputs.length - 1;
+          if (idx >= 0) {
+            outputs[idx] = [outputs[idx], mEndOut].filter(s => s.length > 0).join('\n');
+          } else {
+            outputs.push(mEndOut);
+          }
+        }
+
+        // Post-M-END move detection: some M-END handlers (e.g. LOUD-ROOM-FCN panic
+        // scramble) call ctx.moveTo to GOTO a new room.  Fire onRoomEntered +
+        // describeCurrentRoom so this.here is updated and the new room is described.
+        // Guard: new parent must be a Room (not a vehicle/container) and must differ
+        // from the pre-M-END room to avoid false triggers for players inside vehicles.
+        // Exception: when suppressNextArrivalLook is set (M-ENTER RTRUE path, e.g.
+        // DOME-ROOM dead-player teleport), the destination was already handled in M-ENTER;
+        // update this.here via onRoomEntered for housekeeping but emit nothing.
+        const mEndNewParent = this.player.parent;
+        const mEndNewRoom = mEndNewParent instanceof Room ? mEndNewParent : null;
+        if (mEndNewRoom !== null && mEndNewRoom !== this.here) {
+          moved = true;
+          const enterOut = this.onRoomEntered(mEndNewRoom);
+          // suppressNextArrivalLook: M-ENTER RTRUE already handled the move (e.g. dome
+          // dead-player teleport).  this.here is updated; nothing more to emit.
+          if (!this.suppressNextArrivalLook) {
+            const roomDesc = this.describeCurrentRoom(false); // M-END movement arrival
+            const mEndParts = [enterOut, roomDesc].filter(s => s.length > 0);
+            if (mEndParts.length > 0) {
+              const idx = outputs.length - 1;
+              if (idx >= 0) {
+                outputs[idx] = [outputs[idx], ...mEndParts].filter(s => s.length > 0).join('\n');
+              } else {
+                outputs.push(mEndParts.join('\n'));
               }
             }
           }
         }
       }
 
-      // M-END (gmain.zil:151–161): unconditional post-turn room callback on the
-      // current room (post-GOTO). Passes stashed verb/dobj/iobj/prep so handlers
-      // like LIVING-ROOM-FCN can read VERB?/PRSO/PRSI.
-      const mEndPrevHere = this.here;
-      const mEndOut = this.runMEnd(this.here);
-      if (mEndOut.length > 0) {
-        const idx = outputs.length - 1;
-        if (idx >= 0) {
-          outputs[idx] = [outputs[idx], mEndOut].filter(s => s.length > 0).join('\n');
-        } else {
-          outputs.push(mEndOut);
-        }
-      }
-
-      // Post-M-END move detection: some M-END handlers (e.g. LOUD-ROOM-FCN panic
-      // scramble) call ctx.moveTo to GOTO a new room.  Fire onRoomEntered +
-      // describeCurrentRoom so this.here is updated and the new room is described.
-      // Guard: new parent must be a Room (not a vehicle/container) and must differ
-      // from the pre-M-END room to avoid false triggers for players inside vehicles.
-      const mEndNewParent = this.player.parent;
-      const mEndNewRoom = mEndNewParent instanceof Room ? mEndNewParent : null;
-      if (mEndNewRoom !== null && mEndNewRoom !== mEndPrevHere) {
-        moved = true;
-        const enterOut = this.onRoomEntered(mEndNewRoom);
-        const roomDesc = this.describeCurrentRoom();
-        const parts = [enterOut, roomDesc].filter(s => s.length > 0);
-        if (parts.length > 0) {
-          const idx = outputs.length - 1;
-          if (idx >= 0) {
-            outputs[idx] = [outputs[idx], ...parts].filter(s => s.length > 0).join('\n');
-          } else {
-            outputs.push(parts.join('\n'));
-          }
-        }
-      }
-
       // CLOCKER tick — once per non-meta executed command (gclock.zil).
-      // V-WAIT exception (gverbs.zil:1514–1519): ZIL's V-WAIT calls CLOCKER up
-      // to NUM=3 times in a loop, stopping early when an interrupt fires.  The
-      // main GMAIN CLOCKER call is then skipped (CLOCK-WAIT flag).  We mirror
-      // this here: run up to 3 CLOCKER advances for V-WAIT, stop on first fire.
+      // Runs for both normal and M-FATAL (blocked V-WALK) segments: RFATAL
+      // suppresses M-END but not CLOCKER (ZIL gmain.zil:151 vs :169–172).
       if (segmentConsumesTime) {
-        const isWait = cmd.action === 'V-WAIT';
-        const maxClocks = isWait ? 3 : 1;
-        let fatalFromClock = false;
-
-        for (let ci = 0; ci < maxClocks; ci++) {
-          this.moveCount += 1;
-          const clockLines = this.clock.advance();
-          const clockFiredThisTick = clockLines.length > 0;
-          if (clockFiredThisTick) {
-            const clockText = clockLines.join('\n');
-            const idx = outputs.length - 1;
-            if (idx >= 0) {
-              outputs[idx] = [outputs[idx], clockText].filter(s => s.length > 0).join('\n');
-            } else {
-              outputs.push(clockText);
-            }
-          }
-          this.events.emit({ type: 'turn-complete', moves: this.moveCount });
-
-          // B3: I-FIGHT / I-RIVER JIGS-UP → abort turn.
-          if (this.fatalPending) {
-            this.fatalPending = false;
-            this.parser.clearContinuation();
-            fatalFromClock = true;
-            break;
-          }
-
-          // V-WAIT: stop loop when an interrupt fired (mirrors ZIL <CLOCKER> → <RETURN>).
-          if (isWait && clockFiredThisTick) break;
-        }
-
-        if (fatalFromClock) break;
+        if (this.runSegmentTick(cmd.action, outputs, fatalExit)) break;
+      } else if (fatalExit) {
+        break;
       }
 
       if (!this.parser.hasContinuation()) {
@@ -894,6 +942,58 @@ export class Game {
     }
 
     return { output: outputs.join('\n'), moved };
+  }
+
+  /**
+   * Advance CLOCKER for one executed segment (non-meta non-parse-failure command).
+   * Owns the V-WAIT multi-tick loop (up to 3 advances, stop on interrupt).
+   * Fatal segments (blocked V-WALK, RFATAL) always use maxClocks=1 — they are
+   * never V-WAIT, so the loop body runs exactly once.
+   *
+   * `singleTick` forces maxClocks=1 regardless of action — used by the ghost
+   * dispatch path because DEAD-FUNCTION intercepts WAIT with a bare TELL before
+   * V-WAIT's 3-tick REPEAT runs (1actions.zil:3128–3129 vs gverbs.zil:1514).
+   *
+   * Appends clock interrupt text directly to `outputs` (last entry or a new entry).
+   * Returns true when the turn should abort (fatalPending fired, or fatalExit set).
+   */
+  private runSegmentTick(
+    action: string,
+    outputs: string[],
+    fatalExit: boolean,
+    singleTick = false,
+  ): boolean {
+    const isWait = !singleTick && action === 'V-WAIT';
+    // Fatal segments are never V-WAIT (RFATAL on a blocked walk → maxClocks=1).
+    const maxClocks = isWait ? 3 : 1;
+
+    for (let ci = 0; ci < maxClocks; ci++) {
+      this.moveCount += 1;
+      const { lines: clockLines, interrupted } = this.clock.advance();
+      if (clockLines.length > 0) {
+        const clockText = clockLines.join('\n');
+        const idx = outputs.length - 1;
+        if (idx >= 0) {
+          outputs[idx] = [outputs[idx], clockText].filter(s => s.length > 0).join('\n');
+        } else {
+          outputs.push(clockText);
+        }
+      }
+      this.events.emit({ type: 'turn-complete', moves: this.moveCount });
+
+      if (this.fatalPending) {
+        this.fatalPending = false;
+        this.parser.clearContinuation();
+        return true;
+      }
+
+      // V-WAIT stops early when CLOCKER returns true — an interrupt routine fired
+      // (gverbs.zil:1518 <CLOCKER> <RETURN>).  Burnout returns false, so it does
+      // not stop the loop even though it pushes a message (LIGHT-INT 1actions:2333).
+      if (isWait && interrupted) break;
+    }
+
+    return fatalExit;
   }
 
   /** Return a read-only snapshot of current game state. */
@@ -932,6 +1032,7 @@ export class Game {
     verb: string,
     action: string,
     dobj: GameObject | undefined,
+    dobjIsRooms: boolean,
     iobj: GameObject | undefined,
     prep: string | undefined,
     rarg: number | undefined,
@@ -944,6 +1045,7 @@ export class Game {
       verb,
       action,
       dobj,
+      dobjIsRooms: dobjIsRooms || undefined,
       iobj,
       prep,
       world: this.world,
@@ -964,7 +1066,13 @@ export class Game {
       isDead: () => this.dead,
       queueClock: (id, period, enabled) => this.clock.queue(id, period, enabled),
       getGlobal: (n) => this.flags.get(n),
-      setGlobal: (n, v = true) => this.flags.set(n, v),
+      setGlobal: (n, v = true) => {
+        // LUCKY is stored on the Game instance (not FlagStore) so zprob callers
+        // read it directly via getLucky(). Intercept here so MIRROR-MUNG can flip it.
+        // 1actions.zil:1009 (<SETG LUCKY <>>).
+        if (n === 'LUCKY') { this.lucky = v; return; }
+        this.flags.set(n, v);
+      },
       getIntGlobal: (n) => {
         if (n === 'WATER-LEVEL') return this.waterLevel;
         if (n === 'BEACH-DIG')   return this.beachDig;
@@ -979,6 +1087,7 @@ export class Game {
         if (room !== undefined) room.ldesc = desc;
       },
       thisIsIt: (obj) => { this.parser.setItRef(obj.id); },
+      suppressArrivalLook: () => { this.suppressNextArrivalLook = true; },
       fatal: onFatal ?? (() => { /* no-op when not in a dispatch chain */ }),
       jigsUp: (msg: string) => {
         jigsUp(msg, this.jigsUpMsgs(), this.makeJigsUpCallbacks(tell, onFatal ?? (() => {})));
@@ -998,6 +1107,7 @@ export class Game {
     verb: string,
     action: string,
     dobj: GameObject | undefined,
+    dobjIsRooms: boolean,
     iobj: GameObject | undefined,
     prep: string | undefined,
     preAction: string | undefined,
@@ -1007,7 +1117,7 @@ export class Game {
     const onFatal = (): void => { fatal = true; };
 
     const ctx = (self: GameObject, rarg?: number): ActionContext =>
-      this.makeContext(self, verb, action, dobj, iobj, prep, rarg, tell, onFatal);
+      this.makeContext(self, verb, action, dobj, dobjIsRooms, iobj, prep, rarg, tell, onFatal);
 
     // WINNER (actor) P?ACTION — gmain.zil:211
     if (this.player.handler !== undefined) {
@@ -1080,7 +1190,7 @@ export class Game {
   ): ObjectId | undefined {
     const per = lookupPer(routineName);
     if (per === undefined) return undefined;
-    const ctx = this.makeContext(here, 'walk', 'V-WALK', undefined, undefined, undefined, undefined, tell);
+    const ctx = this.makeContext(here, 'walk', 'V-WALK', undefined, false, undefined, undefined, undefined, tell);
     return per(ctx);
   }
 
@@ -1110,56 +1220,36 @@ export class Game {
     const enterBuf: string[] = [];
     if (room.handler !== undefined) {
       const ctx = this.makeContext(
-        room, 'walk', 'V-WALK', undefined, undefined, undefined, M_ENTER,
+        room, 'walk', 'V-WALK', undefined, false, undefined, undefined, M_ENTER,
         (text) => enterBuf.push(text),
       );
-      room.handler(ctx);
+      const enterHandled = room.handler(ctx);
+      // gverbs.zil:2123 — after M-ENTER, if RTRUE AND HERE changed (M-ENTER
+      // teleported the player via MOVE+SETG rather than calling GOTO which would
+      // fire its own V-FIRST-LOOK), GOTO exits before V-FIRST-LOOK.
+      // DOME-ROOM dead-player path: RTRUE + player moved to TORCH-ROOM → suppress.
+      // BAT-ROOM: M-ENTER returns false (FLY-ME's nested GOTO handles V-FIRST-LOOK).
+      if (enterHandled && this.player.parent !== room) {
+        this.suppressNextArrivalLook = true;
+      }
     }
     this.emitRoomEntered(room.id, (text) => enterBuf.push(text));
     return enterBuf.join('\n');
   }
 
-  private describeCurrentRoom(): string {
-    // Darkness gate — gverbs.zil:1637-1649.
-    // alwaysLit suppresses darkness for ghost mode (ALWAYS-LIT global, 1actions.zil:4083).
-    if (!this.alwaysLit && !lit(this.here, this.player, this.world)) {
-      const sprayed = this.flags.get('SPRAYED?');
-      return sprayed ? describeRoomMsgs.darkSprayed : describeRoomMsgs.darkNoSpray;
-    }
-
-    // ZIL gverbs.zil:1649–1679: when player is in a vehicle, the room title
-    // becomes "<room>, in the <vehicle>" and the vehicle is NOT listed as a room
-    // object; instead the vehicle's contents are shown (PRINT-CONT on the vehicle).
-    const vehicle = (this.player.parent !== null && this.player.parent !== undefined &&
-                     !(this.player.parent instanceof Room) &&
-                     this.player.parent.has(Flag.Vehicle))
-      ? this.player.parent
-      : null;
-
-    const lines: string[] = [
-      vehicle !== null
-        ? `${this.here.desc}, in the ${vehicle.desc}`
-        : this.here.desc,
-    ];
-
-    if (this.here.ldesc) {
-      lines.push(this.here.ldesc);
-    } else if (this.here.handler !== undefined) {
-      const buf: string[] = [];
-      const ctx = this.makeContext(
-        this.here, 'look', 'V-LOOK', undefined, undefined, undefined, M_LOOK,
-        (text) => buf.push(text),
-      );
-      this.here.handler(ctx);
-      if (buf.length > 0) lines.push(buf.join('\n'));
-    }
-
-    // ZIL DESCRIBE-OBJECTS (gverbs.zil:1681-1684) — always calls PRINT-CONT on
-    // HERE. When player is in a vehicle, PRINT-CONT internally skips the vehicle
-    // (PV? path :1753-1795), shows room objects first, then vehicle contents.
-    describeRoomObjects(this.here, this.player, (s) => lines.push(s));
-
-    return lines.join('\n');
+  // lookFlag=true: explicit LOOK or first-look semantics (always verbose).
+  // lookFlag=false: movement arrival (brief when room already Touched).
+  // Delegates to describeRoomShared (gverbs.zil:1635-1679).
+  private describeCurrentRoom(lookFlag = false): string {
+    return describeRoomShared(
+      this.here,
+      this.player,
+      lookFlag,
+      (room) => this.runMLook(room),
+      this.world,
+      (n) => this.flags.get(n),
+      this.alwaysLit,
+    );
   }
 
   /** Run a room's M-LOOK handler and return the output — used by the verb layer. */
@@ -1167,7 +1257,7 @@ export class Game {
     if (room.handler === undefined) return '';
     const buf: string[] = [];
     const ctx = this.makeContext(
-      room, 'look', 'V-LOOK', undefined, undefined, undefined, M_LOOK,
+      room, 'look', 'V-LOOK', undefined, false, undefined, undefined, M_LOOK,
       (text) => buf.push(text),
     );
     room.handler(ctx);
@@ -1188,6 +1278,7 @@ export class Game {
       this.lastVerb,
       this.lastAction,
       this.lastDobj,
+      false,
       this.lastIobj,
       this.lastPrep,
       M_END,
@@ -1952,7 +2043,7 @@ export class Game {
             this.player.moveTo(dest);  // ZIL GOTO moves the player
             const enterOut = this.onRoomEntered(dest);
             if (enterOut) ctx.tell(enterOut);
-            ctx.tell(this.describeCurrentRoom());
+            ctx.tell(this.describeCurrentRoom(false)); // panic scramble arrival
           }
         } else if (hereId === 'RESERVOIR-NORTH' || hereId === 'RESERVOIR-SOUTH') {
           // :1255
@@ -2093,7 +2184,7 @@ export class Game {
             // Re-describe: fire onRoomEntered for M-ENTER + score
             const enterOut = this.onRoomEntered(dest);
             if (enterOut) ctx.tell(enterOut);
-            ctx.tell(this.describeCurrentRoom());
+            ctx.tell(this.describeCurrentRoom(false)); // river drift arrival
           }
           // :2715 — re-arm at new section's speed (NM-H: read speed AFTER the move)
           const newSpeed = RIVER_SPEEDS[nextId];
@@ -2113,6 +2204,77 @@ export class Game {
         }
 
         return true;  // keep entry registered (re-arm or keep for disable)
+      },
+    };
+  }
+
+  // I-XB — ceremony timeout (6 ticks). 1actions.zil:1131–1138.
+  // Fires when XC was never set: prints break message if player is at the gate,
+  // then clears XB.  Returns true to park (turnsLeft=0) and stay registered — the
+  // ZIL C-TABLE slot is re-armable by a later RING BELL; returning false would
+  // delete the entry and soft-lock a second ceremony.
+  private makeIXbEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-XB',
+      turnsLeft: 0,
+      enabled: false,
+      tick: (ctx): boolean => {
+        // :1132 — if XC is already true, skip the break message.
+        if (!this.flags.get('XC') &&
+            this.here.id === 'ENTRANCE-TO-HADES') {
+          ctx.tell(
+            'The tension of this ceremony is broken, and the wraiths, amused but\n' +
+            'shaken at your clumsy attempt, resume their hideous jeering.',
+          );
+        }
+        this.flags.set('XB', false);
+        return true; // stay registered + parked — re-armable by a later RING BELL
+      },
+    };
+  }
+
+  // I-XC — prayer window (3 ticks). 1actions.zil:1139–1141.
+  // Clears XC then calls the I-XB body (which re-checks XC — now false — and breaks).
+  private makeIXcEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-XC',
+      turnsLeft: 0,
+      enabled: false,
+      tick: (ctx): boolean => {
+        this.flags.set('XC', false);
+        // Inline I-XB behaviour: XC is now false, so the break message fires.
+        if (this.here.id === 'ENTRANCE-TO-HADES') {
+          ctx.tell(
+            'The tension of this ceremony is broken, and the wraiths, amused but\n' +
+            'shaken at your clumsy attempt, resume their hideous jeering.',
+          );
+        }
+        this.flags.set('XB', false);
+        return true; // stay registered + parked — re-armable by a later RING BELL
+      },
+    };
+  }
+
+  // I-XBH — bell cooldown (20 ticks). 1actions.zil:1143–1147.
+  // Removes HOT-BELL, moves BELL back to ENTRANCE-TO-HADES.
+  // Prints a message if the player is present.
+  private makeIXbhEntry(): import('./clock.js').ClockEntry {
+    return {
+      id: 'I-XBH',
+      turnsLeft: 0,
+      enabled: false,
+      tick: (ctx): boolean => {
+        const hotBell = this.world.get('HOT-BELL');
+        if (hotBell !== undefined) hotBell.moveTo(null);  // REMOVE-CAREFULLY
+
+        const bell = this.world.get('BELL');
+        const hades = this.world.get('ENTRANCE-TO-HADES');
+        if (bell !== undefined && hades !== undefined) bell.moveTo(hades);
+
+        if (this.here.id === 'ENTRANCE-TO-HADES') {
+          ctx.tell('The bell appears to have cooled down.');
+        }
+        return true; // stay registered + parked — re-armable by a later RING BELL
       },
     };
   }
@@ -2141,7 +2303,7 @@ export class Game {
         this.player.moveTo(room);
         return this.onRoomEntered(room);
       },
-      describeRoom: () => this.describeCurrentRoom(),
+      describeRoom: () => this.describeCurrentRoom(true), // resurrection re-look = explicit look
       clearContinuation: () => { this.parser.clearContinuation(); },
       finish: () => { this.doFinish(tell); },
       signalFatal: onFatal,

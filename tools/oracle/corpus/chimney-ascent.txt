@@ -1,4 +1,5 @@
 # Chimney-ascent corpus — Zork I oracle harness
+# generated-by: dfrotz-r119 2026-06-19 chimney-ascent-bd7
 #
 # MECHANIC: Studio chimney ascent (UP-CHIMNEY-FUNCTION).
 #

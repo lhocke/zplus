@@ -394,7 +394,8 @@ describe('CB-DAM3 — PUTTY-FCN: rejects OIL use', () => {
     const ctx: ActionContext = {
       self: putty,
       actor: player,
-      verb: 'lubricate',  // ZIL OIL maps to lubricate in the port's verb table
+      action: 'V-OIL',   // lubricate/oil → V-OIL
+      verb: 'lubricate',
       dobj: bolt,
       iobj: putty,
       world,
@@ -434,6 +435,7 @@ describe('CB-DAM3 — PUTTY-FCN: rejects OIL use', () => {
     const ctx: ActionContext = {
       self: putty,
       actor: player,
+      action: 'V-PUT',
       verb: 'put',
       dobj: putty,
       iobj: undefined,

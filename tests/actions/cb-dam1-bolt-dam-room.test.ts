@@ -275,7 +275,7 @@ describe('CB-DAM1 — DAM-FUNCTION: joke verbs (1actions.zil:1400–1410)', () =
     const dam = g.world.get('DAM')!;
     const out: string[] = [];
     const ctx: ActionContext = {
-      self: dam, actor: g.player, verb: 'plug', dobj: dam, iobj: undefined,
+      self: dam, actor: g.player, action: 'V-PLUG', verb: 'plug', dobj: dam, iobj: undefined,
       world: g.world, here: g.player.parent as Room,
       tell: (s) => { out.push(s); },
       hasFlag: (o, f) => o.has(f),

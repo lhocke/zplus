@@ -1,6 +1,6 @@
 # Phase 3 — World Verbs, Puzzle Handlers & the Engine-Behavior Bug Sweep
 
-**Status:** AMENDED 2026-06-12 (Amendments A + A.1: re-measured at main 230c07a; queued additions folded in; three-lens panel fixes applied — see §14). LOCKED for the wave; user review of autonomous ratifications (§13 OQ-7..9) pending.
+**Status:** AMENDED 2026-06-12 (Amendments A + A.1: re-measured at main 230c07a; queued additions folded in; three-lens panel fixes applied — see §14). LOCKED for the wave. Autonomous ratifications (§13 OQ-7/8/9 + the A.2 wait-edge correction) ACCEPTED by owner 2026-06-13 — each had a passing dfrotz-anchored task behind it (CB5/CA2/CC5).
 
 > **LINE-REF RULE (A.1):** every inline `file:line` outside §2-A that carries a
 > "(measured at phase-2-combat 4d8c252)" annotation is KNOWN-STALE. Resolve locations against
@@ -279,15 +279,20 @@ AUDIT/RECONCILE task, not a build:** (1) verify the loop-driven form against the
 no-double-tick (the isWait branch must replace, never add to, the normal end-of-turn tick;
 **concrete assertion (A.1): plain `wait` with no pending interrupt advances `moveCount` by
 exactly 3 — not 4**), mid-wait interrupt early-stop, mid-wait death, `wait` in the dark, AND
-**(A.1, panel-confirmed) the printed-vs-interrupted distinction:** the current stop condition
-`clockFiredThisTick = clockLines.length > 0` (game.ts:885) halts on ANY clock output, but ZIL
-stops only when `<CLOCKER>` returns true — an interrupt routine FIRED (gverbs.zil:1514–1519).
-A benign warning print (lamp dimming) must NOT stop the wait at tick 1 when dfrotz continues
-to 3 — anchor this exact case in `wait.txt` (wait across a lamp-warning tick) before ruling;
-(2) author `wait.txt` vs dfrotz; (3) if every edge matches, RATIFY loop-driven-equivalent here
-(OQ-8) and update OQ-1's note — refactor the STOP CONDITION (or the whole form to (a)) if the
-warning-print edge diverges. Do not rip out a dfrotz-validated mechanism on mechanism-purity
-grounds; do not keep a stop condition dfrotz disproves.
+**(A.2 — dfrotz-settled) the printed-vs-interrupted distinction:** the original
+`clockLines.length > 0` stop condition was genuinely wrong, but NOT for the reason A.1
+asserted. **dfrotz R119 ground truth (live runs, 2026-06-12):** a lamp WARNING firing on wait
+tick 1 DOES stop the wait — Moves 205 → 206, delta +1 (A.1's "must not stop" claim was an
+unverified inference; dfrotz disproves it). What must NOT stop the wait is the lamp BURNOUT
+sentinel — it prints but returns false; dfrotz continues to +3 (Moves 388 → 391, corpus
+CASE 3). ZIL semantics: `<CLOCKER>` returns the interrupt routine's value (gverbs.zil:
+1514–1519) — warning branch returns true (stops), burnout sentinel returns false (doesn't).
+The faithful stop condition is the per-entry `interrupted` flag (returned && entryTold —
+clock.ts:122–139 + game.ts:941), implemented and dfrotz-verified at 252877a across all seven
+edges (plain +3; warning tick 1/2 → +1/+2; burnout tick 1/2/3 → +3; dark +3);
+(2) `wait.txt` is authored (386/386 vs dfrotz) — ADD the warning-on-tick-1 case so the
+contested edge is corpus-anchored, not only unit-anchored; (3) OQ-8 ratified per the above.
+Do not re-litigate the stop condition against any prose claim — only against a dfrotz run.
 
 ### 3.3 Relit-match burnout re-arm — `light-sources.ts` (I-MATCH) — EXTEND
 
@@ -754,6 +759,8 @@ was already moved — do not re-schedule it here).
 | **DGC-7** | Chimney→Kitchen arrival: abbreviated revisit view, not full description | BD7 / chimney | dfrotz climb chimney into already-visited Kitchen; capture the brief arrival. |
 | **DGC-8** | ~~Disambiguation prompt Oxford-comma format~~ **moot** — BD8 fixed at main (§2-A); row retained so V2's diff audit can still map any disambig delta | BD8 | dfrotz a genuinely ambiguous command; capture the exact "the X, the Y, or the Z?" line. |
 | **DGC-9** | Movement-arrival lines after first visit lose their ldesc re-print (TOUCHBIT-gated brief mode, CB5 §4.6); DGC-7 is one instance of this class | CB5 / gverbs.zil:1650–1678 | Re-run the golden command file through dfrotz R119; every revisit-arrival line re-baselines from that single transcript. The stash@{1} test deltas predict the blast radius (RESERVOIR-SOUTH, DAM room, +more) but are NOT a source — dfrotz is. |
+| **DGC-10** | The 3 `examine house` lines (North-of-House ×2, South-of-House ×1) change from the stub "There's nothing special about the white house." to the 2-line ZIL house description | CC9 / WHITE-HOUSE-F (1actions.zil:115–116) | dfrotz R119 `examine house` at North + South of House; the 2-line text ("The house is a beautiful colonial house which is painted white." / "It is clear that the owners must have been extremely wealthy.") byte-matches 1actions.zil:115–116. Dfrotz-anchored. |
+| **DGC-11** | The 2 songbird lines "You hear in the distance the chirping of a song bird." at the seed-42 forest-arrival moves (`west`→Forest, `west`→Forest Path) | CC9 / I-FOREST-ROOM registered (§6.9) | **ENGINE-DETERMINISM ARTIFACT — NOT dfrotz-anchored** (see the exception note below). The chirp STRING is dfrotz-verified (byte-identical to dfrotz's I-FOREST-ROOM line); the POSITION is a seed-42 Mulberry32 draw dfrotz cannot reproduce. Regression-lock only, regenerated from the seeded engine run — like the seed-42 grue death already pinned. (Separate open check: dfrotz chirped ~35% vs our prob(15); if the rate is corrected these positions re-derive — CC9 follow-up.) |
 
 **Provenance contract (L41, added 2026-06-12):** every oracle corpus file and golden baseline
 carries a first-line header naming its generator — `# generated-by: dfrotz-r119 <date> <cmd>`
@@ -773,6 +780,18 @@ every changed line in the golden maps to a DGC row, and verifies each replacemen
 snapshot. Re-baselines are never self-referential. A reviewer audits: (1) diff golden vs
 previous golden, (2) every changed line names a DGC row, (3) that row's dfrotz capture
 contains the new line at the claimed (command, move#).
+
+**Engine-RNG determinism artifacts (the one exception to "never self-referential", added
+2026-06-13):** a few golden lines are produced by our seeded RNG (Mulberry32 @ seed 42) and
+**cannot** be dfrotz-anchored — dfrotz's Z-machine RNG draws a different sequence, so the
+line's *position* in our transcript has no dfrotz equivalent (its *text* is still
+dfrotz-verified). These (the seed-42 grue death; the I-FOREST-ROOM songbird chirps, DGC-11)
+are pinned as **regression locks only** — they prove the engine still produces the same
+seeded output it did before, NOT that a specific draw is faithful. They are regenerated from
+the seeded engine run, are **exempt from the dfrotz-anchoring requirement**, and MUST be
+tagged "engine-determinism artifact" in their register row so the §10.2 audit does not demand
+an impossible dfrotz capture. This exception is narrow: it covers ONLY lines whose presence is
+a structural RNG fire (SONGBIRD/grue), never a verb default, room description, or timer phase.
 
 ---
 
@@ -1035,16 +1054,26 @@ depends on a cluster (BD-A V-INVENTORY is independent; CC10 BOOM needs Phase-2 j
    **RATIFIED (2026-06-12, autonomous run — user review pending):** handler-wins-with-ldesc-
    fallback, transcribed from gverbs.zil DESCRIBE-ROOM (§4.6 amended, item 2). Supersedes the
    28bfc98 ldesc-deletion pattern; the 16 default-state ldescs stay as fallbacks.
+   **ACCEPTED by owner 2026-06-13** (CB5 built it; passed the critic panel vs dfrotz).
 
 8. **OQ-8 — V-WAIT mechanism: keep the dam wave's loop-driven 3-tick form, or refactor to
-   OQ-1's option (a)?** **PROVISIONALLY RATIFIED (2026-06-12, autonomous run):** keep the
-   loop-driven form IF the CA2 edge audit (§3.2 amended) passes all four edges; refactor to (a)
-   only on a proven divergence. Rationale: the form is dfrotz-validated by six dam corpora;
-   mechanism purity does not outrank behavioral anchoring.
+   OQ-1's option (a)?** **RE-RATIFIED (2026-06-12, CA2 audit+repair):** keep the loop-driven
+   form. Stop condition uses `clock.advance()` `interrupted` flag (`returned && entryTold`
+   per entry), not `clockLines.length>0`. Lamp warnings set `interrupted=true` (call
+   `ctx.tell` and return truthy) → early stop; burnout sets `interrupted=false` (returns
+   false) → loop continues through tick 3 and prints "You'd better have more light than from
+   the brass lantern." wait.txt CASE 3 (dfrotz R119, 2026-06-12) anchors burnout-during-wait
+   at mc=388→391. **A.2 evidence supplement (the case that settles the contested edge):
+   live dfrotz R119 confirms warning-on-wait-tick-1 STOPS the wait — Moves 205→206, delta
+   +1 (engine matches). A.1's contrary "warnings must not stop" claim was unverified
+   inference, now disproven; no reviewer may re-raise it without a fresh dfrotz run.**
+   DGC-2 not triggered (no wait lines in the golden walkthrough).
+   **ACCEPTED by owner 2026-06-13** (CA2 passed; the A.2 self-correction is part of this acceptance).
 
 9. **OQ-9 — SKELETON rob helper.** **RATIFIED (2026-06-12, autonomous run):** OQ-4 is obsolete —
    its premise (thief wave unbuilt) inverted when the thief wave merged first. CC5 reuses
    thief.ts `rob()`; building a parallel minimal helper is forbidden duplication.
+   **ACCEPTED by owner 2026-06-13** (CC5 built it on the shared `rob()`; passed).
 
 ---
 

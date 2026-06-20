@@ -106,6 +106,8 @@ function makeFixture(): Fixture {
     adjectives: ['wooden'],
     ldesc: 'A heavy wooden chest.',
   });
+  chest.props.set('CAPACITY', 100);
+  chest.props.set('SIZE', 10);
   // Chest is closed initially (no Flag.Open).
   chest.moveTo(clearing);
 

@@ -66,11 +66,35 @@ function makeObj(
 // Context factory
 // ---------------------------------------------------------------------------
 
+/** Derive the ZIL PRSA action id from verb+prep, mirroring syntax.json dispatch. */
+function verbToAction(verb: string, prep?: string): string {
+  const p = prep?.toUpperCase();
+  switch (verb) {
+    case 'take':    return 'V-TAKE';
+    case 'drop':    return 'V-DROP';
+    case 'put':     return p === 'ON' ? 'V-PUT-ON' : 'V-PUT';
+    case 'open':    return 'V-OPEN';
+    case 'close':   return 'V-CLOSE';
+    case 'listen':  return 'V-LISTEN';
+    case 'examine':
+      return (p === 'IN' || p === 'ON') ? 'V-LOOK-INSIDE' : 'V-EXAMINE';
+    case 'look':
+      if (p === 'AT')     return 'V-EXAMINE';
+      if (p === 'IN' || p === 'WITH') return 'V-LOOK-INSIDE';
+      if (p === 'UNDER')  return 'V-LOOK-UNDER';
+      if (p === 'BEHIND') return 'V-LOOK-BEHIND';
+      if (p === 'ON')     return 'V-LOOK-ON';
+      return 'V-LOOK';
+    default:        return 'V-' + verb.toUpperCase();
+  }
+}
+
 function makeCtx(opts: {
   hereId?: string;
   objs?: StubObj[];
   iThiefEnabled?: boolean;
   dead?: boolean;
+  action?: string;
   verb?: string;
   prep?: string;
   prsoId?: string;
@@ -85,14 +109,18 @@ function makeCtx(opts: {
   const hereId = opts.hereId ?? 'TREASURE-ROOM';
   const iThiefEnabled = opts.iThiefEnabled ?? true;
   const dead = opts.dead ?? false;
+  const verb = opts.verb ?? 'take';
+  const prep = opts.prep;
+  const action = opts.action ?? verbToAction(verb, prep);
 
   const objMap = new Map<string, StubObj>();
   for (const o of opts.objs ?? []) objMap.set(o.id, o);
 
   const ctx: T4Ctx = {
     hereId,
-    verb: opts.verb ?? 'take',
-    prep: opts.prep,
+    action,
+    verb,
+    prep,
     prsoId: opts.prsoId,
     prsiId: opts.prsiId,
     rarg: opts.rarg,

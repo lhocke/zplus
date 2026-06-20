@@ -163,7 +163,7 @@ describe('KITCHEN-WINDOW-F: open/close/enter', () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
     const r = g.turn('west');
-    expect(r.output).toContain("You can't go that way.");
+    expect(r.output).toBe('The kitchen window is closed.');
     expect(g.view().here).toBe('EAST-OF-HOUSE');
   });
 });
@@ -732,14 +732,13 @@ describe('GUNK-FUNCTION: slag crumbles', () => {
     g.start();
     const w = worldOf(g);
     const gunk = w.get('GUNK');
+    expect(gunk, 'GUNK must exist in world').toBeDefined();
     const player = w.get('PLAYER')!;
-    if (gunk !== undefined) {
-      gunk.moveTo(player); // put in inventory
-      const r = g.turn('examine gunk');
-      expect(r.output).toContain(
-        'The slag was rather insubstantial, and crumbles into dust at your touch.',
-      );
-    }
+    gunk!.moveTo(player); // put in inventory
+    const r = g.turn('examine gunk');
+    expect(r.output).toContain(
+      'The slag was rather insubstantial, and crumbles into dust at your touch.',
+    );
   });
 });
 

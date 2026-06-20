@@ -30,6 +30,14 @@
       "_source": "gverbs.zil:31",
       "emptyHanded": "You are empty-handed."
     },
+    "vVersion": {
+      "_source": "gverbs.zil:99-121",
+      "banner": "ZORK I: The Great Underground Empire\nInfocom interactive fiction - a fantasy story\nCopyright (c) 1981, 1982, 1983, 1984, 1985, 1986 Infocom, Inc. All rights reserved.\nZORK is a registered trademark of Infocom, Inc.\nRelease 88 / Serial number 840726"
+    },
+    "vScript": {
+      "_source": "gverbs.zil:86-90",
+      "header": "Here begins a transcript of interaction with"
+    },
     "vQuit": {
       "_source": "gverbs.zil:58, 61",
       "prompt": "Do you wish to leave the game? (Y is affirmative): ",

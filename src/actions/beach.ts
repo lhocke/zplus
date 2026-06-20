@@ -32,7 +32,7 @@ const BDIGS: readonly string[] = [
 
 export const sandFunction: ActionHandler = (ctx) => {
   const shovel = ctx.world.get('SHOVEL');
-  if (ctx.verb !== 'dig' || ctx.iobj !== shovel) return false;
+  if (ctx.action !== 'V-DIG' || ctx.iobj !== shovel) return false;
 
   const cur = ctx.getIntGlobal?.('BEACH-DIG') ?? -1;
   const next = cur + 1;

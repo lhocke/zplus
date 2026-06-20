@@ -1,0 +1,245 @@
+# verb-defaults.txt — CB1+CB2 verb-default corpus (Zork I dfrotz R119)
+# generated-by: dfrotz-r119 2026-06-12 CB1-climb-enter-exit-lock
+# amended: 2026-06-12 CB1-repair-closeout-v2 (CASE 6b: climb-walls-at-FOREST-1)
+# amended: 2026-06-12 CB1-repair-window-elseMessage (CASE 8: enter/west at EAST-OF-HOUSE closed)
+# amended: 2026-06-12 CB2-ring-tie-burn-throw-give-wear-move-raise (CASE 9–16)
+#
+# Anchors the CB1 default-verb strings against dfrotz R119.
+# Verbs covered: V-CLIMB family (gverbs.zil:279–335),
+#   V-ENTER (gverbs.zil:620–621), V-EXIT (gverbs.zil:632–641),
+#   V-LOCK (gverbs.zil:855–856), V-UNLOCK (gverbs.zil:1508–1509).
+#
+# Navigation uses only first-visit rooms to avoid the pre-existing BD9
+# brief-mode revisit divergence (dfrotz suppresses ldesc on revisit;
+# engine always prints — CB5 / spec §4.6 fix, not CB1).
+# Revisit nav turns are marked ~ (structural match only).
+#
+# CASE 1 (commands 1-2): navigate to PATH — all first visits.
+#   Route: north → NORTH-OF-HOUSE; north → PATH.
+#   NORTH-OF-HOUSE has a north exit directly to PATH (Forest Path).
+#
+# CASE 2 (command 3): "enter" from PATH → no 'in' exit → "You can't go that way."
+#   V-ENTER calls DO-WALK 'in'; PATH has no 'in' exit → blocked.
+#   gverbs.zil:620–621.
+#   dfrotz output: "You can't go that way."
+#
+# CASE 3 (command 4): "exit" from PATH → no 'out' exit → "You can't go that way."
+#   V-EXIT (no vehicle) calls DO-WALK 'out'; PATH has no 'out' exit.
+#   gverbs.zil:632–641.
+#   dfrotz output: "You can't go that way."
+#
+# CASE 4 (command 5): "climb tree" from PATH → UP-A-TREE
+#   V-CLIMB-UP resolves 'up' exit → DO-WALK 'up' → UP-A-TREE (first visit).
+#   gverbs.zil:300–318.
+#   dfrotz output: "Up a Tree\n<ldesc>" + Score/Moves.
+#
+# CASE 5 (command 6): "climb down" from UP-A-TREE → PATH (revisited room)
+#   PATH was visited at step 2; dfrotz brief-mode suppresses ldesc on revisit.
+#   Engine always shows ldesc (pre-existing BD9 gap, not introduced by CB1).
+#   Marked ~RNG-variable to compare only structural landmarks (room header).
+#   gverbs.zil:279–280.
+#
+# CASE 6 (commands 7-10): climb-tree-at-FOREST-1 — DIV-1 repair
+#   Route from PATH: south → NORTH-OF-HOUSE (revisit ~); west → WEST-OF-HOUSE
+#   (revisit ~); west → FOREST-1 (first visit, exact match).
+#   "climb tree" at FOREST-1: up exit carries elseMessage (not a bare NEXIT);
+#   TREE is local-global of FOREST-1 → GLOBAL-IN? TREE HERE = true
+#   → V-CLIMB-UP routes through DO-WALK → verbGo surfaces exit.elseMessage.
+#   dfrotz output: "There is no tree here suitable for climbing."
+#   gverbs.zil:303–319 + rooms.json FOREST-1 up exit.
+#
+# CASE 6b (command 11): climb-walls-at-FOREST-1 — DIV-1 repair (sidestepped path)
+#   Still at FOREST-1 after CASE 6. FOREST-1 up exit carries elseMessage;
+#   WALL is GLOBAL-OBJECTS but NOT in FOREST-1's GLOBAL list → GLOBAL-IN? WALL HERE = false
+#   → V-CLIMB-UP refusal: "The surrounding wall doesn't lead upward."
+#   dfrotz output: "The surrounding wall doesn't lead upward."
+#   gverbs.zil:306–316 CEXIT path; zil/1dungeon.zil:1309–1322.
+#
+# CASE 7 (commands 12-15): climb-walls-at-WEST-OF-HOUSE — DIV-2 (no-exit WALL branch)
+#   From FOREST-1: east → PATH (revisit ~); south → NORTH-OF-HOUSE (revisit ~);
+#   west → WEST-OF-HOUSE (revisit ~).
+#   WEST-OF-HOUSE has no up exit; WALL is GLOBAL-OBJECTS → accessible.
+#   "climb wall": no exit found → WALL synonym check → walls branch.
+#   dfrotz output: "Climbing the walls is to no avail."
+#   gverbs.zil:320–323.
+#
+# CASE 8 (commands 16-18): enter/west at EAST-OF-HOUSE with window closed
+#   Route from WEST-OF-HOUSE: east → EAST-OF-HOUSE (first visit).
+#   KITCHEN-WINDOW closed (default); in/west exits are gated by ifFlag KITCHEN-WINDOW.
+#   ZIL 1dungeon.zil:1303-1304: CEXIT "IF KITCHEN-WINDOW IS OPEN"; condition fails →
+#   ZIL auto-generates "The kitchen window is closed." from the object desc.
+#   dfrotz output for "enter" and "west": "The kitchen window is closed."
+#   gverbs.zil:620–621 (V-ENTER → DO-WALK in → verbGo → ifFlag fails → elseMessage).
+#
+# LOCK/UNLOCK: tested via CB1 unit tests only. The LOCK syntax requires a
+# TOOLBIT indirect object; orchestrating that deterministically in a corpus
+# without parser orphan-slot complexity is deferred. Corpus rows will be
+# added (extending this file) when a clear setup is confirmed against dfrotz.
+#
+# ZIL refs: gverbs.zil:279–335 (climb), :620–621 (enter), :632–641 (exit).
+
+# --- Setup: WEST-OF-HOUSE → NORTH-OF-HOUSE → PATH ---
+north
+north
+
+# --- CASE 2: enter from PATH → "You can't go that way." ---
+enter
+
+# --- CASE 3: exit from PATH → "You can't go that way." ---
+exit
+
+# --- CASE 4: climb tree from PATH → UP-A-TREE ---
+climb tree
+
+# --- CASE 5: climb down → PATH (revisit; structural match only) ---
+~climb down
+
+# --- CASE 6 setup: PATH → NORTH-OF-HOUSE (revisit) → WEST-OF-HOUSE (revisit) → FOREST-1 ---
+~south
+~west
+west
+
+# --- CASE 6: climb tree at FOREST-1 → "There is no tree here suitable for climbing." ---
+climb tree
+
+# --- CASE 6b: climb wall at FOREST-1 → "The surrounding wall doesn't lead upward." ---
+# WALL not in FOREST-1 GLOBAL list; up exit has elseMessage → CEXIT-style check fires refusal.
+climb wall
+
+# --- CASE 7 setup: FOREST-1 → PATH (revisit) → NORTH-OF-HOUSE (revisit) → WEST-OF-HOUSE (revisit) ---
+# FOREST-1 east→PATH; PATH south→NORTH-OF-HOUSE; NORTH-OF-HOUSE west→WEST-OF-HOUSE.
+~east
+~south
+~west
+
+# --- CASE 7: climb wall at WEST-OF-HOUSE → "Climbing the walls is to no avail." ---
+# WEST-OF-HOUSE has no up exit; WALL is GLOBAL-OBJECTS → accessible everywhere.
+climb wall
+
+# --- CASE 8 setup: WEST-OF-HOUSE → NORTH-OF-HOUSE (revisit) → EAST-OF-HOUSE (first visit) ---
+~north
+east
+
+# --- CASE 8: enter at EAST-OF-HOUSE (window closed) → "The kitchen window is closed." ---
+# V-ENTER → DO-WALK 'in' → verbGo ifFlag KITCHEN-WINDOW gate fails → elseMessage.
+# dfrotz R119: "The kitchen window is closed."
+enter
+
+# --- CASE 8b: west at EAST-OF-HOUSE (window closed) → "The kitchen window is closed." ---
+# west exit also gated by KITCHEN-WINDOW; same elseMessage.
+# dfrotz R119: "The kitchen window is closed."
+west
+
+# ===========================================================================
+# CB2 cases — V-RING, V-TIE, V-UNTIE, V-BURN, V-THROW, V-GIVE, V-WEAR,
+#             V-MOVE, V-RAISE, V-LOWER  (gverbs.zil:1162, 1465, 1511, 243–274,
+#             1445, 708–717, 1597, 910–918, 902, 1131)
+#
+# State at EAST-OF-HOUSE after CASE 8b; still holding nothing.
+# Navigate to WEST-OF-HOUSE for fresh setup with accessible objects.
+# Revisit nav turns are marked ~ (structural match only, pre-existing BD9 gap).
+#
+# CASE 9 (commands 19–20): V-RING default — "How, exactly, can you ring that?"
+#   Route: ~north (NORTH-OF-HOUSE revisit); ~west (WEST-OF-HOUSE revisit).
+#   "ring mailbox" — no object FCN claims V-RING on mailbox → default fires.
+#   gverbs.zil:1162–1163.  dfrotz: "How, exactly, can you ring that?"
+#
+# CASE 10 (commands 21–24): V-WEAR (no WEARBIT) + V-MOVE (TAKEBIT) defaults
+#   Still at WEST-OF-HOUSE.  Open mailbox; take leaflet.
+#   "wear leaflet" — leaflet has no WEARBIT → "You can't wear the leaflet."
+#   "move leaflet" — leaflet has TAKEBIT → "Moving the leaflet reveals nothing."
+#   gverbs.zil:1599, 916.
+#
+# CASE 11 (commands 25–26): V-TIE / V-UNTIE defaults — need rope.
+#   "take rope" is not reachable without entering the house (gated).
+#   Use "tie leaflet to mailbox" to get V-TIE "to that" branch.
+#   "untie leaflet" → V-UNTIE default.
+#   gverbs.zil:1468–1469, 1512.
+#
+# CASE 12 (commands 27–28): V-RAISE + V-LOWER defaults
+#   "raise mailbox" / "lower mailbox" → HACK-HACK "Playing in this way with the mailbox"
+#   + HO-HUM suffix.  Mailbox is not a GLOBAL-OBJECTS member (it has a parent room).
+#   gverbs.zil:902, 1131–1132, 2024–2029.
+#   dfrotz: "Playing in this way with the mailbox doesn't seem to work." (or variant)
+#
+# CASE 13 (commands 29–30): PRE-MOVE / V-MOVE defaults
+#   "move leaflet" already in CASE 10; retest "move mailbox" (mailbox has TAKEBIT → reveals).
+#   "move small leaflet" → reveals nothing (TAKEBIT).
+#   gverbs.zil:914–918.
+#
+# ===========================================================================
+
+# --- CASE 9 setup: EAST-OF-HOUSE → NORTH-OF-HOUSE (revisit) → WEST-OF-HOUSE (revisit) ---
+~north
+~west
+
+# --- CASE 9: ring mailbox → "How, exactly, can you ring that?" ---
+# mailbox has no ring object FCN; V-RING default fires.
+# dfrotz R119: "How, exactly, can you ring that?"
+ring mailbox
+
+# --- CASE 10 setup: open mailbox, take leaflet ---
+open mailbox
+take leaflet
+
+# --- CASE 10a: wear leaflet → "You can't wear the leaflet." ---
+# leaflet has no WEARBIT; V-WEAR default fires.
+# dfrotz R119: "You can't wear the leaflet."
+wear leaflet
+
+# --- CASE 10b: move leaflet → "Moving the leaflet reveals nothing." ---
+# leaflet has TAKEBIT; V-MOVE TAKEBIT branch.
+# dfrotz R119: "Moving the leaflet reveals nothing."
+move leaflet
+
+# --- CASE 11a: tie leaflet to mailbox → "You can't tie the leaflet to that." ---
+# no rope-function intercepts; V-TIE "to that" branch.
+# dfrotz R119: "You can't tie the leaflet to that."
+tie leaflet to mailbox
+
+# --- CASE 11b: untie leaflet → "This cannot be tied, so it cannot be untied!" ---
+# no object FCN claims V-UNTIE; default fires.
+# dfrotz R119: "This cannot be tied, so it cannot be untied!"
+untie leaflet
+
+# --- CASE 12a: raise mailbox → HACK-HACK "Playing in this way with the mailbox" ---
+# mailbox is in room (not GLOBAL-OBJECTS); HACK-HACK suffix branch.
+# HO-HUM PICK-ONE is RNG-seeded — structural match only (prefix is deterministic).
+# dfrotz R119 (seeded run): "Playing in this way with the small mailbox has no effect."
+# The HO-HUM suffix varies by RNG seed; marked ~ (structural/skip).
+~raise mailbox
+
+# --- CASE 12b: lower mailbox → same HACK-HACK route as V-RAISE ---
+# Same HO-HUM variability; marked ~ (structural/skip).
+~lower mailbox
+
+# ===========================================================================
+# CB4 cases — V-KICK, V-PUSH, V-RUB, V-WAVE  (gverbs.zil:760, 1070, 1165, 1594)
+# HACK-HACK family: all route through HACK-HACK with distinct prefix strings.
+# HO-HUM PICK-ONE is RNG-seeded; all turns marked ~ (structural match only).
+# State: WEST-OF-HOUSE; leaflet in player's inventory (from CASE 10).
+# Mailbox is in room (not GLOBAL-OBJECTS) — HO-HUM branch fires for all four.
+# authorized data exception: CB4 / spec §11 (verb-defaults.txt rows)
+#
+# CASE 13 (commands 31–34): V-KICK, V-PUSH, V-RUB, V-WAVE defaults
+#   "kick mailbox"  → "Kicking the small mailbox" + HO-HUM suffix
+#   "push mailbox"  → "Pushing the small mailbox" + HO-HUM suffix
+#   "rub mailbox"   → "Fiddling with the small mailbox" + HO-HUM suffix
+#   "wave mailbox"  → "Waving the small mailbox" + HO-HUM suffix
+# ===========================================================================
+
+# --- CASE 13a: kick mailbox → HACK-HACK "Kicking the small mailbox" ---
+# gverbs.zil:760.  HO-HUM suffix varies by seed; marked ~ (structural/skip).
+~kick mailbox
+
+# --- CASE 13b: push mailbox → HACK-HACK "Pushing the small mailbox" ---
+# gverbs.zil:1070.  HO-HUM suffix varies by seed; marked ~ (structural/skip).
+~push mailbox
+
+# --- CASE 13c: rub mailbox → HACK-HACK "Fiddling with the small mailbox" ---
+# gverbs.zil:1165.  HO-HUM suffix varies by seed; marked ~ (structural/skip).
+~rub mailbox
+
+# --- CASE 13d: wave mailbox → HACK-HACK "Waving the small mailbox" ---
+# gverbs.zil:1594-1595.  HO-HUM suffix varies by seed; marked ~ (structural/skip).
+~wave mailbox

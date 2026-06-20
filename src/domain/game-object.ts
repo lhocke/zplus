@@ -38,6 +38,13 @@ export interface ActionContext {
   readonly action?: string;
   /** Direct object, if any (ZIL PRSO). */
   readonly dobj?: GameObject;
+  /**
+   * True when ZIL PRSO == ROOMS (bare climb/climb-down with no noun).
+   * Distinct from dobj=undefined (V-CLIMB-UP direct): in ZIL, V-CLIMB-DOWN
+   * passes PRSO=ROOMS as the OBJ arg so branch 1 fires; V-CLIMB-UP direct
+   * passes OBJ=<> so branch 1 is skipped.  gverbs.zil:300–302.
+   */
+  readonly dobjIsRooms?: boolean;
   /** Indirect object, if any (ZIL PRSI). */
   readonly iobj?: GameObject;
   /** Preposition for this command, e.g. 'in', 'with' — or a direction for walk. */
@@ -115,6 +122,13 @@ export interface ActionContext {
    * 1actions.zil:2834 (inflate), :2815 (deflate).
    */
   thisIsIt?(obj: GameObject): void;
+  /**
+   * ZIL GOTO V?=false — suppress the post-handler arrival room description.
+   * Call when a handler teleports the player but ZIL's GOTO was invoked with
+   * the look-flag false (second arg <>), so V-FIRST-LOOK is skipped.
+   * gverbs.zil:2134–2136.  Optional; absent → description fires normally.
+   */
+  suppressArrivalLook?(): void;
 }
 
 export type ActionHandler = (ctx: ActionContext) => HandlerResult;
@@ -142,6 +156,13 @@ export class GameObject {
   contFcnRoutine?: string;
   /** CONTFCN handler — called by PERFORM step 5 when dobj is inside a container. */
   contFcn?: ActionHandler;
+  /**
+   * ZIL DESCFCN — dynamic object description, replaces the generic
+   * "There is a X here." when set.  Called by describeObject (gverbs.zil:1693)
+   * with the player object and a tell callback.  Captured world state lives in
+   * the closure (set at bootstrap by wireBatDescFcn etc.).
+   */
+  descFcn?: (player: GameObject, tell: (s: string) => void) => void;
   readonly synonyms: string[];
   readonly adjectives: string[];
 

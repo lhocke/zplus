@@ -56,11 +56,14 @@ describe('LOCAL-GLOBALS/GLOBAL-OBJECTS tier separation', () => {
     expect(r.output).not.toMatch(/can't see any window here/i);
   });
 
-  it('FOREST-1: "examine songbird" → resolves (SONGBIRD in FOREST-1 GLOBAL list)', () => {
+  it('FOREST-1: "find songbird" → resolves (SONGBIRD in FOREST-1 GLOBAL list)', () => {
     const g = newGameAt('FOREST-1');
-    const r = g.turn('examine songbird');
-    // SONGBIRD is in FOREST-1 GLOBAL list [TREE, SONGBIRD, WHITE-HOUSE, FOREST]
-    expect(r.output).not.toMatch(/can't see any songbird here/i);
+    const r = g.turn('find songbird');
+    // SONGBIRD is in FOREST-1 GLOBAL list [TREE, SONGBIRD, WHITE-HOUSE, FOREST] — it
+    // resolves to SONGBIRD-F (FIND → "not here but nearby"), not a parser miss.
+    // (examine/smell faithfully fall to "You can't see any songbird here.", so
+    // they can't serve as the resolution probe — that text is also the parser miss.)
+    expect(r.output).toContain('not here but is probably nearby');
     expect(r.output).not.toMatch(/I don't know the word/i);
   });
 });

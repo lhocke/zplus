@@ -172,8 +172,8 @@ describe('F5(a): Clock demon mode (turnsLeft < 0)', () => {
 // PART (b): advance() returns string[] for transcript routing
 // ---------------------------------------------------------------------------
 
-describe('F5(b): Clock.advance() returns transcript lines', () => {
-  it('advance() returns an empty array when no tick fires any text', () => {
+describe('F5(b): Clock.advance() returns transcript lines and interrupted flag', () => {
+  it('advance() returns empty lines and interrupted=false when no tick fires', () => {
     const clock = new Clock();
     const entry: ClockEntry = {
       id: 'SILENT',
@@ -183,12 +183,12 @@ describe('F5(b): Clock.advance() returns transcript lines', () => {
     };
     clock.schedule(entry);
 
-    const lines = clock.advance();
-    expect(Array.isArray(lines)).toBe(true);
+    const { lines, interrupted } = clock.advance();
     expect(lines).toHaveLength(0);
+    expect(interrupted).toBe(false);
   });
 
-  it('text pushed via ctx.tell() appears in the returned array', () => {
+  it('text pushed via ctx.tell() appears in lines; interrupted reflects tick() return', () => {
     const clock = new Clock();
     const entry: ClockEntry = {
       id: 'TALKER',
@@ -196,17 +196,37 @@ describe('F5(b): Clock.advance() returns transcript lines', () => {
       enabled: true,
       tick(ctx) {
         ctx.tell('Hello from interrupt!');
-        return false;
+        return false;  // returns false → interrupted stays false
       },
     };
     clock.schedule(entry);
 
     clock.advance(); // turnsLeft → 1, no fire
-    const lines = clock.advance(); // turnsLeft → 0, fires
+    const { lines, interrupted } = clock.advance(); // turnsLeft → 0, fires
     expect(lines).toContain('Hello from interrupt!');
+    // tick returned false → not a stop-condition interrupt
+    expect(interrupted).toBe(false);
   });
 
-  it('demon entry text also routes through advance() return', () => {
+  it('tick() returning true sets interrupted=true', () => {
+    const clock = new Clock();
+    const entry: ClockEntry = {
+      id: 'STOPPER',
+      turnsLeft: 1,
+      enabled: true,
+      tick(ctx) {
+        ctx.tell('Stopping!');
+        return true;
+      },
+    };
+    clock.schedule(entry);
+
+    const { lines, interrupted } = clock.advance();
+    expect(lines).toContain('Stopping!');
+    expect(interrupted).toBe(true);
+  });
+
+  it('demon entry text routes through advance() return lines', () => {
     const clock = new Clock();
     let calls = 0;
     const entry: ClockEntry = {
@@ -221,33 +241,51 @@ describe('F5(b): Clock.advance() returns transcript lines', () => {
     };
     clock.schedule(entry);
 
-    const lines1 = clock.advance();
-    expect(lines1).toEqual(['Demon call 1']);
+    const r1 = clock.advance();
+    expect(r1.lines).toEqual(['Demon call 1']);
+    // Demon called tell() AND returned true → interrupted (I-MAINT-ROOM style).
+    expect(r1.interrupted).toBe(true);
 
-    const lines2 = clock.advance();
-    expect(lines2).toEqual(['Demon call 2']);
+    const r2 = clock.advance();
+    expect(r2.lines).toEqual(['Demon call 2']);
+    // Returned false (self-remove) → not interrupted even though it told.
+    expect(r2.interrupted).toBe(false);
 
     // Entry removed after returning false
-    const lines3 = clock.advance();
-    expect(lines3).toHaveLength(0);
+    const r3 = clock.advance();
+    expect(r3.lines).toHaveLength(0);
+    expect(r3.interrupted).toBe(false);
   });
 
-  it('LanternInterrupt warning message appears in advance() return lines', () => {
+  it('LanternInterrupt warning message appears in advance() lines, interrupted=true', () => {
     const emitter = new SimpleEventEmitter();
     const clock = new Clock();
     new LanternInterrupt(clock, emitter, 5);
-    // Start enabled (normally disabled in bootstrap, but enable for this test)
 
-    // Advance 5 turns to trigger first stage
-    let lines: string[] = [];
     for (let i = 0; i < 4; i++) clock.advance();
-    lines = clock.advance(); // 5th turn → fires "lamp appears a bit dimmer"
+    const { lines, interrupted } = clock.advance(); // 5th turn → "lamp appears a bit dimmer"
 
-    // The warning message should be in the returned lines
     expect(lines.some(l => l.includes('dimmer'))).toBe(true);
+    // Warning returns true → interrupted (stops V-WAIT).
+    expect(interrupted).toBe(true);
+  });
 
-    // The lantern-fuel event should ALSO still be emitted (two channels)
-    // (we can verify via emitter — event was already fired above)
+  it('LanternInterrupt burnout pushes message but interrupted=false', () => {
+    const emitter = new SimpleEventEmitter();
+    const clock = new Clock();
+    // 5 → warning on tick 5 (re-queues 100), then we need to get to sentinel.
+    // Use initialTicks=1 to get to the first warning fast, then manually advance.
+    // Easier: use a clock.test.ts-style direct burn through all 385 ticks.
+    // Use a fresh LanternInterrupt with default ticks and advance 385 times.
+    new LanternInterrupt(clock, emitter, 200);
+
+    // Advance 385 times total: warnings at 200, 300, 370; burnout at 385.
+    for (let i = 0; i < 384; i++) clock.advance();
+    const { lines, interrupted } = clock.advance(); // burnout fires
+
+    expect(lines.some(l => l.includes('better have more light'))).toBe(true);
+    // Burnout returns false → does NOT stop V-WAIT.
+    expect(interrupted).toBe(false);
   });
 
   it('LanternInterrupt still emits lantern-fuel events (event channel preserved)', () => {

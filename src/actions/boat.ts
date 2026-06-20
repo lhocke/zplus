@@ -85,7 +85,7 @@ function fixBoat(ctx: Parameters<ActionHandler>[0]): void {
 // ---------------------------------------------------------------------------
 
 export const iboatFcn: ActionHandler = (ctx) => {
-  if (ctx.verb !== 'inflat' && ctx.verb !== 'fill') return false;
+  if (ctx.action !== 'V-INFLATE' && ctx.action !== 'V-FILL') return false;
 
   const inflatable = ctx.world.get('INFLATABLE-BOAT');
   if (inflatable === undefined) return false;
@@ -144,7 +144,7 @@ export const iboatFcn: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const rboatDeflate: ActionHandler = (ctx) => {
-  if (ctx.verb !== 'deflate') return false;
+  if (ctx.action !== 'V-DEFLATE') return false;
 
   const inflated   = ctx.world.get('INFLATED-BOAT');
   const inflatable = ctx.world.get('INFLATABLE-BOAT');
@@ -178,7 +178,7 @@ export const rboatDeflate: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 const rboatInflate: ActionHandler = (ctx) => {
-  if (ctx.verb !== 'inflat' && ctx.verb !== 'fill') return false;
+  if (ctx.action !== 'V-INFLATE' && ctx.action !== 'V-FILL') return false;
   ctx.tell('Inflating it further would probably burst it.');
   return true;
 };
@@ -225,7 +225,7 @@ export const rboatFcn: ActionHandler = (ctx) => {
   // Object-level verb dispatch (no RARG = normal action dispatch)
 
   // :2787 — BOARD: sharp-object puncture check (NM-G)
-  if (ctx.verb === 'board') {
+  if (ctx.action === 'V-BOARD') {
     for (const id of SHARP_OBJECT_IDS) {
       const obj = ctx.world.get(id);
       if (obj !== undefined && obj.parent === ctx.actor) {
@@ -256,7 +256,7 @@ export const rboatFcn: ActionHandler = (ctx) => {
   // :2785 — LAUNCH when player is NOT inside the boat (outer cond fallback)
   // The M-BEG LAUNCH branch only fires when LOC(WINNER)==INFLATED-BOAT.
   // This branch fires when LAUNCH targets INFLATED-BOAT directly (verb dispatch).
-  if (ctx.verb === 'launch') {
+  if (ctx.action === 'V-LAUNCH') {
     ctx.tell("You're not in the boat!");
     return true;
   }
@@ -276,8 +276,8 @@ export const rboatFcn: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 function rboatMBeg(ctx: Parameters<ActionHandler>[0]): boolean {
-  // :2725 — WALK (movement)
-  if (ctx.verb === 'walk') {
+  // :2725 — WALK (movement) — V-WALK covers bare 'walk <dir>' with no prep
+  if (ctx.action === 'V-WALK') {
     const dir = ctx.prep;
     // :2726 — LAND/EAST/WEST passes through (RFALSE → normal GOTO)
     if (dir === 'land' || dir === 'east' || dir === 'west') return false;
@@ -291,7 +291,7 @@ function rboatMBeg(ctx: Parameters<ActionHandler>[0]): boolean {
   }
 
   // :2738 — LAUNCH while inside the boat
-  if (ctx.verb === 'launch') {
+  if (ctx.action === 'V-LAUNCH') {
     const hereId = ctx.here.id;
 
     // :2739–2740 — already on river/reservoir/stream → blocked.
@@ -334,14 +334,14 @@ function rboatMBeg(ctx: Parameters<ActionHandler>[0]): boolean {
 
   // :2756 — DROP/PUT/ATTACK with WEAPONBIT → puncture + maybe drown
   if (
-    (ctx.verb === 'drop' && ctx.dobj !== undefined && ctx.dobj.has(Flag.Weapon)) ||
-    (ctx.verb === 'put'  && ctx.dobj !== undefined && ctx.dobj.has(Flag.Weapon) &&
+    (ctx.action === 'V-DROP' && ctx.dobj !== undefined && ctx.dobj.has(Flag.Weapon)) ||
+    (ctx.action === 'V-PUT'  && ctx.dobj !== undefined && ctx.dobj.has(Flag.Weapon) &&
      ctx.iobj === ctx.world.get('INFLATED-BOAT')) ||
-    ((ctx.verb === 'attack' || ctx.verb === 'mung') &&
+    ((ctx.action === 'V-ATTACK' || ctx.action === 'V-MUNG') &&
      ctx.iobj !== undefined && ctx.iobj.has(Flag.Weapon))
   ) {
     // :2768–2773 — weapon name + deflate message
-    const weaponDesc = (ctx.verb === 'drop' || ctx.verb === 'put')
+    const weaponDesc = (ctx.action === 'V-DROP' || ctx.action === 'V-PUT')
       ? (ctx.dobj?.desc ?? 'weapon')
       : (ctx.iobj?.desc ?? 'weapon');
     ctx.tell(
@@ -399,19 +399,19 @@ export const dboatFcn: ActionHandler = (ctx) => {
   const putty = ctx.world.get('PUTTY');
 
   // :2653–2655 — PUT PUTTY or PUT-ON PUTTY (putty is the dobj)
-  if ((ctx.verb === 'put' || ctx.verb === 'put-on') && ctx.dobj === putty) {
+  if ((ctx.action === 'V-PUT' || ctx.action === 'V-PUT-ON') && ctx.dobj === putty) {
     fixBoat(ctx);
     return true;
   }
 
-  // :2656–2658 — INFLATE/FILL (canonical verb token is 'inflat')
-  if (ctx.verb === 'inflat' || ctx.verb === 'fill') {
+  // :2656–2658 — INFLATE/FILL
+  if (ctx.action === 'V-INFLATE' || ctx.action === 'V-FILL') {
     ctx.tell('No chance. Some moron punctured it.');
     return true;
   }
 
   // :2659–2662 — PLUG
-  if (ctx.verb === 'plug') {
+  if (ctx.action === 'V-PLUG') {
     if (ctx.iobj === putty && putty !== undefined) {
       fixBoat(ctx);
       return true;

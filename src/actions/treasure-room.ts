@@ -38,7 +38,9 @@ export interface T4Ctx {
   /** ZIL HERE — current player room. */
   readonly hereId: string;
 
-  /** Current parsed verb (ZIL PRSA). */
+  /** ZIL PRSA action id, e.g. 'V-TAKE', 'V-ATTACK'. */
+  readonly action?: string;
+  /** Current canonical verb word. */
   readonly verb: string;
   /** Preposition from the parsed command (UPPERCASE, matches syntax.json). */
   readonly prep?: string;
@@ -144,13 +146,11 @@ export function isExamineDispatch(verb: string, prep: string | undefined): boole
 }
 
 export function dumbContainer(ctx: T4Ctx): boolean {
-  const v = ctx.verb;
-  const p = ctx.prep;
-  if (v === 'open' || v === 'close' || isLookInsideDispatch(v, p)) {
+  if (ctx.action === 'V-OPEN' || ctx.action === 'V-CLOSE' || ctx.action === 'V-LOOK-INSIDE') {
     ctx.tell("You can't do that.");
     return true;
   }
-  if (isExamineDispatch(v, p)) {
+  if (ctx.action === 'V-EXAMINE') {
     const prso = ctx.prsoId !== undefined ? ctx.getObj(ctx.prsoId) : undefined;
     ctx.tell('It looks pretty much like a ' + (prso?.desc ?? 'that') + '.');
     return true;
@@ -167,9 +167,7 @@ export function dumbContainer(ctx: T4Ctx): boolean {
 // ---------------------------------------------------------------------------
 
 export function chaliceFcn(ctx: T4Ctx): boolean {
-  const v = ctx.verb;
-
-  if (v === 'take') {
+  if (ctx.action === 'V-TAKE') {
     // Guard: PRSO in TREASURE-ROOM, THIEF in TREASURE-ROOM, FIGHTBIT,
     //        !INVISIBLE, !unconscious-LDESC  — 1actions.zil:2125–2131
     const prso  = ctx.prsoId !== undefined ? ctx.getObj(ctx.prsoId) : undefined;
@@ -191,7 +189,7 @@ export function chaliceFcn(ctx: T4Ctx): boolean {
     return false;
   }
 
-  if (v === 'put' && ctx.prsiId === 'CHALICE') {
+  if (ctx.action === 'V-PUT' && ctx.prsiId === 'CHALICE') {
     ctx.tell("You can't. It's not a very good chalice, is it?");
     return true;
   }
@@ -211,7 +209,7 @@ function weaponFunction(ctx: T4Ctx, weaponId: string, villainId: string): boolea
   const villain = ctx.getObj(villainId);
   if (villain === undefined || villain.parentId !== ctx.hereId) return false;
 
-  if (ctx.verb === 'take') {
+  if (ctx.action === 'V-TAKE') {
     const weapon = ctx.getObj(weaponId);
     if (weapon !== undefined && weapon.parentId === villainId) {
       ctx.tell('The ' + villain.desc + ' swings it out of your reach.');
@@ -239,10 +237,7 @@ export function stilettoFunction(ctx: T4Ctx): boolean {
 // ---------------------------------------------------------------------------
 
 export function largeBagF(ctx: T4Ctx): boolean {
-  const v = ctx.verb;
-  const p = ctx.prep;
-
-  if (v === 'take') {
+  if (ctx.action === 'V-TAKE') {
     const thief = ctx.getObj('THIEF');
     if (thief !== undefined && thief.ldesc === ROBBER_U_DESC) {
       ctx.tell(
@@ -255,19 +250,19 @@ export function largeBagF(ctx: T4Ctx): boolean {
     return true;
   }
 
-  if (v === 'put' && ctx.prsiId === 'LARGE-BAG') {
+  if (ctx.action === 'V-PUT' && ctx.prsiId === 'LARGE-BAG') {
     ctx.tell('It would be a good trick.');
     return true;
   }
 
-  if (v === 'open' || v === 'close') {
+  if (ctx.action === 'V-OPEN' || ctx.action === 'V-CLOSE') {
     ctx.tell('Getting close enough would be a good trick.');
     return true;
   }
 
   // ZIL: VERB? EXAMINE LOOK-INSIDE — only V-EXAMINE and V-LOOK-INSIDE arms;
   // look-under/behind/on are distinct verbs not in this arm (1actions.zil:2109).
-  if (isExamineDispatch(v, p) || isLookInsideDispatch(v, p)) {
+  if (ctx.action === 'V-EXAMINE' || ctx.action === 'V-LOOK-INSIDE') {
     ctx.tell(
       "The bag is underneath the thief, so one can't say what, if anything, is\ninside.",
     );
@@ -288,6 +283,7 @@ export function largeBagF(ctx: T4Ctx): boolean {
 function makeT4Ctx(ac: ActionContext): T4Ctx {
   return {
     hereId: ac.here.id,
+    action: ac.action,
     verb: ac.verb,
     prep: ac.prep,
     prsoId: ac.dobj?.id,

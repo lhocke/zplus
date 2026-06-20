@@ -33,9 +33,9 @@ import type { Game } from '../../src/engine/game.js';
 /** Create a game in TROLL-ROOM with sword in player inventory. */
 function makeGame(combatRng?: ScriptedRng): Game {
   const g = createGame({ startRoom: 'TROLL-ROOM', combatRng });
-  // Give the player a sword
   const sword = g.world.get('SWORD');
-  if (sword !== undefined) sword.moveTo(g.player);
+  expect(sword, 'SWORD must exist in world').toBeDefined();
+  sword!.moveTo(g.player);
   return g;
 }
 
@@ -126,17 +126,6 @@ describe('FIGHTBIT cleared after villain death', () => {
     // pStrength=1 via wounds, then one more hit kills.
     //
     // Simpler: set troll's pStrength to 1 directly, then attack.
-    const g = createGame({ startRoom: 'TROLL-ROOM' });
-    const sword = g.world.get('SWORD');
-    if (sword !== undefined) sword.moveTo(g.player);
-    sword?.set(Flag.Weapon);
-
-    const troll = g.world.get('TROLL');
-    if (troll !== undefined) troll.set(Flag.Fight);  // activate fightbit
-
-    // Set troll to pStrength=1 so any non-miss can kill
-    if (troll !== undefined) (troll as unknown as { pStrength: number }).pStrength = 1;
-
     // Force KILLED: player ATT=2 (score=0), villain DEF=1 → DEF1_RES[1]=DEF1@1.
     // DEF1 = [MISSED,MISSED,MISSED,MISSED,STAGGER,STAGGER,UNCONSCIOUS,UNCONSCIOUS,KILLED,KILLED,KILLED,KILLED,KILLED]
     // DEF1@1: elements [1..9] = [MISSED,MISSED,MISSED,STAGGER,STAGGER,UNCONSCIOUS,UNCONSCIOUS,KILLED,KILLED]
@@ -145,14 +134,16 @@ describe('FIGHTBIT cleared after villain death', () => {
     const combatRng = new ScriptedRng([0.778, 0.1]);
     const g2 = createGame({ startRoom: 'TROLL-ROOM', combatRng });
     const sword2 = g2.world.get('SWORD');
-    if (sword2 !== undefined) { sword2.moveTo(g2.player); sword2.set(Flag.Weapon); }
+    expect(sword2, 'SWORD must exist in world').toBeDefined();
+    sword2!.moveTo(g2.player); sword2!.set(Flag.Weapon);
     const troll2 = g2.world.get('TROLL');
-    if (troll2 !== undefined) (troll2 as unknown as { pStrength: number }).pStrength = 1;
+    expect(troll2, 'TROLL must exist in world').toBeDefined();
+    (troll2 as unknown as { pStrength: number }).pStrength = 1;
 
     g2.turn('attack troll with sword');
 
     // After villain dies, FIGHTBIT must be cleared (not set)
-    expect(troll2?.has(Flag.Fight)).toBe(false);
+    expect(troll2!.has(Flag.Fight)).toBe(false);
   });
 });
 
@@ -203,9 +194,11 @@ describe('GWIM locBits — bare attack troll', () => {
     // constraint, not the search gate.
     const g = createGame({ startRoom: 'TROLL-ROOM' });
     const sword = g.world.get('SWORD');
-    if (sword !== undefined) { sword.moveTo(g.player); sword.set(Flag.Weapon); }
+    expect(sword, 'SWORD must exist in world').toBeDefined();
+    sword!.moveTo(g.player); sword!.set(Flag.Weapon);
     const lamp = g.world.get('LAMP');
-    if (lamp !== undefined) { lamp.moveTo(g.player); lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
+    expect(lamp, 'LAMP must exist in world').toBeDefined();
+    lamp!.moveTo(g.player); lamp!.set(Flag.OnFire); lamp!.set(Flag.Light);
 
     const result = g.turn('attack troll');
     expect(result.output).toContain('(with the sword)');
@@ -224,7 +217,8 @@ describe('GWIM locBits — bare attack troll', () => {
     // locBits gate only applies at ITAKE-CHECK (gparser.zil:1252-1290).
     const g = createGame({ startRoom: 'TROLL-ROOM' });
     const lamp = g.world.get('LAMP');
-    if (lamp !== undefined) { lamp.moveTo(g.player); lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
+    expect(lamp, 'LAMP must exist in world').toBeDefined();
+    lamp!.moveTo(g.player); lamp!.set(Flag.OnFire); lamp!.set(Flag.Light);
     // sword stays in LIVING-ROOM; axe is in troll's inventory (troll in room)
 
     const result = g.turn('attack troll');
@@ -252,17 +246,15 @@ describe('REMARK weapon desc', () => {
     const combatRng = new ScriptedRng([0.2, 0.334, 0.1, 0.1, 0.1]);
     const g = createGame({ startRoom: 'TROLL-ROOM', combatRng });
     const knife = g.world.get('KNIFE');
-    if (knife !== undefined) { knife.moveTo(g.player); knife.set(Flag.Weapon); }
+    expect(knife, 'KNIFE must exist in world').toBeDefined();
+    knife!.moveTo(g.player); knife!.set(Flag.Weapon);
 
     const result = g.turn('wait');
-    // If LOSE_WEAPON message fires (knife appears in output), the desc "nasty knife" must appear
-    // — not the id-derived form "KNIFE" (uppercase) or a form without the adjective.
-    if (result.output.toLowerCase().includes('knife')) {
-      // Positive: real desc "nasty knife" should be present
-      expect(result.output).toContain('nasty knife');
-      // Negative: id-derived uppercase form should not appear
-      expect(result.output).not.toContain('KNIFE');
-    }
+    // LOSE_WEAPON must fire: the RNG was scripted to force STAGGER → LOSE_WEAPON.
+    // The REMARK message must use the real object desc "nasty knife", not the id.
+    expect(result.output.toLowerCase(), 'knife must appear in output — LOSE_WEAPON did not fire').toContain('knife');
+    expect(result.output).toContain('nasty knife');
+    expect(result.output).not.toContain('KNIFE');
   });
 });
 
@@ -277,10 +269,9 @@ describe('death banner format', () => {
     // Turn off lamp so it's dark, then move south (grue)
     // In CELLAR there's no lamp by default. Player is in dark.
     const result = g.turn('south');
-    // Death message should have 4-space indent
-    if (result.output.includes('You have died')) {
-      expect(result.output).toContain('    ****  You have died  ****');
-    }
+    // Grue must kill in dark CELLAR — if not, the grue path is broken.
+    expect(result.output, 'grue must kill the player in dark CELLAR').toContain('You have died');
+    expect(result.output).toContain('    ****  You have died  ****');
   });
 });
 
@@ -293,14 +284,16 @@ describe('TRAP-DOOR TOUCHBIT cleared on death', () => {
     // Open the trap door (which sets TOUCHBIT), then die.
     const g = createGame({ startRoom: 'LIVING-ROOM' });
     const trapDoor = g.world.get('TRAP-DOOR');
+    expect(trapDoor, 'TRAP-DOOR must exist in world').toBeDefined();
 
     // Manually set TOUCHBIT on trap door (simulates it being opened)
-    if (trapDoor !== undefined) trapDoor.set(Flag.Touched);
-    expect(trapDoor?.has(Flag.Touched)).toBe(true);
+    trapDoor!.set(Flag.Touched);
+    expect(trapDoor!.has(Flag.Touched)).toBe(true);
 
     // Trigger death (move to cellar → dark → grue)
     const lamp = g.world.get('LAMP');
-    if (lamp !== undefined) lamp.moveTo(g.player);
+    expect(lamp, 'LAMP must exist in world').toBeDefined();
+    lamp!.moveTo(g.player);
     g.turn('move rug');
     g.turn('open trap door');
     g.turn('down');
@@ -308,9 +301,9 @@ describe('TRAP-DOOR TOUCHBIT cleared on death', () => {
     g.turn('turn off lamp');
     const dieResult = g.turn('south');
 
-    if (dieResult.output.includes('You have died')) {
-      // TRAP-DOOR TOUCHBIT must be cleared after death
-      expect(trapDoor?.has(Flag.Touched)).toBe(false);
-    }
+    // Grue must kill in dark CELLAR — if not, the grue path is broken.
+    expect(dieResult.output, 'grue must kill player in dark CELLAR').toContain('You have died');
+    // TRAP-DOOR TOUCHBIT must be cleared after death
+    expect(trapDoor!.has(Flag.Touched)).toBe(false);
   });
 });

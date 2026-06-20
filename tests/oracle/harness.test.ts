@@ -166,48 +166,39 @@ describe('normalizer hard-wrap rejoining', () => {
     );
   });
 
-  it('rejoins dfrotz width-80 wrap across sentence-boundary period when line >= 75 chars', () => {
-    // DAM-LOBBY ldesc: dfrotz wraps the single continuous ZIL string at col 80.
-    // Line 1 ends with "." but is 75 chars — not a genuine paragraph break.
-    // The normalizer must rejoin it with the continuation.
-    // (1dungeon.zil:2149-2152 — single LDESC string, break is rendering artifact)
+  it('keeps an unwrapped single-string LDESC as one paragraph, separate from objects', () => {
+    // At wide dfrotz width the single continuous DAM-LOBBY LDESC string is emitted
+    // on ONE line (no column wrap), exactly as the engine emits it.  It stays one
+    // paragraph; the object line that follows is a separate paragraph.
+    // (1dungeon.zil:2149-2152 — single LDESC string.)
     const status = ' West of House                                    Score: 0        Moves: 0';
-    const raw = [
-      status,
-      '',
-      'Dam Lobby',
-      'This room appears to have been the waiting room for groups touring the dam.',
-      'There are open doorways here to the north and east marked "Private", and there',
-      'is a path leading south over the top of the dam.',
-      'Some guidebooks here.',
-    ].join('\n');
+    const ldesc =
+      'This room appears to have been the waiting room for groups touring the dam. There are open doorways here to the north and east marked "Private", and there is a path leading south over the top of the dam.';
+    const raw = [status, '', 'Dam Lobby', ldesc, 'Some guidebooks here.'].join('\n');
 
     const turns = normalizeDfrotz(raw);
-    // Must be rejoined into one paragraph (not split at the 75-char sentence end)
+    // The whole LDESC is intact (the room name is joined onto it).
     expect(turns[0]?.text).toContain(
       'This room appears to have been the waiting room for groups touring the dam. There are open doorways',
     );
-    expect(turns[0]?.text).not.toMatch(/touring the dam\.\n/);
+    // LDESC and the object description are SEPARATE paragraphs.
+    expect(turns[0]?.text).toMatch(/over the top of the dam\.\nSome guidebooks here\./);
   });
 
-  it('rejoins maintenance-room 80-char sentence-boundary wrap', () => {
-    // MAINTENANCE-ROOM ldesc: first line is exactly 80 chars, ends with ".".
-    // dfrotz width-80 forced wrap — must be rejoined.
-    // (1dungeon.zil:2161-2166 — single LDESC string)
+  it('keeps an unwrapped LDESC whose text has an internal sentence period', () => {
+    // MAINTENANCE-ROOM ldesc is one continuous string; at wide width it is one
+    // line, so the internal "...Dam #3." boundary is mid-line, never a paragraph
+    // break.  (1dungeon.zil:2161-2166.)
     const status = ' West of House                                    Score: 0        Moves: 0';
-    const raw = [
-      status,
-      '',
-      'Maintenance Room',
-      'This is what appears to have been the maintenance room for Flood Control Dam #3.',
-      'Apparently, this room has been ransacked recently, for most of the valuable',
-      'equipment is gone.',
-    ].join('\n');
+    const ldesc =
+      'This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked recently, for most of the valuable equipment is gone.';
+    const raw = [status, '', 'Maintenance Room', ldesc].join('\n');
 
     const turns = normalizeDfrotz(raw);
     expect(turns[0]?.text).toContain(
-      'This is what appears to have been the maintenance room for Flood Control Dam #3. Apparently',
+      'maintenance room for Flood Control Dam #3. Apparently, this room has been ransacked',
     );
+    // No spurious paragraph break at the internal "Dam #3." period.
     expect(turns[0]?.text).not.toMatch(/Dam #3\.\n/);
   });
 
@@ -234,6 +225,56 @@ describe('normalizer hard-wrap rejoining', () => {
     expect(leafletTurn?.text).toContain('WELCOME TO ZORK!');
     // Paragraph separator preserved
     expect(leafletTurn?.text).toContain('\n');
+  });
+
+  it('rejoins dfrotz line ending with ";" (ZIL clause separator, not paragraph end)', () => {
+    // normalizer.ts:261 — ";" must NOT be in the closing-delimiter char class.
+    // A trailing ";" in ZIL is a statement separator inside a PRINT or TELL block,
+    // meaning the sentence continues on the next line.  Treating it as a paragraph
+    // terminator produces a FALSE diff that can mask a real divergence.
+    // This block exercises both dfrotz-side and engine-side normalisation to confirm
+    // the fix is source-agnostic (rejoinWrapped is called for both transcripts).
+    //
+    // Note: the 75-char WRAP_THRESHOLD gate only applies to sentence-boundary chars
+    // (.!?) — not to ";", which must rejoin regardless of line length.
+    const status = ' West of House                                    Score: 0        Moves: 0';
+    const semicolonLine = 'The way is blocked;';
+    const continuation = 'you cannot pass.';
+
+    // dfrotz-side: line ending with ";" should rejoin (dfrotzSource=true)
+    const dfrotzRaw = [status, '', semicolonLine, continuation].join('\n');
+    const dfrotzTurns = normalizeDfrotz(dfrotzRaw);
+    expect(dfrotzTurns[0]?.text).toBe('The way is blocked; you cannot pass.');
+
+    // engine-side: same behaviour (dfrotzSource=false)
+    const engineRaw = ['> look', semicolonLine, continuation].join('\n');
+    const engineTurns = normalizeEngine(engineRaw);
+    expect(engineTurns[0]?.text).toBe('The way is blocked; you cannot pass.');
+  });
+
+  it('keeps a genuine paragraph break that ends in the 75-80 char band (no false merge)', () => {
+    // The Gallery room ldesc legitimately ends "...north or west exits." and the
+    // PAINTING fdesc is a SEPARATE paragraph following it.  The old WRAP_THRESHOLD
+    // heuristic saw the 75-char sentence-end on the dfrotz side and wrongly merged
+    // the fdesc into the room paragraph, while the engine kept them split — a false
+    // divergence the harness manufactured.  Both sides must preserve real structure
+    // identically.  (dfrotz is now run wide so its line breaks ARE real structure.)
+    const roomLine =
+      'exceptional taste. The vandals left through either the north or west exits.'; // 75 chars
+    const objLine =
+      'Fortunately, there is still one chance for you to be a vandal, for on the far wall is a painting of unparalleled beauty.';
+    const status =
+      ' Gallery                                          Score: 0        Moves: 0';
+
+    const dfrotzTurns = normalizeDfrotz([status, '', 'Gallery', roomLine, objLine].join('\n'));
+    const engineTurns = normalizeEngine(['> east', 'Gallery', roomLine, objLine].join('\n'));
+
+    // The fdesc stays its own paragraph on BOTH sides — identical real structure.
+    expect(dfrotzTurns[0]?.text).toMatch(/west exits\.\nFortunately/);
+    expect(engineTurns[0]?.text).toMatch(/west exits\.\nFortunately/);
+    expect(dfrotzTurns[0]?.text.split('\n').length).toBe(
+      engineTurns[0]?.text.split('\n').length,
+    );
   });
 });
 

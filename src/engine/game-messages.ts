@@ -132,6 +132,8 @@ export const vPut = dv.vPut;
 export const vPutBehind = dv.vPutBehind;
 export const vPutOn = dv.vPutOn;
 export const vPutUnder = dv.vPutUnder;
+export const vVersion = dv.vVersion;
+export const vScript = dv.vScript;
 export const vQuit = dv.vQuit;
 export const vRape = dv.vRape;
 export const vRead = dv.vRead;
@@ -269,6 +271,8 @@ export const MSG = {
   vPutBehind,
   vPutOn,
   vPutUnder,
+  vVersion,
+  vScript,
   vQuit,
   vRape,
   vRead,

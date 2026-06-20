@@ -12,6 +12,7 @@
 
 import type { ActionHandler } from '../domain/game-object.js';
 import { Flag } from '../domain/flags.js';
+import { M_BEG } from '../engine/messages.js';
 
 // ---------------------------------------------------------------------------
 // robToWall — 1actions.zil:3976 (inline for the rainbow-dismiss case only)
@@ -58,7 +59,7 @@ function robToWall(ctx: Parameters<ActionHandler>[0]): void {
 // ---------------------------------------------------------------------------
 
 export const scepFcn: ActionHandler = (ctx) => {
-  if (ctx.verb !== 'wave' && ctx.verb !== 'raise') return false;
+  if (ctx.action !== 'V-WAVE' && ctx.action !== 'V-RAISE') return false;
 
   const hereId = ctx.here.id;
 
@@ -133,7 +134,7 @@ export const scepFcn: ActionHandler = (ctx) => {
 // ---------------------------------------------------------------------------
 
 export const rainbowFcn: ActionHandler = (ctx) => {
-  if (ctx.verb === 'cross' || ctx.verb === 'through') {
+  if (ctx.action === 'V-CROSS' || ctx.action === 'V-THROUGH') {
     const hereId = ctx.here.id;
 
     // :2636–2638 — CANYON-VIEW is a scenic dead-end
@@ -166,8 +167,8 @@ export const rainbowFcn: ActionHandler = (ctx) => {
     return true;
   }
 
-  // :2649–2650 — VERB? LOOK-UNDER (parser sets verb='look', prep='UNDER' uppercase)
-  if (ctx.verb === 'look' && ctx.prep?.toUpperCase() === 'UNDER') {
+  // :2649–2650 — VERB? LOOK-UNDER
+  if (ctx.action === 'V-LOOK-UNDER') {
     ctx.tell('The Frigid River flows under the rainbow.');
     return true;
   }
@@ -175,7 +176,32 @@ export const rainbowFcn: ActionHandler = (ctx) => {
   return false;
 };
 
+// ---------------------------------------------------------------------------
+// CANYON-VIEW-F — 1dungeon.zil:2406–2411
+//
+// A.1 verification: FCN IS defined in ZIL (1dungeon.zil:2406), handling only
+// M-BEG + VERB? LEAP + NOT PRSO → JIGS-UP "Nice view, lousy place to jump."
+// No M-LOOK or M-ENTER clause exists; the ldesc in rooms.json covers the room
+// description entirely.  The CROSS verb at CANYON-VIEW is handled by RAINBOW-FCN
+// (above), not by this room FCN.
+// ---------------------------------------------------------------------------
+
+/**
+ * CANYON-VIEW-F — CANYON-VIEW M-BEG handler.
+ *
+ * Intercepts bare LEAP/JUMP (no dobj) to deliver a fatal fall message.
+ */
+export const canyonViewFcn: ActionHandler = (ctx) => {
+  if (ctx.rarg !== M_BEG) return false;
+  if (ctx.action !== 'V-LEAP') return false;
+  if (ctx.dobj !== undefined) return false;
+
+  ctx.jigsUp?.('Nice view, lousy place to jump.');
+  return true;
+};
+
 export const rainbowActions: Record<string, ActionHandler> = {
   'SCEPTRE-FUNCTION': scepFcn,
   'RAINBOW-FCN':      rainbowFcn,
+  'CANYON-VIEW-F':    canyonViewFcn,
 };

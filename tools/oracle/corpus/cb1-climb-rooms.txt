@@ -1,0 +1,355 @@
+# cb1-climb-rooms.txt — CB1 per-room climb corpus (Zork I dfrotz R119)
+# generated-by: dfrotz-r119 2026-06-12 CB1-structural-rewrite
+#
+# Anchors V-CLIMB-UP/DOWN/FOO branch behavior at each room in the decision
+# table (DT §"Corpus rows") against dfrotz R119.  Covers the 8 divergences
+# (DIV-1..8) and the confirmed-matching cells listed in the decision table.
+#
+# Navigation format:
+#   All revisit-navigation turns and turns with dfrotz-only clock ambient
+#   text (the songbird CLOCKER fires in this run at moves 6 and 17) are
+#   marked ~ (structural match only) so the pre-existing bdesc-gap (dfrotz
+#   brief-mode; engine always prints ldesc) and missing ambient clock do not
+#   count as divergences.
+#
+# Session route (single game, 63 moves):
+#   FOREST-1:    N N S W W  (moves 1-5, FOREST = west of WoH)
+#   PATH:        E           (move 13; revisit ~)
+#   UP-A-TREE:   climb tree  (move 15; first visit)
+#   PATH return: climb down tree  (move 18; revisit ~)
+#   MOUNTAINS:   E E         (moves 19-20; first+first)
+#   CANYON-VIEW: W W S W W S N E  (moves 24-31; revisit nav ~)
+#   CLIFF-MIDDLE: down       (move 38)
+#   CANYON-BOTTOM: down down (moves 41-42)
+#   KITCHEN:     up NW W S E open-window enter  (moves 44-51)
+#   CELLAR:      W move-rug open-trapdoor down  (moves 57-60)
+#
+# ZIL refs: gverbs.zil:279-335 (V-CLIMB-UP/DOWN/FOO), 1actions.zil:3004-3009
+#   (FOREST-ROOM M-BEG intercept), gsyntax.zil:130-137 (RMUNGBIT FIND).
+
+# ==========================================================================
+# SECTION 1: Navigate to FOREST-1
+# Route from WoH: N(NoH) N(PATH) S(NoH) W(WoH) W(FOREST-1)
+# PATH and NoH are first visits; WoH revisit; FOREST-1 first visit.
+# ==========================================================================
+north
+north
+~south
+~west
+west
+
+# --------------------------------------------------------------------------
+# FOREST-1 climb commands (DT rows: FOREST-1)
+# FOREST-ROOM M-BEG intercept: verb in {CLIMB-UP, CLIMB-FOO} + PRSO=TREE ->
+#   DO-WALK UP before V-CLIMB-UP runs (1actions.zil:3004-3009).
+# up exit has elseMessage "There is no tree here suitable for climbing." (CEXIT).
+# DIV-1 repair: climb up/bare/tree/up-tree all surface the elseMessage.
+# --------------------------------------------------------------------------
+
+# "climb up" at FOREST-1: FOREST-ROOM M-BEG intercepts verb=CLIMB-UP,
+#   PRSO defaults nil -> no intercept -> V-CLIMB-UP with OBJ=nil ->
+#   exit exists -> DO-WALK -> CEXIT fires elseMessage.
+# Songbird CLOCKER fires this turn (move 6) -> mark ~.
+# DT confirmed-matching; dfrotz: "There is no tree here suitable for climbing."
+~climb up
+
+# "climb down" at FOREST-1: V-CLIMB-DOWN with OBJ=ROOMS phantom -> branch 1
+#   (ROOMS + no down exit) -> "You can't go that way."
+# DIV-2 repair: ROOMS phantom branch 1 refusal.
+# dfrotz: "You can't go that way."
+climb down
+
+# bare "climb" at FOREST-1: V-CLIMB-FOO passes PRSO=ROOMS as OBJ.
+#   FOREST-ROOM M-BEG: verb=CLIMB-FOO but OBJ=ROOMS != TREE -> no intercept.
+#   V-CLIMB-UP OBJ=ROOMS + up exit -> DO-WALK -> CEXIT fires elseMessage.
+# dfrotz: "There is no tree here suitable for climbing."
+climb
+
+# "climb tree" at FOREST-1: FOREST-ROOM M-BEG intercepts CLIMB-FOO + PRSO=TREE
+#   -> DO-WALK UP -> CEXIT elseMessage.
+# dfrotz: "There is no tree here suitable for climbing."
+climb tree
+
+# "climb up tree" at FOREST-1: CLIMB-FOO (parser: "climb [dir] noun" ->
+#   V-CLIMB-UP with OBJ=PRSO=TREE dispatch via V-CLIMB-FOO).
+#   FOREST-ROOM intercept fires -> DO-WALK UP -> CEXIT elseMessage.
+# dfrotz: "There is no tree here suitable for climbing."
+climb up tree
+
+# "climb surrounding wall" at FOREST-1: WALL synonym; up exit exists ->
+#   V-CLIMB-UP OBJ=nil -> DO-WALK -> CEXIT elseMessage.
+#   (WALL not in FOREST-1 globals; branch 3 WALL-synonym doesn't fire because
+#   OBJ=nil and exit exists -> branch 2 -> DO-WALK -> elseMessage.)
+# Songbird CLOCKER fires after this response (between moves 11 and 12 in a
+#   different sequence; in this run fires at move 11) -> mark ~.
+# Wait: re-check — chirping in THIS run fires at move 6 (climb up) and move 17
+#   (UP-A-TREE climb surrounding wall). Move 11 does NOT have chirping here.
+# dfrotz: "The surrounding wall doesn't lead upward."
+climb surrounding wall
+
+# "climb forest" at FOREST-1: no FOREST object as global; parser resolves
+#   FOREST as room object or fails -> V-CLIMB-UP OBJ set -> branch 1 or 6.
+#   dfrotz output: "The forest doesn't lead upward."
+# DT "confirmed-matching" cell.
+climb forest
+
+# ==========================================================================
+# SECTION 2: Navigate to PATH (Forest Path)
+# From FOREST-1: east -> Forest Path (revisit ~).
+# ==========================================================================
+~east
+
+# --------------------------------------------------------------------------
+# PATH climb commands
+# PATH has up exit to UP-A-TREE; down exit = none.
+# --------------------------------------------------------------------------
+
+# "climb down" at PATH: V-CLIMB-DOWN OBJ=ROOMS phantom -> no down exit ->
+#   branch 1 -> "You can't go that way."
+# dfrotz: "You can't go that way."
+climb down
+
+# ==========================================================================
+# SECTION 3: Navigate to UP-A-TREE
+# "climb tree" from PATH: FOREST-ROOM M-BEG intercepts -> DO-WALK UP ->
+#   UP-A-TREE (first visit, full ldesc).
+# ==========================================================================
+climb tree
+
+# --------------------------------------------------------------------------
+# UP-A-TREE climb commands
+# --------------------------------------------------------------------------
+
+# "climb up" at UP-A-TREE: V-CLIMB-UP OBJ=nil -> up exit -> DO-WALK ->
+#   NEXIT (no-exit-in-direction) -> "You cannot climb any higher."
+# dfrotz: "You cannot climb any higher."
+climb up
+
+# "climb surrounding wall" at UP-A-TREE: WALL synonym; up exit NEXIT ->
+#   V-CLIMB-UP OBJ=nil -> DO-WALK -> NEXIT refusal
+#   "The surrounding wall doesn't lead upward."
+# Songbird CLOCKER fires this turn (move 17 in this run) -> mark ~.
+~climb surrounding wall
+
+# "climb down tree" at UP-A-TREE: V-CLIMB-DOWN passes OBJ=PRSO=TREE.
+#   Down exit exists (to PATH, UEXIT). OBJ=TREE, GLOBAL-IN? TREE HERE=true ->
+#   DO-WALK down -> Forest Path (revisit ~).
+# Walks -> marked ~ for revisit ldesc gap.
+~climb down tree
+
+# ==========================================================================
+# SECTION 4: Navigate to MOUNTAINS
+# From Forest Path (PATH): E -> Forest(dim), E -> Forest(mountains)
+# Both first visits.
+# ==========================================================================
+east
+east
+
+# --------------------------------------------------------------------------
+# MOUNTAINS climb commands (DT rows: MOUNTAINS = Forest(mountains))
+# No FOREST-ROOM action at MOUNTAINS. Up exit = elseMessage CEXIT.
+# --------------------------------------------------------------------------
+
+# "climb up" at MOUNTAINS: V-CLIMB-UP OBJ=nil -> exit -> DO-WALK ->
+#   CEXIT elseMessage -> "The mountains are impassable."
+# dfrotz: "The mountains are impassable."
+climb up
+
+# "climb tree" at MOUNTAINS: V-CLIMB-FOO OBJ=TREE; up exit NEXIT ->
+#   branch 1 (OBJ set + NEXIT) -> "The tree doesn't lead upward."
+# DIV-3: MOUNTAINS has TREE as global but no FOREST-ROOM action, so
+#   branch 1 refuses with "The tree doesn't lead upward." (not "no suitable tree").
+# dfrotz: "The tree doesn't lead upward."
+climb tree
+
+# "climb surrounding wall" at MOUNTAINS: V-CLIMB-FOO OBJ=WALL; NEXIT ->
+#   branch 1 -> "The surrounding wall doesn't lead upward."
+# dfrotz: "The surrounding wall doesn't lead upward."
+climb surrounding wall
+
+# ==========================================================================
+# SECTION 5: Navigate to CANYON-VIEW
+# From MOUNTAINS Forest: W W S W W S N E -> Canyon View (first visit)
+# All nav turns revisit except Canyon View itself; mark ~ throughout.
+# ==========================================================================
+~west
+~west
+~south
+~west
+~west
+~south
+~north
+east
+
+# --------------------------------------------------------------------------
+# CANYON-VIEW climb commands
+# Globals: CLIMBABLE-CLIFF (synonyms: WALL/CLIFF/WALLS/LEDGE), RIVER, RAINBOW.
+# Up exit: none (elseMessage would not apply; no up exit at all).
+# Down exit: DEXIT (boat/river machinery; GLOBAL-IN? check fails -> refuse).
+# --------------------------------------------------------------------------
+
+# "climb up" at CANYON-VIEW: V-CLIMB-UP OBJ=nil -> no up exit -> branch 5
+#   (OBJ nil -> "You can't go that way.").
+# dfrotz: "You can't go that way."
+climb up
+
+# "climb down" at CANYON-VIEW: V-CLIMB-DOWN OBJ=ROOMS phantom -> down exit
+#   exists (DEXIT) but GLOBAL-IN? ROOMS dest = false (ROOMS is phantom) ->
+#   branch 1 refuse -> "The  doesn't lead downward."
+# DIV-4 repair. dfrotz: "The  doesn't lead downward."
+climb down
+
+# "climb wall" at CANYON-VIEW: WALL is synonym for CLIMBABLE-CLIFF; no up exit
+#   -> branch 3 (WALL synonym + no exit) -> "Climbing the walls is to no avail."
+# dfrotz: "Climbing the walls is to no avail."
+climb wall
+
+# "climb cliff" at CANYON-VIEW: CLIFF is synonym for CLIMBABLE-CLIFF; same
+#   branch 3 path -> "Climbing the walls is to no avail."
+# dfrotz: "Climbing the walls is to no avail."
+climb cliff
+
+# "climb up cliff" at CANYON-VIEW: V-CLIMB-UP top-level dispatch strips dobj
+#   (OBJ always nil per gverbs.zil:300-302); no up exit -> branch 5 ->
+#   "You can't go that way." (same as bare "climb up").
+# DIV-5 repair: parser resolves CLIMBABLE-CLIFF for "cliff" but verbClimbUpAction
+#   strips dobj to nil; the WALL-synonym branch-3 check is not reached.
+# dfrotz: "You can't go that way."
+climb up cliff
+
+# "climb tree" at CANYON-VIEW: no TREE global here; parser fails to resolve ->
+#   "You can't see any tree here!"
+# dfrotz: "You can't see any tree here!"
+climb tree
+
+# ==========================================================================
+# SECTION 6: Navigate to CLIFF-MIDDLE (Rocky Ledge)
+# From CANYON-VIEW: down -> Rocky Ledge (first visit).
+# ==========================================================================
+down
+
+# --------------------------------------------------------------------------
+# CLIFF-MIDDLE climb commands
+# Globals: CLIMBABLE-CLIFF, RIVER. Up exit: UEXIT -> Canyon View.
+# Down exit: none (DEXIT to boat region fails GLOBAL-IN? for nil/ROOMS).
+# --------------------------------------------------------------------------
+
+# "climb down" at CLIFF-MIDDLE: V-CLIMB-DOWN OBJ=ROOMS phantom -> down exit
+#   DEXIT fails GLOBAL-IN? -> branch 1 -> "The  doesn't lead downward."
+# DIV-6 repair. dfrotz: "The  doesn't lead downward."
+climb down
+
+# "climb up" at CLIFF-MIDDLE: V-CLIMB-UP OBJ=nil -> up exit UEXIT ->
+#   DO-WALK up -> Canyon View (revisit ~).
+# Walks to Canyon View. dfrotz: Canyon View header (no refusal text).
+~climb up
+
+# ==========================================================================
+# SECTION 7: Navigate to CANYON-BOTTOM (from Canyon View after CLIFF-MIDDLE)
+# Canyon View -> down (Rocky Ledge revisit ~) -> down (Canyon Bottom first visit).
+# ==========================================================================
+~down
+down
+
+# --------------------------------------------------------------------------
+# CANYON-BOTTOM climb commands
+# Globals: GLOBAL-WATER, CLIMBABLE-CLIFF, RIVER. Up exit: UEXIT -> Rocky Ledge.
+# Down exit: none.
+# --------------------------------------------------------------------------
+
+# "climb down" at CANYON-BOTTOM: V-CLIMB-DOWN OBJ=ROOMS phantom -> no down exit
+#   -> branch 5 (OBJ=ROOMS -> "You can't go that way.").
+# dfrotz: "You can't go that way."
+climb down
+
+# "climb up cliff" at CANYON-BOTTOM: V-CLIMB-FOO (dispatched as V-CLIMB-UP
+#   with OBJ=CLIMBABLE-CLIFF passed explicitly). Up exit UEXIT -> GLOBAL-IN?
+#   CLIMBABLE-CLIFF HERE=true -> DO-WALK up -> Rocky Ledge (revisit ~).
+# Walks. dfrotz: Rocky Ledge header.
+~climb up cliff
+
+# ==========================================================================
+# SECTION 8: Navigate to KITCHEN
+# From Rocky Ledge: up(CanyonView~) NW(Clearing~) W(BehindHouse~)
+#   S(SoH~) E(BehindHouse~) open-window enter(Kitchen first visit? revisit~).
+# ==========================================================================
+~up
+~northwest
+~west
+~south
+~east
+~open window
+enter
+
+# --------------------------------------------------------------------------
+# KITCHEN climb commands
+# Globals: KITCHEN-WINDOW, CHIMNEY, STAIRS. Up exit: UEXIT -> Attic.
+# Down exit: none (chimney DEXIT with GLOBAL-IN? guard).
+# --------------------------------------------------------------------------
+
+# "climb down" at KITCHEN: V-CLIMB-DOWN OBJ=ROOMS -> down exit is chimney DEXIT;
+#   GLOBAL-IN? ROOMS dest fails -> branch 1 -> "The  doesn't lead downward."
+# DIV-7 repair. dfrotz: "The  doesn't lead downward."
+climb down
+
+# "climb window" at KITCHEN: KITCHEN-WINDOW global; up exit UEXIT; OBJ=WINDOW
+#   -> GLOBAL-IN? WINDOW dest=true? No — UEXIT doesn't check globals -> DO-WALK.
+#   Wait: V-CLIMB-UP with OBJ=WINDOW; up exit exists. gverbs.zil:303-309:
+#   if exit is NEXIT or (U/C/DEXIT and NOT GLOBAL-IN? OBJ dest):
+#   KITCHEN's up exit is UEXIT; GLOBAL-IN? WINDOW Attic = false (WINDOW not in
+#   Attic globals) -> branch 1 -> "The kitchen window doesn't lead upward."
+# dfrotz: "The kitchen window doesn't lead upward."
+climb window
+
+# "climb chimney" at KITCHEN: CHIMNEY global; up exit UEXIT.
+#   GLOBAL-IN? CHIMNEY Attic = false -> branch 1 -> "The chimney doesn't lead upward."
+# dfrotz: "The chimney doesn't lead upward."
+climb chimney
+
+# "climb surrounding wall" at KITCHEN: WALL synonym; up exit UEXIT.
+#   OBJ=WALL (surroundingwall); GLOBAL-IN? WALL Attic = false -> branch 1 ->
+#   "The surrounding wall doesn't lead upward."
+# dfrotz: "The surrounding wall doesn't lead upward."
+climb surrounding wall
+
+# "climb down stairs" at KITCHEN: V-CLIMB-DOWN with OBJ=STAIRS; down exit
+#   = chimney DEXIT. STAIRS is not CHIMNEY's destination -> branch 1 (?) or
+#   OBJ=STAIRS + exit exists but wrong direction -> "The stairs don't lead downward."
+# dfrotz: "The stairs don't lead downward."
+climb down stairs
+
+# ==========================================================================
+# SECTION 9: Navigate to CELLAR
+# From KITCHEN: W(LivingRoom~) move-rug open-trapdoor down(Cellar first visit).
+# ==========================================================================
+~west
+move rug
+open trapdoor
+down
+
+# --------------------------------------------------------------------------
+# CELLAR climb commands
+# Up exit: DEXIT (trapdoor, closed after descent). elseMessage: "The trap door
+# is closed." added to rooms.json as DIV-8 data repair.
+# --------------------------------------------------------------------------
+
+# "climb up" at CELLAR: V-CLIMB-UP OBJ=nil -> up exit exists (DEXIT) ->
+#   DO-WALK up -> DEXIT gate: door is closed -> elseMessage ->
+#   "The trap door is closed."
+# DIV-8 repair. dfrotz: "The trap door is closed."
+climb up
+
+# "climb up stairs" at CELLAR: V-CLIMB-FOO with OBJ=STAIRS; up exit DEXIT;
+#   GLOBAL-IN? STAIRS dest: trapdoor closed DEXIT -> elseMessage ->
+#   "The trap door is closed."
+# dfrotz: "The trap door is closed."
+climb up stairs
+
+# "climb surrounding wall" at CELLAR: WALL synonym; up exit DEXIT blocked.
+#   V-CLIMB-UP OBJ=nil -> DO-WALK -> DEXIT elseMessage "The trap door is closed."
+#   Wait — but "climb surrounding wall" dispatches V-CLIMB-FOO with OBJ=WALL.
+#   OBJ=WALL (not nil); up exit DEXIT; GLOBAL-IN? WALL Cellar? WALL not a global
+#   of CELLAR -> branch 1 (OBJ set + GLOBAL-IN? fails) ->
+#   "The surrounding wall doesn't lead upward."
+# dfrotz: "The surrounding wall doesn't lead upward."
+climb surrounding wall

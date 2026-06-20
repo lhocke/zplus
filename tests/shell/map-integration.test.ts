@@ -22,15 +22,13 @@ describe('Map integration — direction wiring', () => {
     const { mountShell } = await import('../../src/ui/shell.js');
     const app = document.createElement('div');
     const { mapState } = mountShell(app);
-    // The game starts at WEST-OF-HOUSE.
+    // The game starts at WEST-OF-HOUSE. North exits to NORTH-OF-HOUSE.
     const startRoom = mapState.currentRoom()!;
     await submitCommand(app, 'north');
-    if (mapState.currentRoom() !== startRoom) {
-      // Room changed — verify walked record.
-      const exits = mapState.exitsFor(startRoom);
-      expect(exits.get('north')?.kind).toBe('walked');
-    }
-    // If no room change, the test is vacuous but should not crash.
+    // Room must have changed — no room change means the move silently failed.
+    expect(mapState.currentRoom(), 'north move must change the current room').not.toBe(startRoom);
+    const exits = mapState.exitsFor(startRoom);
+    expect(exits.get('north')?.kind).toBe('walked');
   });
 
   it('a failed direction records a blocked exit', async () => {
@@ -38,13 +36,11 @@ describe('Map integration — direction wiring', () => {
     const app = document.createElement('div');
     const { mapState } = mountShell(app);
     const startRoom = mapState.currentRoom()!;
-    // 'east' from WEST-OF-HOUSE is the boarded door — should fail.
+    // 'east' from WEST-OF-HOUSE is the boarded door — must fail, room stays.
     await submitCommand(app, 'east');
-    if (mapState.currentRoom() === startRoom) {
-      // Room unchanged — east should be blocked.
-      const exits = mapState.exitsFor(startRoom);
-      expect(exits.get('east')?.kind).toBe('blocked');
-    }
+    expect(mapState.currentRoom(), 'east must be blocked — room must not change').toBe(startRoom);
+    const exits = mapState.exitsFor(startRoom);
+    expect(exits.get('east')?.kind).toBe('blocked');
   });
 });
 

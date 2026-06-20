@@ -1,0 +1,53 @@
+# clock-blocked-move — CA1: blocked V-WALK advances CLOCKER by 1 (dfrotz anchor)
+# generated-by: dfrotz-r119 2026-06-12 clock-blocked-move-ca1
+# MECHANIC: CLOCKER tick on blocked moves. Per ZIL gmain.zil, CLOCKER runs for
+# every successfully-parsed non-meta verb, including V-WALK when the exit is
+# blocked (RFATAL / fend-off message). The engine bug (pre-CA1) broke the turn
+# loop on fatalResult before the CLOCKER tick, so blocked moves never advanced
+# MOVES — a silent 1-tick-per-blocked-move desync from dfrotz.
+#
+# FIX (CA1, spec §3.1): introduce fatalExit flag; break from the verb-dispatch
+# path but FALL THROUGH to the segmentConsumesTime tick block before exiting the
+# turn loop. This restores the correct ZIL timing: a blocked east/west in the
+# Troll Room (RFATAL path) now fires I-FIGHT on the CLOCKER tick exactly as
+# dfrotz does.
+#
+# PATH: West of House → south (South of House) → east (Behind House) →
+#   open window → west (Kitchen) → west (Living Room) → take lantern →
+#   move rug → open trap door → turn on lantern → down (Cellar) →
+#   north (Troll Room) → east [BLOCKED, troll fends you off; CLOCKER tick=12] →
+#   west [BLOCKED, troll fends you off + troll misses; CLOCKER tick=13]
+#
+# EVIDENCE (dfrotz R119, seed 42):
+#   Move 11: north → Troll Room (room description + troll present)
+#   Move 12: east → "The troll fends you off with a menacing gesture."
+#             (I-FIGHT fires on CLOCKER tick; F_FIRST prob(33) < threshold → no blow)
+#   Move 13: west → "The troll fends you off with a menacing gesture."
+#             + "The axe sweeps past as you jump aside."
+#             (I-FIGHT fires on CLOCKER tick; F_FIRST prob(33) ≥ threshold → MISSED)
+#
+# The key invariant: the status bar moves counter advances on every blocked move,
+# proving CLOCKER ran. Without CA1 fix, move 11→east→11 (no tick) — divergence
+# detectable at the `quit` score report.
+#
+# dfrotz R119 / zork1.z3 (Release 119 / Serial number 880429)
+# Provenance: /Users/lhocke/Code/zork-oracle-prep/zork1.z3
+# Generated: 2026-06-12, seed 42, normalizer applied
+
+south
+east
+open window
+west
+west
+take lantern
+move rug
+open trap door
+turn on lantern
+down
+# north: arrive in Troll Room; I-FIGHT may fire on this tick (F_FIRST RNG-variable)
+~north
+# east/west: BLOCKED moves — CLOCKER must tick (moves counter advances);
+# I-FIGHT fires (F_FIRST RNG-variable: may produce MISSED or other blow).
+# Both dfrotz and engine advance moves on these blocked moves — this is the CA1 fix.
+~east
+~west
