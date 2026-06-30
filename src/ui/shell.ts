@@ -175,15 +175,19 @@ function buildDrawer(content: HTMLElement): { overlay: HTMLElement; toggle: HTML
     backdrop.classList.add('opacity-100');
     backdrop.classList.remove('opacity-0');
     panel.classList.remove('translate-x-full');
+    // Hide the open-sidebar toggle so it doesn't sit on top of the panel's close
+    // button while the drawer is open.
+    toggle.classList.add('hidden');
   }
   function closeDrawer() {
     backdrop.classList.remove('opacity-100');
     backdrop.classList.add('opacity-0');
     panel.classList.add('translate-x-full');
-    // Wait for slide transition before hiding pointer events.
+    // Wait for slide transition before hiding pointer events + restoring the toggle.
     overlay.addEventListener('transitionend', () => {
       overlay.setAttribute('aria-hidden', 'true');
       overlay.style.pointerEvents = 'none';
+      toggle.classList.remove('hidden');
     }, { once: true });
   }
 
@@ -1522,7 +1526,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   savesBtn.addEventListener('click', () => slotPicker.open());
 
   // Known issues button.
-  const issuesBtn = el('button', 'text-xs text-[var(--zork-accent)] underline mt-2 text-left');
+  const issuesBtn = el('button', 'text-xs text-[var(--zork-accent)] underline mt-2 text-left', { 'data-open-issues': '' });
   issuesBtn.textContent = 'Known Issues & Limitations';
   issuesBtn.addEventListener('click', openIssues);
 
@@ -1532,7 +1536,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   creditsBtn.addEventListener('click', openCredits);
 
   // Feedback button.
-  const feedbackBtn = el('button', 'text-xs text-[var(--zork-accent)] underline text-left');
+  const feedbackBtn = el('button', 'text-xs text-[var(--zork-accent)] underline text-left', { 'data-open-feedback': '' });
   feedbackBtn.textContent = 'Send Feedback';
   feedbackBtn.addEventListener('click', openFeedback);
 
@@ -1596,9 +1600,15 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
     const target = btn.getAttribute('data-theme-target') as ThemeName;
     btn.addEventListener('click', () => applyTheme(target));
   }
-  // Re-wire credits button in the cloned node.
+  // Re-wire the sidebar buttons in the cloned node — cloneNode(true) copies the
+  // markup but NOT event listeners, so each interactive control the drawer reuses
+  // must be re-bound here by its data attribute.
   const drawerCreditsBtn = drawerContent.querySelector<HTMLElement>('[data-open-credits]');
   if (drawerCreditsBtn) drawerCreditsBtn.addEventListener('click', openCredits);
+  const drawerIssuesBtn = drawerContent.querySelector<HTMLElement>('[data-open-issues]');
+  if (drawerIssuesBtn) drawerIssuesBtn.addEventListener('click', openIssues);
+  const drawerFeedbackBtn = drawerContent.querySelector<HTMLElement>('[data-open-feedback]');
+  if (drawerFeedbackBtn) drawerFeedbackBtn.addEventListener('click', openFeedback);
 
   const { overlay: drawerOverlay, toggle: drawerToggle } = buildDrawer(drawerContent);
 

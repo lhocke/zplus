@@ -8,7 +8,9 @@
 # Only ever kills its own child tail by exact PID — never a pattern match.
 set -u
 
-LOGDIR="${1:-/Users/lhocke/Code/zork-test/playtest-logs}"
+# Default to <repo-root>/playtest-logs, resolved from this script's own location
+# (this file lives in tools/, so :h:h is the repo root). No absolute path baked in.
+LOGDIR="${1:-${0:A:h:h}/playtest-logs}"
 PIDFILE="/tmp/zork-playtest-watch.pid"
 
 echo $$ > "$PIDFILE"

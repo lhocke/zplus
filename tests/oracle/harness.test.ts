@@ -514,7 +514,7 @@ describe('loadCorpusItems', () => {
 
   it('extracts plain commands with rngVariable=false', () => {
     // Use extractCommands on a plain corpus
-    const corpusPath = '/Users/lhocke/Code/zork-test-dam/tools/oracle/corpus/c-rainbow.txt';
+    const corpusPath = new URL('../../tools/oracle/corpus/c-rainbow.txt', import.meta.url).pathname;
     const items = loadCorpusItems(corpusPath);
     const cmds = extractCommands(items);
     expect(cmds.length).toBeGreaterThan(0);
@@ -530,7 +530,7 @@ describe('loadCorpusItems', () => {
 
   it('parses ~ prefix as rngVariable=true and strips the tilde', () => {
     // c-dam.txt now has ~kill troll with sword
-    const corpusPath = '/Users/lhocke/Code/zork-test-dam/tools/oracle/corpus/c-dam.txt';
+    const corpusPath = new URL('../../tools/oracle/corpus/c-dam.txt', import.meta.url).pathname;
     const items = loadCorpusItems(corpusPath);
     const rngItems = items.filter((i) => !('kind' in i) && (i as { rngVariable: boolean }).rngVariable);
     expect(rngItems.length).toBeGreaterThan(0);
@@ -545,7 +545,7 @@ describe('loadCorpusItems', () => {
 
   it('parses @resync directives', () => {
     // c-dam.txt has @resync East-West Passage
-    const corpusPath = '/Users/lhocke/Code/zork-test-dam/tools/oracle/corpus/c-dam.txt';
+    const corpusPath = new URL('../../tools/oracle/corpus/c-dam.txt', import.meta.url).pathname;
     const items = loadCorpusItems(corpusPath);
     const resyncs = items.filter((i) => 'kind' in i);
     expect(resyncs.length).toBeGreaterThan(0);
@@ -555,7 +555,7 @@ describe('loadCorpusItems', () => {
   });
 
   it('excludes @resync and # lines from extractCommands', () => {
-    const corpusPath = '/Users/lhocke/Code/zork-test-dam/tools/oracle/corpus/c-dam.txt';
+    const corpusPath = new URL('../../tools/oracle/corpus/c-dam.txt', import.meta.url).pathname;
     const items = loadCorpusItems(corpusPath);
     const cmds = extractCommands(items);
     // Commands must not contain @resync or start with #

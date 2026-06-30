@@ -79,7 +79,7 @@ the maze open, and the score reconciles exactly to 350 on the canonical path.
 
 ## 2. Current State Reconciliation
 
-Measured against `/Users/lhocke/Code/zork-test-specdraft` (pinned checkout) on 2026-06-09.
+Measured against a pinned checkout on 2026-06-09.
 Combat engine judged against `phase-2-combat.md` (RATIFIED), not against `src/` (the
 combat branch is mutating tonight).
 

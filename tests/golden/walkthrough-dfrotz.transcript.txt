@@ -1,6 +1,6 @@
 # generated-by: dfrotz-r119 2026-06-19 walkthrough-master 218cmd
 Using normal formatting.
-Loading /Users/lhocke/Code/zork-oracle-prep/zork1.z3.
+Loading zork1.z3.
  West of House                                    Score: 0        Moves: 0
 
 ZORK I: The Great Underground Empire

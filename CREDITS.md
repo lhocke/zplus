@@ -7,6 +7,8 @@ This project is a fan-made web re-creation of *ZORK I: The Great Underground Emp
 
 The game's text, world data, and behavior derive from the original ZIL source code, preserved at https://github.com/historicalsource/zork1 and released as open source by Microsoft under the MIT License in 2025. A verbatim copy of the license ships with the redistributed source at [zil/LICENSE](zil/LICENSE).
 
+The compiled Zork I story file used by the oracle faithfulness harness ships in-repo at [tools/oracle/zork1.z3](tools/oracle/zork1.z3). It is the same MIT-licensed work in binary form, bundled so the comparator runs without external assets; it is covered by the same license above.
+
 The in-game banner ("Copyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.") is part of the original game text, reproduced for fidelity.
 
 ## MIT License (original Zork I source)

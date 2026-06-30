@@ -79,7 +79,7 @@ Concretely, Phase 3b delivers:
 
 ## 2. Current State Reconciliation
 
-Measured against `/Users/lhocke/Code/zork-test-specdraft` (pinned checkout) on
+Measured against a pinned checkout on
 2026-06-09. Legend: **NEW** = create; **EXTEND** = add to existing; **DONE** = already
 built; **DATA** = present in JSON, handler absent.
 
