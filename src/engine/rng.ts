@@ -36,4 +36,9 @@ export class Rng {
   zprob(base: number, denom: number): boolean {
     return this.next() * denom < base;
   }
+
+  // Serialization accessors for save/restore (SS-RNG).
+  // Only on the concrete class — NOT on the Rng interface or any test stub.
+  getState(): number { return this.state; }
+  setState(s: number): void { this.state = s >>> 0; }
 }

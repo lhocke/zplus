@@ -2,7 +2,19 @@ import type { ObjectId, Dir, GameObject, ActionContext } from '../domain/game-ob
 import type { World } from '../domain/world.js';
 import { Flag } from '../domain/flags.js';
 import { Room } from '../domain/room.js';
-import type { Actor } from '../domain/actor.js';
+import { Actor } from '../domain/actor.js';
+import {
+  SAVE_FORMAT_VERSION,
+  captureObjectDelta,
+  applyObjectDelta,
+  type SaveState,
+} from './save-state.js';
+import type { SavePort } from '../shell/save-port.js';
+// In-voice messages for web-native restore failures (§5.3, OQ-3, FD-3).
+const MSG_RESTORE_VERSION = 'This saved game is from an incompatible version of the story and cannot be restored.';
+const MSG_RESTORE_CORRUPT = 'That saved game appears to be damaged.';
+import { captureModuleGlobals, applyModuleGlobals } from './module-globals.js';
+import { Rng as ConcreteRng } from './rng.js';
 import { Clock } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
@@ -62,6 +74,8 @@ export interface GameView {
   readonly maxScore: number;
   readonly moves: number;
   readonly inMaze: boolean;
+  /** True once doFinish() fires (victory or resurrections exhausted). Shell uses this to surface the RESTART/RESTORE affordance (spec §7.1). */
+  readonly gameOver: boolean;
 }
 
 /**
@@ -173,15 +187,22 @@ export class Game {
 
   private readonly visited = new Set<ObjectId>();
 
+  // Persistence port + restart handler — threaded from the session layer (§4.6).
+  // Optional: absent in test contexts that don't need save/restore/restart wiring.
+  private readonly savePort: SavePort | undefined;
+  private readonly restartFn: (() => void) | undefined;
+
   constructor(
     world: World,
-    opts: { rng: Rng; combatRng?: CombatRng; clock: Clock; events: EventEmitter },
+    opts: { rng: Rng; combatRng?: CombatRng; clock: Clock; events: EventEmitter; savePort?: SavePort; restartFn?: () => void },
   ) {
     this.world = world;
     this.clock = opts.clock;
     this.rng = opts.rng;
     this.combatRng = opts.combatRng ?? (opts.rng as unknown as CombatRng);
     this.events = opts.events;
+    this.savePort = opts.savePort;
+    this.restartFn = opts.restartFn;
     this.parser = new Parser();
     this.flags = new FlagStore();
 
@@ -293,7 +314,10 @@ export class Game {
    * FINISH — gverbs.zil:33–53, web-shell form (B7).
    *
    * Renders V-SCORE (score + moves + rank), emits the terminal string, and
-   * sets gameOver.  RESTART/RESTORE are no-ops (save slots deferred).
+   * sets gameOver.  The engine does not run the ZIL blocking RESTART/RESTORE/QUIT
+   * READ loop — the shell surfaces a RESTART / RESTORE affordance on gameOver,
+   * wired to the same session.restart() / session.restore() substrate the verbs
+   * use (spec §4.4, §7; Phase-2 B7 ratified omitting the loop).
    * The tell callback receives the text so callers can route it to their output
    * buffer; when tell is not provided the output is discarded (death paths that
    * call finish() only care about gameOver).
@@ -584,7 +608,7 @@ export class Game {
   }
 
   /** Execute one command line (may contain chained commands via "then" / "."). */
-  turn(input: string): TurnResult {
+  turn(input: string, opts?: { saveSlot?: string }): TurnResult {
     if (this.gameOver) return { output: '', moved: false };
     this.fatalPending = false;
 
@@ -779,6 +803,22 @@ export class Game {
           disableClock: (id) => this.clock.disable(id),
           finish: () => this.doFinish((text) => handled.push(text)),
           thisIsIt: (obj) => { this.parser.setItRef(obj.id); },
+          saveGame: this.savePort
+            ? (slot) => { this.savePort!.write(slot, this.snapshot()); }
+            : undefined,
+          restoreGame: this.savePort
+            ? (slot) => {
+                const r = this.savePort!.readWithReason(slot);
+                if (r === 'empty')   return undefined;
+                if (r === 'version') return { inVoice: MSG_RESTORE_VERSION };
+                if (r === 'corrupt') return { inVoice: MSG_RESTORE_CORRUPT };
+                // SaveState: mutate in place, then re-describe (V-FIRST-LOOK).
+                this.restore(r);
+                return this.describeCurrentRoom(true);
+              }
+            : undefined,
+          restart: this.restartFn,
+          saveSlot: opts?.saveSlot,
           heroBlow: (targetId, weaponId) => {
             const out: string[] = [];
             const entry = this.getVillainEntry(targetId, (s) => out.push(s));
@@ -1017,6 +1057,7 @@ export class Game {
       maxScore: 350,
       moves: this.moveCount,
       inMaze: this.here.has(Flag.Maze),
+      gameOver: this.gameOver,
     };
   }
 
@@ -2313,4 +2354,176 @@ export class Game {
       rng:   this.rng,
     };
   }
+
+  // ---------------------------------------------------------------------------
+  // Save / Restore (SS1 — serialization surface)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Produce a SaveState capturing all mutable game state.
+   *
+   * Fields owned by sibling tasks are stubs marked // SS1-SEAM:<task>; tests
+   * must NOT assert on those fields until the owning task lands.
+   */
+  snapshot(): SaveState {
+    // Injected at Vite build time; falls back to 'dev' in Node/test.
+    let buildId = 'dev';
+    try {
+      buildId = __BUILD_ID__;
+    } catch { /* node / test: no injected constant */ }
+
+    return {
+      formatVersion: SAVE_FORMAT_VERSION,
+      buildId,
+      savedAt: new Date().toISOString(),
+
+      moveCount:   this.moveCount,
+      deaths:      this.deaths,
+      dead:        this.dead,
+      alwaysLit:   this.alwaysLit,
+      gameOver:    this.gameOver,
+      lucky:       this.lucky,
+      loadAllowed: this.loadAllowed,
+      loadMax:     this.loadMax,
+      waterLevel:  this.waterLevel,
+      beachDig:    this.beachDig,
+
+      hereId:  this.here.id,
+      visited: Array.from(this.visited),
+
+      lastVerb:    this.lastVerb,
+      lastAction:  this.lastAction,
+      lastDobjId:  this.lastDobj?.id,
+      lastIobjId:  this.lastIobj?.id,
+      lastPrep:    this.lastPrep,
+
+      rngMain:   this.rng instanceof ConcreteRng
+        ? this.rng.getState()
+        : (() => { throw new Error('snapshot(): rng is non-serializable (no getState); use a concrete Rng instance'); })(),
+      rngCombat: this.combatRng instanceof ConcreteRng
+        ? (this.combatRng as ConcreteRng).getState()
+        : (() => { throw new Error('snapshot(): combatRng is non-serializable (no getState); use a concrete Rng instance'); })(),
+
+      clock:   this.clock.snapshot(),
+
+      scoring: {
+        baseScore: this.scoring.baseScore,
+        score:     this.scoring.score,
+        wonFlag:   this.scoring.wonFlag,
+      },
+
+      flagStore:     this.flags.snapshot(),  // SS4
+      objects:       this.world.all().map(captureObjectDelta),
+      parser:        this.parser.snapshotState(),  // SS5
+      moduleGlobals: captureModuleGlobals(),        // SS6
+    };
+  }
+
+  /**
+   * Restore game state from a SaveState, mutating this instance in place.
+   *
+   * Fixed order: version guard → subsystem seams → object tree → instance refs → scalars.
+   * restore() is synchronous and NOT re-entrant; Pass 2 transiently empties the world tree.
+   */
+  restore(state: SaveState): void {
+    // 1. Version guard — runs BEFORE mutating anything (no partial restore).
+    //    Full buildId/corruption/in-voice policy owned by PB-VER/PB-PORT (spec §5.3);
+    //    SS1 ships only the formatVersion hard-refuse so ordering is correct.
+    if (state.formatVersion !== SAVE_FORMAT_VERSION) {
+      throw new Error(
+        `SaveState formatVersion ${state.formatVersion} does not match engine version ${SAVE_FORMAT_VERSION}; cannot restore.`,
+      );
+    }
+
+    // 2. Subsystem seams — siblings wire these; each seam runs BEFORE the object tree
+    //    so closures and `here` resolve against restored subsystem state.
+    if (this.rng instanceof ConcreteRng)       this.rng.setState(state.rngMain);
+    if (this.combatRng instanceof ConcreteRng) (this.combatRng as ConcreteRng).setState(state.rngCombat);
+    this.flags.restore(state.flagStore);  // SS4
+    this.scoring.restoreState(state.scoring);  // SS3
+    this.clock.restore(state.clock);
+    applyModuleGlobals(state.moduleGlobals);  // SS6
+
+    // 3. Object tree — three passes (mirrors World.fromData's build-then-link).
+
+    // Pass 1: scalar reinstate, no link changes.
+    // Unknown ids are skipped (untrusted-input posture per spec §5.1).
+    const warnings: string[] = [];
+    for (const d of state.objects) {
+      const obj = this.world.get(d.id);
+      if (obj === undefined) {
+        warnings.push(`restore: unknown object id "${d.id}" skipped`);
+        continue;
+      }
+      applyObjectDelta(obj, d);
+    }
+    // Warnings surface to PB-PORT's validator; ignored in SS1 (no port yet).
+    void warnings;
+
+    // Pass 2: detach ALL objects so Pass 3 is order-independent and idempotent.
+    for (const obj of this.world.all()) {
+      obj.moveTo(null);
+    }
+
+    // Pass 3: relink via moveTo (maintains both parent and children Set).
+    // Sort by siblingOrder so children are re-inserted into the parent's Set
+    // in the same order as the live game — printCont reverses children to
+    // reproduce ZIL's prepend-list iteration, so insertion order is observable.
+    const linked = state.objects
+      .filter(d => d.parent !== null)
+      .sort((a, b) => (a.siblingOrder ?? 0) - (b.siblingOrder ?? 0));
+    for (const d of linked) {
+      const obj = this.world.get(d.id);
+      const par = this.world.get(d.parent!);
+      if (obj === undefined || par === undefined) continue;  // corrupt-save territory
+      obj.moveTo(par);
+    }
+
+    // 4. Re-resolve instance refs by id (AFTER tree rebuild so refs bind correctly).
+    const hereObj = this.world.get(state.hereId);
+    if (hereObj instanceof Room) {
+      this.here = hereObj;
+    }
+    // PLAYER always flows through the delta loop; re-bind the typed reference.
+    const playerObj = this.world.get('PLAYER');
+    if (playerObj instanceof Actor) {
+      this.player = playerObj;
+    }
+    this.lastDobj = state.lastDobjId ? this.world.get(state.lastDobjId) : undefined;
+    this.lastIobj = state.lastIobjId ? this.world.get(state.lastIobjId) : undefined;
+
+    // 5. Core scalars.
+    this.moveCount   = state.moveCount;
+    this.deaths      = state.deaths;
+    this.dead        = state.dead;
+    this.alwaysLit   = state.alwaysLit;
+    this.gameOver    = state.gameOver;
+    this.lucky       = state.lucky;
+    this.loadAllowed = state.loadAllowed;
+    this.loadMax     = state.loadMax;
+    this.waterLevel  = state.waterLevel;
+    this.beachDig    = state.beachDig;
+
+    this.visited.clear();
+    for (const id of state.visited) this.visited.add(id);
+
+    this.lastVerb   = state.lastVerb;
+    this.lastAction = state.lastAction;
+    this.lastPrep   = state.lastPrep;
+
+    // 6. Parser state (SS5).
+    this.parser.restoreState(state.parser);
+  }
+
+  /**
+   * Restore from a SaveState and return the room re-describe text (V-FIRST-LOOK).
+   * Used by the shell's gameOver affordance, which cannot go through turn() because
+   * turn() gates on gameOver.  The verb body uses this.restore() + describeCurrentRoom()
+   * internally; this method makes the same pair reachable from outside the class.
+   */
+  restoreAndDescribe(state: SaveState): string {
+    this.restore(state);
+    return this.describeCurrentRoom(true);
+  }
 }
+

@@ -251,6 +251,68 @@ describe('CandleInterrupt: fuel stages', () => {
 });
 
 // ---------------------------------------------------------------------------
+// SS2 — FuelInterrupt.tableIndex round-trips through ClockSnapshot.aux
+// ---------------------------------------------------------------------------
+
+describe('SS2 fuel-stage round-trip', () => {
+  // Spec §3.3 done-criteria: save at "definitely dimmer" stage (tableIndex=1,
+  // after the first warning at turn 200), restore onto a fresh clock/lantern,
+  // advance 70 turns — the next warning must be "nearly out" not a repeat of
+  // "definitely dimmer".
+
+  it('lamp at stage 1 (definitely dimmer): next warning after restore is nearly out', () => {
+    const emitter1 = new SimpleEventEmitter();
+    const events1: Array<Extract<EngineEvent, { type: 'lantern-fuel' }>> = [];
+    emitter1.on('lantern-fuel', (e) => events1.push(e));
+    const clock1 = new Clock();
+    new LanternInterrupt(clock1, emitter1);
+
+    // Advance through first warning (turn 200) and then through the re-queue
+    // period so we're at stage 1 (tableIndex=1) — one warning emitted, next
+    // fires 100 turns later at turn 300.
+    for (let i = 0; i < 200; i++) clock1.advance();
+    expect(events1[0]!.message).toBe('The lamp appears a bit dimmer.'); // confirms stage 0 fired
+
+    // Snapshot mid-stage-1 (turnsLeft is now 100, tableIndex=1).
+    const snap = clock1.snapshot();
+    const lanternSnap = snap.find((s) => s.id === 'I-LANTERN')!;
+
+    // aux must carry the tableIndex.
+    expect(lanternSnap.aux).toBeDefined();
+    expect(lanternSnap.aux!['tableIndex']).toBe(1);
+
+    // Fresh clock + lantern, then restore.
+    const emitter2 = new SimpleEventEmitter();
+    const events2: Array<Extract<EngineEvent, { type: 'lantern-fuel' }>> = [];
+    emitter2.on('lantern-fuel', (e) => events2.push(e));
+    const clock2 = new Clock();
+    new LanternInterrupt(clock2, emitter2);
+
+    clock2.restore(snap);
+
+    // Advance 100 more turns — the next warning fires (stage 1 → "definitely dimmer"
+    // interval ends; tableIndex becomes 2 → next stage is "nearly out").
+    for (let i = 0; i < 100; i++) clock2.advance();
+    expect(events2).toHaveLength(1);
+    expect(events2[0]!.message).toBe('The lamp is definitely dimmer now.');
+
+    // Advance 70 more — stage 2 fires ("nearly out").
+    for (let i = 0; i < 70; i++) clock2.advance();
+    expect(events2).toHaveLength(2);
+    expect(events2[1]!.message).toBe('The lamp is nearly out.');
+  });
+
+  it('snapshot aux field is absent for non-fuel clock entries', () => {
+    const clock = new Clock();
+    clock.schedule({ id: 'dummy', turnsLeft: 5, enabled: true, tick: () => false });
+    const snap = clock.snapshot();
+    const entry = snap.find((s) => s.id === 'dummy')!;
+    // Non-fuel entries should not have aux (or have it undefined).
+    expect(entry.aux).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // SaveState serialisation round-trip
 // ---------------------------------------------------------------------------
 

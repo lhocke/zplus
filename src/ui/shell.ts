@@ -9,6 +9,8 @@
 import { createSession } from '../shell/session.js';
 import type { GameView } from '../engine/game.js';
 import { HttpSink } from '../shell/http-sink.js';
+import { LocalStorageSavePort } from '../shell/save-port.js';
+import type { SaveSlotMeta } from '../shell/save-port.js';
 import { MapState, type ExitRecord } from './map-state.js';
 import { parseDirection } from './directions.js';
 import { isThemeName, DEFAULT_THEME, type ThemeName } from './themes.js';
@@ -1129,6 +1131,187 @@ function buildMapModal(
   return { open, close: closeModal, element: overlay };
 }
 
+// ── Slot picker modal ─────────────────────────────────────────────────────────
+
+// Same div+classList pattern as the other modals (§7.1).
+// The picker lists SavePort.list() metadata and lets the player save to / restore
+// from a named slot.  Thin sugar over the verbs — calls the same session substrate.
+function buildSlotPickerModal(
+  getSlots: () => SaveSlotMeta[],
+  onSave: (slot: string) => void,
+  onRestore: (slot: string) => void,
+): { open: () => void; close: () => void; element: HTMLElement } {
+  const overlay = el('div', [
+    'hidden fixed inset-0 z-50 overflow-y-auto',
+    'bg-black/70',
+  ].join(' '), { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'slot-picker-title' });
+  overlay.id = 'slot-picker-modal';
+  overlay.setAttribute('data-testid', 'slot-picker-modal');
+
+  const outer = el('div', 'flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0');
+
+  const panel = el('div', [
+    'relative transform overflow-hidden rounded-lg px-4 pt-5 pb-4 text-left shadow-xl',
+    'sm:my-8 sm:w-full sm:max-w-lg sm:p-6',
+    'bg-[var(--zork-bg)] border border-[var(--zork-accent)]',
+    'text-[var(--zork-fg)] font-mono text-sm overflow-y-auto max-h-[80vh]',
+  ].join(' '));
+
+  const closeBtnWrap = el('div', 'absolute top-0 right-0 hidden pt-4 pr-4 sm:block');
+  const closeBtn = el('button', [
+    'rounded-md text-[var(--zork-accent)] hover:opacity-75',
+    'focus:outline-2 focus:outline-offset-2',
+  ].join(' '), { type: 'button' });
+  const closeSr = el('span', 'sr-only');
+  closeSr.textContent = 'Close';
+  closeBtn.appendChild(closeSr);
+  closeBtn.textContent = '✕';
+  closeBtnWrap.appendChild(closeBtn);
+
+  const title = el('h2', 'text-base font-bold mb-4 text-[var(--zork-accent)]');
+  title.id = 'slot-picker-title';
+  title.textContent = 'Save Slots';
+
+  // Slot list — rebuilt each time the modal opens.
+  const slotList = el('div', 'space-y-3');
+
+  const MANUAL_SLOTS = ['1', '2', '3'] as const;
+
+  function renderSlots() {
+    slotList.innerHTML = '';
+    const occupied = new Map(getSlots().map(s => [s.slot, s]));
+
+    for (const slot of MANUAL_SLOTS) {
+      const meta = occupied.get(slot);
+      const row = el('div', 'flex items-center justify-between gap-2 border-b border-[var(--zork-accent)] pb-2');
+
+      const label = el('div', 'flex-1 text-xs');
+      const slotName = el('span', 'font-semibold');
+      slotName.textContent = `Slot ${slot}`;
+      label.appendChild(slotName);
+
+      if (meta) {
+        const info = el('span', 'ml-2 opacity-75');
+        const savedDate = new Date(meta.savedAt).toLocaleString();
+        info.textContent = `${meta.hereName} · ${meta.moves} moves · ${savedDate}`;
+        label.appendChild(info);
+      } else {
+        const empty = el('span', 'ml-2 opacity-50');
+        empty.textContent = 'empty';
+        label.appendChild(empty);
+      }
+
+      const btnRow = el('div', 'flex gap-1 shrink-0');
+
+      const saveBtn = el('button', [
+        'px-2 py-0.5 text-xs rounded border border-[var(--zork-accent)]',
+        'hover:bg-[var(--zork-accent)] hover:text-[var(--zork-bg)]',
+      ].join(' '), { type: 'button' });
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', () => {
+        onSave(slot);
+        closeModal();
+      });
+
+      const restoreBtn = el('button', [
+        'px-2 py-0.5 text-xs rounded border border-[var(--zork-accent)]',
+        meta ? '' : 'opacity-40 cursor-not-allowed',
+      ].join(' '), { type: 'button' });
+      restoreBtn.textContent = 'Restore';
+      if (!meta) restoreBtn.setAttribute('disabled', 'true');
+      restoreBtn.addEventListener('click', () => {
+        if (!meta) return;
+        onRestore(slot);
+        closeModal();
+      });
+
+      btnRow.appendChild(saveBtn);
+      btnRow.appendChild(restoreBtn);
+      row.appendChild(label);
+      row.appendChild(btnRow);
+      slotList.appendChild(row);
+    }
+  }
+
+  function closeModal() { overlay.classList.add('hidden'); }
+
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay || e.target === outer) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeModal();
+  });
+
+  panel.appendChild(closeBtnWrap);
+  panel.appendChild(title);
+  panel.appendChild(slotList);
+  outer.appendChild(panel);
+  overlay.appendChild(outer);
+
+  return {
+    open() {
+      renderSlots();
+      overlay.classList.remove('hidden');
+    },
+    close: closeModal,
+    element: overlay,
+  };
+}
+
+// ── Game-over affordance ──────────────────────────────────────────────────────
+
+// Appended into the scrollback once gameOver fires (§7.1).  Two actions:
+//   Restore — restores from the autosave slot (the pre-turn snapshot before death).
+//   Restart — shell-level confirm, then session.restart() (OQ-4).
+//
+// §6 mandated disclosure: restoring puts the player at the START of the fatal turn.
+// Replaying the identical command re-kills deterministically (same RNG position).
+// The affordance text must make this clear so the player knows to choose differently.
+function buildGameOverAffordance(
+  onRestore: () => void,
+  onRestart: () => void,
+): HTMLElement {
+  const wrap = el('div', [
+    'mt-3 p-3 border border-[var(--zork-accent)] rounded font-mono text-sm',
+  ].join(' '));
+  wrap.setAttribute('data-testid', 'game-over-affordance');
+
+  const msg = el('p', 'mb-2 opacity-75 text-xs');
+  msg.textContent = 'What would you like to do?';
+  wrap.appendChild(msg);
+
+  // §6: disclose the start-of-fatal-turn semantics — the player must understand
+  // that Restore rewinds to the start of that turn, and the same command re-kills.
+  const note = el('p', 'mb-2 opacity-60 text-xs');
+  note.textContent =
+    'Restore returns you to the start of the turn you died on. ' +
+    'Replaying the same command will re-kill you — choose differently.';
+  wrap.appendChild(note);
+
+  const btnRow = el('div', 'flex gap-2');
+
+  const restoreBtn = el('button', [
+    'px-3 py-1 text-xs rounded border border-[var(--zork-accent)]',
+    'hover:bg-[var(--zork-accent)] hover:text-[var(--zork-bg)]',
+  ].join(' '), { type: 'button' });
+  restoreBtn.textContent = 'Restore last position';
+  restoreBtn.addEventListener('click', onRestore);
+
+  const restartBtn = el('button', [
+    'px-3 py-1 text-xs rounded border border-[var(--zork-accent)]',
+    'hover:bg-[var(--zork-accent)] hover:text-[var(--zork-bg)]',
+  ].join(' '), { type: 'button' });
+  restartBtn.textContent = 'Restart game';
+  restartBtn.addEventListener('click', onRestart);
+
+  btnRow.appendChild(restoreBtn);
+  btnRow.appendChild(restartBtn);
+  wrap.appendChild(btnRow);
+
+  return wrap;
+}
+
 // ── Shell mount ───────────────────────────────────────────────────────────────
 
 export function mountShell(app: HTMLElement): { mapState: MapState; session: import('../shell/session.js').GameSession } {
@@ -1150,7 +1333,10 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
     close() { sink.close(); },
   };
 
-  const session = createSession({ sink: trackingSink });
+  // Save port — localStorage-backed, same key namespace as zork-theme (§5.2, §7.1).
+  const savePort = new LocalStorageSavePort(localStorage);
+
+  const session = createSession({ sink: trackingSink, savePort });
 
   // ── Theme management ────────────────────────────────────────────────────
   // switcherContainer must be declared before applyTheme is called at boot —
@@ -1219,6 +1405,60 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
     return _modalLayoutPromise;
   });
 
+  // Slot picker — open/close driven by the "Saves" sidebar button.
+  let currentGameOverAffordance: HTMLElement | null = null;
+
+  function doRestoreFromAutosave() {
+    // Bypass game.turn() (which gates on gameOver) via the dedicated session method.
+    const output = session.restoreFromAutosave();
+    if (output) appendOutput(output);
+    const snap = session.snapshot();
+    updateStatus(snap);
+    mapState.update(snap, null);
+    void map.refresh();
+    pathsPanel.refresh();
+    // Only remove the affordance when the restore actually worked — if the autosave
+    // slot was absent (quota eviction, first turn, etc.) the session stays gameOver
+    // and the player still needs the Restart option.  Removing it unconditionally
+    // would strand the player with no recovery path (house-style no-hard-lock).
+    if (!snap.gameOver && currentGameOverAffordance) {
+      currentGameOverAffordance.remove();
+      currentGameOverAffordance = null;
+    }
+  }
+
+  function doRestartWithConfirm() {
+    if (!window.confirm('Are you sure you want to restart? Your current game will be lost.')) return;
+    session.restart();
+    const snap = session.snapshot();
+    updateStatus(snap);
+    mapState.update(snap, null);
+    void map.refresh();
+    pathsPanel.refresh();
+    // Remove the affordance — the game is running again.
+    if (currentGameOverAffordance) {
+      currentGameOverAffordance.remove();
+      currentGameOverAffordance = null;
+    }
+  }
+
+  const slotPicker = buildSlotPickerModal(
+    () => savePort.list(),
+    (slot) => {
+      const output = session.submit(`save ${slot}`);
+      if (output) appendOutput(output);
+    },
+    (slot) => {
+      const output = session.submit(`restore ${slot}`);
+      if (output) appendOutput(output);
+      const snap = session.snapshot();
+      updateStatus(snap);
+      mapState.update(snap, null);
+      void map.refresh();
+      pathsPanel.refresh();
+    },
+  );
+
   const { container: terminal, appendOutput, appendCommand } = buildTerminal((cmd) => {
     // Intercept 'map' before the engine sees it — no submit, no moves advance.
     if (cmd.trim().toLowerCase() === 'map') {
@@ -1233,6 +1473,15 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
     if (output) appendOutput(output);
     const snap = session.snapshot();
     updateStatus(snap);
+
+    // Show RESTART/RESTORE affordance once the game ends (§7.1).
+    if (snap.gameOver && currentGameOverAffordance === null) {
+      const affordance = buildGameOverAffordance(doRestoreFromAutosave, doRestartWithConfirm);
+      currentGameOverAffordance = affordance;
+      // Append into the scrollback so it reads as natural continuation.
+      const scrollback = terminal.querySelector('[role="log"]');
+      if (scrollback) scrollback.appendChild(affordance);
+    }
 
     const parsedDir = parseDirection(cmd);
 
@@ -1270,6 +1519,11 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   // Map area.
   const mapLabel = el('div', 'text-xs text-[var(--zork-accent)] uppercase tracking-wider mt-2');
   mapLabel.textContent = 'Paths from Here';
+
+  // Saves button — opens the slot picker (§7.1).
+  const savesBtn = el('button', 'text-xs text-[var(--zork-accent)] underline mt-2 text-left');
+  savesBtn.textContent = 'Saves';
+  savesBtn.addEventListener('click', () => slotPicker.open());
 
   // Known issues button.
   const issuesBtn = el('button', 'text-xs text-[var(--zork-accent)] underline mt-2 text-left', { 'data-open-issues': '' });
@@ -1330,6 +1584,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   sidebar.appendChild(switcherContainer);
   sidebar.appendChild(mapLabel);
   sidebar.appendChild(pathsPanel.element);
+  sidebar.appendChild(savesBtn);
   sidebar.appendChild(issuesBtn);
   sidebar.appendChild(creditsBtn);
   sidebar.appendChild(feedbackBtn);
@@ -1391,6 +1646,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   app.appendChild(creditsDialog);
   app.appendChild(feedbackDialog);
   app.appendChild(mapModal.element);
+  app.appendChild(slotPicker.element);
 
   // ── Boot the game ───────────────────────────────────────────────────────
   const banner = session.start();

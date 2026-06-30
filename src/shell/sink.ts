@@ -48,7 +48,36 @@ export interface SessionEnd {
   lastTurn: number;
 }
 
-export type PlaytestEvent = SessionStart | TurnEvent | SessionEnd;
+// Save/restore/restart telemetry (spec §7.2).
+// These act as transcript boundaries so readers can spot state jumps.
+
+export interface SaveEvent {
+  type: 'save';
+  sessionId: string;
+  buildId: string;
+  turn: number;
+  slot: string;
+  ok: boolean;
+  ts: string;
+}
+
+export interface RestoreEvent {
+  type: 'restore';
+  sessionId: string;
+  buildId: string;
+  slot: string;
+  ok: boolean;
+  reason?: 'ok' | 'empty' | 'corrupt' | 'version';
+  ts: string;
+}
+
+export interface RestartEvent {
+  type: 'restart';
+  sessionId: string;
+  ts: string;
+}
+
+export type PlaytestEvent = SessionStart | TurnEvent | SessionEnd | SaveEvent | RestoreEvent | RestartEvent;
 
 // ---------------------------------------------------------------------------
 // Sink interface
@@ -101,6 +130,14 @@ export class FileSink implements PlaytestSink {
       // "> command\n<output>\n<status>\n\n"
       const status = statusLine(e.hereName, e.score, e.maxScore, e.moves);
       text = `> ${e.command}\n${e.output}\n${status}\n\n`;
+    } else if (e.type === 'save') {
+      const flag = e.ok ? 'ok' : 'failed';
+      text = `=== save slot ${e.slot} (${flag}) ===\n`;
+    } else if (e.type === 'restore') {
+      const flag = e.ok ? 'ok' : (e.reason ?? 'failed');
+      text = `=== restore slot ${e.slot} (${flag}) ===\n`;
+    } else if (e.type === 'restart') {
+      text = `=== restart ===\n`;
     } else {
       // SessionEnd: write terminator and mark closed.
       appendFileSync(this.logPath, '=== end ===\n');

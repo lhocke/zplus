@@ -89,6 +89,22 @@ export function resetMatchCount(): void {
   matchCount = 6;
 }
 
+// ---------------------------------------------------------------------------
+// SS6 — serialization surface (spec §3.4)
+// ---------------------------------------------------------------------------
+
+export interface LightSourceStateSnapshot {
+  matchCount: number;
+}
+
+export function snapshotLightSourceState(): LightSourceStateSnapshot {
+  return { matchCount };
+}
+
+export function restoreLightSourceState(s: LightSourceStateSnapshot): void {
+  matchCount = s.matchCount;
+}
+
 /** MATCH-FUNCTION — zil/1actions.zil:2265 */
 export const matchFunction: ActionHandler = (ctx) => {
   const match = ctx.self;
