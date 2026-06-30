@@ -92,7 +92,7 @@ of the world respond faithfully. Three clusters, in dependency order:
 
 ## 2. Current-State Reconciliation
 
-Measured against `src/` at the pinned checkout `/Users/lhocke/Code/zork-test-specdraft`
+Measured against `src/` at a pinned checkout
 on 2026-06-09. **Superseded where it conflicts with §2-A below** — the thief/cyclops and
 dam/river waves merged after this section was measured.
 

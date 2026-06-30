@@ -12,16 +12,18 @@
  * real paragraph structure to compare against the (never-wrapping) engine
  * rather than guessing wraps from line length.
  *
- * The story file path is resolved from env ZORK_STORY, defaulting to
- * /Users/lhocke/Code/zork-oracle-prep/zork1.z3.
+ * The story file path is resolved from env ZORK_STORY, defaulting to the
+ * Zork I story file bundled in-repo at tools/oracle/zork1.z3 (the MIT-licensed
+ * Microsoft 2025 release — see CREDITS.md). No absolute path is baked in.
  */
 
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 export const DEFAULT_STORY_PATH =
   process.env['ZORK_STORY'] ??
-  '/Users/lhocke/Code/zork-oracle-prep/zork1.z3';
+  fileURLToPath(new URL('./zork1.z3', import.meta.url));
 
 // Run dfrotz far wider than any real game line so it never width-wraps — every
 // newline is then a genuine game newline, and the normalizer compares real

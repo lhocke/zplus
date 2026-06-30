@@ -31,7 +31,7 @@
 # detectable at the `quit` score report.
 #
 # dfrotz R119 / zork1.z3 (Release 119 / Serial number 880429)
-# Provenance: /Users/lhocke/Code/zork-oracle-prep/zork1.z3
+# Provenance: tools/oracle/zork1.z3
 # Generated: 2026-06-12, seed 42, normalizer applied
 
 south

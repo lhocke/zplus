@@ -5,14 +5,14 @@ Compares our TypeScript engine's output against the **original Zork I R119 binar
 ## Prerequisites
 
 - **dfrotz** (FROTZ V2.55) must be on `PATH`.
-- The Zork I story file (`.z3` binary) must be accessible.  It lives **outside** this repository; never commit it.
+- The Zork I story file (`.z3` binary) ships in-repo at `tools/oracle/zork1.z3` — the MIT-licensed Microsoft 2025 release of the original ZIL source (see [CREDITS.md](../../CREDITS.md)). No setup required.
 
 ## Story file location
 
 The harness resolves the story file from:
 
-1. **`ZORK_STORY` environment variable** (highest priority)
-2. Default path: `/Users/lhocke/Code/zork-oracle-prep/zork1.z3`
+1. **`ZORK_STORY` environment variable** (highest priority — set it to use a copy kept elsewhere)
+2. Default: the bundled `tools/oracle/zork1.z3` (resolved relative to the repo, never an absolute path)
 
 ```sh
 # Override the path:
