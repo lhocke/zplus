@@ -12,6 +12,12 @@ import { HttpSink } from '../shell/http-sink.js';
 import { LocalStorageSavePort } from '../shell/save-port.js';
 import type { SaveSlotMeta } from '../shell/save-port.js';
 import { MapState, type ExitRecord } from './map-state.js';
+import {
+  REGION_DISPLAY_NAMES,
+  type RegionKey,
+  type MappedRegionKey,
+  type RoomSeam,
+} from './map-layout.js';
 import { parseDirection } from './directions.js';
 import { isThemeName, DEFAULT_THEME, type ThemeName } from './themes.js';
 import { shapeFeedbackPayload, collectBrowserInfo } from './feedback.js';
@@ -315,37 +321,35 @@ function buildStatusBar(): { element: HTMLElement; update: (hereName: string, sc
 
 // ── Map (box-drawing spatial fog-of-war) ─────────────────────────────────────
 
+const MAZE_MESSAGE = 'You are hopelessly lost in a maze of twisting little passages. No map will help you here.';
+
 // Exported for unit testing.
 export function renderMapGrid(
   visited: ReadonlySet<string>,
   current: string | null,
-  rooms: ReadonlyMap<string, { id: string; label: string; col: number; row: number; level: 'surface' | 'underground' }>,
+  rooms: ReadonlyMap<string, { id: string; label: string; region: RegionKey; col?: number; row?: number }>,
   connections: ReadonlyArray<{ a: string; b: string; reciprocal: boolean }>,
+  seams: ReadonlyArray<RoomSeam>,
   exitRecords: ReadonlyMap<string, ReadonlyMap<string, ExitRecord>>,
-  levelFilter: 'surface' | 'underground',
+  regionFilter: MappedRegionKey,
 ): string {
-  // Only show rooms on the current level.
+  // Only show rooms in the current region.
   const visibleVisited = new Set<string>();
   for (const id of visited) {
-    if (rooms.get(id)?.level === levelFilter) visibleVisited.add(id);
+    if (rooms.get(id)?.region === regionFilter) visibleVisited.add(id);
   }
   if (visibleVisited.size === 0) return '';
 
-  // Each room cell occupies CELL_W chars wide × CELL_H chars tall on the grid.
-  // Connections occupy the gaps between cells (CON_W / CON_H).
-  const CELL_W = 9; // inner label width; outer box = CELL_W+2 (for │ borders)
-  const CELL_H = 3; // top border + label row + bottom border
-  const CON_W = 3;  // columns between adjacent room columns
-  const CON_H = 1;  // rows between adjacent room rows
-  // 1-char margin so that blocked/inter-level stubs written outside room box
-  // corners (ox+w, oy-1, oy+CELL_H) are always in-bounds.
+  const CELL_W = 9;
+  const CELL_H = 3;
+  const CON_W = 3;
+  const CON_H = 1;
   const MARGIN = 1;
 
-  // Determine bounding box of visible rooms (grid coords).
   let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
   for (const id of visibleVisited) {
     const r = rooms.get(id);
-    if (!r) continue;
+    if (!r || r.col === undefined || r.row === undefined) continue;
     if (r.col < minCol) minCol = r.col;
     if (r.col > maxCol) maxCol = r.col;
     if (r.row < minRow) minRow = r.row;
@@ -353,13 +357,11 @@ export function renderMapGrid(
   }
   if (!isFinite(minCol)) return '';
 
-  // Character grid dimensions (include margin on all four sides).
   const cols = maxCol - minCol + 1;
   const rows = maxRow - minRow + 1;
   const W = cols * (CELL_W + 2) + (cols - 1) * CON_W + 2 * MARGIN;
   const H = rows * CELL_H + (rows - 1) * CON_H + 2 * MARGIN;
 
-  // Fill with spaces.
   const grid: string[][] = Array.from({ length: H }, () => Array(W).fill(' '));
 
   function put(cx: number, cy: number, ch: string) {
@@ -369,29 +371,23 @@ export function renderMapGrid(
     for (let i = 0; i < s.length; i++) put(cx + i, cy, s[i]!);
   }
 
-  // Grid coord → character offset (top-left corner of outer cell box), offset by MARGIN.
   function cellOrigin(col: number, row: number): [number, number] {
     const x = MARGIN + (col - minCol) * (CELL_W + 2 + CON_W);
     const y = MARGIN + (row - minRow) * (CELL_H + CON_H);
     return [x, y];
   }
 
-  // Draw a room box (CELL_W+2 wide, CELL_H tall).
   function drawRoom(id: string, col: number, row: number, isCurrent: boolean) {
     const [ox, oy] = cellOrigin(col, row);
     const w = CELL_W + 2;
-    // Top border
     put(ox, oy, '┌');
     putStr(ox + 1, oy, '─'.repeat(CELL_W));
     put(ox + w - 1, oy, '┐');
-    // Bottom border
     put(ox, oy + 2, '└');
     putStr(ox + 1, oy + 2, '─'.repeat(CELL_W));
     put(ox + w - 1, oy + 2, '┘');
-    // Side borders
     put(ox, oy + 1, '│');
     put(ox + w - 1, oy + 1, '│');
-    // Label (truncated + current indicator)
     const room = rooms.get(id);
     const rawLabel = room?.label ?? id;
     const label = isCurrent ? `▶${rawLabel}` : rawLabel;
@@ -399,45 +395,31 @@ export function renderMapGrid(
     putStr(ox + 1, oy + 1, truncated);
   }
 
-  // Draw connection between two adjacent (or near) rooms.
-  // col/row delta determines direction; we only handle orthogonal adjacency.
-  function drawConnection(
-    colA: number, rowA: number,
-    colB: number, rowB: number,
-    reciprocal: boolean,
-  ) {
+  function drawConnection(colA: number, rowA: number, colB: number, rowB: number, reciprocal: boolean) {
     const dc = colB - colA;
     const dr = rowB - rowA;
-
-    if (Math.abs(dc) > 1 || Math.abs(dr) > 1) return; // skip non-adjacent
-    if (dc !== 0 && dr !== 0) return; // skip diagonal in grid (not needed here)
-
+    if (Math.abs(dc) > 1 || Math.abs(dr) > 1) return;
+    if (dc !== 0 && dr !== 0) return;
     const [ox, oy] = cellOrigin(colA, rowA);
     const w = CELL_W + 2;
-
     if (dc === 1 && dr === 0) {
-      // Horizontal: A is left, B is right. Fill the CON_W gap.
       const gapX = ox + w;
-      const cy = oy + 1; // label row
-      if (reciprocal) {
-        putStr(gapX, cy, '───');
-      } else {
-        putStr(gapX, cy, '╌╌╌');
-      }
+      const cy = oy + 1;
+      putStr(gapX, cy, reciprocal ? '───' : '╌╌╌');
     } else if (dc === -1 && dr === 0) {
       // A is right of B — handled when we process the (B,A) pair.
     } else if (dc === 0 && dr === 1) {
-      // Vertical: A is above, B is below. Fill the CON_H gap (1 row).
       const cx = ox + Math.floor(w / 2);
-      const gy = oy + CELL_H; // row after bottom border
+      const gy = oy + CELL_H;
       put(cx, gy, reciprocal ? '│' : '╎');
     } else if (dc === 0 && dr === -1) {
       // A is below B — handled when we process the (B,A) pair.
     }
   }
 
-  // Render connection only when at least one endpoint has a walked or backtrack
-  // record pointing at the other. Prevents phantom edges before discovery.
+  // Render connection only when at least one endpoint has a walked or
+  // backtrack record pointing at the other. Prevents phantom edges before
+  // discovery.
   function hasExitRecord(roomId: string, toId: string): boolean {
     const recMap = exitRecords.get(roomId);
     if (!recMap) return false;
@@ -447,27 +429,10 @@ export function renderMapGrid(
     return false;
   }
 
-  // Draw ⬇/⬆ stubs for exits that cross into the other level.
-  // A destination absent from the rooms map is treated as cross-level (it belongs
-  // to the other level's grid which isn't rendered here).
-  function drawInterLevelStub(roomId: string, col: number, row: number) {
-    const recMap = exitRecords.get(roomId);
-    if (!recMap) return;
-    const [ox, oy] = cellOrigin(col, row);
-    const cx = ox + Math.floor((CELL_W + 2) / 2);
-    for (const [, rec] of recMap) {
-      if (rec.kind === 'blocked') continue;
-      if (!rec.to) continue;
-      const destRoom = rooms.get(rec.to);
-      // Cross-level when the destination is in a different level or not in the map.
-      const isCrossLevel = destRoom ? destRoom.level !== levelFilter : true;
-      if (!isCrossLevel) continue;
-      if (rec.dir === 'down') put(cx, oy + CELL_H, '⬇');
-      if (rec.dir === 'up')   put(cx, oy - 1, '⬆');
-    }
-  }
-
   // Draw ✕ glyphs at the wall face for each blocked exit record.
+  // (drawInterLevelStub is deleted outright — no successor under
+  // legend-only cross-region seams, spec §6.3. drawBlockedStubs is
+  // otherwise untouched.)
   function drawBlockedStubs(roomId: string, col: number, row: number) {
     const recMap = exitRecords.get(roomId);
     if (!recMap) return;
@@ -492,38 +457,63 @@ export function renderMapGrid(
   for (const c of connections) {
     const ra = rooms.get(c.a);
     const rb = rooms.get(c.b);
-    if (!ra || !rb) continue;
-    // Both rooms must be on the current level to draw an in-level connection.
+    if (!ra || !rb || ra.col === undefined || ra.row === undefined || rb.col === undefined || rb.row === undefined) continue;
     if (!visibleVisited.has(c.a) || !visibleVisited.has(c.b)) continue;
-    // Gate on exit records — no phantom edges before discovery.
     if (!hasExitRecord(c.a, c.b) && !hasExitRecord(c.b, c.a)) continue;
     drawConnection(ra.col, ra.row, rb.col, rb.row, c.reciprocal);
     drawConnection(rb.col, rb.row, ra.col, ra.row, c.reciprocal);
   }
 
-  // Pass 2: draw room boxes (overdraw connection stubs if they overlap box borders).
+  // Pass 2: draw room boxes.
   for (const id of visibleVisited) {
     const r = rooms.get(id);
-    if (!r) continue;
+    if (!r || r.col === undefined || r.row === undefined) continue;
     drawRoom(id, r.col, r.row, id === current);
   }
 
-  // Pass 3: inter-level stubs + blocked stubs (on top of room boxes).
+  // Pass 3: blocked stubs (on top of room boxes).
   for (const id of visibleVisited) {
     const r = rooms.get(id);
-    if (!r) continue;
-    drawInterLevelStub(id, r.col, r.row);
+    if (!r || r.col === undefined || r.row === undefined) continue;
     drawBlockedStubs(id, r.col, r.row);
   }
 
-  return grid.map(row => row.join('')).join('\n');
+  const gridText = grid.map(row => row.join('')).join('\n');
+  const legendLines = buildSeamLegend(visibleVisited, rooms, seams, exitRecords);
+  if (legendLines.length === 0) return gridText;
+  return `${gridText}\n\n${legendLines.join('\n')}`;
+}
+
+// The sole seam representation (spec §6.4) — no in-grid glyph exists anywhere.
+// Discovery gate: a seam is discovered iff exitRecords has a walked/backtrack
+// record on `seam.from` matching `seam.dir` exactly (spec §6.3) — the same
+// fog-of-war gate hasExitRecord uses for in-region connections. No dedup by
+// destination (spec §5.4): SMALL-CAVE's down+south and RIVER-1's west+out
+// each produce their own line.
+function buildSeamLegend(
+  visibleVisited: ReadonlySet<string>,
+  rooms: ReadonlyMap<string, { id: string; label: string; region: RegionKey; col?: number; row?: number }>,
+  seams: ReadonlyArray<RoomSeam>,
+  exitRecords: ReadonlyMap<string, ReadonlyMap<string, ExitRecord>>,
+): string[] {
+  const discovered: Array<{ seam: RoomSeam; fromLabel: string }> = [];
+  for (const seam of seams) {
+    if (!visibleVisited.has(seam.from)) continue;
+    const rec = exitRecords.get(seam.from)?.get(seam.dir);
+    if (!rec || (rec.kind !== 'walked' && rec.kind !== 'backtrack')) continue;
+    discovered.push({ seam, fromLabel: rooms.get(seam.from)?.label ?? seam.from });
+  }
+  discovered.sort((a, b) =>
+    a.fromLabel.localeCompare(b.fromLabel) || a.seam.dir.localeCompare(b.seam.dir));
+  return discovered.map(({ seam, fromLabel }) =>
+    `→ ${REGION_DISPLAY_NAMES[seam.toRegion]} (via ${fromLabel}, ${seam.dir})`);
 }
 
 // ── Paths from Here panel ─────────────────────────────────────────────────────
 
 function buildPathsPanel(
   mapState: MapState,
-  roomById: ReadonlyMap<string, { id: string; label: string; col: number; row: number; level: string }>,
+  roomById: ReadonlyMap<string, { id: string; label: string; region: string; col?: number; row?: number }>,
 ): { element: HTMLElement; refresh: () => void } {
   const element = el('div', 'text-xs font-mono text-[var(--zork-fg)] py-1');
   element.setAttribute('data-testid', 'paths-panel');
@@ -558,8 +548,16 @@ function buildPathsPanel(
   return { element, refresh };
 }
 
-function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => void } {
-  const element = el('div', 'text-xs font-mono text-[var(--zork-fg)] py-2 overflow-x-auto');
+// This grid quick-view was retired from the visible sidebar in favor of the
+// "Paths from Here" text list (7a5d03c) — the sidebar/drawer no longer show
+// a "Map" section (tests/shell/paths-panel.test.ts pins that). The renderer
+// (renderMapGrid) and this wrapper stay alive because buildMapModal's `map`
+// command surface still needs the region auto-follow + maze-message logic
+// generalized here (spec §7, §8.1); `element` is mounted `hidden` (DOM-
+// present, not visually rendered) purely so that logic stays exercised and
+// test-observable end-to-end without resurrecting the retired sidebar panel.
+function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => Promise<void> } {
+  const element = el('div', 'hidden text-xs font-mono text-[var(--zork-fg)] py-2 overflow-x-auto');
 
   let _layoutPromise: Promise<typeof import('./map-layout.js')> | null = null;
   function getLayout() {
@@ -577,14 +575,22 @@ function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => vo
       return;
     }
 
-    const currentLevel: 'surface' | 'underground' = (current ? layout.ROOM_BY_ID.get(current)?.level : undefined) ?? 'surface';
+    const currentRegion = (current ? layout.ROOM_BY_ID.get(current)?.region : undefined) ?? 'surface';
+    if (!(layout.MAPPED_REGIONS as readonly string[]).includes(currentRegion)) {
+      element.textContent = MAZE_MESSAGE;
+      return;
+    }
+    // Narrowed by the includes() check above — MAPPED_REGIONS only ever
+    // holds MappedRegionKey values.
+    const mappedRegion = currentRegion as MappedRegionKey;
     const text = renderMapGrid(
       visited,
       current,
       layout.ROOM_BY_ID,
       layout.ROOM_CONNECTIONS,
+      layout.ROOM_SEAMS,
       mapState.getAllExits(),
-      currentLevel,
+      mappedRegion,
     );
     element.textContent = text || '';
   }
@@ -1027,12 +1033,12 @@ function buildFeedbackDialog(getSessionId: () => string, getActiveTheme: () => T
 
 // ── Map modal ─────────────────────────────────────────────────────────────────
 
-// Same div+classList pattern as buildKnownIssuesDialog. Uses async open() so
+// Same div+classList pattern as buildCreditsDialog. Uses async open() so
 // the map layout can be lazy-loaded and the grid centered on the current room.
 function buildMapModal(
   mapState: MapState,
   getLayout: () => Promise<typeof import('./map-layout.js')>,
-): { open: () => void; close: () => void; element: HTMLElement } {
+): { open: () => void; close: () => void; noteRegion: (roomId: string) => void; element: HTMLElement } {
   const overlay = el('div', [
     'hidden fixed inset-0 z-50 overflow-y-auto',
     'bg-black/70',
@@ -1060,9 +1066,26 @@ function buildMapModal(
   closeBtn.textContent = '✕';
   closeBtnWrap.appendChild(closeBtn);
 
-  const title = el('h2', 'text-base font-bold mb-4 text-[var(--zork-accent)]');
+  // Header row: region label (+ discovered counter) and prev/next paging.
+  const headerRow = el('div', 'flex items-center justify-between gap-2 mb-4');
+  const title = el('h2', 'text-base font-bold text-[var(--zork-accent)]');
   title.id = 'map-modal-title';
   title.textContent = 'Map';
+  const pagerControls = el('div', 'flex items-center gap-2');
+  const prevBtn = el('button', 'text-[var(--zork-accent)] underline disabled:opacity-30 disabled:no-underline', {
+    type: 'button',
+    'data-testid': 'map-modal-prev',
+  });
+  prevBtn.textContent = '‹ Prev';
+  const nextBtn = el('button', 'text-[var(--zork-accent)] underline disabled:opacity-30 disabled:no-underline', {
+    type: 'button',
+    'data-testid': 'map-modal-next',
+  });
+  nextBtn.textContent = 'Next ›';
+  pagerControls.appendChild(prevBtn);
+  pagerControls.appendChild(nextBtn);
+  headerRow.appendChild(title);
+  headerRow.appendChild(pagerControls);
 
   const gridContainer = el('div', 'overflow-auto max-h-[70vh]');
   const gridPre = el('pre', 'text-xs font-mono text-[var(--zork-fg)] m-0 p-0');
@@ -1078,26 +1101,86 @@ function buildMapModal(
     if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeModal();
   });
 
-  async function open() {
-    overlay.classList.remove('hidden');
-    const layout = await getLayout();
+  // ── Paging state (spec §8.3) ──────────────────────────────────────────────
+  // pageRegion: reset every open() per the three-way rule below. Always a
+  // MappedRegionKey once set (paging only ever cycles discovered *mapped*
+  // regions — a maze region never enters the cycle, spec §8.2).
+  let pageRegion: MappedRegionKey | null = null;
+  // lastMappedRegion: SEPARATE from pageRegion, persists across opens/closes.
+  // Updated on every turn via noteRegion(), regardless of whether the modal
+  // is open, so it always holds the most recent mapped region actually stood
+  // in — the rule-(2) fallback when currentRegion is unmapped at open time.
+  let lastMappedRegion: MappedRegionKey | null = null;
+  // pagedAway: reset on every open(); set once the player clicks Prev/Next.
+  // Resolves a tension between §7 ("the modal shows the maze message while
+  // paging controls stay enabled, letting the player page away") and §8.3's
+  // pageRegion reset rule (which always resolves to a MAPPED region, never
+  // the literal maze region) — see the note in Step 1.7's task description.
+  // Until the player pages away, an unmapped currentRegion renders the maze
+  // message (matching buildMap and satisfying the maze-message test guard,
+  // spec §11); the moment they click Prev/Next, the view switches to
+  // pageRegion's grid, which was already primed to a sensible fallback.
+  let pagedAway = false;
+
+  function isMappedRegion(layout: Awaited<ReturnType<typeof getLayout>>, region: string): region is MappedRegionKey {
+    return (layout.MAPPED_REGIONS as readonly string[]).includes(region);
+  }
+
+  function discoveredMappedRegions(layout: Awaited<ReturnType<typeof getLayout>>): MappedRegionKey[] {
     const visited = mapState.visitedRooms();
+    const found = new Set<MappedRegionKey>();
+    for (const id of visited) {
+      const r = layout.ROOM_BY_ID.get(id);
+      if (r && isMappedRegion(layout, r.region)) found.add(r.region as MappedRegionKey);
+    }
+    return layout.MAPPED_REGIONS.filter(k => found.has(k));
+  }
+
+  async function noteRegion(roomId: string) {
+    const layout = await getLayout();
+    const region = layout.ROOM_BY_ID.get(roomId)?.region;
+    if (region && isMappedRegion(layout, region)) lastMappedRegion = region;
+  }
+
+  async function renderPage() {
+    const layout = await getLayout();
     const current = mapState.currentRoom();
-    const currentLevel: 'surface' | 'underground' = (current ? layout.ROOM_BY_ID.get(current)?.level : undefined) ?? 'surface';
+    const currentRegion = (current ? layout.ROOM_BY_ID.get(current)?.region : undefined) ?? 'surface';
+    const discovered = discoveredMappedRegions(layout);
+    const count = discovered.length;
+
+    prevBtn.disabled = count <= 1;
+    nextBtn.disabled = count <= 1;
+
+    if (!pagedAway && !isMappedRegion(layout, currentRegion)) {
+      title.textContent = 'Map';
+      gridPre.textContent = MAZE_MESSAGE;
+      return;
+    }
+
+    const activeRegion: MappedRegionKey = pageRegion ?? 'surface';
+    const idx = discovered.indexOf(activeRegion);
+    title.textContent = count > 1
+      ? `${layout.REGION_DISPLAY_NAMES[activeRegion]} (${idx + 1} of ${count} discovered)`
+      : layout.REGION_DISPLAY_NAMES[activeRegion];
+
+    const visited = mapState.visitedRooms();
     const text = renderMapGrid(
       visited,
       current,
       layout.ROOM_BY_ID,
       layout.ROOM_CONNECTIONS,
+      layout.ROOM_SEAMS,
       mapState.getAllExits(),
-      currentLevel,
+      activeRegion,
     );
     gridPre.textContent = text;
 
-    // Center viewport on current room.
-    if (current) {
+    // Center viewport on current room — only while genuinely auto-following
+    // (spec §8.3: pageRegion === currentRegion).
+    if (activeRegion === currentRegion && current) {
       const r = layout.ROOM_BY_ID.get(current);
-      if (r) {
+      if (r && r.col !== undefined && r.row !== undefined) {
         const CELL_W = 9, CELL_H = 3, CON_W = 3, CON_H = 1;
         const charW = CELL_W + 2 + CON_W;
         const charH = CELL_H + CON_H;
@@ -1105,8 +1188,8 @@ function buildMapModal(
         const pxPerRow = 14;
         let minCol = Infinity, minRow = Infinity;
         for (const id of visited) {
-          const rm = layout.ROOM_BY_ID.get(id) as { col: number; row: number; level: string } | undefined;
-          if (!rm || rm.level !== currentLevel) continue;
+          const rm = layout.ROOM_BY_ID.get(id);
+          if (!rm || rm.region !== activeRegion || rm.col === undefined || rm.row === undefined) continue;
           if (rm.col < minCol) minCol = rm.col;
           if (rm.row < minRow) minRow = rm.row;
         }
@@ -1116,19 +1199,68 @@ function buildMapModal(
           const halfW = gridContainer.clientWidth / 2;
           const halfH = gridContainer.clientHeight / 2;
           gridContainer.scrollLeft = Math.max(0, cellX - halfW);
-          gridContainer.scrollTop  = Math.max(0, cellY - halfH);
+          gridContainer.scrollTop = Math.max(0, cellY - halfH);
         }
       }
     }
   }
 
+  function stepPage(delta: 1 | -1) {
+    void (async () => {
+      const layout = await getLayout();
+      const discovered = discoveredMappedRegions(layout);
+      if (discovered.length === 0) return;
+      const current = mapState.currentRoom();
+      const currentRegion = (current ? layout.ROOM_BY_ID.get(current)?.region : undefined) ?? 'surface';
+      const wasOnMazeMessage = !pagedAway && !isMappedRegion(layout, currentRegion);
+      pagedAway = true;
+      if (wasOnMazeMessage) {
+        // First page-away from the maze message lands on the primed
+        // pageRegion (§8.3's lastMappedRegion/surface fallback) rather than
+        // stepping past it — the player hasn't seen that grid yet.
+        if (!discovered.includes(pageRegion ?? 'surface')) pageRegion = discovered[0]!;
+        await renderPage();
+        return;
+      }
+      const cur = pageRegion ?? discovered[0]!;
+      const idx = discovered.indexOf(cur);
+      const base = idx < 0 ? 0 : idx;
+      const nextIdx = (base + delta + discovered.length) % discovered.length;
+      pageRegion = discovered[nextIdx]!;
+      await renderPage();
+    })();
+  }
+
+  prevBtn.addEventListener('click', () => stepPage(-1));
+  nextBtn.addEventListener('click', () => stepPage(1));
+
+  async function open() {
+    overlay.classList.remove('hidden');
+    const layout = await getLayout();
+    const current = mapState.currentRoom();
+    const currentRegion = (current ? layout.ROOM_BY_ID.get(current)?.region : undefined) ?? 'surface';
+
+    pagedAway = false;
+    // Three-way reset rule (spec §8.3), evaluated fresh every open() —
+    // never carries over whatever the player had paged to before closing.
+    if (isMappedRegion(layout, currentRegion)) {
+      pageRegion = currentRegion;
+    } else if (lastMappedRegion !== null) {
+      pageRegion = lastMappedRegion;
+    } else {
+      pageRegion = 'surface';
+    }
+
+    await renderPage();
+  }
+
   panel.appendChild(closeBtnWrap);
-  panel.appendChild(title);
+  panel.appendChild(headerRow);
   panel.appendChild(gridContainer);
   outer.appendChild(panel);
   overlay.appendChild(outer);
 
-  return { open, close: closeModal, element: overlay };
+  return { open, close: closeModal, noteRegion: (roomId: string) => { void noteRegion(roomId); }, element: overlay };
 }
 
 // ── Slot picker modal ─────────────────────────────────────────────────────────
@@ -1314,7 +1446,12 @@ function buildGameOverAffordance(
 
 // ── Shell mount ───────────────────────────────────────────────────────────────
 
-export function mountShell(app: HTMLElement): { mapState: MapState; session: import('../shell/session.js').GameSession } {
+export function mountShell(app: HTMLElement): {
+  mapState: MapState;
+  session: import('../shell/session.js').GameSession;
+  refreshMap: () => Promise<void>;
+  noteRegion: (roomId: string) => void;
+} {
   // Clear the loading placeholder.
   app.innerHTML = '';
 
@@ -1496,6 +1633,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
 
     pathsPanel.refresh();
     void map.refresh();
+    mapModal.noteRegion(snap.here);
   });
   const { open: openIssues, element: issuesDialog } = buildKnownIssuesDialog();
   const { open: openCredits, element: creditsDialog } = buildCreditsDialog();
@@ -1647,6 +1785,9 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   app.appendChild(feedbackDialog);
   app.appendChild(mapModal.element);
   app.appendChild(slotPicker.element);
+  // Hidden — see the comment on buildMap(). Kept out of `sidebar` so it is
+  // never cloned into the mobile drawer.
+  app.appendChild(map.element);
 
   // ── Boot the game ───────────────────────────────────────────────────────
   const banner = session.start();
@@ -1654,6 +1795,7 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
   const snap = session.snapshot();
   updateStatus(snap);
   mapState.update(snap, null);
+  mapModal.noteRegion(snap.here);
   void map.refresh();
 
   // Focus the input immediately.
@@ -1671,5 +1813,13 @@ export function mountShell(app: HTMLElement): { mapState: MapState; session: imp
     sink.drainBeacon();
   });
 
-  return { mapState, session };
+  return {
+    mapState,
+    session,
+    // Test handles: force a sidebar map refresh (async — awaits the lazy
+    // layout import), and record a room's region as lastMappedRegion
+    // without driving a full engine turn.
+    refreshMap: () => map.refresh(),
+    noteRegion: (roomId: string) => mapModal.noteRegion(roomId),
+  };
 }
