@@ -13,6 +13,7 @@ import {
   ROOM_BY_ID,
   MAPPED_REGIONS,
 } from '../../src/ui/map-layout.js';
+import { REGION_TABLE } from './region-table.js';
 
 const MAPPED_SET = new Set<string>(MAPPED_REGIONS);
 
@@ -93,8 +94,50 @@ describe('ROOM_CONNECTIONS — intra-region only', () => {
   });
 });
 
-// NOTE: the partition-completeness guard (all 110 rooms placed, region equals
-// the canonical §4 assignment, mapped-have-coords/unmapped-don't) is
-// DEFERRED to Task 11 by design — it would be red-by-construction until all
-// nine per-region tasks land, and every task in this plan must end
-// full-suite-green. See Task 11's "Add the partition-completeness guard" step.
+// ── Partition completeness (spec §4, §11 — the G1 gate) ──────────────────────
+// Reads the SAME canonical roomRegion table as region-seam-derivation.test.ts
+// (spec §11: no duplicated hardcoded region table between the two tests).
+
+describe('ROOM_LAYOUT — partition completeness (all 110 rooms)', () => {
+  const roomRegion = new Map<string, string>();
+  for (const [region, ids] of Object.entries(REGION_TABLE)) {
+    for (const id of ids) roomRegion.set(id, region);
+  }
+  const roomsJsonIds = new Set((roomsData as Array<{ id: string }>).map(r => r.id));
+
+  it('the canonical partition covers exactly the rooms.json id set', () => {
+    expect(roomRegion.size).toBe(roomsJsonIds.size);
+    for (const id of roomRegion.keys()) {
+      expect(roomsJsonIds.has(id), `${id} in partition but not rooms.json`).toBe(true);
+    }
+  });
+
+  it('every rooms.json room has a ROOM_LAYOUT entry with the canonical region', () => {
+    for (const id of roomsJsonIds) {
+      const entry = ROOM_BY_ID.get(id);
+      expect(entry, `${id} missing from ROOM_LAYOUT`).toBeDefined();
+      expect(entry!.region, id).toBe(roomRegion.get(id));
+    }
+  });
+
+  it('ROOM_LAYOUT has exactly 110 entries — no extras', () => {
+    expect(ROOM_LAYOUT.length).toBe(110);
+  });
+
+  it('all 86 mapped rooms have coords; all 24 unmapped rooms have neither', () => {
+    let mapped = 0, unmapped = 0;
+    for (const r of ROOM_LAYOUT) {
+      if (MAPPED_SET.has(r.region)) {
+        mapped++;
+        expect(r.col, `${r.id} missing col`).not.toBeUndefined();
+        expect(r.row, `${r.id} missing row`).not.toBeUndefined();
+      } else {
+        unmapped++;
+        expect(r.col, `${r.id} has col`).toBeUndefined();
+        expect(r.row, `${r.id} has row`).toBeUndefined();
+      }
+    }
+    expect(mapped).toBe(86);
+    expect(unmapped).toBe(24);
+  });
+});

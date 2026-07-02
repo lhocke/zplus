@@ -2,10 +2,10 @@
 //
 // Mobile drawer regression (#20). The drawer is a cloneNode(true) of the sidebar,
 // which copies markup but NOT event listeners — so every interactive control the
-// drawer reuses must be re-bound by its data attribute. #20.2: Known Issues and
-// Feedback opened nothing in the drawer because only the theme + credits buttons
-// were re-wired. #20.1: the open-sidebar toggle stayed on top of the panel's close
-// button while the drawer was open.
+// drawer reuses must be re-bound by its data attribute. #20.2: Feedback opened
+// nothing in the drawer because only the theme + credits buttons were re-wired.
+// #20.1: the open-sidebar toggle stayed on top of the panel's close button while
+// the drawer was open.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
@@ -18,20 +18,6 @@ beforeEach(() => {
 });
 
 describe('mobile drawer — cloned sidebar buttons open their modals (#20.2)', () => {
-  it('drawer Known Issues button opens the known-issues dialog', async () => {
-    const { mountShell } = await import('../../src/ui/shell.js');
-    const app = document.createElement('div');
-    mountShell(app);
-    const drawer = app.querySelector('[aria-label="Sidebar"]');
-    expect(drawer, 'drawer panel must exist').not.toBeNull();
-    const btn = drawer!.querySelector<HTMLElement>('[data-open-issues]');
-    expect(btn, 'drawer must contain a Known Issues button').not.toBeNull();
-    const dialog = app.querySelector('#known-issues-dialog');
-    expect(dialog!.classList.contains('hidden'), 'dialog starts hidden').toBe(true);
-    btn!.click();
-    expect(dialog!.classList.contains('hidden'), 'dialog opens after drawer click').toBe(false);
-  });
-
   it('drawer Send Feedback button opens the feedback dialog', async () => {
     const { mountShell } = await import('../../src/ui/shell.js');
     const app = document.createElement('div');

@@ -599,93 +599,9 @@ function buildMap(mapState: MapState): { element: HTMLElement; refresh: () => Pr
 }
 
 
-// ── Known-issues dialog ───────────────────────────────────────────────────────
-
-// Tailwind Plus: modal dialog with dismiss button (04-simple-with-dismiss-button.html)
-// Uses div+classList toggle (not native <dialog>) so it works in jsdom and any env
-// that doesn't implement HTMLDialogElement.showModal.
-function buildKnownIssuesDialog(): { open: () => void; element: HTMLElement } {
-  // Outer overlay — backdrop + centering shell. Hidden until open().
-  const overlay = el('div', [
-    'hidden fixed inset-0 z-50 overflow-y-auto',
-    'bg-black/70',
-  ].join(' '), { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'known-issues-title' });
-  overlay.id = 'known-issues-dialog';
-
-  const outer = el('div', 'flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0');
-
-  const panel = el('div', [
-    'relative transform overflow-hidden rounded-lg px-4 pt-5 pb-4 text-left shadow-xl',
-    'sm:my-8 sm:w-full sm:max-w-lg sm:p-6',
-    'bg-[var(--zork-bg)] border border-[var(--zork-accent)]',
-    'text-[var(--zork-fg)] font-mono text-sm overflow-y-auto max-h-[80vh]',
-  ].join(' '));
-
-  // Close button — top-right (Plus pattern).
-  const closeBtnWrap = el('div', 'absolute top-0 right-0 hidden pt-4 pr-4 sm:block');
-  const closeBtn = el('button', [
-    'rounded-md text-[var(--zork-accent)] hover:opacity-75',
-    'focus:outline-2 focus:outline-offset-2',
-  ].join(' '), { type: 'button' });
-  const closeSr = el('span', 'sr-only');
-  closeSr.textContent = 'Close';
-  const closeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  closeIcon.setAttribute('viewBox', '0 0 24 24');
-  closeIcon.setAttribute('fill', 'none');
-  closeIcon.setAttribute('stroke', 'currentColor');
-  closeIcon.setAttribute('stroke-width', '1.5');
-  closeIcon.setAttribute('aria-hidden', 'true');
-  closeIcon.setAttribute('class', 'size-6');
-  const closePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  closePath.setAttribute('d', 'M6 18 18 6M6 6l12 12');
-  closePath.setAttribute('stroke-linecap', 'round');
-  closePath.setAttribute('stroke-linejoin', 'round');
-  closeIcon.appendChild(closePath);
-  closeBtn.appendChild(closeSr);
-  closeBtn.appendChild(closeIcon);
-  closeBtnWrap.appendChild(closeBtn);
-
-  const title = el('h2', 'text-base font-bold mb-4 text-[var(--zork-accent)]');
-  title.id = 'known-issues-title';
-  title.textContent = 'Known Issues & Limitations';
-
-  const issues = [
-    'No saving yet. Each page load is a fresh game.',
-    'The map only covers the surface and the first rooms underground — the dam, river, coal mine, and temple regions aren\'t drawn yet.',
-    'The temple and Hades stretch is reachable but its puzzles aren\'t fully wired.',
-    'Some timed mechanics (lamp burnout, candles) are still being verified against the original and may diverge.',
-    'Not every point of the full 350 can be earned yet — late-game content is still landing.',
-  ];
-
-  const list = el('ul', 'list-disc pl-5 space-y-1');
-  for (const issue of issues) {
-    const li = el('li', '');
-    li.textContent = issue;
-    list.appendChild(li);
-  }
-
-  function closeDialog() { overlay.classList.add('hidden'); }
-
-  closeBtn.addEventListener('click', closeDialog);
-  // Backdrop click (outside the panel) closes.
-  overlay.addEventListener('click', (e) => { if (e.target === overlay || e.target === outer) closeDialog(); });
-  // Escape key closes.
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeDialog(); });
-
-  panel.appendChild(closeBtnWrap);
-  panel.appendChild(title);
-  panel.appendChild(list);
-  outer.appendChild(panel);
-  overlay.appendChild(outer);
-
-  function open() { overlay.classList.remove('hidden'); }
-
-  return { open, element: overlay };
-}
-
 // ── Credits dialog ───────────────────────────────────────────────────────────
 
-// Same div+classList pattern as buildKnownIssuesDialog.
+// Modal dialog via div+classList toggle (not native <dialog>) so it works in jsdom.
 function buildCreditsDialog(): { open: () => void; element: HTMLElement } {
   const MIT_LICENSE =
     'MIT License\n\nCopyright (c) 2025 Microsoft\n\n' +
@@ -1635,7 +1551,6 @@ export function mountShell(app: HTMLElement): {
     void map.refresh();
     mapModal.noteRegion(snap.here);
   });
-  const { open: openIssues, element: issuesDialog } = buildKnownIssuesDialog();
   const { open: openCredits, element: creditsDialog } = buildCreditsDialog();
   const { open: openFeedback, element: feedbackDialog } = buildFeedbackDialog(
     () => sessionIdRef,
@@ -1662,11 +1577,6 @@ export function mountShell(app: HTMLElement): {
   const savesBtn = el('button', 'text-xs text-[var(--zork-accent)] underline mt-2 text-left');
   savesBtn.textContent = 'Saves';
   savesBtn.addEventListener('click', () => slotPicker.open());
-
-  // Known issues button.
-  const issuesBtn = el('button', 'text-xs text-[var(--zork-accent)] underline mt-2 text-left', { 'data-open-issues': '' });
-  issuesBtn.textContent = 'Known Issues & Limitations';
-  issuesBtn.addEventListener('click', openIssues);
 
   // Credits button.
   const creditsBtn = el('button', 'text-xs text-[var(--zork-accent)] underline text-left', { 'data-open-credits': '' });
@@ -1723,7 +1633,6 @@ export function mountShell(app: HTMLElement): {
   sidebar.appendChild(mapLabel);
   sidebar.appendChild(pathsPanel.element);
   sidebar.appendChild(savesBtn);
-  sidebar.appendChild(issuesBtn);
   sidebar.appendChild(creditsBtn);
   sidebar.appendChild(feedbackBtn);
   sidebar.appendChild(notice);
@@ -1743,8 +1652,6 @@ export function mountShell(app: HTMLElement): {
   // must be re-bound here by its data attribute.
   const drawerCreditsBtn = drawerContent.querySelector<HTMLElement>('[data-open-credits]');
   if (drawerCreditsBtn) drawerCreditsBtn.addEventListener('click', openCredits);
-  const drawerIssuesBtn = drawerContent.querySelector<HTMLElement>('[data-open-issues]');
-  if (drawerIssuesBtn) drawerIssuesBtn.addEventListener('click', openIssues);
   const drawerFeedbackBtn = drawerContent.querySelector<HTMLElement>('[data-open-feedback]');
   if (drawerFeedbackBtn) drawerFeedbackBtn.addEventListener('click', openFeedback);
 
@@ -1780,7 +1687,6 @@ export function mountShell(app: HTMLElement): {
   app.appendChild(outer);
   app.appendChild(drawerOverlay);
   app.appendChild(drawerToggle);
-  app.appendChild(issuesDialog);
   app.appendChild(creditsDialog);
   app.appendChild(feedbackDialog);
   app.appendChild(mapModal.element);
