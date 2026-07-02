@@ -1,22 +1,23 @@
 import type { RoomLayout, RoomConnection } from '../map-layout.js';
 
 export const ROOMS: RoomLayout[] = [
-  { id: 'NORTH-OF-HOUSE',   label: 'N of House',   region: 'surface', col: 3, row: 1 },
-  { id: 'WEST-OF-HOUSE',    label: 'W of House',   region: 'surface', col: 2, row: 2 },
-  { id: 'EAST-OF-HOUSE',    label: 'E of House',   region: 'surface', col: 4, row: 2 },
-  { id: 'SOUTH-OF-HOUSE',   label: 'S of House',   region: 'surface', col: 3, row: 3 },
+  { id: 'NORTH-OF-HOUSE',   label: 'N House',      region: 'surface', col: 3, row: 1 },
+  { id: 'WEST-OF-HOUSE',    label: 'W House',      region: 'surface', col: 2, row: 2 },
+  { id: 'EAST-OF-HOUSE',    label: 'E House',      region: 'surface', col: 4, row: 2 },
+  { id: 'SOUTH-OF-HOUSE',   label: 'S House',      region: 'surface', col: 3, row: 3 },
   { id: 'FOREST-1',         label: 'Forest',       region: 'surface', col: 1, row: 2 },
   { id: 'FOREST-2',         label: 'Forest',       region: 'surface', col: 1, row: 0 },
   { id: 'FOREST-3',         label: 'Forest',       region: 'surface', col: 2, row: 4 },
-  { id: 'PATH',             label: 'Forest Path',  region: 'surface', col: 1, row: 1 },
+  { id: 'PATH',             label: 'For Path',     region: 'surface', col: 1, row: 1 },
   { id: 'UP-A-TREE',        label: 'Up-a-Tree',    region: 'surface', col: 0, row: 1 },
   // Moved from (1,0) — collided with FOREST-2 in the pre-spec file. See task note above.
-  { id: 'GRATING-CLEARING', label: 'Grating Clrg', region: 'surface', col: 0, row: 0 },
+  { id: 'GRATING-CLEARING', label: 'Grate Clr',    region: 'surface', col: 0, row: 0 },
   { id: 'CLEARING',         label: 'Clearing',     region: 'surface', col: 5, row: 2 },
   { id: 'MOUNTAINS',        label: 'Mountains',    region: 'surface', col: 6, row: 0 },
   { id: 'KITCHEN',          label: 'Kitchen',      region: 'surface', col: 4, row: 1 },
   { id: 'ATTIC',            label: 'Attic',        region: 'surface', col: 4, row: 0 },
-  { id: 'LIVING-ROOM',      label: 'Living Room',  region: 'surface', col: 3, row: 2 },
+  { id: 'LIVING-ROOM',      label: 'Living Rm',    region: 'surface', col: 3, row: 2 },
+  { id: 'STONE-BARROW',     label: 'Barrow',       region: 'surface', col: 2, row: 3 },
 ];
 
 export const CONNECTIONS: RoomConnection[] = [
@@ -40,4 +41,6 @@ export const CONNECTIONS: RoomConnection[] = [
   { a: 'EAST-OF-HOUSE',   b: 'KITCHEN',         reciprocal: true  },
   { a: 'KITCHEN',         b: 'LIVING-ROOM',     reciprocal: true  },
   { a: 'KITCHEN',         b: 'ATTIC',           reciprocal: true  },
+  { a: 'WEST-OF-HOUSE',   b: 'STONE-BARROW',    reciprocal: true  },
+  { a: 'GRATING-CLEARING',b: 'FOREST-2',        reciprocal: false },
 ];
