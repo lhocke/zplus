@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Z+ app icon, primary (CRT bezel). Palette matches src/style.css CRT theme. -->
+  <defs>
+    <g id="zg">
+      <polygon points="110,140 300,140 300,192 192,348 300,348 300,400 110,400 110,348 218,192 110,192"/>
+      <path d="M374,96 h36 v36 h36 v36 h-36 v36 h-36 v-36 h-36 v-36 h36 z"/>
+    </g>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="11"/>
+    </filter>
+    <pattern id="scan" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect y="4" width="6" height="2" fill="#000" opacity="0.28"/>
+    </pattern>
+  </defs>
+  <rect x="4" y="4" width="504" height="504" rx="100" fill="#1a1a1a" stroke="#2a2a2a" stroke-width="8"/>
+  <rect x="52" y="52" width="408" height="408" rx="36" fill="#050505"/>
+  <g transform="translate(256,264) scale(0.8) translate(-278,-240)">
+    <use href="#zg" fill="#33ff33" filter="url(#glow)" opacity="0.8"/>
+    <use href="#zg" fill="#5aff5a"/>
+  </g>
+  <rect x="52" y="52" width="408" height="408" rx="36" fill="url(#scan)"/>
+  <path d="M80,120 Q256,40 432,120 L432,84 Q256,20 80,84 Z" fill="#fff" opacity="0.05"/>
+</svg>
