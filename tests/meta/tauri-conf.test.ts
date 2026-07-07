@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { join, dirname } from 'node:path';
 
 const CONF_PATH = fileURLToPath(new URL('../../src-tauri/tauri.conf.json', import.meta.url));
 
@@ -29,5 +30,15 @@ describe('src-tauri/tauri.conf.json — Z+ identity', () => {
   it('requests ad-hoc codesigning on macOS (no ADP cert)', () => {
     const conf = JSON.parse(readFileSync(CONF_PATH, 'utf8'));
     expect(conf.bundle.macOS.signingIdentity).toBe('-');
+  });
+});
+
+describe('src-tauri/icons — generated icon set', () => {
+  it('has every icon file the bundle.icon array references', () => {
+    const conf = JSON.parse(readFileSync(CONF_PATH, 'utf8'));
+    for (const rel of conf.bundle.icon as string[]) {
+      const p = join(dirname(CONF_PATH), rel);
+      expect(existsSync(p), `missing icon file: ${rel}`).toBe(true);
+    }
   });
 });
