@@ -484,7 +484,7 @@ describe('C8 — AGAIN after direction', () => {
 //     in resolveNounPhraseList (gparser.zil:459-491).
 // ---------------------------------------------------------------------------
 
-describe('C8-FIX — game.turn() integration (no manual setLastWon)', () => {
+describe('C8-FIX — await game.turn() integration (no manual setLastWon)', () => {
   it('"take lamp. again" — AGAIN as second segment replays "take lamp", producing already-have message', async () => {
     // dfrotz oracle (LIVING-ROOM, fresh game, no prior commands):
     //   > take lamp. again
@@ -498,7 +498,7 @@ describe('C8-FIX — game.turn() integration (no manual setLastWon)', () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
 
-    const result = game.turn('take lamp. again');
+    const result = await game.turn('take lamp. again');
 
     // Both segments must have produced output.
     expect(result.output).toContain('Taken.');
@@ -522,7 +522,7 @@ describe('C8-FIX — game.turn() integration (no manual setLastWon)', () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
 
-    const result = game.turn('take sword and lantern');
+    const result = await game.turn('take sword and lantern');
 
     // Both objects should be taken with per-object descriptive prefix.
     // dfrotz oracle: "sword: Taken.\nbrass lantern: Taken."

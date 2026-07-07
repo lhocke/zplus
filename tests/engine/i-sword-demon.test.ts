@@ -61,7 +61,7 @@ describe('I-SWORD: registered in clock after bootstrap', () => {
 // ---------------------------------------------------------------------------
 
 describe('I-SWORD glow: adjacent infested room (Cellar) → faint blue', () => {
-  it('prints faint-blue on first turn in Cellar (Troll Room adjacent)', () => {
+  it('prints faint-blue on first turn in Cellar (Troll Room adjacent)', async () => {
     // Troll Room is north of Cellar and contains the troll (ACTORBIT, not invisible)
     const g = createGame({ startRoom: 'CELLAR', rng: fixedRng });
     const w = worldOf(g);
@@ -77,11 +77,11 @@ describe('I-SWORD glow: adjacent infested room (Cellar) → faint blue', () => {
     const clock = clockOf(g);
     clock.enable('I-SWORD');
 
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('Your sword is glowing with a faint blue glow.');
   });
 
-  it('no glow message when level is unchanged (second turn in Cellar)', () => {
+  it('no glow message when level is unchanged (second turn in Cellar)', async () => {
     const g = createGame({ startRoom: 'CELLAR', rng: fixedRng });
     const w = worldOf(g);
     const sword = w.get('SWORD')!;
@@ -96,14 +96,14 @@ describe('I-SWORD glow: adjacent infested room (Cellar) → faint blue', () => {
     const clock = clockOf(g);
     clock.enable('I-SWORD');
 
-    const r = g.turn('look');
+    const r = await g.turn('look');
     // Level stays 1 (adjacent troll room) — no transition message
     expect(r.output).not.toContain('glowing');
   });
 });
 
 describe('I-SWORD glow: current room infested (Troll Room) → bright', () => {
-  it('prints "begun to glow very brightly" when entering Troll Room', () => {
+  it('prints "begun to glow very brightly" when entering Troll Room', async () => {
     const g = createGame({ startRoom: 'TROLL-ROOM', rng: fixedRng });
     const w = worldOf(g);
     const sword = w.get('SWORD')!;
@@ -118,13 +118,13 @@ describe('I-SWORD glow: current room infested (Troll Room) → bright', () => {
     const clock = clockOf(g);
     clock.enable('I-SWORD');
 
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('Your sword has begun to glow very brightly.');
   });
 });
 
 describe('I-SWORD glow: no infested room → extinguish', () => {
-  it('prints "no longer glowing" when moving away from all infested rooms', () => {
+  it('prints "no longer glowing" when moving away from all infested rooms', async () => {
     // East of Chasm has no adjacent infested rooms
     const g = createGame({ startRoom: 'EAST-OF-CHASM', rng: fixedRng });
     const w = worldOf(g);
@@ -140,13 +140,13 @@ describe('I-SWORD glow: no infested room → extinguish', () => {
     const clock = clockOf(g);
     clock.enable('I-SWORD');
 
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('Your sword is no longer glowing.');
   });
 });
 
 describe('I-SWORD glow: demon disables when sword dropped', () => {
-  it('demon disables itself when sword not in player inventory', () => {
+  it('demon disables itself when sword not in player inventory', async () => {
     const g = createGame({ startRoom: 'CELLAR', rng: fixedRng });
     const w = worldOf(g);
     const sword = w.get('SWORD')!;
@@ -163,13 +163,13 @@ describe('I-SWORD glow: demon disables when sword dropped', () => {
     const clock = clockOf(g);
     clock.enable('I-SWORD');
 
-    g.turn('look');  // demon fires, sword not in player → disables
+    await g.turn('look');  // demon fires, sword not in player → disables
 
     const entry = clock.getEntry('I-SWORD')!;
     expect(entry.enabled).toBe(false);
   });
 
-  it('no glow message when sword not held', () => {
+  it('no glow message when sword not held', async () => {
     const g = createGame({ startRoom: 'TROLL-ROOM', rng: fixedRng });
     const w = worldOf(g);
     const sword = w.get('SWORD')!;
@@ -185,7 +185,7 @@ describe('I-SWORD glow: demon disables when sword dropped', () => {
     const clock = clockOf(g);
     clock.enable('I-SWORD');
 
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).not.toContain('glow');
   });
 });
@@ -196,7 +196,7 @@ describe('I-SWORD glow: demon disables when sword dropped', () => {
 // ---------------------------------------------------------------------------
 
 describe('I-SWORD glow: live turn() round-trip Cellar → Troll Room → Cellar', () => {
-  it('glow transitions on movement match dfrotz evidence', () => {
+  it('glow transitions on movement match dfrotz evidence', async () => {
     // Start in Cellar with sword (glow=0). Enable I-SWORD.
     // Turn 1: look → glow 0→1 → "faint blue glow"
     // Turn 2: look → glow stays 1 → no message
@@ -218,33 +218,33 @@ describe('I-SWORD glow: live turn() round-trip Cellar → Troll Room → Cellar'
     clock.enable('I-SWORD');
 
     // Turn 1 in Cellar: 0→1
-    const r1 = g.turn('look');
+    const r1 = await g.turn('look');
     expect(r1.output).toContain('Your sword is glowing with a faint blue glow.');
 
     // Turn 2 in Cellar: 1→1 (unchanged)
-    const r2 = g.turn('look');
+    const r2 = await g.turn('look');
     expect(r2.output).not.toContain('glow');
 
     // Teleport to Troll Room: 1→2
     const troll = w.get('TROLL-ROOM')!;
     player.moveTo(troll);
-    const r3 = g.turn('look');
+    const r3 = await g.turn('look');
     expect(r3.output).toContain('Your sword has begun to glow very brightly.');
 
     // Still in Troll Room: 2→2 (unchanged)
-    const r4 = g.turn('look');
+    const r4 = await g.turn('look');
     expect(r4.output).not.toContain('glow');
 
     // Teleport back to Cellar: 2→1
     const cellar = w.get('CELLAR')!;
     player.moveTo(cellar);
-    const r5 = g.turn('look');
+    const r5 = await g.turn('look');
     expect(r5.output).toContain('Your sword is glowing with a faint blue glow.');
 
     // Teleport to East of Chasm: 1→0
     const eoc = w.get('EAST-OF-CHASM')!;
     player.moveTo(eoc);
-    const r6 = g.turn('look');
+    const r6 = await g.turn('look');
     expect(r6.output).toContain('Your sword is no longer glowing.');
   });
 });

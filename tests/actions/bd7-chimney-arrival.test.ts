@@ -42,8 +42,8 @@ describe('BD7 — chimney arrival brief revisit (DGC-7)', () => {
     expect(lines[1]).toMatch(/^# generated-by: dfrotz-r119 /);
   });
 
-  it('chimney UP into already-visited Kitchen shows brief arrival (name + objects, no ldesc)', () => {
-    const transcript = runEngine(COMMANDS);
+  it('chimney UP into already-visited Kitchen shows brief arrival (name + objects, no ldesc)', async () => {
+    const transcript = await runEngine(COMMANDS);
 
     // Find the last "> up" (the chimney ascent, not an earlier one).
     const lastUp = transcript.lastIndexOf('> up');

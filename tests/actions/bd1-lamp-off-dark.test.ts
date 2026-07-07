@@ -33,10 +33,10 @@ describe('BD1 — lamp-off pitch-black (DGC-3)', () => {
     expect(lines[1]).toMatch(/^# generated-by: dfrotz-r119 /);
   });
 
-  it('turn off lamp in dark Cellar appends "It is now pitch black."', () => {
+  it('turn off lamp in dark Cellar appends "It is now pitch black."', async () => {
     resetKitchenWindowFlag();
     resetRugMoved();
-    const transcript = runEngine(COMMANDS);
+    const transcript = await runEngine(COMMANDS);
     // Find the turn output for "turn off lamp"
     const idx = transcript.indexOf('> turn off lamp');
     expect(idx).toBeGreaterThan(-1);
@@ -45,10 +45,10 @@ describe('BD1 — lamp-off pitch-black (DGC-3)', () => {
     expect(after).toContain('It is now pitch black.');
   });
 
-  it('subsequent look reports pitch-black grue warning', () => {
+  it('subsequent look reports pitch-black grue warning', async () => {
     resetKitchenWindowFlag();
     resetRugMoved();
-    const transcript = runEngine(COMMANDS);
+    const transcript = await runEngine(COMMANDS);
     const idx = transcript.indexOf('> look', transcript.indexOf('> turn off lamp'));
     expect(idx).toBeGreaterThan(-1);
     const after = transcript.slice(idx);

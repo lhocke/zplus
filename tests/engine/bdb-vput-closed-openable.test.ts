@@ -93,34 +93,34 @@ function ctx(fix: Fix, dobjId: string, iobjId: string): VerbContext {
 // ---------------------------------------------------------------------------
 
 describe('BD-B — V-PUT door (closed, Flag.Door only) → "isn\'t open"', () => {
-  it('returns "The door isn\'t open." — not "You can\'t do that."', () => {
+  it('returns "The door isn\'t open." — not "You can\'t do that."', async () => {
     const fix = makeFixture();
     fix.leaflet.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, 'LEAFLET', 'DOOR'), 'V-PUT');
+    const result = await executeVerb(ctx(fix, 'LEAFLET', 'DOOR'), 'V-PUT');
     expect(result.output).toBe(fmt(vPut.notOpen, 'door'));
     expect(result.output).toBe("The door isn't open.");
   });
 
-  it('does NOT return "You can\'t do that." for a closed door', () => {
+  it('does NOT return "You can\'t do that." for a closed door', async () => {
     const fix = makeFixture();
     fix.leaflet.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, 'LEAFLET', 'DOOR'), 'V-PUT');
+    const result = await executeVerb(ctx(fix, 'LEAFLET', 'DOOR'), 'V-PUT');
     expect(result.output).not.toBe(vPut.cantDoThat);
     expect(result.output).not.toBe('You can\'t do that.');
   });
 
-  it('does not set TOUCHBIT on item when door is closed', () => {
+  it('does not set TOUCHBIT on item when door is closed', async () => {
     const fix = makeFixture();
     fix.leaflet.moveTo(fix.player);
     expect(fix.leaflet.has(Flag.Touched)).toBe(false);
-    executeVerb(ctx(fix, 'LEAFLET', 'DOOR'), 'V-PUT');
+    await executeVerb(ctx(fix, 'LEAFLET', 'DOOR'), 'V-PUT');
     expect(fix.leaflet.has(Flag.Touched)).toBe(false);
   });
 
-  it('does not move item when door is closed', () => {
+  it('does not move item when door is closed', async () => {
     const fix = makeFixture();
     fix.leaflet.moveTo(fix.player);
-    executeVerb(ctx(fix, 'LEAFLET', 'DOOR'), 'V-PUT');
+    await executeVerb(ctx(fix, 'LEAFLET', 'DOOR'), 'V-PUT');
     expect(fix.leaflet.parent).toBe(fix.player);
   });
 });
@@ -130,10 +130,10 @@ describe('BD-B — V-PUT door (closed, Flag.Door only) → "isn\'t open"', () =>
 // ---------------------------------------------------------------------------
 
 describe('BD-B — V-PUT closed Container still → "isn\'t open"', () => {
-  it('returns "The wooden box isn\'t open." for closed container', () => {
+  it('returns "The wooden box isn\'t open." for closed container', async () => {
     const fix = makeFixture();
     fix.leaflet.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, 'LEAFLET', 'BOX'), 'V-PUT');
+    const result = await executeVerb(ctx(fix, 'LEAFLET', 'BOX'), 'V-PUT');
     expect(result.output).toBe(fmt(vPut.notOpen, 'wooden box'));
     expect(result.output).toBe("The wooden box isn't open.");
   });
@@ -144,11 +144,11 @@ describe('BD-B — V-PUT closed Container still → "isn\'t open"', () => {
 // ---------------------------------------------------------------------------
 
 describe('BD-B — integration: put leaflet in door (West of House)', () => {
-  it('dfrotz R119: put leaflet in door → "The door isn\'t open."', () => {
+  it('dfrotz R119: put leaflet in door → "The door isn\'t open."', async () => {
     const game = newGameAt('WEST-OF-HOUSE');
-    game.turn('open mailbox');
-    game.turn('take leaflet');
-    const result = game.turn('put leaflet in door');
+    await game.turn('open mailbox');
+    await game.turn('take leaflet');
+    const result = await game.turn('put leaflet in door');
     expect(result.output).toBe("The door isn't open.");
   });
 });
@@ -158,23 +158,23 @@ describe('BD-B — integration: put leaflet in door (West of House)', () => {
 // ---------------------------------------------------------------------------
 
 describe('BD-B — integration: put leaflet in trap door (Living Room)', () => {
-  it('trap door closed → "The trap door isn\'t open."', () => {
+  it('trap door closed → "The trap door isn\'t open."', async () => {
     // Navigate: West of House → mailbox → Living Room → trap door
     // The trap door starts invisible/closed; the rug must be moved to reveal it,
     // then we attempt to put leaflet in it while it's still closed.
     const game = newGameAt('WEST-OF-HOUSE');
-    game.turn('open mailbox');
-    game.turn('take leaflet');
+    await game.turn('open mailbox');
+    await game.turn('take leaflet');
     // Enter the house: north → east → open window → west → west puts us in Living Room
-    game.turn('north');
-    game.turn('east');
-    game.turn('open window');
-    game.turn('west');
-    game.turn('west');
+    await game.turn('north');
+    await game.turn('east');
+    await game.turn('open window');
+    await game.turn('west');
+    await game.turn('west');
     // Living Room: move rug to reveal trap door (it starts invisible)
-    game.turn('move rug');
+    await game.turn('move rug');
     // Trap door is now visible but still closed
-    const result = game.turn('put leaflet in trap door');
+    const result = await game.turn('put leaflet in trap door');
     expect(result.output).toBe("The trap door isn't open.");
   });
 });
@@ -184,11 +184,11 @@ describe('BD-B — integration: put leaflet in trap door (Living Room)', () => {
 // ---------------------------------------------------------------------------
 
 describe('BD-B — regression: capacity check with SIZE default=5 still works', () => {
-  it('dfrotz R119: put bottle in sack (kitchen) → "There\'s no room."', () => {
+  it('dfrotz R119: put bottle in sack (kitchen) → "There\'s no room."', async () => {
     const game = newGameAt('KITCHEN');
-    game.turn('open sack');
-    game.turn('take bottle');
-    const result = game.turn('put bottle in sack');
+    await game.turn('open sack');
+    await game.turn('take bottle');
+    const result = await game.turn('put bottle in sack');
     expect(result.output).toBe("There's no room.");
   });
 });

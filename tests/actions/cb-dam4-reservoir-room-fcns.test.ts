@@ -38,8 +38,8 @@ function giveLight(g: Game) {
   lamp.set(Flag.OnFire);
 }
 
-function look(g: Game) {
-  return g.turn('look').output;
+async function look(g: Game) {
+  return await (await g.turn('look')).output;
 }
 
 // ---------------------------------------------------------------------------
@@ -54,55 +54,55 @@ describe('CB-DAM4 — RESERVOIR-SOUTH-FCN: 4-state M-LOOK', () => {
     giveLight(g);
   });
 
-  it('S0 sealed (GATES=F, LOW=F): south-shore lake description', () => {
+  it('S0 sealed (GATES=F, LOW=F): south-shore lake description', async () => {
     setFlags(g, false, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('south shore of a large lake');
     expect(out).toContain('too deep and wide for crossing');
   });
 
-  it('S0: includes fixed exit text', () => {
+  it('S0: includes fixed exit text', async () => {
     setFlags(g, false, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('path along the stream to the east or west');
     expect(out).toContain('canyon to the southeast');
   });
 
-  it('S2 draining (GATES=T, LOW=F): "dropping at a rapid rate"', () => {
+  it('S2 draining (GATES=T, LOW=F): "dropping at a rapid rate"', async () => {
     setFlags(g, true, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('dropping at a rapid rate');
   });
 
-  it('S2: includes fixed exit text', () => {
+  it('S2: includes fixed exit text', async () => {
     setFlags(g, true, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('path along the stream to the east or west');
   });
 
-  it('S3 drained (GATES=T, LOW=T): lake formerly; stream through center', () => {
+  it('S3 drained (GATES=T, LOW=T): lake formerly; stream through center', async () => {
     setFlags(g, true, true);
-    const out = look(g);
+    const out = await look(g);
     // "wide stream running through the center of the room" (may wrap)
     expect(out).toContain('formerly a lake');
     expect(out).toContain('center of the room');
   });
 
-  it('S3: includes fixed exit text', () => {
+  it('S3: includes fixed exit text', async () => {
     setFlags(g, true, true);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('path along the stream to the east or west');
   });
 
-  it('S4 refilling (GATES=F, LOW=T): "level of the stream is rising quickly"', () => {
+  it('S4 refilling (GATES=F, LOW=T): "level of the stream is rising quickly"', async () => {
     setFlags(g, false, true);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('level of the stream is rising quickly');
   });
 
-  it('S4: includes fixed exit text', () => {
+  it('S4: includes fixed exit text', async () => {
     setFlags(g, false, true);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('path along the stream to the east or west');
   });
 });
@@ -119,23 +119,23 @@ describe('CB-DAM4 — RESERVOIR-FCN: M-LOOK descriptions', () => {
     giveLight(g);
   });
 
-  it('drained (LOW-TIDE=T): mud-pile description', () => {
+  it('drained (LOW-TIDE=T): mud-pile description', async () => {
     setFlags(g, false, true);
-    const out = look(g);
+    const out = await look(g);
     // "what used to be a large lake, but which is now a large\nmud pile"
     expect(out).toContain('mud pile');
     expect(out).toContain('shores');
   });
 
-  it('filled (LOW-TIDE=F): lake description', () => {
+  it('filled (LOW-TIDE=F): lake description', async () => {
     setFlags(g, false, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('You are on the lake');
   });
 
-  it('filled: mentions dam downstream', () => {
+  it('filled: mentions dam downstream', async () => {
     setFlags(g, false, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('dam can be seen downstream');
   });
 });
@@ -147,42 +147,42 @@ describe('CB-DAM4 — RESERVOIR-FCN: M-LOOK descriptions', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM4 — RESERVOIR-FCN: M-END peril nag', () => {
-  it('emits peril warning when on-foot, gates sealed, reservoir drained', () => {
+  it('emits peril warning when on-foot, gates sealed, reservoir drained', async () => {
     const g = newGameAt('RESERVOIR');
     giveLight(g);
     // Player on foot (not in vehicle); gates closed; reservoir drained
     setFlags(g, false, true);
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toContain('water level here is rising rapidly');
   });
 
-  it('peril warning fires every turn (not just once)', () => {
+  it('peril warning fires every turn (not just once)', async () => {
     const g = newGameAt('RESERVOIR');
     giveLight(g);
     setFlags(g, false, true);
-    const out1 = g.turn('wait').output;
-    const out2 = g.turn('wait').output;
+    const out1 = await (await g.turn('wait')).output;
+    const out2 = await (await g.turn('wait')).output;
     expect(out1).toContain('water level here is rising rapidly');
     expect(out2).toContain('water level here is rising rapidly');
   });
 
-  it('no peril warning when GATES-OPEN (draining phase)', () => {
+  it('no peril warning when GATES-OPEN (draining phase)', async () => {
     const g = newGameAt('RESERVOIR');
     giveLight(g);
     setFlags(g, true, true);
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).not.toContain('water level here is rising rapidly');
   });
 
-  it('no peril warning when LOW-TIDE=F (lake full)', () => {
+  it('no peril warning when LOW-TIDE=F (lake full)', async () => {
     const g = newGameAt('RESERVOIR');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).not.toContain('water level here is rising rapidly');
   });
 
-  it('no peril warning when player is in vehicle (boat floats safely)', () => {
+  it('no peril warning when player is in vehicle (boat floats safely)', async () => {
     const g = newGameAt('RESERVOIR');
     giveLight(g);
     setFlags(g, false, true);
@@ -191,7 +191,7 @@ describe('CB-DAM4 — RESERVOIR-FCN: M-END peril nag', () => {
     const reservoir = g.world.get('RESERVOIR')!;
     inflatedBoat.moveTo(reservoir);
     g.player.moveTo(inflatedBoat);
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).not.toContain('water level here is rising rapidly');
   });
 });
@@ -208,51 +208,51 @@ describe('CB-DAM4 — RESERVOIR-NORTH-FCN: 4-state M-LOOK', () => {
     giveLight(g);
   });
 
-  it('S0 sealed (GATES=F, LOW=F): "north of a large lake"', () => {
+  it('S0 sealed (GATES=F, LOW=F): "north of a large lake"', async () => {
     setFlags(g, false, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('north of a large lake');
   });
 
-  it('S0: includes slimy-stairway exit text', () => {
+  it('S0: includes slimy-stairway exit text', async () => {
     setFlags(g, false, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('slimy stairway');
   });
 
-  it('S2 draining (GATES=T, LOW=F): "falling rapidly"', () => {
+  it('S2 draining (GATES=T, LOW=F): "falling rapidly"', async () => {
     setFlags(g, true, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('falling rapidly');
   });
 
-  it('S2: includes slimy-stairway exit text', () => {
+  it('S2: includes slimy-stairway exit text', async () => {
     setFlags(g, true, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('slimy stairway');
   });
 
-  it('S3 drained (GATES=T, LOW=T): "wide stream running through there"', () => {
+  it('S3 drained (GATES=T, LOW=T): "wide stream running through there"', async () => {
     setFlags(g, true, true);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('wide stream running through there');
   });
 
-  it('S3: includes slimy-stairway exit text', () => {
+  it('S3: includes slimy-stairway exit text', async () => {
     setFlags(g, true, true);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('slimy stairway');
   });
 
-  it('S4 refilling (GATES=F, LOW=T): "level of the stream is rising rapidly"', () => {
+  it('S4 refilling (GATES=F, LOW=T): "level of the stream is rising rapidly"', async () => {
     setFlags(g, false, true);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('level of the stream is rising rapidly');
   });
 
-  it('S4: includes slimy-stairway exit text', () => {
+  it('S4: includes slimy-stairway exit text', async () => {
     setFlags(g, false, true);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('slimy stairway');
   });
 });
@@ -274,39 +274,39 @@ describe('CB-DAM4 — DEEP-CANYON-F: base text and water suffix', () => {
     giveLight(g);
   });
 
-  it('always includes the base canyon description', () => {
+  it('always includes the base canyon description', async () => {
     setFlags(g, false, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('south edge of a deep canyon');
     expect(out).toContain('stairway leads down');
   });
 
-  it('S0 sealed (GATES=F, LOW=F): default "sound of flowing water from below"', () => {
+  it('S0 sealed (GATES=F, LOW=F): default "sound of flowing water from below"', async () => {
     setFlags(g, false, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('sound of flowing water from below');
   });
 
-  it('S2 draining (GATES=T, LOW=F): "loud roaring sound, like that of rushing water"', () => {
+  it('S2 draining (GATES=T, LOW=F): "loud roaring sound, like that of rushing water"', async () => {
     setFlags(g, true, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('loud roaring sound');
     expect(out).toContain('rushing water');
   });
 
-  it('S3/S4 drained+closed (GATES=F, LOW=T): no water-sound suffix', () => {
+  it('S3/S4 drained+closed (GATES=F, LOW=T): no water-sound suffix', async () => {
     // ZIL: (!GATES-OPEN && LOW-TIDE) → CRLF + RTRUE (no extra water line)
     setFlags(g, false, true);
-    const out = look(g);
+    const out = await look(g);
     expect(out).not.toContain('sound of flowing water');
     expect(out).not.toContain('roaring sound');
   });
 
-  it('S4 draining+drained (GATES=T, LOW=T): "loud roaring sound" (gates open takes priority)', () => {
+  it('S4 draining+drained (GATES=T, LOW=T): "loud roaring sound" (gates open takes priority)', async () => {
     // GATES-OPEN && !LOW-TIDE is the first branch; here LOW-TIDE=T so this branch
     // does not match. GATES-OPEN && LOW-TIDE falls to the else → "sound of flowing water".
     setFlags(g, true, true);
-    const out = look(g);
+    const out = await look(g);
     // GATES-OPEN=T, LOW-TIDE=T: not (!GATES-OPEN && LOW-TIDE), not (GATES-OPEN && !LOW-TIDE)
     // → falls to else → "sound of flowing water"
     expect(out).toContain('sound of flowing water');
@@ -320,38 +320,38 @@ describe('CB-DAM4 — DEEP-CANYON-F: base text and water suffix', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM4 — bootstrap clears static ldesc for FCN rooms', () => {
-  it('RESERVOIR-SOUTH: FCN description not the static default ldesc text', () => {
+  it('RESERVOIR-SOUTH: FCN description not the static default ldesc text', async () => {
     // After bootstrap, the FCN fires. The static ldesc was the S0 text.
     // Verify that the FCN controls the description by checking a non-S0 state.
     const g = newGameAt('RESERVOIR-SOUTH');
     giveLight(g);
     setFlags(g, true, false);  // draining state
-    const out = look(g);
+    const out = await look(g);
     // The draining description should appear (not the sealed static ldesc)
     expect(out).toContain('dropping at a rapid rate');
   });
 
-  it('RESERVOIR-NORTH: FCN description fires (not static ldesc)', () => {
+  it('RESERVOIR-NORTH: FCN description fires (not static ldesc)', async () => {
     const g = newGameAt('RESERVOIR-NORTH');
     giveLight(g);
     setFlags(g, true, false);  // draining state
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('falling rapidly');
   });
 
-  it('RESERVOIR: FCN mud description fires when drained', () => {
+  it('RESERVOIR: FCN mud description fires when drained', async () => {
     const g = newGameAt('RESERVOIR');
     giveLight(g);
     setFlags(g, false, true);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('mud pile');
   });
 
-  it('DEEP-CANYON: FCN roaring-water suffix fires when gates open', () => {
+  it('DEEP-CANYON: FCN roaring-water suffix fires when gates open', async () => {
     const g = newGameAt('DEEP-CANYON');
     giveLight(g);
     setFlags(g, true, false);
-    const out = look(g);
+    const out = await look(g);
     expect(out).toContain('loud roaring sound');
   });
 });

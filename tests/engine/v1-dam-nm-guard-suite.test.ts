@@ -67,8 +67,8 @@ function giveLight(g: Game) {
   lamp.moveTo(g.player);
 }
 
-function waitN(g: Game, n: number) {
-  for (let i = 0; i < n; i++) g.turn('wait');
+async function waitN(g: Game, n: number) {
+  for (let i = 0; i < n; i++) await g.turn('wait');
 }
 
 // ---------------------------------------------------------------------------
@@ -80,30 +80,30 @@ function waitN(g: Game, n: number) {
 // ---------------------------------------------------------------------------
 
 describe('NM-A — parked timer never fires (tick-0 disabled)', () => {
-  it('parked I-RFILL (turnsLeft=0, enabled=false) does not flip LOW-TIDE after 10 turns', () => {
+  it('parked I-RFILL (turnsLeft=0, enabled=false) does not flip LOW-TIDE after 10 turns', async () => {
     const g = newGameAt('DAM-ROOM');
     // Park I-RFILL explicitly
     clock(g).queue('I-RFILL', 0, false);
     flags(g).set('LOW-TIDE', false);
-    waitN(g, 10);
+    await waitN(g, 10);
     expect(flags(g).get('LOW-TIDE')).toBe(false);
   });
 
-  it('parked I-REMPTY (turnsLeft=0, enabled=false) does not flip LOW-TIDE', () => {
+  it('parked I-REMPTY (turnsLeft=0, enabled=false) does not flip LOW-TIDE', async () => {
     const g = newGameAt('DAM-ROOM');
     clock(g).queue('I-REMPTY', 0, false);
     flags(g).set('LOW-TIDE', true);
-    waitN(g, 10);
+    await waitN(g, 10);
     // LOW-TIDE stays true — parked I-REMPTY never fires
     expect(flags(g).get('LOW-TIDE')).toBe(true);
   });
 
-  it('bolt open: parks I-RFILL (enabled=false, turnsLeft=0) in the same turn', () => {
+  it('bolt open: parks I-RFILL (enabled=false, turnsLeft=0) in the same turn', async () => {
     const g = newGameAt('DAM-ROOM');
     g.world.get('WRENCH')!.moveTo(g.player);
     flags(g).set('GATE-FLAG', true);
     // gates are closed by default → turn bolt opens them
-    g.turn('turn bolt with wrench');
+    await g.turn('turn bolt with wrench');
     const rfill = clock(g).getEntry('I-RFILL');
     expect(rfill!.enabled).toBe(false);
     expect(rfill!.turnsLeft).toBe(0);
@@ -119,23 +119,23 @@ describe('NM-A — parked timer never fires (tick-0 disabled)', () => {
 // ---------------------------------------------------------------------------
 
 describe('NM-B — trunk re-hide conditional on RESERVOIR location', () => {
-  it('trunk in RESERVOIR is re-hidden by I-RFILL', () => {
+  it('trunk in RESERVOIR is re-hidden by I-RFILL', async () => {
     const g = newGameAt('DAM-ROOM');
     const trunk = g.world.get('TRUNK')!;
     trunk.clear(Flag.Invisible);
     trunk.moveTo(g.world.get('RESERVOIR')!);
     armTimer(g, 'I-RFILL', 1);
-    g.turn('wait');
+    await g.turn('wait');
     expect(trunk.has(Flag.Invisible)).toBe(true);
   });
 
-  it('trunk carried by player is NOT re-hidden by I-RFILL (NM-B)', () => {
+  it('trunk carried by player is NOT re-hidden by I-RFILL (NM-B)', async () => {
     const g = newGameAt('DAM-ROOM');
     const trunk = g.world.get('TRUNK')!;
     trunk.clear(Flag.Invisible);
     trunk.moveTo(g.player);
     armTimer(g, 'I-RFILL', 1);
-    g.turn('wait');
+    await g.turn('wait');
     expect(trunk.has(Flag.Invisible)).toBe(false);
   });
 });
@@ -150,34 +150,34 @@ describe('NM-B — trunk re-hide conditional on RESERVOIR location', () => {
 // ---------------------------------------------------------------------------
 
 describe('NM-C — DROWNINGS indexed at WATER-LEVEL/2', () => {
-  it('WL=1 → DROWNINGS[0]: "up to your ankles"', () => {
+  it('WL=1 → DROWNINGS[0]: "up to your ankles"', async () => {
     const g = newGameAt('MAINTENANCE-ROOM');
     g.world.get('MAINTENANCE-ROOM')!.set(Flag.On);
     giveLight(g);
     setWaterLevel(g, 1);
     clock(g).queue('I-MAINT-ROOM', -1, true);
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toContain('up to your ankles');
   });
 
-  it('WL=4 → DROWNINGS[2]: "up to your knees"', () => {
+  it('WL=4 → DROWNINGS[2]: "up to your knees"', async () => {
     const g = newGameAt('MAINTENANCE-ROOM');
     g.world.get('MAINTENANCE-ROOM')!.set(Flag.On);
     giveLight(g);
     // Arm via push-blue-button to set up the demon; override WL after
-    g.turn('push blue button');
+    await g.turn('push blue button');
     setWaterLevel(g, 4);
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toContain('up to your knees');
   });
 
-  it('drown at WL=14 in MAINTENANCE-ROOM', () => {
+  it('drown at WL=14 in MAINTENANCE-ROOM', async () => {
     const g = newGameAt('MAINTENANCE-ROOM');
     g.world.get('MAINTENANCE-ROOM')!.set(Flag.On);
     giveLight(g);
-    g.turn('push blue button');
+    await g.turn('push blue button');
     setWaterLevel(g, 13);  // next tick → 14 → drown
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toMatch(/drowned/i);
   });
 });
@@ -196,28 +196,28 @@ describe('NM-D — BAR untakeable while loud; takeable after ECHO', () => {
     expect(g.world.get('BAR')!.has(Flag.Sacred)).toBe(true);
   });
 
-  it('take bar while loud → echoes, bar stays in LOUD-ROOM', () => {
+  it('take bar while loud → echoes, bar stays in LOUD-ROOM', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     flags(g).set('GATES-OPEN', false);  // ensure loud state (default)
-    g.turn('take bar');
+    await g.turn('take bar');
     expect(g.world.get('BAR')!.parent?.id).toBe('LOUD-ROOM');
   });
 
-  it('ECHO clears BAR.SACREDBIT (1actions.zil:1676)', () => {
+  it('ECHO clears BAR.SACREDBIT (1actions.zil:1676)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     flags(g).set('GATES-OPEN', false);
-    g.turn('echo');
+    await g.turn('echo');
     expect(g.world.get('BAR')!.has(Flag.Sacred)).toBe(false);
   });
 
-  it('take bar succeeds after ECHO (bar no longer sacred)', () => {
+  it('take bar succeeds after ECHO (bar no longer sacred)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     flags(g).set('GATES-OPEN', false);
-    g.turn('echo');
-    g.turn('take bar');
+    await g.turn('echo');
+    await g.turn('take bar');
     expect(g.world.get('BAR')!.parent?.id).toBe('PLAYER');
   });
 });
@@ -253,34 +253,34 @@ describe('NM-E — GOTO three VEHBIT/NONLANDBIT rejection clauses', () => {
     return { verb: 'walk', prep: dir, player, here, world };
   }
 
-  it('clause 1: on-foot into NonLand → "without a vehicle"', () => {
+  it('clause 1: on-foot into NonLand → "without a vehicle"', async () => {
     const { shore, player, world } = mkWorld();
-    const result = executeVerb(ctx(player, shore, world, 'east'), 'V-WALK');
+    const result = await executeVerb(ctx(player, shore, world, 'east'), 'V-WALK');
     expect(result.moved).toBe(false);
     expect(result.output).toContain('without a vehicle');
   });
 
-  it('clause 2: boat beached on land, walk to another land room → "in a"', () => {
+  it('clause 2: boat beached on land, walk to another land room → "in a"', async () => {
     const { shore, player, boat, world } = mkWorld();
     player.moveTo(boat);
-    const result = executeVerb(ctx(player, shore, world, 'north'), 'V-WALK');
+    const result = await executeVerb(ctx(player, shore, world, 'north'), 'V-WALK');
     expect(result.moved).toBe(false);
     expect(result.output).toContain('in a');
   });
 
-  it('clause 3: boat in water, destination is land → allowed (landing)', () => {
+  it('clause 3: boat in water, destination is land → allowed (landing)', async () => {
     const { river, player, boat, world } = mkWorld();
     boat.moveTo(river);
     player.moveTo(boat);
-    const result = executeVerb(ctx(player, river, world, 'west'), 'V-WALK');
+    const result = await executeVerb(ctx(player, river, world, 'west'), 'V-WALK');
     expect(result.moved).toBe(true);
   });
 
-  it('landing emits "comes to a rest on the shore."', () => {
+  it('landing emits "comes to a rest on the shore."', async () => {
     const { river, player, boat, world } = mkWorld();
     boat.moveTo(river);
     player.moveTo(boat);
-    const result = executeVerb(ctx(player, river, world, 'west'), 'V-WALK');
+    const result = await executeVerb(ctx(player, river, world, 'west'), 'V-WALK');
     expect(result.output).toContain('comes to a rest on the shore.');
   });
 });
@@ -294,14 +294,14 @@ describe('NM-E — GOTO three VEHBIT/NONLANDBIT rejection clauses', () => {
 // ---------------------------------------------------------------------------
 
 describe('NM-F — inflate messages: pump inflates; lungs and other tools distinct', () => {
-  it('inflate with pump → "seaworthy" (inflates the boat)', () => {
+  it('inflate with pump → "seaworthy" (inflates the boat)', async () => {
     const g = newGameAt('DAM-BASE');
     g.world.get('PUMP')!.moveTo(g.player);
-    const out = g.turn('inflate boat with pump').output;
+    const out = await (await g.turn('inflate boat with pump')).output;
     expect(out).toContain('seaworthy');
   });
 
-  it('blow in boat → "lung power" (NM-F: BREATHE path, distinct from pump)', () => {
+  it('blow in boat → "lung power" (NM-F: BREATHE path, distinct from pump)', async () => {
     // ZIL: BREATHE → <PERFORM V?INFLATE PRSO LUNGS> (gverbs.zil:231, 1actions.zil:2817).
     // "blow in boat" routes V-BREATHE → lung-power message without inflating.
     // "inflate boat with lungs" is NOT a valid ZIL command (INFLATE syntax requires
@@ -309,29 +309,29 @@ describe('NM-F — inflate messages: pump inflates; lungs and other tools distin
     const g = newGameAt('DAM-BASE');
     const inflatable = g.world.get('INFLATABLE-BOAT')!;
     inflatable.moveTo(g.world.get('DAM-BASE')!);
-    const out = g.turn('blow in boat').output;
+    const out = await (await g.turn('blow in boat')).output;
     expect(out).toContain('lung power');
   });
 
-  it('inflate with non-pump non-lungs tool → "jest"', () => {
+  it('inflate with non-pump non-lungs tool → "jest"', async () => {
     const g = newGameAt('DAM-BASE');
     g.world.get('WRENCH')!.moveTo(g.player);
-    const out = g.turn('inflate boat with wrench').output;
+    const out = await (await g.turn('inflate boat with wrench')).output;
     expect(out).toContain('jest');
   });
 
-  it('blow in teeth → "How can you inflate that?" (non-boat V-BREATHE fall-through)', () => {
+  it('blow in teeth → "How can you inflate that?" (non-boat V-BREATHE fall-through)', async () => {
     // V-BREATHE dispatches <PERFORM V?INFLATE PRSO LUNGS>.  A non-boat dobj has no
     // IBOAT-FUNCTION branch → falls through to V-INFLATE: "How can you inflate that?"
     // ZIL: gverbs.zil:757–758 (V-INFLATE default)
     const g = newGameAt('WEST-OF-HOUSE');
     giveLight(g);
     // TEETH is a global object (NDESCBIT); always accessible.
-    const out = g.turn('blow in teeth').output;
+    const out = await (await g.turn('blow in teeth')).output;
     expect(out).toContain('How can you inflate that?');
   });
 
-  it('blow in punctured-boat → "No chance. Some moron punctured it." (1actions.zil:2656)', () => {
+  it('blow in punctured-boat → "No chance. Some moron punctured it." (1actions.zil:2656)', async () => {
     // DBOAT-FUNCTION intercepts the BREATHE/INFLATE call and returns the puncture rejection.
     // ZIL: 1actions.zil:2652–2668 (DBOAT-FUNCTION)
     const g = newGameAt('DAM-BASE');
@@ -339,7 +339,7 @@ describe('NM-F — inflate messages: pump inflates; lungs and other tools distin
     g.world.get('INFLATABLE-BOAT')!.moveTo(g.world.get('TROPHY-CASE')!);
     const punctured = g.world.get('PUNCTURED-BOAT')!;
     punctured.moveTo(g.world.get('DAM-BASE')!);
-    const out = g.turn('blow in boat').output;
+    const out = await (await g.turn('blow in boat')).output;
     expect(out).toContain('moron punctured it');
   });
 });
@@ -357,36 +357,36 @@ describe('NM-F — inflate messages: pump inflates; lungs and other tools distin
 describe('NM-G — BOARD with six named sharp objects punctures', () => {
   const sharpObjects = ['SWORD', 'KNIFE', 'RUSTY-KNIFE', 'AXE', 'STILETTO', 'SCEPTRE'];
 
-  function setupBoard(sharpId: string) {
+  async function setupBoard(sharpId: string) {
     const g = newGameAt('DAM-BASE');
     g.world.get('PUMP')!.moveTo(g.player);
-    g.turn('inflate boat with pump');  // creates INFLATED-BOAT in room
+    await g.turn('inflate boat with pump');  // creates INFLATED-BOAT in room
     const sharp = g.world.get(sharpId);
     if (sharp) sharp.moveTo(g.player);
     return g;
   }
 
   for (const id of sharpObjects) {
-    it(`board with ${id} in inventory → punctured boat`, () => {
-      const g = setupBoard(id);
+    it(`board with ${id} in inventory → punctured boat`, async () => {
+      const g = await setupBoard(id);
       // all six sharp objects must exist — a missing one is a data bug, not a skip
       expect(g.world.get(id)).toBeTruthy();
-      const out = g.turn('board boat').output;
+      const out = await (await g.turn('board boat')).output;
       expect(out).toMatch(/puncture|punctured|slipped/i);
       expect(g.world.get('PUNCTURED-BOAT')!.parent?.id).not.toBeNull();
     });
   }
 
-  it('board with empty hands succeeds (no puncture)', () => {
+  it('board with empty hands succeeds (no puncture)', async () => {
     const g = newGameAt('DAM-BASE');
     g.world.get('PUMP')!.moveTo(g.player);
-    g.turn('inflate boat with pump');
+    await g.turn('inflate boat with pump');
     // ensure no sharp objects in inventory
     for (const id of sharpObjects) {
       const obj = g.world.get(id);
       if (obj && obj.parent?.id === 'PLAYER') obj.moveTo(g.world.get('DAM-BASE')!);
     }
-    const out = g.turn('board boat').output;
+    const out = await (await g.turn('board boat')).output;
     expect(out).not.toMatch(/puncture|punctured|slipped/i);
   });
 });
@@ -400,16 +400,16 @@ describe('NM-G — BOARD with six named sharp objects punctures', () => {
 // ---------------------------------------------------------------------------
 
 describe('NM-H — I-RIVER re-arms at new section speed after drift', () => {
-  it('after RIVER-1→RIVER-2 drift, I-RIVER turnsLeft is 4 (RIVER-2 speed)', () => {
+  it('after RIVER-1→RIVER-2 drift, I-RIVER turnsLeft is 4 (RIVER-2 speed)', async () => {
     const g = newGameAt('DAM-BASE');
     g.world.get('PUMP')!.moveTo(g.player);
-    g.turn('inflate boat with pump');
-    g.turn('board boat');
-    g.turn('launch');
+    await g.turn('inflate boat with pump');
+    await g.turn('board boat');
+    await g.turn('launch');
     // RIVER-1 speed = 4; clock advances once at end of launch turn → turnsLeft=3.
     // V-WAIT multi-CLOCKER (gverbs.zil:1514-1519): one wait runs up to 3 CLOCKER
     // ticks, stopping on first fire.  1 wait fires the drift (3→2→1→0 FIRE).
-    waitN(g, 1);
+    await waitN(g, 1);
     // Drift to RIVER-2 fires; re-arm at RIVER-2 speed (4)
     const entry = clock(g).getEntry('I-RIVER');
     expect(entry!.enabled).toBe(true);
@@ -426,12 +426,12 @@ describe('NM-H — I-RIVER re-arms at new section speed after drift', () => {
 // ---------------------------------------------------------------------------
 
 describe('NM-I — past RIVER-5: waterfall death (not silent disable)', () => {
-  it('drifting off RIVER-5 emits waterfall death message', () => {
+  it('drifting off RIVER-5 emits waterfall death message', async () => {
     const g = newGameAt('DAM-BASE');
     g.world.get('PUMP')!.moveTo(g.player);
-    g.turn('inflate boat with pump');
-    g.turn('board boat');
-    g.turn('launch');
+    await g.turn('inflate boat with pump');
+    await g.turn('board boat');
+    await g.turn('launch');
     // Speeds: R1=4(→3), R2=4, R3=3, R4=2, R5=1.
     // V-WAIT multi-CLOCKER (gverbs.zil:1514-1519): up to 3 CLOCKER ticks per wait.
     // Cumulative waits to reach R5 (multi-CLOCKER):
@@ -441,9 +441,9 @@ describe('NM-I — past RIVER-5: waterfall death (not silent disable)', () => {
     //   wait 4: 3→2→1→0 FIRE → RIVER-4 (rearm 2)
     //   wait 5: 2→1→0 FIRE → RIVER-5 (rearm 1)
     // R5 turnsLeft=1 after re-arm; falls on wait 6.
-    waitN(g, 5);
+    await waitN(g, 5);
     expect(g.world.get('INFLATED-BOAT')!.parent?.id).toBe('RIVER-5');
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toMatch(/waterfalls|bottom|rocks/i);
   });
 });
@@ -475,23 +475,23 @@ describe('NM-J — BEACH-DIG counter: dig #4 reveals; dig #5 kills', () => {
     expect(beachDig(g)).toBe(-1);
   });
 
-  it('dig #1: BEACH-DIG → 0, progress message', () => {
+  it('dig #1: BEACH-DIG → 0, progress message', async () => {
     const g = digSetup();
-    const out = g.turn('dig sand with shovel').output;
+    const out = await (await g.turn('dig sand with shovel')).output;
     expect(beachDig(g)).toBe(0);
     expect(out).toContain('digging a hole');
   });
 
-  it('dig #4 (pre-set to 2): BEACH-DIG → 3, scarab revealed', () => {
+  it('dig #4 (pre-set to 2): BEACH-DIG → 3, scarab revealed', async () => {
     const g = digSetup(2);
-    g.turn('dig sand with shovel');
+    await g.turn('dig sand with shovel');
     expect(beachDig(g)).toBe(3);
     expect(g.world.get('SCARAB')!.has(Flag.Invisible)).toBe(false);
   });
 
-  it('dig #5 (pre-set to 3): death + BEACH-DIG reset to -1', () => {
+  it('dig #5 (pre-set to 3): death + BEACH-DIG reset to -1', async () => {
     const g = digSetup(3);
-    const out = g.turn('dig sand with shovel').output;
+    const out = await (await g.turn('dig sand with shovel')).output;
     expect(out).toContain('smothering');
     expect(beachDig(g)).toBe(-1);
   });
@@ -505,37 +505,37 @@ describe('NM-J — BEACH-DIG counter: dig #4 reveals; dig #5 kills', () => {
 // ---------------------------------------------------------------------------
 
 describe('NM-K — rainbow: on-rainbow fatal; endpoint toggle; pot reveal only at END-OF-RAINBOW', () => {
-  it('wave sceptre on ON-RAINBOW → fatal', () => {
+  it('wave sceptre on ON-RAINBOW → fatal', async () => {
     const g = newGameAt('ON-RAINBOW');
     giveLight(g);
     const sceptre = g.world.get('SCEPTRE')!;
     sceptre.moveTo(g.player);
     flags(g).set('RAINBOW-FLAG', true);  // solid rainbow (player is on it)
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     expect(out).toMatch(/midair|vapor|hanging/i);
   });
 
-  it('wave at ARAGAIN-FALLS sets RAINBOW-FLAG', () => {
+  it('wave at ARAGAIN-FALLS sets RAINBOW-FLAG', async () => {
     const g = newGameAt('ARAGAIN-FALLS');
     giveLight(g);
     const sceptre = g.world.get('SCEPTRE')!;
     sceptre.moveTo(g.player);
     flags(g).set('RAINBOW-FLAG', false);
-    g.turn('wave sceptre');
+    await g.turn('wave sceptre');
     expect(flags(g).get('RAINBOW-FLAG')).toBe(true);
   });
 
-  it('wave at ARAGAIN-FALLS does NOT show pot-of-gold message', () => {
+  it('wave at ARAGAIN-FALLS does NOT show pot-of-gold message', async () => {
     const g = newGameAt('ARAGAIN-FALLS');
     giveLight(g);
     const sceptre = g.world.get('SCEPTRE')!;
     sceptre.moveTo(g.player);
     flags(g).set('RAINBOW-FLAG', false);
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     expect(out).not.toContain('pot of gold');
   });
 
-  it('wave at END-OF-RAINBOW (first time, pot in room) → pot-of-gold message', () => {
+  it('wave at END-OF-RAINBOW (first time, pot in room) → pot-of-gold message', async () => {
     const g = newGameAt('END-OF-RAINBOW');
     giveLight(g);
     const sceptre = g.world.get('SCEPTRE')!;
@@ -544,7 +544,7 @@ describe('NM-K — rainbow: on-rainbow fatal; endpoint toggle; pot reveal only a
     pot.set(Flag.Invisible);
     pot.moveTo(g.world.get('END-OF-RAINBOW')!);
     flags(g).set('RAINBOW-FLAG', false);
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     expect(out).toMatch(/pot of gold|shimmering/i);
   });
 });
@@ -559,35 +559,35 @@ describe('NM-K — rainbow: on-rainbow fatal; endpoint toggle; pot reveal only a
 // ---------------------------------------------------------------------------
 
 describe('NM-L — I-RFILL mutations survive JIGS-UP (death does not roll them back)', () => {
-  it('after drowning in RESERVOIR: LOW-TIDE is false', () => {
+  it('after drowning in RESERVOIR: LOW-TIDE is false', async () => {
     const g = newGameAt('RESERVOIR');
     flags(g).set('LOW-TIDE', true);
     armTimer(g, 'I-RFILL', 1);
-    g.turn('wait');
+    await g.turn('wait');
     expect(flags(g).get('LOW-TIDE')).toBe(false);
   });
 
-  it('after drowning in RESERVOIR: RESERVOIR has NONLANDBIT set', () => {
+  it('after drowning in RESERVOIR: RESERVOIR has NONLANDBIT set', async () => {
     const g = newGameAt('RESERVOIR');
     armTimer(g, 'I-RFILL', 1);
-    g.turn('wait');
+    await g.turn('wait');
     expect(g.world.get('RESERVOIR')!.has(Flag.NonLand)).toBe(true);
   });
 
-  it('after drowning in RESERVOIR: RESERVOIR does not have RLANDBIT', () => {
+  it('after drowning in RESERVOIR: RESERVOIR does not have RLANDBIT', async () => {
     const g = newGameAt('RESERVOIR');
     armTimer(g, 'I-RFILL', 1);
-    g.turn('wait');
+    await g.turn('wait');
     expect(g.world.get('RESERVOIR')!.has(Flag.Land)).toBe(false);
   });
 
-  it('after drowning in RESERVOIR: trunk (in reservoir) is re-hidden (NM-L + NM-B)', () => {
+  it('after drowning in RESERVOIR: trunk (in reservoir) is re-hidden (NM-L + NM-B)', async () => {
     const g = newGameAt('RESERVOIR');
     const trunk = g.world.get('TRUNK')!;
     trunk.clear(Flag.Invisible);
     trunk.moveTo(g.world.get('RESERVOIR')!);
     armTimer(g, 'I-RFILL', 1);
-    g.turn('wait');
+    await g.turn('wait');
     expect(trunk.has(Flag.Invisible)).toBe(true);
   });
 });

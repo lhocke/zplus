@@ -78,24 +78,24 @@ function putGarlicInRoom(g: ReturnType<typeof newGameAt>): void {
 // ---------------------------------------------------------------------------
 
 describe('CC4 — BAT-F: garlic in inventory repels bat (1actions.zil:313)', () => {
-  it('take bat with garlic in inventory: "clinging to the ceiling" message', () => {
+  it('take bat with garlic in inventory: "clinging to the ceiling" message', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
     giveGarlicToPlayer(g);
-    const out = g.turn('take bat').output;
+    const out = await (await g.turn('take bat')).output;
     expect(out).toContain('ceiling');
   });
 
-  it('take bat with garlic in inventory: player does NOT move', () => {
+  it('take bat with garlic in inventory: player does NOT move', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
     giveGarlicToPlayer(g);
     const startRoom = g.player.parent?.id;
-    g.turn('take bat');
+    await g.turn('take bat');
     expect(g.player.parent?.id).toBe(startRoom);
   });
 
-  it('attack bat with sword, garlic in inventory: bat repelled', () => {
+  it('attack bat with sword, garlic in inventory: bat repelled', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
     giveGarlicToPlayer(g);
@@ -103,26 +103,26 @@ describe('CC4 — BAT-F: garlic in inventory repels bat (1actions.zil:313)', () 
     const sword = g.world.get('SWORD');
     expect(sword, 'SWORD must exist in world').toBeDefined();
     sword!.moveTo(g.player);
-    const out = g.turn('attack bat with sword').output;
+    const out = await (await g.turn('attack bat with sword')).output;
     expect(out).toContain('ceiling');
   });
 });
 
 describe('CC4 — BAT-F: garlic in room repels bat (1actions.zil:313)', () => {
-  it('take bat with garlic on floor: "clinging to the ceiling" message', () => {
+  it('take bat with garlic on floor: "clinging to the ceiling" message', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
     putGarlicInRoom(g);
-    const out = g.turn('take bat').output;
+    const out = await (await g.turn('take bat')).output;
     expect(out).toContain('ceiling');
   });
 
-  it('take bat with garlic on floor: player does NOT move', () => {
+  it('take bat with garlic on floor: player does NOT move', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
     putGarlicInRoom(g);
     const startRoom = g.player.parent?.id;
-    g.turn('take bat');
+    await g.turn('take bat');
     expect(g.player.parent?.id).toBe(startRoom);
   });
 });
@@ -133,44 +133,44 @@ describe('CC4 — BAT-F: garlic in room repels bat (1actions.zil:313)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CC4 — FLY-ME: bat teleport (1actions.zil:317)', () => {
-  it('take bat without garlic: output includes "Fweep!" (1actions.zil:318)', () => {
+  it('take bat without garlic: output includes "Fweep!" (1actions.zil:318)', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
-    const out = g.turn('take bat').output;
+    const out = await (await g.turn('take bat')).output;
     expect(out).toContain('Fweep!');
   });
 
-  it('take bat without garlic: output includes grab message (1actions.zil:319–320)', () => {
+  it('take bat without garlic: output includes grab message (1actions.zil:319–320)', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
-    const out = g.turn('take bat').output;
+    const out = await (await g.turn('take bat')).output;
     expect(out).toContain('scruff of your neck');
   });
 
-  it('take bat without garlic: player lands in a valid BAT-DROPS room', () => {
+  it('take bat without garlic: player lands in a valid BAT-DROPS room', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
-    g.turn('take bat');
+    await g.turn('take bat');
     const newRoom = g.player.parent?.id;
     expect(newRoom, 'player must have moved to a room').toBeDefined();
     expect(BAT_DROPS, 'destination must be a BAT-DROPS member').toContain(newRoom);
   });
 
-  it('take bat without garlic: player moves away from BAT-ROOM', () => {
+  it('take bat without garlic: player moves away from BAT-ROOM', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
-    g.turn('take bat');
+    await g.turn('take bat');
     expect(g.player.parent?.id).not.toBe('BAT-ROOM');
   });
 
-  it('attack bat with sword, no garlic: also triggers FLY-ME (1actions.zil:312)', () => {
+  it('attack bat with sword, no garlic: also triggers FLY-ME (1actions.zil:312)', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
     // Give the player a weapon so the ATTACK parse resolves (numObjects=2 in syntax.json).
     const sword = g.world.get('SWORD');
     expect(sword, 'SWORD must exist in world').toBeDefined();
     sword!.moveTo(g.player);
-    const out = g.turn('attack bat with sword').output;
+    const out = await (await g.turn('attack bat with sword')).output;
     // Branch fires: grab message present and player moved.
     expect(out).toContain('scruff');
     expect(BAT_DROPS).toContain(g.player.parent?.id);
@@ -178,20 +178,20 @@ describe('CC4 — FLY-ME: bat teleport (1actions.zil:317)', () => {
 
   // ZIL FWEEP(N) decrements N before the print test, so FWEEP(4) prints 3 lines.
   // 1actions.zil:328: <COND (<L? <SET N <- .N 1>> 1> <RETURN>) (T <TELL "    Fweep!" CR>)>
-  it('FLY-ME: exactly 3 Fweep! lines (FWEEP(4) = N-1 prints, 1actions.zil:326-330)', () => {
+  it('FLY-ME: exactly 3 Fweep! lines (FWEEP(4) = N-1 prints, 1actions.zil:326-330)', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
-    const out = g.turn('take bat').output;
+    const out = await (await g.turn('take bat')).output;
     const fweepCount = (out.match(/    Fweep!/g) ?? []).length;
     expect(fweepCount).toBe(3);
   });
 
   // ZIL FWEEP ends with <CRLF> (1actions.zil:330), dfrotz renders a blank line
   // between the last Fweep and the grab message.
-  it('FLY-ME: blank line between last Fweep and grab message (1actions.zil:330)', () => {
+  it('FLY-ME: blank line between last Fweep and grab message (1actions.zil:330)', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
-    const out = g.turn('take bat').output;
+    const out = await (await g.turn('take bat')).output;
     expect(out).toMatch(/Fweep!\n\nThe bat grabs/);
   });
 });
@@ -202,10 +202,10 @@ describe('CC4 — FLY-ME: bat teleport (1actions.zil:317)', () => {
 
 describe('CC4 — BAT-F V-TELL: Fweep count (1actions.zil:310)', () => {
   // ZIL <FWEEP 6> with the N-1 rule prints 5 lines.
-  it('tell bat: exactly 5 Fweep! lines (FWEEP(6) = N-1 prints)', () => {
+  it('tell bat: exactly 5 Fweep! lines (FWEEP(6) = N-1 prints)', async () => {
     const g = gameAtBatRoom();
     ensureBatInRoom(g);
-    const out = g.turn('tell bat').output;
+    const out = await (await g.turn('tell bat')).output;
     const fweepCount = (out.match(/    Fweep!/g) ?? []).length;
     expect(fweepCount).toBe(5);
   });
@@ -216,33 +216,33 @@ describe('CC4 — BAT-F V-TELL: Fweep count (1actions.zil:310)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CC4 — GARLIC-F: eat garlic (1actions.zil:4161)', () => {
-  it('eat garlic: prints gulp message', () => {
+  it('eat garlic: prints gulp message', async () => {
     const g = newGameAt('BAT-ROOM');
     g.start();
     const garlic = g.world.get('GARLIC');
     expect(garlic, 'GARLIC must exist in world').toBeDefined();
     garlic!.moveTo(g.player);
-    const out = g.turn('eat garlic').output;
+    const out = await (await g.turn('eat garlic')).output;
     expect(out).toContain('Gulp');
   });
 
-  it('eat garlic: garlic is removed from the world', () => {
+  it('eat garlic: garlic is removed from the world', async () => {
     const g = newGameAt('BAT-ROOM');
     g.start();
     const garlic = g.world.get('GARLIC');
     expect(garlic, 'GARLIC must exist in world').toBeDefined();
     garlic!.moveTo(g.player);
-    g.turn('eat garlic');
+    await g.turn('eat garlic');
     expect(garlic!.parent).toBeNull();
   });
 
-  it('eat garlic: output mentions not making friends', () => {
+  it('eat garlic: output mentions not making friends', async () => {
     const g = newGameAt('BAT-ROOM');
     g.start();
     const garlic = g.world.get('GARLIC');
     expect(garlic, 'GARLIC must exist in world').toBeDefined();
     garlic!.moveTo(g.player);
-    const out = g.turn('eat garlic').output;
+    const out = await (await g.turn('eat garlic')).output;
     expect(out).toContain("won't make friends");
   });
 });

@@ -94,7 +94,7 @@ describe('SD3-D: jigsUp calls killInterrupts (integration via game.turn)', () =>
   const grueRng = (): Rng =>
     ({ next: () => 0.5, prob: (base: number) => 0.5 * 100 < base } as unknown as Rng);
 
-  it('I-LANTERN is disabled in the clock after a grue death', () => {
+  it('I-LANTERN is disabled in the clock after a grue death', async () => {
     const game = createGame({ startRoom: 'MAZE-1', rng: grueRng() });
     game.start();
 
@@ -107,20 +107,20 @@ describe('SD3-D: jigsUp calls killInterrupts (integration via game.turn)', () =>
     expect(snapBefore.find((s) => s.id === 'I-LANTERN')?.enabled).toBe(true);
 
     // Die in the dark maze — grue fires.
-    game.turn('north');
+    await game.turn('north');
 
     const snapAfter = clock.snapshot();
     expect(snapAfter.find((s) => s.id === 'I-LANTERN')?.enabled).toBe(false);
   });
 
-  it('MATCH ONBIT is cleared after death even if the match was lit', () => {
+  it('MATCH ONBIT is cleared after death even if the match was lit', async () => {
     const game = createGame({ startRoom: 'MAZE-1', rng: grueRng() });
     game.start();
 
     const match = game.world.get('MATCH')!;
     match.set(Flag.OnFire);
 
-    game.turn('north'); // grue death → jigsUp → killInterrupts
+    await game.turn('north'); // grue death → jigsUp → killInterrupts
 
     expect(match.has(Flag.OnFire)).toBe(false);
   });

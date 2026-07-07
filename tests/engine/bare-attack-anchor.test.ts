@@ -24,7 +24,7 @@ function worldOf(g: Game): World {
 const fixedRng = { next: () => 0.1, prob: () => false, zprob: () => false };
 
 describe('bare attack anchor (dfrotz-verified)', () => {
-  it('bare "attack" in Troll Room with sword held → (troll) + bare-hands suicidal', () => {
+  it('bare "attack" in Troll Room with sword held → (troll) + bare-hands suicidal', async () => {
     // dfrotz (Release 119 / Serial 880429):
     //   > attack
     //   (troll)
@@ -40,7 +40,7 @@ describe('bare attack anchor (dfrotz-verified)', () => {
     sword.moveTo(player);
     g.start();
 
-    const r = g.turn('attack');
+    const r = await g.turn('attack');
     expect(r.output).toContain('(troll)');
     expect(r.output).toContain('Trying to attack a troll with your bare hands is suicidal.');
   });

@@ -62,33 +62,33 @@ function setupFalls(roomId: string) {
 // ---------------------------------------------------------------------------
 
 describe('CB-RAINBOW — SCEPTRE-FUNCTION wave at ARAGAIN-FALLS', () => {
-  it('wave sceptre at ARAGAIN-FALLS sets RAINBOW-FLAG=true', () => {
+  it('wave sceptre at ARAGAIN-FALLS sets RAINBOW-FLAG=true', async () => {
     const g = setupFalls('ARAGAIN-FALLS');
     expect(getRainbowFlag(g)).toBe(false);
-    g.turn('wave sceptre');
+    await g.turn('wave sceptre');
     expect(getRainbowFlag(g)).toBe(true);
   });
 
-  it('wave sceptre prints the rainbow-becomes-solid message', () => {
+  it('wave sceptre prints the rainbow-becomes-solid message', async () => {
     const g = setupFalls('ARAGAIN-FALLS');
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     expect(out).toContain('rainbow appears to become solid');
   });
 
-  it('wave sceptre clears INVISIBLE on pot-of-gold (1actions.zil:2597)', () => {
+  it('wave sceptre clears INVISIBLE on pot-of-gold (1actions.zil:2597)', async () => {
     const g = setupFalls('ARAGAIN-FALLS');
     const pot = g.world.get('POT-OF-GOLD')!;
     expect(pot.has(Flag.Invisible)).toBe(true);
-    g.turn('wave sceptre');
+    await g.turn('wave sceptre');
     expect(pot.has(Flag.Invisible)).toBe(false);
   });
 
-  it('pot-of-gold reveal message does NOT appear when waving at ARAGAIN-FALLS (NM-K: only at END-OF-RAINBOW)', () => {
+  it('pot-of-gold reveal message does NOT appear when waving at ARAGAIN-FALLS (NM-K: only at END-OF-RAINBOW)', async () => {
     // :2601 — the pot-announce fires only if HERE == END-OF-RAINBOW
     const g = setupFalls('ARAGAIN-FALLS');
     const pot = g.world.get('POT-OF-GOLD')!;
     pot.moveTo(g.world.get('END-OF-RAINBOW')!);
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     expect(out).not.toContain('shimmering pot of gold');
   });
 });
@@ -99,26 +99,26 @@ describe('CB-RAINBOW — SCEPTRE-FUNCTION wave at ARAGAIN-FALLS', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-RAINBOW — SCEPTRE-FUNCTION wave at END-OF-RAINBOW (NM-K)', () => {
-  it('wave sceptre at END-OF-RAINBOW sets RAINBOW-FLAG=true', () => {
+  it('wave sceptre at END-OF-RAINBOW sets RAINBOW-FLAG=true', async () => {
     const g = setupFalls('END-OF-RAINBOW');
-    g.turn('wave sceptre');
+    await g.turn('wave sceptre');
     expect(getRainbowFlag(g)).toBe(true);
   });
 
-  it('pot-of-gold reveal message appears when waving at END-OF-RAINBOW with pot there', () => {
+  it('pot-of-gold reveal message appears when waving at END-OF-RAINBOW with pot there', async () => {
     // :2601–2604 — COND: HERE==END-OF-RAINBOW AND pot-of-gold IN END-OF-RAINBOW
     const g = setupFalls('END-OF-RAINBOW');
     const pot = g.world.get('POT-OF-GOLD')!;
     pot.moveTo(g.world.get('END-OF-RAINBOW')!);
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     expect(out).toContain('shimmering pot of gold');
   });
 
-  it('pot-of-gold reveal message NOT shown if pot already taken (not in END-OF-RAINBOW)', () => {
+  it('pot-of-gold reveal message NOT shown if pot already taken (not in END-OF-RAINBOW)', async () => {
     const g = setupFalls('END-OF-RAINBOW');
     const pot = g.world.get('POT-OF-GOLD')!;
     pot.moveTo(g.player);  // player already has the pot
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     expect(out).not.toContain('shimmering pot of gold');
   });
 });
@@ -129,21 +129,21 @@ describe('CB-RAINBOW — SCEPTRE-FUNCTION wave at END-OF-RAINBOW (NM-K)', () => 
 // ---------------------------------------------------------------------------
 
 describe('CB-RAINBOW — SCEPTRE-FUNCTION wave again dismisses rainbow (1actions.zil:2606)', () => {
-  it('waving again (RAINBOW-FLAG=true) clears RAINBOW-FLAG', () => {
+  it('waving again (RAINBOW-FLAG=true) clears RAINBOW-FLAG', async () => {
     const g = setupFalls('ARAGAIN-FALLS');
     setRainbowFlag(g, true);
-    g.turn('wave sceptre');
+    await g.turn('wave sceptre');
     expect(getRainbowFlag(g)).toBe(false);
   });
 
-  it('waving again prints the run-of-the-mill message', () => {
+  it('waving again prints the run-of-the-mill message', async () => {
     const g = setupFalls('ARAGAIN-FALLS');
     setRainbowFlag(g, true);
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     expect(out).toContain('run-of-the-mill');
   });
 
-  it('ROB ON-RAINBOW: items in ON-RAINBOW are moved to WALL on dismiss', () => {
+  it('ROB ON-RAINBOW: items in ON-RAINBOW are moved to WALL on dismiss', async () => {
     // :2607 <ROB ,ON-RAINBOW ,WALL> — treasure on the rainbow gets swept off
     const g = setupFalls('ARAGAIN-FALLS');
     setRainbowFlag(g, true);
@@ -151,7 +151,7 @@ describe('CB-RAINBOW — SCEPTRE-FUNCTION wave again dismisses rainbow (1actions
     const diamond = g.world.get('DIAMOND')!;
     const onRainbow = g.world.get('ON-RAINBOW')!;
     diamond.moveTo(onRainbow);
-    g.turn('wave sceptre');
+    await g.turn('wave sceptre');
     // Diamond should now be in WALL (limbo), not ON-RAINBOW
     expect(diamond.parent?.id).toBe('WALL');
     expect(onRainbow.children.has(diamond)).toBe(false);
@@ -164,24 +164,24 @@ describe('CB-RAINBOW — SCEPTRE-FUNCTION wave again dismisses rainbow (1actions
 // ---------------------------------------------------------------------------
 
 describe('CB-RAINBOW — wave on ON-RAINBOW is fatal (NM-K, 1actions.zil:2612)', () => {
-  it('wave sceptre while on ON-RAINBOW triggers JIGS-UP', () => {
+  it('wave sceptre while on ON-RAINBOW triggers JIGS-UP', async () => {
     const g = setupFalls('ON-RAINBOW');
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     // JIGS-UP fires the death sequence
     expect(out).toContain('You have died');
   });
 
-  it('wave on ON-RAINBOW emits the structural-integrity death message', () => {
+  it('wave on ON-RAINBOW emits the structural-integrity death message', async () => {
     const g = setupFalls('ON-RAINBOW');
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     expect(out).toContain('water vapor');
   });
 
-  it('wave on ON-RAINBOW clears RAINBOW-FLAG', () => {
+  it('wave on ON-RAINBOW clears RAINBOW-FLAG', async () => {
     // :2613 <SETG RAINBOW-FLAG <>> — rainbow collapses
     const g = setupFalls('ON-RAINBOW');
     setRainbowFlag(g, true);
-    g.turn('wave sceptre');
+    await g.turn('wave sceptre');
     expect(getRainbowFlag(g)).toBe(false);
   });
 });
@@ -192,16 +192,16 @@ describe('CB-RAINBOW — wave on ON-RAINBOW is fatal (NM-K, 1actions.zil:2612)',
 // ---------------------------------------------------------------------------
 
 describe('CB-RAINBOW — SCEPTRE-FUNCTION wave elsewhere (1actions.zil:2617)', () => {
-  it('wave sceptre in a non-rainbow room prints the dazzling-display message', () => {
+  it('wave sceptre in a non-rainbow room prints the dazzling-display message', async () => {
     const g = setupFalls('LIVING-ROOM');
-    const out = g.turn('wave sceptre').output;
+    const out = await (await g.turn('wave sceptre')).output;
     expect(out).toContain('dazzling display');
   });
 
-  it('wave sceptre elsewhere does not change RAINBOW-FLAG', () => {
+  it('wave sceptre elsewhere does not change RAINBOW-FLAG', async () => {
     const g = setupFalls('LIVING-ROOM');
     expect(getRainbowFlag(g)).toBe(false);
-    g.turn('wave sceptre');
+    await g.turn('wave sceptre');
     expect(getRainbowFlag(g)).toBe(false);
   });
 });
@@ -212,16 +212,16 @@ describe('CB-RAINBOW — SCEPTRE-FUNCTION wave elsewhere (1actions.zil:2617)', (
 // ---------------------------------------------------------------------------
 
 describe('CB-RAINBOW — RAINBOW-FCN CROSS without solid rainbow (1actions.zil:2646)', () => {
-  it('crossing without rainbow solid returns "walk on water vapor" message', () => {
+  it('crossing without rainbow solid returns "walk on water vapor" message', async () => {
     const g = newGameAt('ARAGAIN-FALLS');
     // RAINBOW-FLAG defaults to false
-    const out = g.turn('cross rainbow').output;
+    const out = await (await g.turn('cross rainbow')).output;
     expect(out).toContain('water vapor');
   });
 
-  it('RAINBOW-FLAG stays false after attempted crossing', () => {
+  it('RAINBOW-FLAG stays false after attempted crossing', async () => {
     const g = newGameAt('ARAGAIN-FALLS');
-    g.turn('cross rainbow');
+    await g.turn('cross rainbow');
     expect(getRainbowFlag(g)).toBe(false);
   });
 });
@@ -232,17 +232,17 @@ describe('CB-RAINBOW — RAINBOW-FCN CROSS without solid rainbow (1actions.zil:2
 // ---------------------------------------------------------------------------
 
 describe('CB-RAINBOW — RAINBOW-FCN CROSS from CANYON-VIEW (1actions.zil:2636)', () => {
-  it('crossing rainbow from CANYON-VIEW prints "From here?!?"', () => {
+  it('crossing rainbow from CANYON-VIEW prints "From here?!?"', async () => {
     const g = newGameAt('CANYON-VIEW');
     setRainbowFlag(g, true);
-    const out = g.turn('cross rainbow').output;
+    const out = await (await g.turn('cross rainbow')).output;
     expect(out).toContain('From here');
   });
 
-  it('CANYON-VIEW cross does not move the player', () => {
+  it('CANYON-VIEW cross does not move the player', async () => {
     const g = newGameAt('CANYON-VIEW');
     setRainbowFlag(g, true);
-    g.turn('cross rainbow');
+    await g.turn('cross rainbow');
     expect(g.player.parent?.id).toBe('CANYON-VIEW');
   });
 });
@@ -253,25 +253,25 @@ describe('CB-RAINBOW — RAINBOW-FCN CROSS from CANYON-VIEW (1actions.zil:2636)'
 // ---------------------------------------------------------------------------
 
 describe('CB-RAINBOW — RAINBOW-FCN CROSS with solid rainbow (1actions.zil:2639)', () => {
-  it('crossing from ARAGAIN-FALLS moves player to END-OF-RAINBOW', () => {
+  it('crossing from ARAGAIN-FALLS moves player to END-OF-RAINBOW', async () => {
     const g = newGameAt('ARAGAIN-FALLS');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.player);
     lamp.set(Flag.OnFire);
     setRainbowFlag(g, true);
-    g.turn('cross rainbow');
+    await g.turn('cross rainbow');
     // Player should be at END-OF-RAINBOW (possibly via ON-RAINBOW intermediate, but
     // GOTO END-OF-RAINBOW is the direct destination per :2641)
     expect(g.player.parent?.id).toBe('END-OF-RAINBOW');
   });
 
-  it('crossing from END-OF-RAINBOW moves player to ARAGAIN-FALLS', () => {
+  it('crossing from END-OF-RAINBOW moves player to ARAGAIN-FALLS', async () => {
     const g = newGameAt('END-OF-RAINBOW');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.player);
     lamp.set(Flag.OnFire);
     setRainbowFlag(g, true);
-    g.turn('cross rainbow');
+    await g.turn('cross rainbow');
     expect(g.player.parent?.id).toBe('ARAGAIN-FALLS');
   });
 });
@@ -283,9 +283,9 @@ describe('CB-RAINBOW — RAINBOW-FCN CROSS with solid rainbow (1actions.zil:2639
 // ---------------------------------------------------------------------------
 
 describe('CB-RAINBOW — RAINBOW-FCN LOOK-UNDER (1actions.zil:2649)', () => {
-  it('look under rainbow prints "Frigid River flows under the rainbow"', () => {
+  it('look under rainbow prints "Frigid River flows under the rainbow"', async () => {
     const g = newGameAt('ARAGAIN-FALLS');
-    const out = g.turn('look under rainbow').output;
+    const out = await (await g.turn('look under rainbow')).output;
     expect(out).toContain('Frigid River');
   });
 });
@@ -296,10 +296,10 @@ describe('CB-RAINBOW — RAINBOW-FCN LOOK-UNDER (1actions.zil:2649)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-RAINBOW — V-CROSS fall-through (gverbs.zil:371)', () => {
-  it("crossing a non-rainbow object returns \"You can't cross that!\"", () => {
+  it("crossing a non-rainbow object returns \"You can't cross that!\"", async () => {
     const g = newGameAt('LIVING-ROOM');
     // "cross rug" — RUG exists in LIVING-ROOM but has no cross handler
-    const out = g.turn('cross rug').output;
+    const out = await (await g.turn('cross rug')).output;
     expect(out).toContain("can't cross");
   });
 });

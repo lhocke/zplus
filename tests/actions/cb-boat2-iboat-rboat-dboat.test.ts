@@ -115,52 +115,52 @@ describe('CB-BOAT2 — IBOAT-FUNCTION (game integration, 1actions.zil:2820)', ()
     pump.moveTo(g.player);
   });
 
-  it('inflate boat with pump → seaworthy message', () => {
-    const out = g.turn('inflate boat with pump').output;
+  it('inflate boat with pump → seaworthy message', async () => {
+    const out = await (await g.turn('inflate boat with pump')).output;
     expect(out).toContain('seaworthy');
   });
 
-  it('inflate boat with pump → swaps INFLATABLE-BOAT out', () => {
+  it('inflate boat with pump → swaps INFLATABLE-BOAT out', async () => {
     const inflatable = g.world.get('INFLATABLE-BOAT')!;
     const room = g.world.get('DAM-BASE')!;
     expect(inflatable.parent).toBe(room);
-    g.turn('inflate boat with pump');
+    await g.turn('inflate boat with pump');
     // After inflate, INFLATABLE-BOAT should be removed from the room
     expect(inflatable.parent).toBeNull();
   });
 
-  it('inflate boat with pump → INFLATED-BOAT appears in room', () => {
+  it('inflate boat with pump → INFLATED-BOAT appears in room', async () => {
     const inflated = g.world.get('INFLATED-BOAT')!;
-    g.turn('inflate boat with pump');
+    await g.turn('inflate boat with pump');
     const room = g.world.get('DAM-BASE')!;
     expect(inflated.parent).toBe(room);
   });
 
-  it('inflate boat with pump → DEFLATE flag set to false', () => {
-    g.turn('inflate boat with pump');
+  it('inflate boat with pump → DEFLATE flag set to false', async () => {
+    await g.turn('inflate boat with pump');
     expect(gameFlags(g).get('DEFLATE')).toBe(false);
   });
 
-  it('inflate boat with pump → label hint when BOAT-LABEL not touched (1actions.zil:2828)', () => {
+  it('inflate boat with pump → label hint when BOAT-LABEL not touched (1actions.zil:2828)', async () => {
     // BOAT-LABEL starts without TOUCHBIT
     const label = g.world.get('BOAT-LABEL')!;
     expect(label.has(Flag.Touched)).toBe(false);
-    const out = g.turn('inflate boat with pump').output;
+    const out = await (await g.turn('inflate boat with pump')).output;
     expect(out).toContain('tan label');
   });
 
-  it('inflate boat with pump → no label hint when BOAT-LABEL already touched', () => {
+  it('inflate boat with pump → no label hint when BOAT-LABEL already touched', async () => {
     const label = g.world.get('BOAT-LABEL')!;
     label.set(Flag.Touched);
-    const out = g.turn('inflate boat with pump').output;
+    const out = await (await g.turn('inflate boat with pump')).output;
     expect(out).not.toContain('tan label');
   });
 
-  it('inflate when boat not in room → "must be on the ground" (1actions.zil:2822)', () => {
+  it('inflate when boat not in room → "must be on the ground" (1actions.zil:2822)', async () => {
     // Move the inflatable boat away from the room
     const inflatable = g.world.get('INFLATABLE-BOAT')!;
     inflatable.moveTo(g.player);   // carry it
-    const out = g.turn('inflate boat with pump').output;
+    const out = await (await g.turn('inflate boat with pump')).output;
     expect(out).toContain('ground');
   });
 });
@@ -234,47 +234,47 @@ describe('CB-BOAT2 — NM-F: lungs and other-tool inflate messages (1actions.zil
 describe('CB-BOAT2 — RBOAT-FUNCTION DEFLATE (1actions.zil:2803)', () => {
   let g: Game;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     g = newGameAt('DAM-BASE');
     // Inflate the boat manually: swap objects
     const pump = g.world.get('PUMP')!;
     pump.moveTo(g.player);
-    g.turn('inflate boat with pump');
+    await g.turn('inflate boat with pump');
   });
 
-  it('deflate while IN boat → "can\'t deflate while you\'re in it" (1actions.zil:2804)', () => {
+  it('deflate while IN boat → "can\'t deflate while you\'re in it" (1actions.zil:2804)', async () => {
     // Put the player inside the inflated boat
     const inflated = g.world.get('INFLATED-BOAT')!;
     g.player.moveTo(inflated);
-    const out = g.turn('deflate boat').output;
+    const out = await (await g.turn('deflate boat')).output;
     expect(out).toContain("can't deflate");
   });
 
-  it('deflate when boat not in room → "must be on the ground" (1actions.zil:2807)', () => {
+  it('deflate when boat not in room → "must be on the ground" (1actions.zil:2807)', async () => {
     // Move the inflated boat away
     const inflated = g.world.get('INFLATED-BOAT')!;
     inflated.moveTo(g.player);   // picked up (not "on the ground")
-    const out = g.turn('deflate boat').output;
+    const out = await (await g.turn('deflate boat')).output;
     expect(out).toContain('ground');
   });
 
-  it('deflate when boat on ground → "deflates" message (1actions.zil:2810)', () => {
-    const out = g.turn('deflate boat').output;
+  it('deflate when boat on ground → "deflates" message (1actions.zil:2810)', async () => {
+    const out = await (await g.turn('deflate boat')).output;
     expect(out).toContain('deflates');
   });
 
-  it('deflate when on ground → sets DEFLATE flag true (1actions.zil:2812)', () => {
-    g.turn('deflate boat');
+  it('deflate when on ground → sets DEFLATE flag true (1actions.zil:2812)', async () => {
+    await g.turn('deflate boat');
     expect(gameFlags(g).get('DEFLATE')).toBe(true);
   });
 
-  it('deflate when on ground → swaps INFLATED-BOAT out, INFLATABLE-BOAT in room', () => {
+  it('deflate when on ground → swaps INFLATED-BOAT out, INFLATABLE-BOAT in room', async () => {
     const inflated   = g.world.get('INFLATED-BOAT')!;
     const inflatable = g.world.get('INFLATABLE-BOAT')!;
     const room = g.world.get('DAM-BASE')!;
 
     expect(inflated.parent).toBe(room);
-    g.turn('deflate boat');
+    await g.turn('deflate boat');
     expect(inflated.parent).toBeNull();
     expect(inflatable.parent).toBe(room);
   });
@@ -395,12 +395,12 @@ describe('CB-BOAT2 — DBOAT-FUNCTION putty repair (1actions.zil:2652)', () => {
 describe('CB-BOAT2 — oracle C-PUNCTURE: repair sequence (1actions.zil:2652–2667)', () => {
   let g: Game;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     g = newGameAt('DAM-BASE');
     const pump = g.world.get('PUMP')!;
     pump.moveTo(g.player);
     // Inflate the boat
-    g.turn('inflate boat with pump');
+    await g.turn('inflate boat with pump');
     // Give player putty for the repair test
     const tube = g.world.get('TUBE')!;
     tube.moveTo(g.player);
@@ -410,7 +410,7 @@ describe('CB-BOAT2 — oracle C-PUNCTURE: repair sequence (1actions.zil:2652–2
     putty.moveTo(g.player);
   });
 
-  it('PUT GUNK ON PUNCTURED-BOAT in game → "repaired" (integration)', () => {
+  it('PUT GUNK ON PUNCTURED-BOAT in game → "repaired" (integration)', async () => {
     // Puncture the boat by placing the PUNCTURED-BOAT in room manually
     // (board + sharp-object is CB-BOAT3; for CB-BOAT2 we test repair directly).
     // PUTTY object synonyms: MATERIAL, GUNK (objects.json).
@@ -423,7 +423,7 @@ describe('CB-BOAT2 — oracle C-PUNCTURE: repair sequence (1actions.zil:2652–2
     punctured.moveTo(room);
 
     // "put gunk on boat" — GUNK resolves to PUTTY object (synonym), BOAT to PUNCTURED-BOAT
-    const out = g.turn('put gunk on boat').output;
+    const out = await (await g.turn('put gunk on boat')).output;
     expect(out).toContain('repaired');
     expect(punctured.parent).toBeNull();
     // After repair, INFLATABLE-BOAT should be in room
@@ -437,13 +437,13 @@ describe('CB-BOAT2 — oracle C-PUNCTURE: repair sequence (1actions.zil:2652–2
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT2 — RBOAT-FUNCTION INFLATE fall-through (1actions.zil:2801)', () => {
-  it('inflating an already-inflated boat → "probably burst it"', () => {
+  it('inflating an already-inflated boat → "probably burst it"', async () => {
     const g = newGameAt('DAM-BASE');
     const pump = g.world.get('PUMP')!;
     pump.moveTo(g.player);
-    g.turn('inflate boat with pump');  // inflate first
+    await g.turn('inflate boat with pump');  // inflate first
     // Now try to inflate the inflated boat
-    const out = g.turn('inflate boat with pump').output;
+    const out = await (await g.turn('inflate boat with pump')).output;
     expect(out).toContain('burst');
   });
 });
@@ -453,28 +453,28 @@ describe('CB-BOAT2 — RBOAT-FUNCTION INFLATE fall-through (1actions.zil:2801)',
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT2 — THIS-IS-IT: pronoun re-points after inflate (1actions.zil:2834)', () => {
-  it('after inflate, "examine it" resolves to the magic boat, not the plastic pile', () => {
+  it('after inflate, "examine it" resolves to the magic boat, not the plastic pile', async () => {
     const g = newGameAt('DAM-BASE');
     const pump = g.world.get('PUMP')!;
     pump.moveTo(g.player);
-    g.turn('inflate boat with pump');
+    await g.turn('inflate boat with pump');
     // "it" should now resolve to INFLATED-BOAT; examine should return its description
-    const out = g.turn('examine it').output;
+    const out = await (await g.turn('examine it')).output;
     // INFLATED-BOAT has "magic boat" in description; pile of plastic must not appear
     expect(out).not.toContain('pile of plastic');
   });
 
-  it('after inflate, "take it" resolves to the magic boat', () => {
+  it('after inflate, "take it" resolves to the magic boat', async () => {
     const g = newGameAt('DAM-BASE');
     const pump = g.world.get('PUMP')!;
     pump.moveTo(g.player);
-    g.turn('inflate boat with pump');
+    await g.turn('inflate boat with pump');
     // ZIL: after inflate THIS-IS-IT ,INFLATED-BOAT → "it" = the magic boat
     // "take it" should either succeed (taking INFLATED-BOAT) or give a boat-specific message,
     // not silently take the now-removed INFLATABLE-BOAT.
     const inflatable = g.world.get('INFLATABLE-BOAT')!;
     const inflated   = g.world.get('INFLATED-BOAT')!;
-    g.turn('take it');
+    await g.turn('take it');
     // INFLATED-BOAT may have been taken; the pile of plastic must NOT be in player inventory
     expect(inflatable.parent).not.toBe(g.player);
     // INFLATED-BOAT should be in player inventory (taken) or still in room
@@ -484,28 +484,28 @@ describe('CB-BOAT2 — THIS-IS-IT: pronoun re-points after inflate (1actions.zil
 });
 
 describe('CB-BOAT2 — THIS-IS-IT: pronoun re-points after deflate (1actions.zil:2815)', () => {
-  it('after deflate, "take it" resolves to the pile of plastic, not the magic boat', () => {
+  it('after deflate, "take it" resolves to the pile of plastic, not the magic boat', async () => {
     const g = newGameAt('DAM-BASE');
     const pump = g.world.get('PUMP')!;
     pump.moveTo(g.player);
-    g.turn('inflate boat with pump');
-    g.turn('deflate boat');
+    await g.turn('inflate boat with pump');
+    await g.turn('deflate boat');
     // ZIL: after deflate THIS-IS-IT ,INFLATABLE-BOAT → "it" = the pile of plastic
     const inflatable = g.world.get('INFLATABLE-BOAT')!;
     const inflated   = g.world.get('INFLATED-BOAT')!;
-    g.turn('take it');
+    await g.turn('take it');
     // pile of plastic should be taken; magic boat (removed) must NOT be taken
     expect(inflatable.parent).toBe(g.player);
     expect(inflated.parent).toBeNull();
   });
 
-  it('after deflate, "examine it" resolves to the pile of plastic', () => {
+  it('after deflate, "examine it" resolves to the pile of plastic', async () => {
     const g = newGameAt('DAM-BASE');
     const pump = g.world.get('PUMP')!;
     pump.moveTo(g.player);
-    g.turn('inflate boat with pump');
-    g.turn('deflate boat');
-    const out = g.turn('examine it').output;
+    await g.turn('inflate boat with pump');
+    await g.turn('deflate boat');
+    const out = await (await g.turn('examine it')).output;
     // INFLATABLE-BOAT is the "pile of plastic"; magic boat description must not appear
     expect(out).not.toContain('magic boat');
   });

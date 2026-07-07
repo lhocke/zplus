@@ -264,67 +264,67 @@ describe('V3 MATCH re-arm: forced-clock unit (CA3)', () => {
 describe('V3 MATCH re-arm: game integration (CA3)', () => {
   beforeEach(() => resetMatchCount());
 
-  it('light → burnout → light again → burns out a second time', () => {
+  it('light → burnout → light again → burns out a second time', async () => {
     const g = createGame({ startRoom: 'DAM-LOBBY' });
     g.start();
-    g.turn('take matchbook');
+    await g.turn('take matchbook');
 
-    g.turn('light match');
-    const firstBurnout = g.turn('z');
+    await g.turn('light match');
+    const firstBurnout = await g.turn('z');
     expect(firstBurnout.output).toContain('The match has gone out.');
 
-    g.turn('light match');
-    const secondBurnout = g.turn('z');
+    await g.turn('light match');
+    const secondBurnout = await g.turn('z');
     expect(secondBurnout.output).toContain('The match has gone out.');
   });
 
-  it('I-MATCH is still enabled after the second burnout', () => {
+  it('I-MATCH is still enabled after the second burnout', async () => {
     const g = createGame({ startRoom: 'DAM-LOBBY' });
     g.start();
-    g.turn('take matchbook');
+    await g.turn('take matchbook');
 
-    g.turn('light match');
-    g.turn('z');               // first burnout
+    await g.turn('light match');
+    await g.turn('z');               // first burnout
 
-    g.turn('light match');
-    g.turn('z');               // second burnout
+    await g.turn('light match');
+    await g.turn('z');               // second burnout
 
     // Slot must still be alive for a third light (if matches remain)
     const entry = clockOf(g).getEntry('I-MATCH');
     expect(entry, 'I-MATCH slot must persist across two burnouts').toBeDefined();
   });
 
-  it('MATCH-COUNT decrements with each light', () => {
+  it('MATCH-COUNT decrements with each light', async () => {
     const g = createGame({ startRoom: 'DAM-LOBBY' });
     g.start();
-    g.turn('take matchbook');
+    await g.turn('take matchbook');
 
     // Light twice; count command should show fewer matches each time.
-    g.turn('light match');
-    g.turn('extinguish match');
-    g.turn('light match');
-    g.turn('extinguish match');
+    await g.turn('light match');
+    await g.turn('extinguish match');
+    await g.turn('light match');
+    await g.turn('extinguish match');
 
-    const r = g.turn('open matchbook');
+    const r = await g.turn('open matchbook');
     // 6 initial - 2 used = 4 remaining (count shows n-1 usable = 3 left after dec)
     // Actually matchFunction checks matchCount-1 for "have N matches" display.
     // After 2 lights: matchCount=4, display shows 3.
     expect(r.output).toMatch(/\b[1-4]\b.*match/i);
   });
 
-  it('MATCH-COUNT does not drop below 0 (caps at exhaustion)', () => {
+  it('MATCH-COUNT does not drop below 0 (caps at exhaustion)', async () => {
     const g = createGame({ startRoom: 'DAM-LOBBY' });
     g.start();
-    g.turn('take matchbook');
+    await g.turn('take matchbook');
 
     // Use all 6 matches
     for (let i = 0; i < 6; i++) {
-      g.turn('light match');
-      g.turn('extinguish match');
+      await g.turn('light match');
+      await g.turn('extinguish match');
     }
 
     // 7th light should fail with exhaustion message
-    const r = g.turn('light match');
+    const r = await g.turn('light match');
     expect(r.output).toContain("I'm afraid that you have run out of matches.");
   });
 });
@@ -349,20 +349,20 @@ describe('V3 CANDLES first-touch: slot state (CA3 / §3.4)', () => {
     expect(entry!.enabled).toBe(false);
   });
 
-  it('taking lit candles arms I-CANDLES (first-touch, before TOUCHBIT set)', () => {
+  it('taking lit candles arms I-CANDLES (first-touch, before TOUCHBIT set)', async () => {
     const g = createGame({ startRoom: 'SOUTH-TEMPLE' });
     g.start();
-    g.turn('take candles');
+    await g.turn('take candles');
 
     const entry = clockOf(g).getEntry('I-CANDLES');
     expect(entry, 'I-CANDLES must remain registered after take').toBeDefined();
     expect(entry!.enabled, 'I-CANDLES must be enabled after first touch').toBe(true);
   });
 
-  it('I-CANDLES turnsLeft is non-zero after first-touch arm', () => {
+  it('I-CANDLES turnsLeft is non-zero after first-touch arm', async () => {
     const g = createGame({ startRoom: 'SOUTH-TEMPLE' });
     g.start();
-    g.turn('take candles');
+    await g.turn('take candles');
 
     const entry = clockOf(g).getEntry('I-CANDLES');
     expect(entry, 'I-CANDLES must exist').toBeDefined();
@@ -371,7 +371,7 @@ describe('V3 CANDLES first-touch: slot state (CA3 / §3.4)', () => {
     expect(entry!.turnsLeft).toBeGreaterThan(0);
   });
 
-  it('first-touch arm is independent of the burn/relight path', () => {
+  it('first-touch arm is independent of the burn/relight path', async () => {
     // Touch (examine/take) the candles without lighting or relighting them.
     // The clock must arm from the first-touch branch, not the burn branch.
     const g = createGame({ startRoom: 'SOUTH-TEMPLE' });
@@ -383,7 +383,7 @@ describe('V3 CANDLES first-touch: slot state (CA3 / §3.4)', () => {
     expect(candles!.has(Flag.OnFire), 'CANDLES must start lit at SOUTH-TEMPLE').toBe(true);
 
     // Take (= touch) the candles — triggers CANDLES-FCN first-touch path.
-    g.turn('take candles');
+    await g.turn('take candles');
 
     // Clock must be armed purely from first-touch, not from a burn command.
     const entry = clockOf(g).getEntry('I-CANDLES');
@@ -391,17 +391,17 @@ describe('V3 CANDLES first-touch: slot state (CA3 / §3.4)', () => {
     expect(entry!.enabled).toBe(true);
   });
 
-  it('second touch does not reset the countdown (TOUCHBIT idempotent)', () => {
+  it('second touch does not reset the countdown (TOUCHBIT idempotent)', async () => {
     const g = createGame({ startRoom: 'SOUTH-TEMPLE' });
     g.start();
-    g.turn('take candles');
+    await g.turn('take candles');
 
     const afterFirst = clockOf(g).getEntry('I-CANDLES')!;
     const turnsAfterFirst = afterFirst.turnsLeft;
 
     // Advance the clock a bit, then interact again.
-    g.turn('z');  // 1 or more ticks
-    g.turn('examine candles');
+    await g.turn('z');  // 1 or more ticks
+    await g.turn('examine candles');
 
     const afterSecond = clockOf(g).getEntry('I-CANDLES')!;
     // turnsLeft must have DECREASED (clock ticked), not been reset to initial.
@@ -459,9 +459,9 @@ describe('V3 I-XB/I-XC/I-XBH: forced slot state after ring (CC1)', () => {
     expect(ixbh!.turnsLeft).toBe(0);
   });
 
-  it('ring bell: I-XB enabled with turnsLeft=5 (queued at 6, ticked once on ring turn)', () => {
+  it('ring bell: I-XB enabled with turnsLeft=5 (queued at 6, ticked once on ring turn)', async () => {
     const g = hadesGame();
-    g.turn('ring bell');
+    await g.turn('ring bell');
 
     const ixb = clockOf(g).getEntry('I-XB');
     expect(ixb, 'I-XB must be registered').toBeDefined();
@@ -470,9 +470,9 @@ describe('V3 I-XB/I-XC/I-XBH: forced slot state after ring (CC1)', () => {
     expect(ixb!.turnsLeft).toBe(5);
   });
 
-  it('ring bell: I-XBH enabled with turnsLeft=19 (queued at 20, ticked once)', () => {
+  it('ring bell: I-XBH enabled with turnsLeft=19 (queued at 20, ticked once)', async () => {
     const g = hadesGame();
-    g.turn('ring bell');
+    await g.turn('ring bell');
 
     const ixbh = clockOf(g).getEntry('I-XBH');
     expect(ixbh, 'I-XBH must be registered').toBeDefined();
@@ -480,17 +480,17 @@ describe('V3 I-XB/I-XC/I-XBH: forced slot state after ring (CC1)', () => {
     expect(ixbh!.turnsLeft).toBe(19);
   });
 
-  it('candles held+lit after ring: I-XB disabled, I-XC armed (turnsLeft=2)', () => {
+  it('candles held+lit after ring: I-XB disabled, I-XC armed (turnsLeft=2)', async () => {
     // Ring with bell+book only; give lit candles AFTER ring so M-END fires XC.
     const g = hadesGame({ candles: false });
-    g.turn('ring bell');
+    await g.turn('ring bell');
 
     const candles = g.world.get('CANDLES');
     expect(candles, 'CANDLES must exist').toBeDefined();
     candles!.moveTo(g.player);
     candles!.set(Flag.OnFire);
 
-    g.turn('look');  // 1 tick → M-END fires XC condition
+    await g.turn('look');  // 1 tick → M-END fires XC condition
 
     const ixb = clockOf(g).getEntry('I-XB');
     const ixc = clockOf(g).getEntry('I-XC');
@@ -502,18 +502,18 @@ describe('V3 I-XB/I-XC/I-XBH: forced slot state after ring (CC1)', () => {
     expect(ixc!.turnsLeft).toBe(2);
   });
 
-  it('read book with XC=T: LLD-FLAG set, I-XC disabled', () => {
+  it('read book with XC=T: LLD-FLAG set, I-XC disabled', async () => {
     const g = hadesGame({ candles: false });
-    g.turn('ring bell');
+    await g.turn('ring bell');
 
     const candles = g.world.get('CANDLES');
     expect(candles, 'CANDLES must exist').toBeDefined();
     candles!.moveTo(g.player);
     candles!.set(Flag.OnFire);
 
-    g.turn('look');  // arms XC
+    await g.turn('look');  // arms XC
 
-    g.turn('read book');
+    await g.turn('read book');
 
     expect(flagsOf(g).get('LLD-FLAG'), 'LLD-FLAG must be true after ceremony').toBe(true);
 
@@ -522,28 +522,28 @@ describe('V3 I-XB/I-XC/I-XBH: forced slot state after ring (CC1)', () => {
     expect(ixc!.enabled, 'I-XC must be disabled after LLD-FLAG').toBe(false);
   });
 
-  it('I-XB lapse (6 turns without XC): XB global cleared, ceremony broken', () => {
+  it('I-XB lapse (6 turns without XC): XB global cleared, ceremony broken', async () => {
     const g = hadesGame({ candles: false });
-    g.turn('ring bell');
+    await g.turn('ring bell');
 
     // I-XB queued at 6, ticked once on ring → turnsLeft=5.
     // 5 more waits (each up to 3 ticks) will exhaust it; we use 'look' (1 tick each).
-    for (let i = 0; i < 5; i++) g.turn('look');
+    for (let i = 0; i < 5; i++) await g.turn('look');
 
     expect(flagsOf(g).get('XB'), 'XB must be cleared when I-XB fires').toBe(false);
   });
 
-  it('I-XB/I-XBH slots survive firing — re-armable for a second ceremony (no soft-lock)', () => {
+  it('I-XB/I-XBH slots survive firing — re-armable for a second ceremony (no soft-lock)', async () => {
     // ZIL C-TABLE slots are statically allocated: I-XB/I-XBH park at turnsLeft=0
     // when they fire, they do NOT vanish, so a second <QUEUE I-XB 6> on a second
     // RING BELL re-arms them.  A return-false tick deletes the clock entry, making
     // the re-arm a silent dead letter — I-XBH never re-fires, BELL never returns,
     // and the bell soft-locks.  (1actions.zil:1131-1147.)
     const g = hadesGame({ candles: false });
-    g.turn('ring bell'); // arms I-XB(6) + I-XBH(20)
+    await g.turn('ring bell'); // arms I-XB(6) + I-XBH(20)
 
     // Lapse the whole ceremony: I-XB fires ~turn 6, I-XBH ~turn 20.
-    for (let i = 0; i < 20; i++) g.turn('look');
+    for (let i = 0; i < 20; i++) await g.turn('look');
 
     const ixb = clockOf(g).getEntry('I-XB');
     const ixbh = clockOf(g).getEntry('I-XBH');
@@ -578,7 +578,7 @@ describe('V3 I-FOREST-ROOM: slot registered (§6.9)', () => {
 });
 
 describe('V3 I-FOREST-ROOM: prob(15) chirp structural (§6.9 / §10.3)', () => {
-  it('chirp fires at approximately 15% over 200 seeded forest turns', () => {
+  it('chirp fires at approximately 15% over 200 seeded forest turns', async () => {
     const rng = new Rng(42);
     const g = createGame({ startRoom: 'PATH', rng });
     g.start();
@@ -590,7 +590,7 @@ describe('V3 I-FOREST-ROOM: prob(15) chirp structural (§6.9 / §10.3)', () => {
     lamp!.moveTo(g.player);
 
     // Move west: PATH → FOREST-1 (M-ENTER fires → I-FOREST-ROOM enabled).
-    g.turn('west');
+    await g.turn('west');
 
     const entry = clockOf(g).getEntry('I-FOREST-ROOM');
     expect(entry, 'I-FOREST-ROOM must be registered').toBeDefined();
@@ -600,7 +600,7 @@ describe('V3 I-FOREST-ROOM: prob(15) chirp structural (§6.9 / §10.3)', () => {
     let chirpCount = 0;
     const N = 200;
     for (let i = 0; i < N; i++) {
-      const r = g.turn('look');
+      const r = await g.turn('look');
       if (r.output.includes('chirping of a song bird')) chirpCount++;
     }
 
@@ -654,44 +654,44 @@ describe('V3 blocked-move tick: forced clock counts (CA1)', () => {
     return { g, getCount: () => advanceCount };
   }
 
-  it('blocked move (elseMessage NEXIT) advances the counter by 1', () => {
+  it('blocked move (elseMessage NEXIT) advances the counter by 1', async () => {
     const { g, getCount } = buildMinimalWorld();
     g.start();
     const before = getCount();
-    g.turn('south');  // blocked: elseMessage="Solid wall."
+    await g.turn('south');  // blocked: elseMessage="Solid wall."
     expect(getCount() - before).toBe(1);
   });
 
-  it('blocked move (no exit defined) advances the counter by 1', () => {
+  it('blocked move (no exit defined) advances the counter by 1', async () => {
     const { g, getCount } = buildMinimalWorld();
     g.start();
     const before = getCount();
-    g.turn('east');  // no exit defined in ROOM-A
+    await g.turn('east');  // no exit defined in ROOM-A
     expect(getCount() - before).toBe(1);
   });
 
-  it('parse failure does NOT advance the counter', () => {
+  it('parse failure does NOT advance the counter', async () => {
     const { g, getCount } = buildMinimalWorld();
     g.start();
     const before = getCount();
-    g.turn('xyzzy123garbage');  // parse failure
+    await g.turn('xyzzy123garbage');  // parse failure
     expect(getCount() - before).toBe(0);
   });
 
-  it('successful move advances the counter by exactly 1 (no double-tick)', () => {
+  it('successful move advances the counter by exactly 1 (no double-tick)', async () => {
     const { g, getCount } = buildMinimalWorld();
     g.start();
     const before = getCount();
-    g.turn('north');  // successful move to ROOM-B
+    await g.turn('north');  // successful move to ROOM-B
     expect(getCount() - before).toBe(1);
   });
 
-  it('1 blocked + 1 successful = exactly 2 counter advances', () => {
+  it('1 blocked + 1 successful = exactly 2 counter advances', async () => {
     const { g, getCount } = buildMinimalWorld();
     g.start();
     const before = getCount();
-    g.turn('south');  // blocked
-    g.turn('north');  // successful
+    await g.turn('south');  // blocked
+    await g.turn('north');  // successful
     expect(getCount() - before).toBe(2);
   });
 });
@@ -731,36 +731,36 @@ describe('V3 V-WAIT: no-double-tick (CA2)', () => {
     return { g, getCount: () => advanceCount };
   }
 
-  it('wait advances the counter by exactly 3 (no 4th tick from loop)', () => {
+  it('wait advances the counter by exactly 3 (no 4th tick from loop)', async () => {
     const { g, getCount } = buildWaitFixture();
     g.start();
     const before = getCount();
-    g.turn('wait');
+    await g.turn('wait');
     expect(getCount() - before).toBe(3);
   });
 
-  it('two sequential waits each advance by 3 (no accumulation bug)', () => {
+  it('two sequential waits each advance by 3 (no accumulation bug)', async () => {
     const { g, getCount } = buildWaitFixture();
     g.start();
     const before = getCount();
-    g.turn('wait');
-    g.turn('wait');
+    await g.turn('wait');
+    await g.turn('wait');
     expect(getCount() - before).toBe(6);
   });
 
-  it('wait output contains "Time passes..." exactly once', () => {
+  it('wait output contains "Time passes..." exactly once', async () => {
     const { g } = buildWaitFixture();
     g.start();
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     const count = (out.match(/Time passes\.\.\./g) ?? []).length;
     expect(count).toBe(1);
   });
 
-  it('look (non-wait) advances counter by exactly 1', () => {
+  it('look (non-wait) advances counter by exactly 1', async () => {
     const { g, getCount } = buildWaitFixture();
     g.start();
     const before = getCount();
-    g.turn('look');
+    await g.turn('look');
     expect(getCount() - before).toBe(1);
   });
 });

@@ -869,7 +869,7 @@ describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
-    const result = g.turn('examine bell');
+    const result = await g.turn('examine bell');
     expect(result.output.toLowerCase()).toMatch(/can't see/);
     expect(result.output.toLowerCase()).not.toContain('which');
   });
@@ -878,7 +878,7 @@ describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
-    const result = g.turn('examine boat');
+    const result = await g.turn('examine boat');
     expect(result.output.toLowerCase()).toMatch(/can't see/);
   });
 
@@ -888,7 +888,7 @@ describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
-    const result = g.turn('examine lantern');
+    const result = await g.turn('examine lantern');
     expect(result.output.toLowerCase()).toMatch(/can't see/);
   });
 
@@ -896,7 +896,7 @@ describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
-    const result = g.turn('examine diamond');
+    const result = await g.turn('examine diamond');
     expect(result.output.toLowerCase()).toMatch(/can't see/);
   });
 
@@ -904,7 +904,7 @@ describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
-    const result = g.turn('examine bauble');
+    const result = await g.turn('examine bauble');
     expect(result.output.toLowerCase()).toMatch(/can't see/);
   });
 
@@ -912,7 +912,7 @@ describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
-    const result = g.turn('examine egg');
+    const result = await g.turn('examine egg');
     expect(result.output.toLowerCase()).toMatch(/can't see/);
   });
 
@@ -920,7 +920,7 @@ describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
-    const result = g.turn('examine gunk');
+    const result = await g.turn('examine gunk');
     expect(result.output.toLowerCase()).toMatch(/can't see/);
   });
 
@@ -928,7 +928,7 @@ describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
-    const result = g.turn('examine mountain');
+    const result = await g.turn('examine mountain');
     expect(result.output.toLowerCase()).toMatch(/can't see/);
   });
 
@@ -937,7 +937,7 @@ describe('nowhere-objects report not-here at WEST-OF-HOUSE (oracle A1)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
-    const result = g.turn('examine teeth');
+    const result = await g.turn('examine teeth');
     // Not-here would mean we broke the real global; we expect a handler response
     // (any message that is NOT "You can't see any teeth here!").
     expect(result.output.toLowerCase()).not.toMatch(/can't see any teeth/);
@@ -964,7 +964,7 @@ describe('"examine wall" disambiguates when two global walls match (oracle A2)',
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const g = createGame();
     g.start();
-    const result = g.turn('examine wall');
+    const result = await g.turn('examine wall');
     // Exact oracle wording (byte-verbatim):
     expect(result.output).toBe('Which wall do you mean, the granite wall or the surrounding wall?');
     // Confirm disambiguation fired (redundant given the exact match above, but explicit):

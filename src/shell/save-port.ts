@@ -29,26 +29,26 @@ export interface SaveSlotMeta {
 export type RestoreFailReason = 'empty' | 'corrupt' | 'version';
 
 export interface SavePort {
-  /** Persist state to slot. May throw on quota/IO — caller surfaces as Failed. */
-  write(slot: string, state: SaveState): void;
+  /** Persist state to slot. Rejects on quota/IO — caller awaits and surfaces as Failed. */
+  write(slot: string, state: SaveState): Promise<void>;
   /**
-   * Read from slot.  Returns undefined when:
+   * Read from slot.  Resolves undefined when:
    * - slot is empty,
    * - stored data fails JSON parse,
    * - stored data fails schema validation,
    * - formatVersion mismatches (refuse before any mutation — spec §5.3).
    * buildId mismatch on same formatVersion is warn-allow (OQ-1).
    */
-  read(slot: string): SaveState | undefined;
+  read(slot: string): Promise<SaveState | undefined>;
   /**
    * Like read(), but surfaces the failure reason so callers can emit
    * distinct player messages for empty/corrupt/version (OQ-3, §5.3).
    */
-  readWithReason(slot: string): SaveState | RestoreFailReason;
+  readWithReason(slot: string): Promise<SaveState | RestoreFailReason>;
   /** Metadata for all occupied slots — for the slot picker (§7). */
-  list(): SaveSlotMeta[];
+  list(): Promise<SaveSlotMeta[]>;
   /** Remove a slot.  No-op if absent. */
-  remove(slot: string): void;
+  remove(slot: string): Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -205,18 +205,18 @@ export class LocalStorageSavePort implements SavePort {
     this.storage = storage;
   }
 
-  write(slot: string, state: SaveState): void {
-    // May throw QuotaExceededError — let it propagate so the verb layer
-    // can catch it and emit Failed.
+  async write(slot: string, state: SaveState): Promise<void> {
+    // A QuotaExceededError thrown by setItem becomes a rejection of this
+    // async method — the verb layer awaits and emits Failed.
     this.storage.setItem(slotKey(slot), JSON.stringify(state));
   }
 
-  read(slot: string): SaveState | undefined {
-    const r = this.readWithReason(slot);
+  async read(slot: string): Promise<SaveState | undefined> {
+    const r = await this.readWithReason(slot);
     return typeof r === 'string' ? undefined : r;
   }
 
-  readWithReason(slot: string): SaveState | RestoreFailReason {
+  async readWithReason(slot: string): Promise<SaveState | RestoreFailReason> {
     const raw = this.storage.getItem(slotKey(slot));
     if (raw === null) return 'empty';
 
@@ -240,7 +240,7 @@ export class LocalStorageSavePort implements SavePort {
     return state;
   }
 
-  list(): SaveSlotMeta[] {
+  async list(): Promise<SaveSlotMeta[]> {
     const prefix = 'zork-save-';
     const results: SaveSlotMeta[] = [];
 
@@ -270,7 +270,7 @@ export class LocalStorageSavePort implements SavePort {
     return results;
   }
 
-  remove(slot: string): void {
+  async remove(slot: string): Promise<void> {
     this.storage.removeItem(slotKey(slot));
   }
 }

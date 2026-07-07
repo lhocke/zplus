@@ -31,20 +31,22 @@ process.stdout.write(`[logging this session to playtest-logs/ — type 'quit' to
 rl.prompt();
 
 rl.on('line', (line) => {
-  const input = line.trim();
-  if (input === 'quit' || input === 'q') {
-    rl.close();
-    return;
-  }
-  if (input.length > 0) {
-    const output = session.submit(input);
-    if (output) {
-      process.stdout.write(output + '\n');
+  void (async () => {
+    const input = line.trim();
+    if (input === 'quit' || input === 'q') {
+      rl.close();
+      return;
     }
-    process.stdout.write(status() + '\n');
-  }
-  process.stdout.write('\n');
-  rl.prompt();
+    if (input.length > 0) {
+      const output = await session.submit(input);
+      if (output) {
+        process.stdout.write(output + '\n');
+      }
+      process.stdout.write(status() + '\n');
+    }
+    process.stdout.write('\n');
+    rl.prompt();
+  })();
 });
 
 rl.on('close', () => {

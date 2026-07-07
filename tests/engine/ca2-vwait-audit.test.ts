@@ -64,34 +64,34 @@ function buildLitRoom(clockOverride?: Clock) {
 // ---------------------------------------------------------------------------
 
 describe('CA2: plain wait advances moveCount by exactly 3', () => {
-  it('moveCount increases by 3 after wait with no enabled clock entries', () => {
+  it('moveCount increases by 3 after wait with no enabled clock entries', async () => {
     const g = buildLitRoom();
     g.start();
 
     const before = g.view().moves;
-    g.turn('wait');
+    await g.turn('wait');
     const after = g.view().moves;
 
     expect(after - before).toBe(3);
   });
 
-  it('two sequential waits each advance by 3 (no accumulation bug)', () => {
+  it('two sequential waits each advance by 3 (no accumulation bug)', async () => {
     const g = buildLitRoom();
     g.start();
 
     const before = g.view().moves;
-    g.turn('wait');
-    g.turn('wait');
+    await g.turn('wait');
+    await g.turn('wait');
     const after = g.view().moves;
 
     expect(after - before).toBe(6);
   });
 
-  it('wait output contains "Time passes..."', () => {
+  it('wait output contains "Time passes..."', async () => {
     const g = buildLitRoom();
     g.start();
 
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toContain('Time passes...');
   });
 });
@@ -105,7 +105,7 @@ describe('CA2: plain wait advances moveCount by exactly 3', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA2: mid-wait interrupt stops the loop early', () => {
-  it('interrupt on tick 1 yields moveCount delta of exactly 1', () => {
+  it('interrupt on tick 1 yields moveCount delta of exactly 1', async () => {
     const clock = new Clock();
     // Fires immediately on first advance (turnsLeft=1).
     const entry: ClockEntry = {
@@ -123,11 +123,11 @@ describe('CA2: mid-wait interrupt stops the loop early', () => {
     g.start();
 
     const before = g.view().moves;
-    g.turn('wait');
+    await g.turn('wait');
     expect(g.view().moves - before).toBe(1);
   });
 
-  it('interrupt on tick 2 yields moveCount delta of exactly 2', () => {
+  it('interrupt on tick 2 yields moveCount delta of exactly 2', async () => {
     const clock = new Clock();
     const entry: ClockEntry = {
       id: 'TICK-2-FIRE',
@@ -144,11 +144,11 @@ describe('CA2: mid-wait interrupt stops the loop early', () => {
     g.start();
 
     const before = g.view().moves;
-    g.turn('wait');
+    await g.turn('wait');
     expect(g.view().moves - before).toBe(2);
   });
 
-  it('interrupt text from mid-wait fire appears in the turn output', () => {
+  it('interrupt text from mid-wait fire appears in the turn output', async () => {
     const clock = new Clock();
     const entry: ClockEntry = {
       id: 'TALKER',
@@ -164,7 +164,7 @@ describe('CA2: mid-wait interrupt stops the loop early', () => {
     const g = buildLitRoom(clock);
     g.start();
 
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toContain('Time passes...');
     expect(out).toContain('The clock chimes!');
   });
@@ -184,7 +184,7 @@ describe('CA2: mid-wait interrupt stops the loop early', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA2: wait across a lamp-warning tick (dfrotz-anchored edge)', () => {
-  it('lamp warning firing on wait tick 1 stops the loop at 1 tick', () => {
+  it('lamp warning firing on wait tick 1 stops the loop at 1 tick', async () => {
     const clock = new Clock();
     const emitter = new SimpleEventEmitter();
     // initialTicks=1 → warning fires on very first clock advance.
@@ -199,7 +199,7 @@ describe('CA2: wait across a lamp-warning tick (dfrotz-anchored edge)', () => {
     g.start();
 
     const before = g.view().moves;
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     const delta = g.view().moves - before;
 
     // Moves must be exactly 1 — warning stops the loop after tick 1.
@@ -209,7 +209,7 @@ describe('CA2: wait across a lamp-warning tick (dfrotz-anchored edge)', () => {
     expect(out).toMatch(/dimmer/i);
   });
 
-  it('lamp warning firing on wait tick 2 yields delta 2', () => {
+  it('lamp warning firing on wait tick 2 yields delta 2', async () => {
     const clock = new Clock();
     const emitter = new SimpleEventEmitter();
     // initialTicks=2 → warning fires on second advance.
@@ -224,7 +224,7 @@ describe('CA2: wait across a lamp-warning tick (dfrotz-anchored edge)', () => {
     g.start();
 
     const before = g.view().moves;
-    g.turn('wait');
+    await g.turn('wait');
     expect(g.view().moves - before).toBe(2);
   });
 });
@@ -237,7 +237,7 @@ describe('CA2: wait across a lamp-warning tick (dfrotz-anchored edge)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA2: wait in the dark', () => {
-  it('wait in dark room advances moveCount by 3 without crashing', () => {
+  it('wait in dark room advances moveCount by 3 without crashing', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
 
@@ -257,7 +257,7 @@ describe('CA2: wait in the dark', () => {
     gd.start();
 
     const before = gd.view().moves;
-    gd.turn('wait');
+    await gd.turn('wait');
     const after = gd.view().moves;
 
     expect(after - before).toBe(3);
@@ -274,11 +274,11 @@ describe('CA2: wait in the dark', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA2: "Time passes..." appears exactly once', () => {
-  it('no-interrupt wait has "Time passes..." exactly once in output', () => {
+  it('no-interrupt wait has "Time passes..." exactly once in output', async () => {
     const g = buildLitRoom();
     g.start();
 
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     const occurrences = (out.match(/Time passes\.\.\./g) ?? []).length;
     expect(occurrences).toBe(1);
   });
@@ -293,7 +293,7 @@ describe('CA2: "Time passes..." appears exactly once', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA2: bootstrap game wait (real lantern, cold start)', () => {
-  it('wait from Living Room with lamp on advances exactly 3 moves', () => {
+  it('wait from Living Room with lamp on advances exactly 3 moves', async () => {
     const g = createGame({ startRoom: 'LIVING-ROOM' });
     g.start();
 
@@ -305,7 +305,7 @@ describe('CA2: bootstrap game wait (real lantern, cold start)', () => {
     // Skip this setup complication: just wait without the lamp lit.
     // The lamp is off by default; I-LANTERN is disabled. 3 clean ticks.
     const before = g.view().moves;
-    g.turn('wait');
+    await g.turn('wait');
     expect(g.view().moves - before).toBe(3);
   });
 });
@@ -330,7 +330,7 @@ describe('CA2: bootstrap game wait (real lantern, cold start)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA2: burnout-like interrupt does not stop wait but message appears', () => {
-  it('clock entry returning false with ctx.tell() does not stop the 3-tick loop', () => {
+  it('clock entry returning false with ctx.tell() does not stop the 3-tick loop', async () => {
     const clock = new Clock();
     // Fires on tick 2, prints a burnout message, returns false (like I-LANTERN burnout).
     const entry: ClockEntry = {
@@ -348,7 +348,7 @@ describe('CA2: burnout-like interrupt does not stop wait but message appears', (
     g.start();
 
     const before = g.view().moves;
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     const delta = g.view().moves - before;
 
     // Wait must complete all 3 ticks — burnout returns false, not a stop condition.
@@ -359,7 +359,7 @@ describe('CA2: burnout-like interrupt does not stop wait but message appears', (
     expect(out).toContain('Time passes...');
   });
 
-  it('clock entry returning false on tick 1 allows ticks 2 and 3 to run', () => {
+  it('clock entry returning false on tick 1 allows ticks 2 and 3 to run', async () => {
     const clock = new Clock();
     const fired: number[] = [];
     const entry: ClockEntry = {
@@ -378,7 +378,7 @@ describe('CA2: burnout-like interrupt does not stop wait but message appears', (
     g.start();
 
     const before = g.view().moves;
-    g.turn('wait');
+    await g.turn('wait');
     const delta = g.view().moves - before;
 
     // Entry fires once (then removed), wait continues for all 3 ticks.

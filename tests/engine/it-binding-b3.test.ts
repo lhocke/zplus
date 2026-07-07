@@ -73,18 +73,18 @@ function buildItWorld(): ItWorld {
 // ---------------------------------------------------------------------------
 
 describe('B3 — IT-binding in PERFORM prologue (cross-turn)', () => {
-  it('take lamp then examine it (two turns) resolves "it" to the lamp', () => {
+  it('take lamp then examine it (two turns) resolves "it" to the lamp', async () => {
     const { game } = buildItWorld();
     game.start();
 
     // Turn 1: take lamp — PERFORM prologue binds IT to the lamp.
-    const r1 = game.turn('take lamp');
+    const r1 = await game.turn('take lamp');
     expect(r1.output).not.toMatch(/I don't know the word/i);
     // The lamp was taken (some acknowledgment).
     expect(r1.output.length).toBeGreaterThan(0);
 
     // Turn 2: examine it — parser reads IT = lamp, resolves correctly.
-    const r2 = game.turn('examine it');
+    const r2 = await game.turn('examine it');
     // Must NOT fail with "I don't see what you are referring to" or similar.
     expect(r2.output).not.toMatch(/don't see what you are referring to/i);
     expect(r2.output).not.toMatch(/You haven't mentioned any thing/i);
@@ -93,62 +93,62 @@ describe('B3 — IT-binding in PERFORM prologue (cross-turn)', () => {
     expect(r2.output.length).toBeGreaterThan(0);
   });
 
-  it('after "take bottle", "examine it" resolves to the bottle (IT updated)', () => {
+  it('after "take bottle", "examine it" resolves to the bottle (IT updated)', async () => {
     const { game } = buildItWorld();
     game.start();
 
     // Bind IT to lamp first.
-    game.turn('take lamp');
+    await game.turn('take lamp');
 
     // Now bind IT to bottle.
-    game.turn('take bottle');
+    await game.turn('take bottle');
 
     // "examine it" should now refer to bottle, not lamp.
-    const r = game.turn('examine it');
+    const r = await game.turn('examine it');
     expect(r.output).not.toMatch(/don't see what you are referring to/i);
     expect(r.output).not.toMatch(/You haven't mentioned any thing/i);
     expect(r.output.length).toBeGreaterThan(0);
   });
 
-  it('a WALK command does NOT rebind IT (gmain.zil:202 guard: verb!=WALK)', () => {
+  it('a WALK command does NOT rebind IT (gmain.zil:202 guard: verb!=WALK)', async () => {
     const { game } = buildItWorld();
     game.start();
 
     // Bind IT to lamp.
-    game.turn('take lamp');
+    await game.turn('take lamp');
 
     // Walk north (no exit — parser handles the walk verb, no room movement).
     // The WALK guard must ensure IT remains bound to lamp.
-    game.turn('north');  // likely fails "You can't go that way" but verb=walk
+    await game.turn('north');  // likely fails "You can't go that way" but verb=walk
 
     // "examine it" must still resolve to the lamp, not be unbound.
-    const r = game.turn('examine it');
+    const r = await game.turn('examine it');
     expect(r.output).not.toMatch(/don't see what you are referring to/i);
     expect(r.output).not.toMatch(/You haven't mentioned any thing/i);
   });
 
-  it('a no-dobj command does NOT change IT binding (previous referent persists)', () => {
+  it('a no-dobj command does NOT change IT binding (previous referent persists)', async () => {
     const { game } = buildItWorld();
     game.start();
 
     // Bind IT to lamp.
-    game.turn('take lamp');
+    await game.turn('take lamp');
 
     // "look" has no dobj — IT should NOT be rebound.
-    game.turn('look');
+    await game.turn('look');
 
     // "examine it" must still resolve to the lamp.
-    const r = game.turn('examine it');
+    const r = await game.turn('examine it');
     expect(r.output).not.toMatch(/don't see what you are referring to/i);
     expect(r.output).not.toMatch(/You haven't mentioned any thing/i);
   });
 
-  it('before any action, "examine it" fails with an unbound-referent message', () => {
+  it('before any action, "examine it" fails with an unbound-referent message', async () => {
     const { game } = buildItWorld();
     game.start();
 
     // No prior command — IT is unbound.
-    const r = game.turn('examine it');
+    const r = await game.turn('examine it');
     // Parser should return a fail about no referent.
     expect(r.output).toMatch(/You haven't mentioned any thing|don't see what/i);
   });
@@ -159,30 +159,30 @@ describe('B3 — IT-binding in PERFORM prologue (cross-turn)', () => {
 // ---------------------------------------------------------------------------
 
 describe('B3 — seam: parser reads IT; PERFORM prologue writes IT', () => {
-  it('IT is set by PERFORM prologue BEFORE the next turn\'s parse reads it', () => {
+  it('IT is set by PERFORM prologue BEFORE the next turn\'s parse reads it', async () => {
     // The seam test: the binding must be in place before the next parse.
     // We verify by making Turn 2's parse succeed (IT was bound by Turn 1's prologue).
     const { game } = buildItWorld();
     game.start();
 
     // Turn 1 binds IT.
-    game.turn('take lamp');
+    await game.turn('take lamp');
 
     // Turn 2 reads IT at parse time — if binding happened in Turn 1's prologue,
     // the parser's itRef is already set to lamp.id before Turn 2 parses "examine it".
-    const r = game.turn('examine it');
+    const r = await game.turn('examine it');
     // A successful parse (kind='ok') means the parser found a referent.
     // We infer success by absence of the unbound-referent error.
     expect(r.output).not.toMatch(/You haven't mentioned any thing/i);
   });
 
-  it('non-WALK action with dobj in one room, then IT resolves correctly in the same room', () => {
+  it('non-WALK action with dobj in one room, then IT resolves correctly in the same room', async () => {
     // Full integration: take in room, then examine it.
     const { game } = buildItWorld();
     game.start();
 
-    game.turn('take lamp');
-    const r = game.turn('examine it');
+    await game.turn('take lamp');
+    const r = await game.turn('examine it');
 
     // The parser must resolve "it" to the lamp successfully.
     expect(r.output.length).toBeGreaterThan(0);

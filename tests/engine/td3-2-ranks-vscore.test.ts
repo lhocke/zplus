@@ -41,7 +41,7 @@ function makeGame(startRoom: string = 'WEST-OF-HOUSE') {
 // ---------------------------------------------------------------------------
 
 describe('TD3-2-A: V-SCORE output — score 0, moves 0 (dfrotz oracle)', () => {
-  it('output is byte-identical to the expected ZIL format', () => {
+  it('output is byte-identical to the expected ZIL format', async () => {
     // Start in WEST-OF-HOUSE (no room VALUE), issue "score" as the FIRST move.
     // dfrotz R119 oracle: "score" as the very first command prints "0 moves"
     // because SCORE is a no-time verb — it does NOT increment the MOVES counter.
@@ -52,17 +52,17 @@ describe('TD3-2-A: V-SCORE output — score 0, moves 0 (dfrotz oracle)', () => {
     const game = makeGame('WEST-OF-HOUSE');
     // start() does NOT increment moveCount; the first turn() call does so AFTER
     // executing the verb — but V-SCORE reads moveCount before the increment.
-    const result = game.turn('score');
+    const result = await game.turn('score');
     expect(result.output).toBe(
       'Your score is 0 (total of 350 points), in 0 moves.\n' +
       'This gives you the rank of Beginner.',
     );
   });
 
-  it('move counter shows "0 moves" (plural) for the very first score command', () => {
+  it('move counter shows "0 moves" (plural) for the very first score command', async () => {
     // dfrotz oracle: "score" as first command → "in 0 moves." (plural, not "0 move.")
     const game = makeGame('WEST-OF-HOUSE');
-    const result = game.turn('score');
+    const result = await game.turn('score');
     expect(result.output).toContain(', in 0 moves.');
   });
 });
@@ -72,26 +72,26 @@ describe('TD3-2-A: V-SCORE output — score 0, moves 0 (dfrotz oracle)', () => {
 // ---------------------------------------------------------------------------
 
 describe('TD3-2-B: V-SCORE after taking a scored object', () => {
-  it('score reflects the VALUE of the taken object', () => {
+  it('score reflects the VALUE of the taken object', async () => {
     // SKULL has VALUE=10.  Start in LAND-OF-LIVING-DEAD (no room VALUE).
     // turn 1: "take skull" → moveCount incremented to 1, score = 10
     // turn 2: "score" → V-SCORE reads moveCount=1 (before increment to 2)
     // dfrotz oracle: after one real move then "score" → "in 1 move."
     const game = makeGame('LAND-OF-LIVING-DEAD');
-    game.turn('take skull'); // move 1, score = 10
-    const result = game.turn('score'); // reads moveCount=1, then increments to 2
+    await game.turn('take skull'); // move 1, score = 10
+    const result = await game.turn('score'); // reads moveCount=1, then increments to 2
     expect(result.output).toBe(
       'Your score is 10 (total of 350 points), in 1 move.\n' +
       'This gives you the rank of Beginner.',
     );
   });
 
-  it('score for PAINTING is 4 (spec §4.1)', () => {
+  it('score for PAINTING is 4 (spec §4.1)', async () => {
     // PAINTING.VALUE = 4. Start in GALLERY (no room VALUE matching spec).
     // After one real move (take painting), "score" reports moveCount=1.
     const game = makeGame('GALLERY');
-    game.turn('take painting'); // move 1, score = 4
-    const result = game.turn('score'); // reads moveCount=1
+    await game.turn('take painting'); // move 1, score = 4
+    const result = await game.turn('score'); // reads moveCount=1
     expect(result.output).toContain('Your score is 4 (total of 350 points), in 1 move.');
     expect(result.output).toContain('This gives you the rank of Beginner.');
   });
@@ -102,13 +102,13 @@ describe('TD3-2-B: V-SCORE after taking a scored object', () => {
 // ---------------------------------------------------------------------------
 
 describe('TD3-2-C: rank titles at threshold boundaries', () => {
-  it('score=0 → Beginner', () => {
+  it('score=0 → Beginner', async () => {
     const game = makeGame('WEST-OF-HOUSE');
-    const result = game.turn('score');
+    const result = await game.turn('score');
     expect(result.output).toContain('rank of Beginner.');
   });
 
-  it('score=51 → Novice Adventurer', () => {
+  it('score=51 → Novice Adventurer', async () => {
     // Use WEST-OF-HOUSE (no room VALUE), then apply internal scoring via
     // a real scored object sequence that sums to 51.
     // Instead, verify via the Scoring class directly (which is already covered
@@ -129,8 +129,8 @@ describe('TD3-2-C: rank titles at threshold boundaries', () => {
     //
     // TORCH has VALUE=14. Take torch in TORCH-ROOM (no room VALUE).
     const game = makeGame('TORCH-ROOM');
-    game.turn('take torch'); // score = 14
-    const result = game.turn('score');
+    await game.turn('take torch'); // score = 14
+    const result = await game.turn('score');
     expect(result.output).toContain('Your score is 14 (total of 350 points)');
     expect(result.output).toContain('rank of Beginner.');
   });
@@ -146,9 +146,9 @@ describe('TD3-2-D: SCORE-MAX == 350', () => {
     expect(game.view().maxScore).toBe(350);
   });
 
-  it('V-SCORE line always contains "(total of 350 points)"', () => {
+  it('V-SCORE line always contains "(total of 350 points)"', async () => {
     const game = makeGame();
-    const result = game.turn('score');
+    const result = await game.turn('score');
     expect(result.output).toContain('(total of 350 points)');
   });
 });
@@ -158,31 +158,31 @@ describe('TD3-2-D: SCORE-MAX == 350', () => {
 // ---------------------------------------------------------------------------
 
 describe('TD3-2-E: V-DIAGNOSE at game start', () => {
-  it('reports "You are in perfect health." when not wounded', () => {
+  it('reports "You are in perfect health." when not wounded', async () => {
     // Without combat built, the player has no wounds; I-CURE is disabled.
     // ZIL: when WD==0 → TELL "You are in perfect health."
     // (1actions.zil:3998)
     const game = makeGame('WEST-OF-HOUSE');
-    const result = game.turn('diagnose');
+    const result = await game.turn('diagnose');
     expect(result.output).toContain('You are in perfect health.');
   });
 
-  it('output does NOT mention a personal wound status when health is perfect', () => {
+  it('output does NOT mention a personal wound status when health is perfect', async () => {
     // ZIL: WD=0 → "You are in perfect health." (no "You have ... wound" line).
     // The survivability line ("You can [survive|be killed by] ...") IS printed always
     // and may mention "wound" — that is correct ZIL behavior (1actions.zil:4005–4019).
     const game = makeGame('WEST-OF-HOUSE');
-    const result = game.turn('diagnose');
+    const result = await game.turn('diagnose');
     // No "You have ... wound" possession line (WD=0 → skipped by the <NOT <0? .WD>> cond)
     expect(result.output).not.toContain('You have ');
     expect(result.output).not.toContain('cured');
   });
 
-  it('DEATHS count line is NOT shown when deaths == 0', () => {
+  it('DEATHS count line is NOT shown when deaths == 0', async () => {
     // ZIL: <COND (<NOT <0? ,DEATHS>> <TELL "You have been killed...">)>
     // At game start DEATHS=0, so the killed line is absent.
     const game = makeGame('WEST-OF-HOUSE');
-    const result = game.turn('diagnose');
+    const result = await game.turn('diagnose');
     expect(result.output).not.toContain('You have been killed');
   });
 });
@@ -192,38 +192,38 @@ describe('TD3-2-E: V-DIAGNOSE at game start', () => {
 // ---------------------------------------------------------------------------
 
 describe('TD3-2-F: V-SCORE move plurality', () => {
-  it('uses plural "moves" when moveCount == 0 (first score command)', () => {
+  it('uses plural "moves" when moveCount == 0 (first score command)', async () => {
     // dfrotz oracle: "score" as the very first command → "in 0 moves."
     // V-SCORE reads moveCount BEFORE the turn increments it: 0 → "0 moves."
     const game = makeGame('WEST-OF-HOUSE');
-    const r = game.turn('score'); // reads moveCount=0, then increments to 1
+    const r = await game.turn('score'); // reads moveCount=0, then increments to 1
     expect(r.output).toContain('in 0 moves.');
   });
 
-  it('uses singular "move" when moveCount == 1', () => {
+  it('uses singular "move" when moveCount == 1', async () => {
     // dfrotz oracle: after one real move ("look"), "score" → "in 1 move."
     // V-SCORE reads moveCount=1 (after look incremented it) before "score" increments.
     const game = makeGame('WEST-OF-HOUSE');
-    game.turn('look');   // moveCount incremented to 1
-    const r = game.turn('score'); // reads moveCount=1, then increments to 2
+    await game.turn('look');   // moveCount incremented to 1
+    const r = await game.turn('score'); // reads moveCount=1, then increments to 2
     expect(r.output).toContain('in 1 move.');
   });
 
-  it('uses plural "moves" when moveCount == 2', () => {
+  it('uses plural "moves" when moveCount == 2', async () => {
     // dfrotz oracle: after two real moves, "score" → "in 2 moves."
     const game = makeGame('WEST-OF-HOUSE');
-    game.turn('look');   // moveCount → 1
-    game.turn('look');   // moveCount → 2
-    const r = game.turn('score'); // reads moveCount=2, then increments to 3
+    await game.turn('look');   // moveCount → 1
+    await game.turn('look');   // moveCount → 2
+    const r = await game.turn('score'); // reads moveCount=2, then increments to 3
     expect(r.output).toContain('in 2 moves.');
   });
 
-  it('uses plural "moves" for larger counts', () => {
+  it('uses plural "moves" for larger counts', async () => {
     const game = makeGame('WEST-OF-HOUSE');
-    game.turn('look');
-    game.turn('look');
-    game.turn('look'); // moveCount → 3
-    const r = game.turn('score'); // reads moveCount=3
+    await game.turn('look');
+    await game.turn('look');
+    await game.turn('look'); // moveCount → 3
+    const r = await game.turn('score'); // reads moveCount=3
     expect(r.output).toContain('in 3 moves.');
   });
 });

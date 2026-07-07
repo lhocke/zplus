@@ -32,10 +32,10 @@ describe('createGame() default', () => {
     expect(output).not.toContain('cretin');
   });
 
-  it('turn(north) does not list "cretin" in room contents', () => {
+  it('turn(north) does not list "cretin" in room contents', async () => {
     const g = createGame();
     g.start();
-    const result = g.turn('north');
+    const result = await g.turn('north');
     expect(result.output).not.toContain('cretin');
   });
 });
@@ -45,10 +45,10 @@ describe('createGame() default', () => {
 // ---------------------------------------------------------------------------
 
 describe('open mailbox on real data', () => {
-  it('output contains "leaflet"', () => {
+  it('output contains "leaflet"', async () => {
     const g = createGame();
     g.start();
-    const result = g.turn('open mailbox');
+    const result = await g.turn('open mailbox');
     expect(result.output.toLowerCase()).toContain('leaflet');
   });
 });
@@ -58,14 +58,14 @@ describe('open mailbox on real data', () => {
 // ---------------------------------------------------------------------------
 
 describe('read leaflet on real data', () => {
-  it('output contains "WELCOME TO ZORK"', () => {
+  it('output contains "WELCOME TO ZORK"', async () => {
     const g = createGame();
     g.start();
     // Open mailbox first so the leaflet is accessible.
-    g.turn('open mailbox');
+    await g.turn('open mailbox');
     // Take the leaflet so it is in inventory.
-    g.turn('take leaflet');
-    const result = g.turn('read leaflet');
+    await g.turn('take leaflet');
+    const result = await g.turn('read leaflet');
     expect(result.output).toContain('WELCOME TO ZORK');
   });
 });
@@ -75,10 +75,10 @@ describe('read leaflet on real data', () => {
 // ---------------------------------------------------------------------------
 
 describe('movement on real data', () => {
-  it('going north from WEST-OF-HOUSE reaches NORTH-OF-HOUSE', () => {
+  it('going north from WEST-OF-HOUSE reaches NORTH-OF-HOUSE', async () => {
     const g = createGame();
     g.start();
-    const result = g.turn('north');
+    const result = await g.turn('north');
     expect(result.moved).toBe(true);
     expect(g.view().here).toBe('NORTH-OF-HOUSE');
   });

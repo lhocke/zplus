@@ -56,23 +56,23 @@ function trollRoomNoSword() {
 }
 
 describe('attack troll with sword => real combat (not the sign)', () => {
-  it('attack troll with sword produces non-empty output', () => {
-    const r = trollRoom().turn('attack troll with sword');
+  it('attack troll with sword produces non-empty output', async () => {
+    const r = await trollRoom().turn('attack troll with sword');
     expect(r.output.length).toBeGreaterThan(0);
     expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 
-  it('kill troll with sword produces non-empty output', () => {
-    const r = trollRoom().turn('kill troll with sword');
+  it('kill troll with sword produces non-empty output', async () => {
+    const r = await trollRoom().turn('kill troll with sword');
     expect(r.output.length).toBeGreaterThan(0);
     expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 });
 
 describe('attack troll without weapon => guard fires', () => {
-  it('attack troll bare-handed (no sword) fires bare-hands guard', () => {
+  it('attack troll bare-handed (no sword) fires bare-hands guard', async () => {
     // No sword held — verbAttack guard 2 fires
-    const r = trollRoomNoSword().turn('attack troll');
+    const r = await trollRoomNoSword().turn('attack troll');
     // Either bare-hands guard or parser can't find weapon — either way not the sign
     expect(r.output).not.toContain(SIGN_FRAGMENT);
     expect(r.output.length).toBeGreaterThan(0);
@@ -80,31 +80,31 @@ describe('attack troll without weapon => guard fires', () => {
 });
 
 describe('no troll present => faithful engine response, NOT the sign', () => {
-  it('attack troll at West of House => not the sign', () => {
+  it('attack troll at West of House => not the sign', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('attack troll');
+    const r = await g.turn('attack troll');
     expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 
-  it('kill troll at West of House => not the sign', () => {
+  it('kill troll at West of House => not the sign', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('kill troll');
+    const r = await g.turn('kill troll');
     expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 
-  it('attack troll at West of House => engine produces a non-empty response', () => {
+  it('attack troll at West of House => engine produces a non-empty response', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('attack troll');
+    const r = await g.turn('attack troll');
     expect(r.output.length).toBeGreaterThan(0);
     expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 });
 
 describe('real-path reachability into Troll Room', () => {
-  it('attack troll with sword after navigating to Troll Room fires real combat', () => {
+  it('attack troll with sword after navigating to Troll Room fires real combat', async () => {
     const g = createGame();
     g.start();
 
@@ -116,26 +116,26 @@ describe('real-path reachability into Troll Room', () => {
     if (lamp && player) { lamp.moveTo(player); lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
     if (sword && player) { sword.moveTo(player); }
 
-    g.turn('north');
-    g.turn('east');
-    g.turn('open window');
-    g.turn('west');
-    g.turn('west');
-    g.turn('move rug');
-    g.turn('open trap door');
-    g.turn('down');
-    const arrived = g.turn('north');
+    await g.turn('north');
+    await g.turn('east');
+    await g.turn('open window');
+    await g.turn('west');
+    await g.turn('west');
+    await g.turn('move rug');
+    await g.turn('open trap door');
+    await g.turn('down');
+    const arrived = await g.turn('north');
 
     expect(arrived.output).toContain('troll');
 
-    const r = g.turn('attack troll with sword');
+    const r = await g.turn('attack troll with sword');
     expect(r.output.length).toBeGreaterThan(0);
     expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 });
 
 describe('attack non-troll => graceful deflection (not an unimplemented-verb error)', () => {
-  it('attack cyclops', () => {
+  it('attack cyclops', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     const w = (g as unknown as { world: { get(id: string): unknown } }).world;
@@ -145,30 +145,30 @@ describe('attack non-troll => graceful deflection (not an unimplemented-verb err
     const sword = w.get('SWORD') as Obj | undefined;
     if (lamp && player) { lamp.moveTo(player); lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
     if (sword && player) { sword.moveTo(player); }
-    const r = g.turn('attack cyclops');
+    const r = await g.turn('attack cyclops');
     expect(r.output).not.toContain("I don't know how to");
     expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 });
 
 describe('golden-preserving guards', () => {
-  it('examine troll output unchanged', () => {
-    const r = trollRoom().turn('examine troll');
+  it('examine troll output unchanged', async () => {
+    const r = await trollRoom().turn('examine troll');
     expect(r.output).toBe(EXAMINE_TROLL_LINE);
     expect(r.output).not.toContain(SIGN_FRAGMENT);
   });
 
-  it('east blocked by authentic fend-off', () => {
-    const r = trollRoom().turn('east');
+  it('east blocked by authentic fend-off', async () => {
+    const r = await trollRoom().turn('east');
     expect(r.output).toBe(FEND_OFF);
   });
 
-  it('west blocked by authentic fend-off', () => {
-    const r = trollRoom().turn('west');
+  it('west blocked by authentic fend-off', async () => {
+    const r = await trollRoom().turn('west');
     expect(r.output).toBe(FEND_OFF);
   });
 
-  it('attack troll does not set TROLL-FLAG when blow misses', () => {
+  it('attack troll does not set TROLL-FLAG when blow misses', async () => {
     // Force MISS: ATT=2, DEF=1 (SWORD vBestAdv), DEF1@1 window.
     // DEF1[1..9] = [M,M,M,S,S,U,U,K,K]; index 0 → MISS.
     // next()=0.1 → nextInt(9)=0 → DEF1[1+0]=MISSED.
@@ -182,11 +182,11 @@ describe('golden-preserving guards', () => {
     const sword = w.get('SWORD') as Obj | undefined;
     if (lamp  && player) { lamp.moveTo(player);  lamp.set(Flag.OnFire); lamp.set(Flag.Light); }
     if (sword && player) { sword.moveTo(player); }
-    g.turn('attack troll with sword');
+    await g.turn('attack troll with sword');
     // Missed blow: TROLL-FLAG stays unset, east still fends off.
     // CA1: blocked move now ticks CLOCKER, so the troll's I-FIGHT demon may also
     // fire a counter-attack in the same output — use toContain, not toBe.
-    const r = g.turn('east');
+    const r = await g.turn('east');
     expect(r.output).toContain(FEND_OFF);
   });
 });
@@ -289,21 +289,21 @@ describe('troll-kill walkthrough (test H)', () => {
     return g;
   }
 
-  it('scripted sword fight kills troll: trollFlag=true, exits unblocked', () => {
+  it('scripted sword fight kills troll: trollFlag=true, exits unblocked', async () => {
     const g = makeTrollKillGame();
 
     // Round 1: STAGGER — troll still alive, trollFlag stays false
-    const r1 = g.turn('attack troll with sword');
+    const r1 = await g.turn('attack troll with sword');
     expect(r1.output.length).toBeGreaterThan(0);
     expect(r1.output).not.toContain(SIGN_FRAGMENT);
 
     // After round 1: troll staggered but alive — exits still blocked.
     // CA1: blocked move now ticks CLOCKER, so the troll's I-FIGHT demon may also fire.
-    const eastAfter1 = g.turn('east');
+    const eastAfter1 = await g.turn('east');
     expect(eastAfter1.output).toContain(FEND_OFF);
 
     // Round 2: KILLED — F_DEAD fires
-    const r2 = g.turn('attack troll with sword');
+    const r2 = await g.turn('attack troll with sword');
     expect(r2.output.length).toBeGreaterThan(0);
     expect(r2.output).not.toContain(SIGN_FRAGMENT);
 
@@ -312,16 +312,16 @@ describe('troll-kill walkthrough (test H)', () => {
     expect(trollFlagGame.flags.get('TROLL-FLAG')).toBe(true);
 
     // East exit is now unblocked
-    const eastAfter2 = g.turn('east');
+    const eastAfter2 = await g.turn('east');
     expect(eastAfter2.output).not.toBe(FEND_OFF);
   });
 
-  it('west exit also unblocked after troll kill', () => {
+  it('west exit also unblocked after troll kill', async () => {
     const g = makeTrollKillGame();
-    g.turn('attack troll with sword');  // round 1: stagger
-    g.turn('east');                     // just advance turn state, discard output
-    g.turn('attack troll with sword');  // round 2: kill
-    const westAfter2 = g.turn('west');
+    await g.turn('attack troll with sword');  // round 1: stagger
+    await g.turn('east');                     // just advance turn state, discard output
+    await g.turn('attack troll with sword');  // round 2: kill
+    const westAfter2 = await g.turn('west');
     expect(westAfter2.output).not.toBe(FEND_OFF);
   });
 });

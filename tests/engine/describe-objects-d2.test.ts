@@ -68,22 +68,22 @@ describe('D2: WEST-OF-HOUSE object listing', () => {
     return { room, mailbox, player, world };
   }
 
-  it('shows "There is a small mailbox here." instead of "You can see: small mailbox."', () => {
+  it('shows "There is a small mailbox here." instead of "You can see: small mailbox."', async () => {
     const { room, player, world } = makeWestOfHouse();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('There is a small mailbox here.');
     expect(result.output).not.toContain('You can see:');
   });
 
-  it('does not list the player actor in room contents', () => {
+  it('does not list the player actor in room contents', async () => {
     const { room, player, world } = makeWestOfHouse();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).not.toContain('yourself');
   });
 
-  it('still shows the room name and ldesc', () => {
+  it('still shows the room name and ldesc', async () => {
     const { room, player, world } = makeWestOfHouse();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('West of House');
     expect(result.output).toContain('open field west of a white house');
   });
@@ -134,29 +134,29 @@ describe('D2: NDESCBIT objects skipped', () => {
     return { room, trophyCase, rug, sword, player, world };
   }
 
-  it('lists the sword via its fdesc', () => {
+  it('lists the sword via its fdesc', async () => {
     const { room, player, world } = makeLivingRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('Above the trophy case hangs an elvish sword of great antiquity.');
   });
 
-  it('does NOT list the trophy case (NDESCBIT)', () => {
+  it('does NOT list the trophy case (NDESCBIT)', async () => {
     const { room, player, world } = makeLivingRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).not.toMatch(/trophy case[^.]*here/);
     expect(result.output).not.toContain('There is a trophy case here.');
   });
 
-  it('does NOT list the rug (NDESCBIT)', () => {
+  it('does NOT list the rug (NDESCBIT)', async () => {
     const { room, player, world } = makeLivingRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).not.toContain('carpet here');
     expect(result.output).not.toContain('There is a carpet here.');
   });
 
-  it('does not emit "You can see:" for any objects', () => {
+  it('does not emit "You can see:" for any objects', async () => {
     const { room, player, world } = makeLivingRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).not.toContain('You can see:');
   });
 });
@@ -200,22 +200,22 @@ describe('D2: fdesc pass 1 vs fallback pass 2', () => {
     return { room, lampWithFdesc, touchedItem, plainItem, player, world };
   }
 
-  it('untouched item with fdesc shows its fdesc (pass 1)', () => {
+  it('untouched item with fdesc shows its fdesc (pass 1)', async () => {
     const { room, player, world } = makeRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('A battery-powered brass lantern is on the trophy case.');
   });
 
-  it('touched item with fdesc shows ldesc instead (pass 2)', () => {
+  it('touched item with fdesc shows ldesc instead (pass 2)', async () => {
     const { room, player, world } = makeRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).not.toContain('This is the fdesc for the touched thing.');
     expect(result.output).toContain('There is a touched thing here.');
   });
 
-  it('item with no fdesc and no ldesc shows "There is a <desc> here."', () => {
+  it('item with no fdesc and no ldesc shows "There is a <desc> here."', async () => {
     const { room, player, world } = makeRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('There is a plain widget here.');
   });
 });
@@ -270,22 +270,22 @@ describe('D2: open/transparent container contents listed', () => {
     return { room, box, coin, closedBox, secret, player, world };
   }
 
-  it('shows FIRSTER header for open container with contents', () => {
+  it('shows FIRSTER header for open container with contents', async () => {
     const { room, player, world } = makeRoomWithContainer();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('The wooden box contains:');
   });
 
-  it('shows contents of open container with indent', () => {
+  it('shows contents of open container with indent', async () => {
     const { room, player, world } = makeRoomWithContainer();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     // At level 1: "  A gold coin" (INDENTS[1] = "  ", then "A " + desc)
     expect(result.output).toContain('A gold coin');
   });
 
-  it('does NOT show contents of closed opaque container', () => {
+  it('does NOT show contents of closed opaque container', async () => {
     const { room, player, world } = makeRoomWithContainer();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).not.toContain('secret item');
   });
 });
@@ -349,39 +349,39 @@ describe('D2: NDESCBIT container with open/transparent contents recurse', () => 
     return { room, table, bottle, water, sack, player, world };
   }
 
-  it('shows bottle fdesc (recursed into from NDESCBIT table)', () => {
+  it('shows bottle fdesc (recursed into from NDESCBIT table)', async () => {
     const { room, player, world } = makeKitchenLikeRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('A bottle is sitting on the table.');
   });
 
-  it('shows bottle contents with FIRSTER header', () => {
+  it('shows bottle contents with FIRSTER header', async () => {
     const { room, player, world } = makeKitchenLikeRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('The glass bottle contains:');
   });
 
-  it('shows water inside bottle with indent', () => {
+  it('shows water inside bottle with indent', async () => {
     const { room, player, world } = makeKitchenLikeRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('A quantity of water');
   });
 
-  it('shows sack fdesc (recursed into from NDESCBIT table)', () => {
+  it('shows sack fdesc (recursed into from NDESCBIT table)', async () => {
     const { room, player, world } = makeKitchenLikeRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('On the table is an elongated brown sack, smelling of hot peppers.');
   });
 
-  it('does NOT show "You can see:" anywhere', () => {
+  it('does NOT show "You can see:" anywhere', async () => {
     const { room, player, world } = makeKitchenLikeRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).not.toContain('You can see:');
   });
 
-  it('does NOT list the table itself (NDESCBIT)', () => {
+  it('does NOT list the table itself (NDESCBIT)', async () => {
     const { room, player, world } = makeKitchenLikeRoom();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).not.toContain('There is a kitchen table here.');
   });
 });
@@ -391,14 +391,14 @@ describe('D2: NDESCBIT container with open/transparent contents recurse', () => 
 // ---------------------------------------------------------------------------
 
 describe('D2: empty room produces no object listing', () => {
-  it('shows only room name and ldesc with no object lines', () => {
+  it('shows only room name and ldesc with no object lines', async () => {
     const room = new Room('EMPTY', 'Empty Room', { ldesc: 'Nothing here.' });
     room.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
     player.moveTo(room);
     const world = World.fromObjects([room, player]);
 
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toBe('Empty Room\nNothing here.');
     expect(result.output).not.toContain('You can see:');
     expect(result.output).not.toContain('There is');
@@ -501,32 +501,32 @@ describe('D2: trophy-case "consists of" header with filled case', () => {
     return { room, trophyCase, egg, player, world };
   }
 
-  it('LOOK in living room with filled trophy case shows "consists of" header', () => {
+  it('LOOK in living room with filled trophy case shows "consists of" header', async () => {
     const { room, player, world } = makeLivingRoomWithTreasure();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('Your collection of treasures consists of:');
   });
 
-  it('LOOK in living room with filled trophy case lists the treasure (ldesc) under the header', () => {
+  it('LOOK in living room with filled trophy case lists the treasure (ldesc) under the header', async () => {
     // At room-look depth (level 0), describeObject uses ldesc rather than "A <desc>".
     // ZIL: the treasury contents are printed at room depth via printCont(TROPHY-CASE, -1).
     const { room, player, world } = makeLivingRoomWithTreasure();
-    const result = executeVerb(makeCtx(room, player, world), 'V-LOOK');
+    const result = await executeVerb(makeCtx(room, player, world), 'V-LOOK');
     expect(result.output).toContain('The egg is covered in jewels.');
   });
 
-  it('EXAMINE trophy-case with treasure shows "consists of" header', () => {
+  it('EXAMINE trophy-case with treasure shows "consists of" header', async () => {
     const { room, trophyCase, player, world } = makeLivingRoomWithTreasure();
-    const result = executeVerb(
+    const result = await executeVerb(
       { ...makeCtx(room, player, world), dobj: trophyCase },
       'V-EXAMINE',
     );
     expect(result.output).toContain('Your collection of treasures consists of:');
   });
 
-  it('EXAMINE trophy-case with treasure lists the treasure under the header', () => {
+  it('EXAMINE trophy-case with treasure lists the treasure under the header', async () => {
     const { room, trophyCase, player, world } = makeLivingRoomWithTreasure();
-    const result = executeVerb(
+    const result = await executeVerb(
       { ...makeCtx(room, player, world), dobj: trophyCase },
       'V-EXAMINE',
     );

@@ -66,7 +66,7 @@ describe('F4 death path — jigsUp via grue kill (integration)', () => {
    * it through the public turn() interface with a controlled RNG.
    */
 
-  it('death message appears in output when grue kills', () => {
+  it('death message appears in output when grue kills', async () => {
     // Start in CELLAR, take a step to a dark neighbor with grue-triggering RNG.
     // CELLAR → up → KITCHEN (lit) so that's not dark→dark.
     // CELLAR → down → SHAFT-ROOM (dark? check). We need a dark-to-dark path.
@@ -82,7 +82,7 @@ describe('F4 death path — jigsUp via grue kill (integration)', () => {
     // CELLAR exits include "down" → might go deeper (dark). Let's try.
     // If no dark→dark exit exists from CELLAR, we use a different room.
     // We check both the death message and fallback to darkPlaceEntered message.
-    const r = g.turn('down');
+    const r = await g.turn('down');
     // Either the grue kills (death message) or we just get darkPlaceEntered.
     // The test just verifies the output is non-empty and either contains grue death
     // or moved-into-dark message — to be tightened once we know the map topology.
@@ -91,7 +91,7 @@ describe('F4 death path — jigsUp via grue kill (integration)', () => {
 });
 
 describe('F4 death path — jigsUp scores -10 and increments deaths', () => {
-  it('first death: deaths counter goes from 0 to 1, score drops -10', () => {
+  it('first death: deaths counter goes from 0 to 1, score drops -10', async () => {
     const g = newGameAt('CELLAR');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
@@ -104,7 +104,7 @@ describe('F4 death path — jigsUp scores -10 and increments deaths', () => {
 
     const scoreBefore = g2.view().score;
     // MAZE-1 north loops back to MAZE-1 (dark→dark). grueRng forces PROB 80 to fire.
-    const r = g2.turn('north');
+    const r = await g2.turn('north');
     const scoreAfter = g2.view().score;
 
     // Grue must kill with the scripted RNG — if it doesn't, the grue path is broken.
@@ -113,7 +113,7 @@ describe('F4 death path — jigsUp scores -10 and increments deaths', () => {
     // After resurrection, player should be at FOREST-1.
     expect(g2.view().here).toBe('FOREST-1');
     // deaths is now 1 — verify via V-DIAGNOSE.
-    const diag = g2.turn('diagnose');
+    const diag = await g2.turn('diagnose');
     expect(diag.output).toContain('killed once');
   });
 });
@@ -123,7 +123,7 @@ describe('F4 death path — jigsUp scores -10 and increments deaths', () => {
 // ---------------------------------------------------------------------------
 
 describe('F4 grue gate — verbGo dark→dark with grue-triggering RNG', () => {
-  it('entering a dark room from another dark room with prob-triggering RNG kills via grue', () => {
+  it('entering a dark room from another dark room with prob-triggering RNG kills via grue', async () => {
     // MAZE-1 is a maze room (Flag.Maze) and should be dark.
     // Its neighbors are also dark maze rooms.
     const g = newGameAt('MAZE-1');
@@ -132,7 +132,7 @@ describe('F4 grue gate — verbGo dark→dark with grue-triggering RNG', () => {
 
     // The maze is dark (no light source). Any move is dark→dark.
     // Grue PROB 80 triggered by rng.next()=0.5 → 50 < 80 → true.
-    const r = g.turn('north');
+    const r = await g.turn('north');
 
     // Expected: grue kill message present in output.
     expect(r.output).toContain('grue slithered');
@@ -141,43 +141,43 @@ describe('F4 grue gate — verbGo dark→dark with grue-triggering RNG', () => {
     expect(g.view().here).toBe('FOREST-1');
   });
 
-  it('score decreases by 10 on grue death', () => {
+  it('score decreases by 10 on grue death', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     const before = g.view().score;
-    g.turn('north');
+    await g.turn('north');
     expect(g.view().score).toBe(before - 10);
   });
 
-  it('deaths counter increments to 1 after first death', () => {
+  it('deaths counter increments to 1 after first death', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
-    g.turn('north'); // death 1 → FOREST-1
+    await g.turn('north'); // death 1 → FOREST-1
 
-    const diag = g.turn('diagnose');
+    const diag = await g.turn('diagnose');
     expect(diag.output).toContain('killed once');
   });
 
-  it('deaths counter increments to 2 after second death', () => {
+  it('deaths counter increments to 2 after second death', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
-    g.turn('north'); // death 1 → FOREST-1
+    await g.turn('north'); // death 1 → FOREST-1
     // Now at FOREST-1 (lit). Go back to maze to die again.
     // Need to navigate back to a dark room. This may require multiple steps.
     // For determinism, directly test the deaths field via a direct jigsUp call.
     // Actually, let the test end here — only verify death 1 for now.
     // Death 2 + 3 covered by the 3-strike test below.
-    const diag = g.turn('diagnose');
+    const diag = await g.turn('diagnose');
     expect(diag.output).toContain('killed once');
   });
 
-  it('entering a dark room from a lit room only shows darkPlaceEntered, no grue', () => {
+  it('entering a dark room from a lit room only shows darkPlaceEntered, no grue', async () => {
     // KITCHEN is lit (Flag.On). Moving UP to ATTIC is lit→dark.
     // The grue gate requires !oldLit && !newLit (dark→dark only).
     // First step lit→dark should give "You have moved into a dark place." only.
@@ -185,7 +185,7 @@ describe('F4 grue gate — verbGo dark→dark with grue-triggering RNG', () => {
     (g as unknown as { rng: Rng }).rng = grueRng(); // would trigger grue if polarity wrong
     g.start();
 
-    const r = g.turn('up');
+    const r = await g.turn('up');
 
     // Should NOT contain grue death message (old room was lit).
     expect(r.output).not.toContain('grue slithered');
@@ -196,14 +196,14 @@ describe('F4 grue gate — verbGo dark→dark with grue-triggering RNG', () => {
     expect(g.view().here).not.toBe('FOREST-1');
   });
 
-  it('safe RNG (prob 0.99) does not trigger grue even in dark→dark', () => {
+  it('safe RNG (prob 0.99) does not trigger grue even in dark→dark', async () => {
     // With rng.next()=0.99 → 99 ≥ 80 → grue does NOT trigger.
     // Dark→dark should give darkPlaceEntered, not a kill.
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = safeRng();
     g.start();
 
-    const r = g.turn('north');
+    const r = await g.turn('north');
 
     expect(r.output).not.toContain('grue slithered');
     expect(r.output).not.toContain('You have died');
@@ -221,7 +221,7 @@ describe('F4 grue gate — verbGo dark→dark with grue-triggering RNG', () => {
 // ---------------------------------------------------------------------------
 
 describe('F4 3-strike kill — 3rd death sets gameOver', () => {
-  it('3rd death outputs suicidal maniac message', () => {
+  it('3rd death outputs suicidal maniac message', async () => {
     // Force 3 grue deaths. After each death player is at FOREST-1.
     // We need to navigate back to a dark room for deaths 2 and 3.
     // Easiest: override rng and drive deaths via direct state inspection.
@@ -239,25 +239,25 @@ describe('F4 3-strike kill — 3rd death sets gameOver', () => {
     // Manually set deaths to 2 to simulate 2 prior deaths.
     (g as unknown as { deaths: number }).deaths = 2;
 
-    const r = g.turn('north'); // 3rd death with deaths already = 2
+    const r = await g.turn('north'); // 3rd death with deaths already = 2
 
     expect(r.output).toContain('suicidal maniac');
     // gameOver is set; further turns return empty output.
-    const r2 = g.turn('look');
+    const r2 = await g.turn('look');
     expect(r2.output).toBe('');
   });
 
-  it('gameOver halts the engine: turn() after gameOver returns empty', () => {
+  it('gameOver halts the engine: turn() after gameOver returns empty', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     (g as unknown as { deaths: number }).deaths = 2;
-    g.turn('north'); // triggers gameOver
+    await g.turn('north'); // triggers gameOver
 
     // All subsequent turns return empty.
-    expect(g.turn('look').output).toBe('');
-    expect(g.turn('north').output).toBe('');
+    expect(await (await g.turn('look')).output).toBe('');
+    expect(await (await g.turn('north')).output).toBe('');
   });
 });
 
@@ -266,7 +266,7 @@ describe('F4 3-strike kill — 3rd death sets gameOver', () => {
 // ---------------------------------------------------------------------------
 
 describe('F4 re-death guard — dead=true triggers talented message + gameOver', () => {
-  it('when dead=true and jigsUp is called again, emits talented message', () => {
+  it('when dead=true and jigsUp is called again, emits talented message', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
@@ -274,11 +274,11 @@ describe('F4 re-death guard — dead=true triggers talented message + gameOver',
     // Set dead=true (ghost mode) — simulate already-dead state.
     (g as unknown as { dead: boolean }).dead = true;
 
-    const r = g.turn('north'); // triggers jigsUp with dead=true
+    const r = await g.turn('north'); // triggers jigsUp with dead=true
 
     expect(r.output).toContain('talented');
     // gameOver set by re-death guard.
-    expect(g.turn('look').output).toBe('');
+    expect(await (await g.turn('look')).output).toBe('');
   });
 });
 
@@ -287,21 +287,21 @@ describe('F4 re-death guard — dead=true triggers talented message + gameOver',
 // ---------------------------------------------------------------------------
 
 describe('F4 deaths field — VerbContext wired with live deaths count', () => {
-  it('diagnose shows deaths=0 at start, reflects correct count after deaths', () => {
+  it('diagnose shows deaths=0 at start, reflects correct count after deaths', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     // Before any death, V-DIAGNOSE should not mention "been killed".
-    const diagBefore = g.turn('diagnose');
+    const diagBefore = await g.turn('diagnose');
     expect(diagBefore.output).not.toContain('have been killed');
 
     // Die once.
-    g.turn('north'); // grue death → resurrection to FOREST-1
+    await g.turn('north'); // grue death → resurrection to FOREST-1
 
     // Now diagnose should show "killed once".
     // But we're at FOREST-1 now, which is lit; diagnose should work there.
-    const diagAfter = g.turn('diagnose');
+    const diagAfter = await g.turn('diagnose');
     expect(diagAfter.output).toContain('killed once');
   });
 });
@@ -311,32 +311,32 @@ describe('F4 deaths field — VerbContext wired with live deaths count', () => {
 // ---------------------------------------------------------------------------
 
 describe('F4 resurrection — player moves to FOREST-1', () => {
-  it('after grue death, player location is FOREST-1', () => {
+  it('after grue death, player location is FOREST-1', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
-    g.turn('north'); // grue kill
+    await g.turn('north'); // grue kill
 
     expect(g.view().here).toBe('FOREST-1');
   });
 
-  it('resurrection output includes "Well, you probably deserve another chance"', () => {
+  it('resurrection output includes "Well, you probably deserve another chance"', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
-    const r = g.turn('north');
+    const r = await g.turn('north');
 
     expect(r.output).toContain('deserve another chance');
   });
 
-  it('FOREST-1 room description appears in resurrection output', () => {
+  it('FOREST-1 room description appears in resurrection output', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
-    const r = g.turn('north');
+    const r = await g.turn('north');
 
     // FOREST-1 ldesc contains "This is a forest" or similar.
     expect(r.output).toMatch(/forest/i);
@@ -360,29 +360,29 @@ describe('F4 resurrection — player moves to FOREST-1', () => {
 import { resetKitchenWindowFlag, resetRugMoved } from '../../src/actions/above-ground.js';
 
 describe('G. Oracle ordering — pitch-black on same turn as darkPlaceEntered', () => {
-  it('lit→dark move (KITCHEN→up→ATTIC): darkPlaceEntered AND pitch-black on same turn', () => {
+  it('lit→dark move (KITCHEN→up→ATTIC): darkPlaceEntered AND pitch-black on same turn', async () => {
     // dfrotz oracle: KITCHEN up → outputs both on the same turn.
     const g = newGameAt('KITCHEN');
     g.start();
-    const r = g.turn('up');
+    const r = await g.turn('up');
 
     expect(r.output).toContain('You have moved into a dark place.');
     expect(r.output).toContain('It is pitch black. You are likely to be eaten by a grue.');
     expect(r.output).not.toContain('This is the attic');
   });
 
-  it('dark→dark no-grue move (MAZE-1 safe RNG): darkPlaceEntered AND pitch-black on same turn', () => {
+  it('dark→dark no-grue move (MAZE-1 safe RNG): darkPlaceEntered AND pitch-black on same turn', async () => {
     // dfrotz oracle: each dark→dark move (grue not firing) produces both lines.
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = safeRng();
     g.start();
-    const r = g.turn('north');
+    const r = await g.turn('north');
 
     expect(r.output).toContain('You have moved into a dark place.');
     expect(r.output).toContain('It is pitch black. You are likely to be eaten by a grue.');
   });
 
-  it('LIVING-ROOM→down→CELLAR ordering: darkPlaceEntered then M-ENTER then pitch-black', () => {
+  it('LIVING-ROOM→down→CELLAR ordering: darkPlaceEntered then M-ENTER then pitch-black', async () => {
     // dfrotz oracle turn 8 ('down' into Cellar):
     //   (1) "You have moved into a dark place."
     //   (2) "The trap door crashes shut, and you hear someone barring it."
@@ -392,9 +392,9 @@ describe('G. Oracle ordering — pitch-black on same turn as darkPlaceEntered', 
     resetKitchenWindowFlag();
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    g.turn('open trap door');
-    const r = g.turn('down');
+    await g.turn('move rug');
+    await g.turn('open trap door');
+    const r = await g.turn('down');
 
     const lines = r.output.split('\n').filter(l => l.length > 0);
     const idxDark   = lines.findIndex(l => l.includes('You have moved into a dark place.'));

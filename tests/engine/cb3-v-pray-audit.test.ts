@@ -32,17 +32,17 @@ import { newGameAt } from '../helpers/new-game.js';
 // ---------------------------------------------------------------------------
 
 describe('CB3: V-PRAY living path — SOUTH-TEMPLE teleport', () => {
-  it('pray at SOUTH-TEMPLE moves player to FOREST-1', () => {
+  it('pray at SOUTH-TEMPLE moves player to FOREST-1', async () => {
     const g = newGameAt('SOUTH-TEMPLE');
     g.start();
-    g.turn('pray');
+    await g.turn('pray');
     expect(g.view().here).toBe('FOREST-1');
   });
 
-  it('pray at SOUTH-TEMPLE emits no V-PRAY text (GOTO produces no message)', () => {
+  it('pray at SOUTH-TEMPLE emits no V-PRAY text (GOTO produces no message)', async () => {
     const g = newGameAt('SOUTH-TEMPLE');
     g.start();
-    const r = g.turn('pray');
+    const r = await g.turn('pray');
     // ZIL <GOTO ,FOREST-1> doesn't TELL anything — output is the room description
     // from onRoomEntered, not a V-PRAY message.
     expect(r.output).not.toContain('If you pray enough');
@@ -55,17 +55,17 @@ describe('CB3: V-PRAY living path — SOUTH-TEMPLE teleport', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB3: V-PRAY living path — fallback string', () => {
-  it('pray outside SOUTH-TEMPLE → exact ZIL string', () => {
+  it('pray outside SOUTH-TEMPLE → exact ZIL string', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
-    const r = g.turn('pray');
+    const r = await g.turn('pray');
     expect(r.output).toContain('If you pray enough, your prayers may be answered.');
   });
 
-  it('fallback fires at any non-temple room', () => {
+  it('fallback fires at any non-temple room', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('pray');
+    const r = await g.turn('pray');
     expect(r.output).toContain('If you pray enough, your prayers may be answered.');
   });
 });
@@ -77,7 +77,7 @@ describe('CB3: V-PRAY living path — fallback string', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB3: ghost-precedence seam', () => {
-  it('dead===true at SOUTH-TEMPLE → ghost resurrection path, not living teleport', () => {
+  it('dead===true at SOUTH-TEMPLE → ghost resurrection path, not living teleport', async () => {
     // Living V-PRAY at SOUTH-TEMPLE would silently teleport without any resurrection text.
     // Ghost PRAY at SOUTH-TEMPLE should produce the trumpet/resurrection message.
     const g = newGameAt('SOUTH-TEMPLE');
@@ -85,30 +85,30 @@ describe('CB3: ghost-precedence seam', () => {
     (g as unknown as { dead: boolean }).dead = true;
     (g as unknown as { alwaysLit: boolean }).alwaysLit = true;
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
-    const r = g.turn('pray');
+    const r = await g.turn('pray');
     // Ghost path produces resurrection text — living path would produce none.
     expect(r.output).toMatch(/trumpet|bright|disembod/i);
     // Ghost path clears dead flag (resurrection).
     expect((g as unknown as { dead: boolean }).dead).toBe(false);
   });
 
-  it('dead===true outside SOUTH-TEMPLE → ghost "not heard", not living fallback', () => {
+  it('dead===true outside SOUTH-TEMPLE → ghost "not heard", not living fallback', async () => {
     // Living V-PRAY would produce "If you pray enough, your prayers may be answered."
     // Ghost PRAY elsewhere produces "Your prayers are not heard."
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
     (g as unknown as { dead: boolean }).dead = true;
     (g as unknown as { alwaysLit: boolean }).alwaysLit = true;
-    const r = g.turn('pray');
+    const r = await g.turn('pray');
     expect(r.output).toContain('not heard');
     expect(r.output).not.toContain('If you pray enough');
   });
 
-  it('dead===false → verbPray is reached (living path fires, ghost path skipped)', () => {
+  it('dead===false → verbPray is reached (living path fires, ghost path skipped)', async () => {
     // dead===false means ghostDispatch is not entered; verbPray handles the command.
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
-    const r = g.turn('pray');
+    const r = await g.turn('pray');
     expect(r.output).toContain('If you pray enough, your prayers may be answered.');
     // Ghost fallback must NOT appear.
     expect(r.output).not.toContain('not heard');

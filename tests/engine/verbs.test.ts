@@ -160,33 +160,33 @@ function ctx(fix: Fixture, opts: {
 // ---------------------------------------------------------------------------
 
 describe('verb: look', () => {
-  it('prints the room name and ldesc', () => {
+  it('prints the room name and ldesc', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'look' }));
+    const result = await executeVerb(ctx(fix, { verb: 'look' }));
     expect(result.output).toContain('Clearing');
     expect(result.output).toContain('sun-drenched');
   });
 
-  it('lists visible items in the room', () => {
+  it('lists visible items in the room', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'look' }));
+    const result = await executeVerb(ctx(fix, { verb: 'look' }));
     // lantern and sword are loose in the clearing; mailbox is a container.
     expect(result.output).toContain('lantern');
     expect(result.output).toContain('mailbox');
   });
 
-  it('does not list the player actor ("yourself") in room contents', () => {
+  it('does not list the player actor ("yourself") in room contents', async () => {
     const fix = makeFixture();
     // Player is in the clearing; look should NOT list "yourself" as a room item.
-    const result = executeVerb(ctx(fix, { verb: 'look' }));
+    const result = await executeVerb(ctx(fix, { verb: 'look' }));
     expect(result.output).not.toContain('yourself');
   });
 
-  it('does not list items carried by the player as room contents when moving', () => {
+  it('does not list items carried by the player as room contents when moving', async () => {
     const fix = makeFixture();
     // Move lantern to player inventory, then go to FOREST and look.
     fix.lantern.moveTo(fix.player);
-    const goResult = executeVerb(ctx(fix, { verb: 'walk', prep: 'north' }));
+    const goResult = await executeVerb(ctx(fix, { verb: 'walk', prep: 'north' }));
     // The description of FOREST should not mention "lantern" as a loose item.
     expect(goResult.output).not.toContain('lantern');
     expect(goResult.output).not.toContain('yourself');
@@ -194,73 +194,73 @@ describe('verb: look', () => {
 });
 
 describe('verb: go', () => {
-  it('moves the player to the destination room', () => {
+  it('moves the player to the destination room', async () => {
     const fix = makeFixture();
     // "go north" from clearing → forest
-    const result = executeVerb(ctx(fix, { verb: 'walk', prep: 'north' }));
+    const result = await executeVerb(ctx(fix, { verb: 'walk', prep: 'north' }));
     expect(result.moved).toBe(true);
     expect(fix.player.parent?.id).toBe('FOREST');
   });
 
-  it('prints the destination room description after moving', () => {
+  it('prints the destination room description after moving', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'walk', prep: 'north' }));
+    const result = await executeVerb(ctx(fix, { verb: 'walk', prep: 'north' }));
     expect(result.output).toContain('Forest');
   });
 
-  it('shows blocked-exit message when no destination and elseMessage is set', () => {
+  it('shows blocked-exit message when no destination and elseMessage is set', async () => {
     const fix = makeFixture();
     // In BLOCKED-ROOM, south exit has only elseMessage — no destination.
-    const result = executeVerb(ctx(fix, { verb: 'walk', prep: 'south', here: fix.blockedRoom }));
+    const result = await executeVerb(ctx(fix, { verb: 'walk', prep: 'south', here: fix.blockedRoom }));
     expect(result.moved).toBe(false);
     expect(result.output).toContain('rusty gate');
   });
 
-  it('shows generic blocked message when exit has no to and no elseMessage', () => {
+  it('shows generic blocked message when exit has no to and no elseMessage', async () => {
     // north exit in BLOCKED-ROOM has per='SOME-ROUTINE' but no to/elseMessage.
     // Without a perResolver the engine should fall back to a generic message.
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'walk', prep: 'north', here: fix.blockedRoom }));
+    const result = await executeVerb(ctx(fix, { verb: 'walk', prep: 'north', here: fix.blockedRoom }));
     expect(result.moved).toBe(false);
     expect(result.output.length).toBeGreaterThan(0);
   });
 
-  it('calls per routine when a perResolver is provided and resolves destination', () => {
+  it('calls per routine when a perResolver is provided and resolves destination', async () => {
     const fix = makeFixture();
     const perResolver = (_name: string, _here: Room) => 'FOREST';
-    const result = executeVerb(ctx(fix, { verb: 'walk', prep: 'north', here: fix.blockedRoom, perResolver }));
+    const result = await executeVerb(ctx(fix, { verb: 'walk', prep: 'north', here: fix.blockedRoom, perResolver }));
     expect(result.moved).toBe(true);
     expect(fix.player.parent?.id).toBe('FOREST');
   });
 
-  it('returns error when direction has no exit', () => {
+  it('returns error when direction has no exit', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'walk', prep: 'up' }));
+    const result = await executeVerb(ctx(fix, { verb: 'walk', prep: 'up' }));
     expect(result.moved).toBe(false);
     expect(result.output.length).toBeGreaterThan(0);
   });
 });
 
 describe('verb: take', () => {
-  it('moves a takeable item from the room to the player inventory', () => {
+  it('moves a takeable item from the room to the player inventory', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'take', dobjId: 'LANTERN' }));
+    const result = await executeVerb(ctx(fix, { verb: 'take', dobjId: 'LANTERN' }));
     expect(result.output).toMatch(/taken|ok/i);
     expect(fix.lantern.parent?.id).toBe('PLAYER');
   });
 
-  it('refuses to take an item without the Takeable flag', () => {
+  it('refuses to take an item without the Takeable flag', async () => {
     const fix = makeFixture();
     // chest is not Takeable.
-    const result = executeVerb(ctx(fix, { verb: 'take', dobjId: 'CHEST' }));
+    const result = await executeVerb(ctx(fix, { verb: 'take', dobjId: 'CHEST' }));
     expect(result.output.length).toBeGreaterThan(0);
     expect(fix.chest.parent?.id).toBe('CLEARING');
   });
 
-  it('refuses to take something the player already carries', () => {
+  it('refuses to take something the player already carries', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, { verb: 'take', dobjId: 'LANTERN' }));
+    const result = await executeVerb(ctx(fix, { verb: 'take', dobjId: 'LANTERN' }));
     expect(result.output.length).toBeGreaterThan(0);
     // Still with player (no double-take).
     expect(fix.lantern.parent?.id).toBe('PLAYER');
@@ -268,80 +268,80 @@ describe('verb: take', () => {
 });
 
 describe('verb: drop', () => {
-  it('moves a carried item from inventory to the current room', () => {
+  it('moves a carried item from inventory to the current room', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, { verb: 'drop', dobjId: 'LANTERN' }));
+    const result = await executeVerb(ctx(fix, { verb: 'drop', dobjId: 'LANTERN' }));
     expect(result.output).toMatch(/dropped|ok/i);
     expect(fix.lantern.parent?.id).toBe('CLEARING');
   });
 
-  it('refuses to drop an item not in inventory', () => {
+  it('refuses to drop an item not in inventory', async () => {
     const fix = makeFixture();
     // Lantern is on the floor, not held.
-    const result = executeVerb(ctx(fix, { verb: 'drop', dobjId: 'LANTERN' }));
+    const result = await executeVerb(ctx(fix, { verb: 'drop', dobjId: 'LANTERN' }));
     expect(result.output.length).toBeGreaterThan(0);
     expect(fix.lantern.parent?.id).toBe('CLEARING');
   });
 });
 
 describe('verb: open', () => {
-  it('sets the Open flag on a container', () => {
+  it('sets the Open flag on a container', async () => {
     const fix = makeFixture();
     // Close the mailbox first so we can open it.
     fix.mailbox.clear(Flag.Open);
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }));
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }));
     expect(result.output).toMatch(/open/i);
     expect(fix.mailbox.has(Flag.Open)).toBe(true);
   });
 
-  it('says already open if it is already open', () => {
+  it('says already open if it is already open', async () => {
     const fix = makeFixture();
     // Mailbox starts open in fixture.
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }));
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }));
     expect(result.output.length).toBeGreaterThan(0);
     expect(fix.mailbox.has(Flag.Open)).toBe(true);
   });
 });
 
 describe('verb: close', () => {
-  it('clears the Open flag on a container', () => {
+  it('clears the Open flag on a container', async () => {
     const fix = makeFixture();
     // mailbox starts open.
-    const result = executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }));
+    const result = await executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }));
     expect(result.output).toMatch(/close/i);
     expect(fix.mailbox.has(Flag.Open)).toBe(false);
   });
 
-  it('says already closed if not open', () => {
+  it('says already closed if not open', async () => {
     const fix = makeFixture();
     fix.mailbox.clear(Flag.Open);
-    const result = executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }));
+    const result = await executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }));
     expect(result.output.length).toBeGreaterThan(0);
     expect(fix.mailbox.has(Flag.Open)).toBe(false);
   });
 });
 
 describe('verb: read', () => {
-  it('prints the text prop of a readable item', () => {
+  it('prints the text prop of a readable item', async () => {
     const fix = makeFixture();
     // Leaflet is inside an open mailbox — bring to inventory for simplicity.
     fix.leaflet.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, { verb: 'read', dobjId: 'LEAFLET' }));
+    const result = await executeVerb(ctx(fix, { verb: 'read', dobjId: 'LEAFLET' }));
     expect(result.output).toContain('Infocom');
   });
 
-  it('falls back to ldesc for a readable item without a text prop', () => {
+  it('falls back to ldesc for a readable item without a text prop', async () => {
     const fix = makeFixture();
     fix.pamphlet.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, { verb: 'read', dobjId: 'PAMPHLET' }));
+    const result = await executeVerb(ctx(fix, { verb: 'read', dobjId: 'PAMPHLET' }));
     expect(result.output).toContain('pamphlet');
   });
 
-  it('refuses when the item lacks the Readable flag', () => {
+  it('refuses when the item lacks the Readable flag', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, { verb: 'read', dobjId: 'LANTERN' }));
+    const result = await executeVerb(ctx(fix, { verb: 'read', dobjId: 'LANTERN' }));
     expect(result.output.length).toBeGreaterThan(0);
     // Sanity: lantern has no text anyway.
     expect(result.output).not.toContain('undefined');
@@ -349,18 +349,18 @@ describe('verb: read', () => {
 });
 
 describe('verb: inventory', () => {
-  it('lists items the player is carrying', () => {
+  it('lists items the player is carrying', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
     fix.sword.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, { verb: 'inventory' }));
+    const result = await executeVerb(ctx(fix, { verb: 'inventory' }));
     expect(result.output).toContain('lantern');
     expect(result.output).toContain('sword');
   });
 
-  it('prints an empty-hands message when carrying nothing', () => {
+  it('prints an empty-hands message when carrying nothing', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'inventory' }));
+    const result = await executeVerb(ctx(fix, { verb: 'inventory' }));
     expect(result.output.length).toBeGreaterThan(0);
     // Should mention "empty" or "nothing" or "not carrying".
     expect(result.output).toMatch(/empty|nothing|not carrying/i);
@@ -368,45 +368,45 @@ describe('verb: inventory', () => {
 });
 
 describe('verb: examine', () => {
-  it('prints the ldesc of an object', () => {
+  it('prints the ldesc of an object', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'examine', dobjId: 'LANTERN' }));
+    const result = await executeVerb(ctx(fix, { verb: 'examine', dobjId: 'LANTERN' }));
     expect(result.output).toContain('tarnished');
   });
 
-  it('falls back to desc when ldesc is absent', () => {
+  it('falls back to desc when ldesc is absent', async () => {
     const fix = makeFixture();
     // Remove ldesc from pamphlet and confirm we still get a response.
     fix.pamphlet.ldesc = undefined;
-    const result = executeVerb(ctx(fix, { verb: 'examine', dobjId: 'PAMPHLET' }));
+    const result = await executeVerb(ctx(fix, { verb: 'examine', dobjId: 'PAMPHLET' }));
     expect(result.output).toContain('pamphlet');
   });
 });
 
 describe('verb: put X in Y', () => {
-  it('moves the dobj into an open container iobj', () => {
+  it('moves the dobj into an open container iobj', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
     fix.chest.set(Flag.Open);
-    const result = executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }));
+    const result = await executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }));
     expect(result.output.length).toBeGreaterThan(0);
     expect(fix.lantern.parent?.id).toBe('CHEST');
   });
 
-  it('refuses to put into a closed container', () => {
+  it('refuses to put into a closed container', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
     // chest is closed by default.
-    const result = executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }));
+    const result = await executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }));
     expect(result.output.length).toBeGreaterThan(0);
     expect(fix.lantern.parent?.id).not.toBe('CHEST');
   });
 
-  it('refuses to put something not held by the player', () => {
+  it('refuses to put something not held by the player', async () => {
     const fix = makeFixture();
     // lantern is on the floor, not held.
     fix.chest.set(Flag.Open);
-    const result = executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }));
+    const result = await executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }));
     expect(result.output.length).toBeGreaterThan(0);
     expect(fix.lantern.parent?.id).not.toBe('CHEST');
   });
@@ -423,9 +423,9 @@ describe('verb: put X in Y', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-LOOK-UNDER (action)', () => {
-  it('always emits "There is nothing but dust there." (gverbs.zil:900)', () => {
+  it('always emits "There is nothing but dust there." (gverbs.zil:900)', async () => {
     const fix = makeFixture();
-    const result = executeVerb(
+    const result = await executeVerb(
       ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'UNDER' }),
       'V-LOOK-UNDER',
     );
@@ -433,9 +433,9 @@ describe('V-LOOK-UNDER (action)', () => {
     expect(result.moved).toBe(false);
   });
 
-  it('does NOT re-describe the room', () => {
+  it('does NOT re-describe the room', async () => {
     const fix = makeFixture();
-    const result = executeVerb(
+    const result = await executeVerb(
       ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'UNDER' }),
       'V-LOOK-UNDER',
     );
@@ -444,9 +444,9 @@ describe('V-LOOK-UNDER (action)', () => {
 });
 
 describe('V-LOOK-BEHIND (action)', () => {
-  it('emits "There is nothing behind the <desc>." (gverbs.zil:863)', () => {
+  it('emits "There is nothing behind the <desc>." (gverbs.zil:863)', async () => {
     const fix = makeFixture();
-    const result = executeVerb(
+    const result = await executeVerb(
       ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'BEHIND' }),
       'V-LOOK-BEHIND',
     );
@@ -454,9 +454,9 @@ describe('V-LOOK-BEHIND (action)', () => {
     expect(result.moved).toBe(false);
   });
 
-  it('does NOT re-describe the room', () => {
+  it('does NOT re-describe the room', async () => {
     const fix = makeFixture();
-    const result = executeVerb(
+    const result = await executeVerb(
       ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'BEHIND' }),
       'V-LOOK-BEHIND',
     );
@@ -465,10 +465,10 @@ describe('V-LOOK-BEHIND (action)', () => {
 });
 
 describe('V-LOOK-ON (action)', () => {
-  it('emits "Look on a <desc>???" when PRSO lacks SURFACEBIT (gverbs.zil:897)', () => {
+  it('emits "Look on a <desc>???" when PRSO lacks SURFACEBIT (gverbs.zil:897)', async () => {
     const fix = makeFixture();
     // Lantern has no SURFACEBIT — the non-surface branch.
-    const result = executeVerb(
+    const result = await executeVerb(
       ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'ON' }),
       'V-LOOK-ON',
     );
@@ -476,14 +476,14 @@ describe('V-LOOK-ON (action)', () => {
     expect(result.moved).toBe(false);
   });
 
-  it('delegates to LOOK-INSIDE when PRSO has SURFACEBIT (gverbs.zil:893-894)', () => {
+  it('delegates to LOOK-INSIDE when PRSO has SURFACEBIT (gverbs.zil:893-894)', async () => {
     const fix = makeFixture();
     // Give the lantern SURFACEBIT and add something on it.
     fix.lantern.set(Flag.Surface);
     fix.lantern.set(Flag.Container);
     fix.lantern.set(Flag.Open);
     fix.sword.moveTo(fix.lantern);
-    const result = executeVerb(
+    const result = await executeVerb(
       ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'ON' }),
       'V-LOOK-ON',
     );
@@ -492,9 +492,9 @@ describe('V-LOOK-ON (action)', () => {
     expect(result.output).toContain('sword');
   });
 
-  it('does NOT re-describe the room', () => {
+  it('does NOT re-describe the room', async () => {
     const fix = makeFixture();
-    const result = executeVerb(
+    const result = await executeVerb(
       ctx(fix, { verb: 'look', dobjId: 'LANTERN', prep: 'ON' }),
       'V-LOOK-ON',
     );

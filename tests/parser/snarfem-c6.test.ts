@@ -467,7 +467,7 @@ describe('C6 integration via Game.turn', () => {
     const game = createGame({ startRoom: 'WEST-OF-HOUSE' });
     game.start();
 
-    const result = game.turn('take all');
+    const result = await game.turn('take all');
     // Should NOT produce MANY-CHECK error for TAKE
     expect(result.output).not.toContain('You can\'t use multiple direct objects with "take"');
   });
@@ -480,9 +480,9 @@ describe('C6 integration via Game.turn', () => {
     const game = createGame({ startRoom: 'WEST-OF-HOUSE' });
     game.start();
     // Open mailbox first to expose leaflet
-    game.turn('open mailbox');
+    await game.turn('open mailbox');
 
-    const result = game.turn('read all');
+    const result = await game.turn('read all');
     // Should either succeed (if only 1 readable visible) or fail with MANY-CHECK
     // (if 2+ readables visible). Either way should not crash or produce "I don't know..."
     expect(result.output).not.toContain('I don\'t know the word "all"');
@@ -498,11 +498,11 @@ describe('C6 integration via Game.turn', () => {
 
     const game = createGame({ startRoom: 'WEST-OF-HOUSE' });
     game.start();
-    game.turn('open mailbox');  // expose leaflet
+    await game.turn('open mailbox');  // expose leaflet
 
     // "read leaflet" — leaflet in mailbox (open container, reachable but not held)
     // READ has STAKE: if not held → auto-take → "(Taken)" echoed
-    const result = game.turn('read leaflet');
+    const result = await game.turn('read leaflet');
     // The "(Taken)" should appear in the output
     expect(result.output).toContain('(Taken)');
   });
@@ -515,7 +515,7 @@ describe('C6 integration via Game.turn', () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
 
-    const result = game.turn('take all');
+    const result = await game.turn('take all');
     // Player should NEVER appear as a take-all candidate
     expect(result.output).not.toContain('cretin');
     // Result should not be an error about MANY-CHECK
@@ -530,7 +530,7 @@ describe('C6 integration via Game.turn', () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
 
-    const result = game.turn('take all');
+    const result = await game.turn('take all');
     // The output must contain at least one "desc: " prefix — takeable objects
     // in Living Room are sword and brass lantern.
     const hasSwordPrefix = result.output.includes('sword:') || result.output.includes('sword: ');
@@ -548,7 +548,7 @@ describe('C6 integration via Game.turn', () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
 
-    const result = game.turn('examine all');
+    const result = await game.turn('examine all');
     // Player should NEVER appear as an examine-all candidate
     expect(result.output).not.toContain('cretin');
     // Room objects should NOT appear (EXAMINE scope bits don't cover room tier)
@@ -574,7 +574,7 @@ describe('C6-FIX oracle: "take all" in LIVING-ROOM', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
-    const result = game.turn('take all');
+    const result = await game.turn('take all');
     // Verbatim refusal lines from ZIL action handlers
     expect(result.output).toContain('carpet: The rug is extremely heavy and cannot be carried.');
     expect(result.output).toContain('trophy case: The trophy case is securely fastened to the wall.');
@@ -584,7 +584,7 @@ describe('C6-FIX oracle: "take all" in LIVING-ROOM', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
-    const result = game.turn('take all');
+    const result = await game.turn('take all');
     expect(result.output).toContain('sword: Taken.');
     expect(result.output).toContain('brass lantern: Taken.');
   });
@@ -595,7 +595,7 @@ describe('C6-FIX oracle: "take all" in LIVING-ROOM', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
-    const result = game.turn('take all');
+    const result = await game.turn('take all');
     // Full verbatim output matches oracle order
     const expected =
       'sword: Taken.\n' +
@@ -618,7 +618,7 @@ describe('C6-FIX oracle: "take all" in KITCHEN', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const game = createGame({ startRoom: 'KITCHEN' });
     game.start();
-    const result = game.turn('take all');
+    const result = await game.turn('take all');
     // Water must NOT appear in take all output
     expect(result.output).not.toContain('quantity of water');
     expect(result.output).not.toContain("You can't reach");
@@ -630,7 +630,7 @@ describe('C6-FIX oracle: "take all" in KITCHEN', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const game = createGame({ startRoom: 'KITCHEN' });
     game.start();
-    const result = game.turn('take all');
+    const result = await game.turn('take all');
     const expected = 'glass bottle: Taken.\nbrown sack: Taken.';
     expect(result.output).toBe(expected);
   });
@@ -648,7 +648,7 @@ describe('C6-FIX oracle: "examine all" in LIVING-ROOM (A3 STAIRS)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
-    const result = game.turn('examine all');
+    const result = await game.turn('examine all');
     // STAIRS must appear, global-objects must not
     expect(result.output).toContain('stairs:');
     expect(result.output).not.toContain('set of teeth');
@@ -660,7 +660,7 @@ describe('C6-FIX oracle: "examine all" in LIVING-ROOM (A3 STAIRS)', () => {
     const { createGame } = await import('../../src/engine/bootstrap.js');
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     game.start();
-    const result = game.turn('examine all');
+    const result = await game.turn('examine all');
     expect(result.output).toBe("stairs: There's nothing special about the stairs.");
   });
 });

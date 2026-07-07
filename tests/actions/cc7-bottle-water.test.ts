@@ -92,29 +92,29 @@ function trollRoomWithBottle() {
 
 // THROW needs "throw bottle AT <ACTORBIT>" — gsyntax.zil:486–487. Troll has ACTORBIT.
 describe('CC7 — BOTTLE-FUNCTION: throw bottle → shatters (1actions.zil:1492–1496)', () => {
-  it('throw bottle at troll: shatters message emitted', () => {
+  it('throw bottle at troll: shatters message emitted', async () => {
     const g = trollRoomWithBottle();
-    const out = g.turn('throw bottle at troll').output;
+    const out = await (await g.turn('throw bottle at troll')).output;
     expect(out).toContain('shatters');
   });
 
-  it('throw bottle at troll: bottle removed from world', () => {
+  it('throw bottle at troll: bottle removed from world', async () => {
     const g = trollRoomWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
 
-    g.turn('throw bottle at troll');
+    await g.turn('throw bottle at troll');
 
     expect(bottle!.parent, 'BOTTLE must be removed after throw').toBeNull();
   });
 
-  it('throw bottle at troll: water also removed (spills as bottle shatters)', () => {
+  it('throw bottle at troll: water also removed (spills as bottle shatters)', async () => {
     const g = trollRoomWithBottle();
     const water = g.world.get('WATER');
     expect(water, 'WATER must exist').toBeDefined();
     expect(water!.parent?.id, 'WATER must be in BOTTLE before throw').toBe('BOTTLE');
 
-    g.turn('throw bottle at troll');
+    await g.turn('throw bottle at troll');
 
     expect(water!.parent, 'WATER must be removed after bottle shatters').toBeNull();
   });
@@ -125,18 +125,18 @@ describe('CC7 — BOTTLE-FUNCTION: throw bottle → shatters (1actions.zil:1492�
 // ---------------------------------------------------------------------------
 
 describe('CC7 — BOTTLE-FUNCTION: mung/destroy bottle (1actions.zil:1496–1499)', () => {
-  it('mung bottle: "brilliant maneuver destroys the bottle" message', () => {
+  it('mung bottle: "brilliant maneuver destroys the bottle" message', async () => {
     const g = kitchenWithBottle();
     // Give player a weapon so PRE-MUNG passes.
     const sword = g.world.get('SWORD');
     expect(sword, 'SWORD must exist').toBeDefined();
     sword!.moveTo(g.player);
 
-    const out = g.turn('break bottle with sword').output;
+    const out = await (await g.turn('break bottle with sword')).output;
     expect(out).toContain('brilliant maneuver destroys the bottle');
   });
 
-  it('mung bottle: bottle removed from world', () => {
+  it('mung bottle: bottle removed from world', async () => {
     const g = kitchenWithBottle();
     const sword = g.world.get('SWORD');
     expect(sword, 'SWORD must exist').toBeDefined();
@@ -145,7 +145,7 @@ describe('CC7 — BOTTLE-FUNCTION: mung/destroy bottle (1actions.zil:1496–1499
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
 
-    g.turn('break bottle with sword');
+    await g.turn('break bottle with sword');
 
     expect(bottle!.parent, 'BOTTLE must be removed after mung').toBeNull();
   });
@@ -156,17 +156,17 @@ describe('CC7 — BOTTLE-FUNCTION: mung/destroy bottle (1actions.zil:1496–1499
 // ---------------------------------------------------------------------------
 
 describe('CC7 — BOTTLE-FUNCTION: shake open bottle → spill (1actions.zil:1500–1506)', () => {
-  it('shake open bottle: "water spills to the floor and evaporates"', () => {
+  it('shake open bottle: "water spills to the floor and evaporates"', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
     bottle!.set(Flag.Open);
 
-    const out = g.turn('shake bottle').output;
+    const out = await (await g.turn('shake bottle')).output;
     expect(out).toContain('evaporates');
   });
 
-  it('shake open bottle: water removed from world', () => {
+  it('shake open bottle: water removed from world', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
@@ -175,7 +175,7 @@ describe('CC7 — BOTTLE-FUNCTION: shake open bottle → spill (1actions.zil:150
     expect(water, 'WATER must exist').toBeDefined();
     expect(water!.parent?.id, 'WATER must be in BOTTLE before shake').toBe('BOTTLE');
 
-    g.turn('shake bottle');
+    await g.turn('shake bottle');
 
     expect(water!.parent, 'WATER must be removed after shake-spill').toBeNull();
   });
@@ -186,18 +186,18 @@ describe('CC7 — BOTTLE-FUNCTION: shake open bottle → spill (1actions.zil:150
 // ---------------------------------------------------------------------------
 
 describe('CC7 — V-SHAKE: closed bottle sounds (gverbs.zil:1233–1237)', () => {
-  it('shake closed bottle with water inside: "something inside" message', () => {
+  it('shake closed bottle with water inside: "something inside" message', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
     // Bottle starts closed — BOTTLE-FUNCTION returns false, V-SHAKE default runs.
     expect(bottle!.has(Flag.Open), 'BOTTLE must start closed for this test').toBe(false);
 
-    const out = g.turn('shake bottle').output;
+    const out = await (await g.turn('shake bottle')).output;
     expect(out).toContain('something inside');
   });
 
-  it('shake closed bottle: water NOT spilled', () => {
+  it('shake closed bottle: water NOT spilled', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
@@ -205,7 +205,7 @@ describe('CC7 — V-SHAKE: closed bottle sounds (gverbs.zil:1233–1237)', () =>
     const water = g.world.get('WATER');
     expect(water, 'WATER must exist').toBeDefined();
 
-    g.turn('shake bottle');
+    await g.turn('shake bottle');
 
     expect(water!.parent?.id, 'WATER must remain in BOTTLE after closed-shake').toBe('BOTTLE');
   });
@@ -217,7 +217,7 @@ describe('CC7 — V-SHAKE: closed bottle sounds (gverbs.zil:1233–1237)', () =>
 // ---------------------------------------------------------------------------
 
 describe('CC7 — WATER-F: pour/drop water → evaporates (1actions.zil:219–233)', () => {
-  it('pour water (no target): evaporates message', () => {
+  it('pour water (no target): evaporates message', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
@@ -226,11 +226,11 @@ describe('CC7 — WATER-F: pour/drop water → evaporates (1actions.zil:219–23
     expect(water, 'WATER must exist').toBeDefined();
     water!.moveTo(g.player);   // water in player inventory (poured out of bottle)
 
-    const out = g.turn('pour water').output;
+    const out = await (await g.turn('pour water')).output;
     expect(out).toContain('evaporates');
   });
 
-  it('pour water (no target): water removed', () => {
+  it('pour water (no target): water removed', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
@@ -239,12 +239,12 @@ describe('CC7 — WATER-F: pour/drop water → evaporates (1actions.zil:219–23
     expect(water, 'WATER must exist').toBeDefined();
     water!.moveTo(g.player);
 
-    g.turn('pour water');
+    await g.turn('pour water');
 
     expect(water!.parent, 'WATER must be removed after pour').toBeNull();
   });
 
-  it('pour water from closed bottle: "The bottle is closed."', () => {
+  it('pour water from closed bottle: "The bottle is closed."', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
@@ -254,7 +254,7 @@ describe('CC7 — WATER-F: pour/drop water → evaporates (1actions.zil:219–23
     expect(water, 'WATER must exist').toBeDefined();
     expect(water!.parent?.id, 'WATER must be in BOTTLE').toBe('BOTTLE');
 
-    const out = g.turn('pour water').output;
+    const out = await (await g.turn('pour water')).output;
     expect(out).toContain('bottle is closed');
   });
 });
@@ -267,7 +267,7 @@ describe('CC7 — WATER-F: pour/drop water → evaporates (1actions.zil:219–23
 // ---------------------------------------------------------------------------
 
 describe('CC7 — WATER-F: take water from open bottle → slips through fingers (1actions.zil:195–204)', () => {
-  it('take water from open held bottle: "slips through your fingers" message', () => {
+  it('take water from open held bottle: "slips through your fingers" message', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
@@ -276,11 +276,11 @@ describe('CC7 — WATER-F: take water from open bottle → slips through fingers
     expect(water, 'WATER must exist').toBeDefined();
     expect(water!.parent?.id, 'WATER must be in BOTTLE').toBe('BOTTLE');
 
-    const out = g.turn('take water').output;
+    const out = await (await g.turn('take water')).output;
     expect(out).toContain('slips through your fingers');
   });
 
-  it('take water from open held bottle: water stays in BOTTLE (not pocketed)', () => {
+  it('take water from open held bottle: water stays in BOTTLE (not pocketed)', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
@@ -288,7 +288,7 @@ describe('CC7 — WATER-F: take water from open bottle → slips through fingers
     const water = g.world.get('WATER');
     expect(water, 'WATER must exist').toBeDefined();
 
-    g.turn('take water');
+    await g.turn('take water');
 
     expect(water!.parent?.id, 'WATER must remain in BOTTLE after take').toBe('BOTTLE');
   });
@@ -300,29 +300,29 @@ describe('CC7 — WATER-F: take water from open bottle → slips through fingers
 // ---------------------------------------------------------------------------
 
 describe('CC7 — BOTTLE-FUNCTION: throw bottle (no target) → shatters (1actions.zil:1492–1496)', () => {
-  it('throw bottle (no target): shatters message emitted', () => {
+  it('throw bottle (no target): shatters message emitted', async () => {
     const g = kitchenWithBottle();
-    const out = g.turn('throw bottle').output;
+    const out = await (await g.turn('throw bottle')).output;
     expect(out).toContain('shatters');
   });
 
-  it('throw bottle (no target): bottle removed from world', () => {
+  it('throw bottle (no target): bottle removed from world', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
 
-    g.turn('throw bottle');
+    await g.turn('throw bottle');
 
     expect(bottle!.parent, 'BOTTLE must be removed after throw').toBeNull();
   });
 
-  it('throw bottle (no target): water also removed (spills)', () => {
+  it('throw bottle (no target): water also removed (spills)', async () => {
     const g = kitchenWithBottle();
     const water = g.world.get('WATER');
     expect(water, 'WATER must exist').toBeDefined();
     expect(water!.parent?.id, 'WATER must be in BOTTLE before throw').toBe('BOTTLE');
 
-    g.turn('throw bottle');
+    await g.turn('throw bottle');
 
     expect(water!.parent, 'WATER must be removed after bottle shatters').toBeNull();
   });
@@ -333,18 +333,18 @@ describe('CC7 — BOTTLE-FUNCTION: throw bottle (no target) → shatters (1actio
 // ---------------------------------------------------------------------------
 
 describe('CC7 — WATER-F / V-DRINK: open-bottle drink (gverbs.zil:483–524)', () => {
-  it('drink water from open bottle: HIT-SPOT thirst message', () => {
+  it('drink water from open bottle: HIT-SPOT thirst message', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
     bottle!.set(Flag.Open);
     bottle!.moveTo(g.player);
 
-    const out = g.turn('drink water').output;
+    const out = await (await g.turn('drink water')).output;
     expect(out).toContain('rather thirsty');
   });
 
-  it('drink water from open bottle: water consumed (removed from world)', () => {
+  it('drink water from open bottle: water consumed (removed from world)', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
@@ -354,12 +354,12 @@ describe('CC7 — WATER-F / V-DRINK: open-bottle drink (gverbs.zil:483–524)', 
     expect(water, 'WATER must exist').toBeDefined();
     expect(water!.parent?.id, 'WATER must be in BOTTLE before drink').toBe('BOTTLE');
 
-    g.turn('drink water');
+    await g.turn('drink water');
 
     expect(water!.parent, 'WATER must be removed after drinking').toBeNull();
   });
 
-  it('drink water from closed bottle: bottle-closed gate message', () => {
+  it('drink water from closed bottle: bottle-closed gate message', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
@@ -367,11 +367,11 @@ describe('CC7 — WATER-F / V-DRINK: open-bottle drink (gverbs.zil:483–524)', 
     expect(bottle!.has(Flag.Open), 'BOTTLE must start closed').toBe(false);
     bottle!.moveTo(g.player);
 
-    const out = g.turn('drink water').output;
+    const out = await (await g.turn('drink water')).output;
     expect(out).toContain('open the glass bottle first');
   });
 
-  it('drink water from closed bottle: water NOT consumed', () => {
+  it('drink water from closed bottle: water NOT consumed', async () => {
     const g = kitchenWithBottle();
     const bottle = g.world.get('BOTTLE');
     expect(bottle, 'BOTTLE must exist').toBeDefined();
@@ -380,7 +380,7 @@ describe('CC7 — WATER-F / V-DRINK: open-bottle drink (gverbs.zil:483–524)', 
     const water = g.world.get('WATER');
     expect(water, 'WATER must exist').toBeDefined();
 
-    g.turn('drink water');
+    await g.turn('drink water');
 
     expect(water!.parent?.id, 'WATER must remain in BOTTLE after failed drink').toBe('BOTTLE');
   });
@@ -406,39 +406,39 @@ describe('CC7 — V-POUR-ON: pour water on lit candle (gverbs.zil:1024–1038)',
     return g;
   }
 
-  it('pour water on lit candles: extinguished message', () => {
+  it('pour water on lit candles: extinguished message', async () => {
     const g = templeWithWater();
     const candles = g.world.get('CANDLES');
     expect(candles, 'CANDLES must exist').toBeDefined();
     // Candles start lit (have OnFire and Light flags).
     expect(candles!.has(Flag.OnFire), 'CANDLES must be lit (OnFire) for test').toBe(true);
 
-    const out = g.turn('pour water on candles').output;
+    const out = await (await g.turn('pour water on candles')).output;
     expect(out).toContain('extinguished');
   });
 
-  it('pour water on lit candles: candles lose OnFire flag', () => {
+  it('pour water on lit candles: candles lose OnFire flag', async () => {
     const g = templeWithWater();
     const candles = g.world.get('CANDLES');
     expect(candles, 'CANDLES must exist').toBeDefined();
     expect(candles!.has(Flag.OnFire), 'CANDLES must be lit for test').toBe(true);
 
-    g.turn('pour water on candles');
+    await g.turn('pour water on candles');
 
     expect(candles!.has(Flag.OnFire), 'CANDLES must not have OnFire after pour').toBe(false);
   });
 
-  it('pour water on lit candles: water removed', () => {
+  it('pour water on lit candles: water removed', async () => {
     const g = templeWithWater();
     const water = g.world.get('WATER');
     expect(water, 'WATER must exist').toBeDefined();
 
-    g.turn('pour water on candles');
+    await g.turn('pour water on candles');
 
     expect(water!.parent, 'WATER must be removed after pour').toBeNull();
   });
 
-  it('pour water on unlit object: evaporates message', () => {
+  it('pour water on unlit object: evaporates message', async () => {
     const g = templeWithWater();
     // Place the bottle in SOUTH-TEMPLE so it's a targetable unlit object.
     const temple = g.world.get('SOUTH-TEMPLE');
@@ -448,7 +448,7 @@ describe('CC7 — V-POUR-ON: pour water on lit candle (gverbs.zil:1024–1038)',
     bottle!.moveTo(temple!);
     // Bottle has no OnFire flag → not FLAMING? → evaporates path.
 
-    const out = g.turn('pour water on bottle').output;
+    const out = await (await g.turn('pour water on bottle')).output;
     expect(out).toContain('evaporates');
   });
 });

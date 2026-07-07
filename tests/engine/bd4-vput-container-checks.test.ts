@@ -85,18 +85,18 @@ function ctx(fix: Fix, dobjId: string, iobjId: string): VerbContext {
 // ---------------------------------------------------------------------------
 
 describe('BD4 — V-PUT self-containment', () => {
-  it('returns "How can you do that?" when putting a container into itself', () => {
+  it('returns "How can you do that?" when putting a container into itself', async () => {
     const fix = makeFixture();
     fix.box.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, 'BOX', 'BOX'), 'V-PUT');
+    const result = await executeVerb(ctx(fix, 'BOX', 'BOX'), 'V-PUT');
     expect(result.output).toBe(vPut.how);
     expect(result.output).toBe('How can you do that?');
   });
 
-  it('does not move the container', () => {
+  it('does not move the container', async () => {
     const fix = makeFixture();
     fix.box.moveTo(fix.player);
-    executeVerb(ctx(fix, 'BOX', 'BOX'), 'V-PUT');
+    await executeVerb(ctx(fix, 'BOX', 'BOX'), 'V-PUT');
     expect(fix.box.parent).toBe(fix.player);
   });
 });
@@ -106,14 +106,14 @@ describe('BD4 — V-PUT self-containment', () => {
 // ---------------------------------------------------------------------------
 
 describe('BD4 — V-PUT already-in', () => {
-  it('reports already-in message with correct names', () => {
+  it('reports already-in message with correct names', async () => {
     const fix = makeFixture();
     // place coin inside box, player holds nothing relevant
     fix.coin.moveTo(fix.box);
     // player tries to put coin in box (coin is already in box — not held by player,
     // but we want to test guard 3 triggers before the not-held guard)
     // Guard order in ZIL: not-open → self → already-in → capacity → not-held → try-take
-    const result = executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
+    const result = await executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
     expect(result.output).toBe(fmt(vPut.alreadyIn, 'gold coin', 'wooden box'));
     expect(result.output).toBe('The gold coin is already in the wooden box.');
   });
@@ -124,25 +124,25 @@ describe('BD4 — V-PUT already-in', () => {
 // ---------------------------------------------------------------------------
 
 describe('BD4 — V-PUT capacity check', () => {
-  it('returns "There\'s no room." when item is too heavy for container', () => {
+  it('returns "There\'s no room." when item is too heavy for container', async () => {
     const fix = makeFixture();
     fix.boulder.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, 'BOULDER', 'BOX'), 'V-PUT');
+    const result = await executeVerb(ctx(fix, 'BOULDER', 'BOX'), 'V-PUT');
     expect(result.output).toBe(vPut.noRoom);
     expect(result.output).toBe("There's no room.");
   });
 
-  it('allows put when item fits exactly', () => {
+  it('allows put when item fits exactly', async () => {
     const fix = makeFixture();
     // box capacity=10, box SIZE=5, box currently empty so content-weight=0
     // coin SIZE=3 → 0+3 <= 10 → fits
     fix.coin.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
+    const result = await executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
     expect(result.output).toBe(vPut.done);
     expect(result.output).toBe('Done.');
   });
 
-  it('rejects when contents plus new item exceed capacity', () => {
+  it('rejects when contents plus new item exceed capacity', async () => {
     const fix = makeFixture();
     // fill box with a size-9 thing
     const stone = new Thing('STONE', 'stone', { synonyms: ['stone'] });
@@ -151,7 +151,7 @@ describe('BD4 — V-PUT capacity check', () => {
     fix.world.register(stone);
     // coin size=3; content weight already 9; 9+3 > 10 → no room
     fix.coin.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
+    const result = await executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
     expect(result.output).toBe(vPut.noRoom);
   });
 });
@@ -161,33 +161,33 @@ describe('BD4 — V-PUT capacity check', () => {
 // ---------------------------------------------------------------------------
 
 describe('BD4 — V-PUT success sets TOUCHBIT and calls SCORE-OBJ', () => {
-  it('sets Flag.Touched on the moved item', () => {
+  it('sets Flag.Touched on the moved item', async () => {
     const fix = makeFixture();
     fix.coin.moveTo(fix.player);
     expect(fix.coin.has(Flag.Touched)).toBe(false);
-    executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
+    await executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
     expect(fix.coin.has(Flag.Touched)).toBe(true);
   });
 
-  it('calls scoreObj with the moved item', () => {
+  it('calls scoreObj with the moved item', async () => {
     const fix = makeFixture();
     fix.coin.moveTo(fix.player);
-    executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
+    await executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
     expect(fix.scoreLog).toHaveLength(1);
     expect(fix.scoreLog[0]!.obj).toBe('COIN');
   });
 
-  it('moves item into container', () => {
+  it('moves item into container', async () => {
     const fix = makeFixture();
     fix.coin.moveTo(fix.player);
-    executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
+    await executeVerb(ctx(fix, 'COIN', 'BOX'), 'V-PUT');
     expect(fix.coin.parent).toBe(fix.box);
   });
 
-  it('does not call scoreObj on a failed put', () => {
+  it('does not call scoreObj on a failed put', async () => {
     const fix = makeFixture();
     fix.boulder.moveTo(fix.player);
-    executeVerb(ctx(fix, 'BOULDER', 'BOX'), 'V-PUT');
+    await executeVerb(ctx(fix, 'BOULDER', 'BOX'), 'V-PUT');
     expect(fix.scoreLog).toHaveLength(0);
   });
 });
@@ -207,15 +207,15 @@ describe('BD4 — V-PUT success sets TOUCHBIT and calls SCORE-OBJ', () => {
 // (18 + 9) - 9 = 18 > 9 (capacity) → no room.
 
 describe('BD4 — capacity uses ZIL default SIZE=5 for items without explicit SIZE', () => {
-  it('rejects put bottle in sack (dfrotz R119: "There\'s no room.")', () => {
+  it('rejects put bottle in sack (dfrotz R119: "There\'s no room.")', async () => {
     const game = newGameAt('KITCHEN');
-    game.turn('open sack');
-    game.turn('take bottle');
-    const result = game.turn('put bottle in sack');
+    await game.turn('open sack');
+    await game.turn('take bottle');
+    const result = await game.turn('put bottle in sack');
     expect(result.output).toBe("There's no room.");
   });
 
-  it('weight() counts absent-SIZE items as 5 per ZIL PROPDEF', () => {
+  it('weight() counts absent-SIZE items as 5 per ZIL PROPDEF', async () => {
     // Minimal fixture: a container with capacity 4, and two SIZE-less items.
     // With default-0: 0+0 <= 4 → fits. With default-5: 5+5=10 > 4 → no room.
     const room = new Room('R', 'Room', { ldesc: 'A room.' });
@@ -248,7 +248,7 @@ describe('BD4 — capacity uses ZIL default SIZE=5 for items without explicit SI
     // WEIGHT(box) = SIZE(box=5) + WEIGHT(apple=5) = 10
     // WEIGHT(pear) = 5
     // (10 + 5) - 5 = 10 > 4 → no room
-    const result = executeVerb(vctx, 'V-PUT');
+    const result = await executeVerb(vctx, 'V-PUT');
     expect(result.output).toBe("There's no room.");
   });
 });

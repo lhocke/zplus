@@ -31,22 +31,22 @@ describe('brief mode — touched room', () => {
     expect(startOut).toContain(F1_LDESC_FRAGMENT);
   });
 
-  it('(a) revisit after travel prints title-only (no ldesc)', () => {
+  it('(a) revisit after travel prints title-only (no ldesc)', async () => {
     const game = createGame({ startRoom: 'FOREST-1' });
     game.start(); // first visit FOREST-1 (Touched, verbose by untouched rule)
-    game.turn('east'); // → PATH (first visit, untouched)
-    const r = game.turn('west'); // back to FOREST-1 — now touched → brief
+    await game.turn('east'); // → PATH (first visit, untouched)
+    const r = await game.turn('west'); // back to FOREST-1 — now touched → brief
     // Title must be present
     expect(r.output).toContain('Forest');
     // ldesc must NOT reprint on revisit in brief mode
     expect(r.output).not.toContain(F1_LDESC_FRAGMENT);
   });
 
-  it('(a) brief arrival is non-empty (no hard-lock silent arrival)', () => {
+  it('(a) brief arrival is non-empty (no hard-lock silent arrival)', async () => {
     const game = createGame({ startRoom: 'FOREST-1' });
     game.start();
-    game.turn('east'); // → PATH
-    const r = game.turn('west'); // revisit FOREST-1
+    await game.turn('east'); // → PATH
+    const r = await game.turn('west'); // revisit FOREST-1
     expect(r.output.trim().length).toBeGreaterThan(0);
   });
 });
@@ -55,12 +55,12 @@ describe('brief mode — touched room', () => {
 // (b) Explicit LOOK forces full desc on touched room
 // ---------------------------------------------------------------------------
 describe('explicit look forces verbose on touched room', () => {
-  it('(b) look in touched room prints ldesc', () => {
+  it('(b) look in touched room prints ldesc', async () => {
     const game = createGame({ startRoom: 'FOREST-1' });
     game.start(); // first visit FOREST-1 (gets Touched)
-    game.turn('east'); // → PATH (first visit)
-    game.turn('west'); // revisit FOREST-1 (now touched, brief)
-    const r = game.turn('look'); // explicit look → full desc
+    await game.turn('east'); // → PATH (first visit)
+    await game.turn('west'); // revisit FOREST-1 (now touched, brief)
+    const r = await game.turn('look'); // explicit look → full desc
     expect(r.output).toContain(F1_LDESC_FRAGMENT);
   });
 });
@@ -89,7 +89,7 @@ describe('maze room always verbose', () => {
     expect(startOut).toContain('open field west of a white house');
   });
 
-  it('(c) maze room repeated look always shows ldesc (Touched cleared each time)', () => {
+  it('(c) maze room repeated look always shows ldesc (Touched cleared each time)', async () => {
     // MAZE-1 is dark without lamp; the maze TOUCHBIT-clear fires within describeRoomShared
     // regardless. Verify indirectly: after start at FOREST-1, the second look still shows
     // ldesc because FOREST-1 doesn't have Flag.Maze (touched → brief), but maze rooms do.
@@ -97,14 +97,14 @@ describe('maze room always verbose', () => {
     // Integration-level proof: LOOK in a non-maze touched room → brief.
     const game = createGame({ startRoom: 'FOREST-1' });
     game.start(); // first visit FOREST-1 (Touched)
-    game.turn('east'); // → PATH
-    game.turn('west'); // revisit FOREST-1 (brief)
+    await game.turn('east'); // → PATH
+    await game.turn('west'); // revisit FOREST-1 (brief)
     // Now look → explicit look forces verbose
-    const rLook = game.turn('look');
+    const rLook = await game.turn('look');
     expect(rLook.output).toContain(F1_LDESC_FRAGMENT);
     // And movement revisit is still brief (not a maze room)
-    game.turn('east'); // → PATH
-    const rRevisiit = game.turn('west'); // revisit FOREST-1 again
+    await game.turn('east'); // → PATH
+    const rRevisiit = await game.turn('west'); // revisit FOREST-1 again
     expect(rRevisiit.output).not.toContain(F1_LDESC_FRAGMENT);
   });
 });
@@ -113,36 +113,36 @@ describe('maze room always verbose', () => {
 // (d) VERBOSE global: verbVerbose sets globals, revisit prints full desc
 // ---------------------------------------------------------------------------
 describe('verbose global enables full desc on revisit', () => {
-  it('(d) verbVerbose sets VERBOSE=true and returns "Maximum verbosity."', () => {
+  it('(d) verbVerbose sets VERBOSE=true and returns "Maximum verbosity."', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const r = game.turn('verbose');
+    const r = await game.turn('verbose');
     expect(r.output).toBe('Maximum verbosity.');
   });
 
-  it('(d) after verbose, revisit of touched room shows ldesc', () => {
+  it('(d) after verbose, revisit of touched room shows ldesc', async () => {
     const game = createGame({ startRoom: 'FOREST-1' });
     game.start(); // first visit FOREST-1 (Touched)
-    game.turn('east'); // → PATH (first visit)
-    game.turn('west'); // revisit FOREST-1 (brief — no ldesc)
-    game.turn('verbose'); // VERBOSE=true
-    const r = game.turn('east'); // → PATH (touched, but VERBOSE=true → verbose)
+    await game.turn('east'); // → PATH (first visit)
+    await game.turn('west'); // revisit FOREST-1 (brief — no ldesc)
+    await game.turn('verbose'); // VERBOSE=true
+    const r = await game.turn('east'); // → PATH (touched, but VERBOSE=true → verbose)
     expect(r.output).toContain(PATH_LDESC_FRAGMENT);
   });
 
-  it('(d) verbBrief sets VERBOSE=false, returns "Brief descriptions."', () => {
+  it('(d) verbBrief sets VERBOSE=false, returns "Brief descriptions."', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    game.turn('verbose'); // VERBOSE=true
-    const r = game.turn('brief');
+    await game.turn('verbose'); // VERBOSE=true
+    const r = await game.turn('brief');
     expect(r.output).toBe('Brief descriptions.');
   });
 
-  it('(d) verbBrief is a meta-verb — does not advance move counter', () => {
+  it('(d) verbBrief is a meta-verb — does not advance move counter', async () => {
     const game = createGame({ seed: 42 });
     game.start();
     const before = game.view().moves;
-    game.turn('brief');
+    await game.turn('brief');
     expect(game.view().moves).toBe(before);
   });
 });
@@ -151,27 +151,27 @@ describe('verbose global enables full desc on revisit', () => {
 // (e) SUPER-BRIEF: verbSuperBrief, revisit prints title only
 // ---------------------------------------------------------------------------
 describe('superbrief mode', () => {
-  it('(e) superbrief command returns "Superbrief descriptions."', () => {
+  it('(e) superbrief command returns "Superbrief descriptions."', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const r = game.turn('superbrief');
+    const r = await game.turn('superbrief');
     expect(r.output).toBe('Superbrief descriptions.');
   });
 
-  it('(e) superbrief is a meta-verb — does not advance move counter', () => {
+  it('(e) superbrief is a meta-verb — does not advance move counter', async () => {
     const game = createGame({ seed: 42 });
     game.start();
     const before = game.view().moves;
-    game.turn('superbrief');
+    await game.turn('superbrief');
     expect(game.view().moves).toBe(before);
   });
 
-  it('(e) after superbrief, movement to untouched room prints title-only (no ldesc)', () => {
+  it('(e) after superbrief, movement to untouched room prints title-only (no ldesc)', async () => {
     // SUPER-BRIEF suppresses ldesc even on first visit (untouched → V?=true but body gate blocks)
     const game = createGame({ startRoom: 'FOREST-1' });
     game.start(); // first visit FOREST-1
-    game.turn('superbrief');
-    const r = game.turn('east'); // → PATH (untouched, but superbrief suppresses ldesc)
+    await game.turn('superbrief');
+    const r = await game.turn('east'); // → PATH (untouched, but superbrief suppresses ldesc)
     expect(r.output).toContain('Forest Path');
     expect(r.output).not.toContain(PATH_LDESC_FRAGMENT);
   });
@@ -181,40 +181,40 @@ describe('superbrief mode', () => {
 // (f) V-VERSION — pinned Release 88 / Serial number 840726
 // ---------------------------------------------------------------------------
 describe('V-VERSION banner', () => {
-  it('(f) version command includes "ZORK I: The Great Underground Empire"', () => {
+  it('(f) version command includes "ZORK I: The Great Underground Empire"', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const r = game.turn('version');
+    const r = await game.turn('version');
     expect(r.output).toContain('ZORK I: The Great Underground Empire');
   });
 
-  it('(f) version command includes pinned Release 88', () => {
+  it('(f) version command includes pinned Release 88', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const r = game.turn('version');
+    const r = await game.turn('version');
     expect(r.output).toContain('Release 88');
   });
 
-  it('(f) version command includes pinned Serial number 840726', () => {
+  it('(f) version command includes pinned Serial number 840726', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const r = game.turn('version');
+    const r = await game.turn('version');
     expect(r.output).toContain('840726');
   });
 
-  it('(f) version includes copyright and trademark lines', () => {
+  it('(f) version includes copyright and trademark lines', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const r = game.turn('version');
+    const r = await game.turn('version');
     expect(r.output).toContain('Infocom interactive fiction - a fantasy story');
     expect(r.output).toContain('ZORK is a registered trademark of Infocom, Inc.');
   });
 
-  it('(f) version is a meta-verb — does not advance move counter', () => {
+  it('(f) version is a meta-verb — does not advance move counter', async () => {
     const game = createGame({ seed: 42 });
     game.start();
     const before = game.view().moves;
-    game.turn('version');
+    await game.turn('version');
     expect(game.view().moves).toBe(before);
   });
 });
@@ -223,33 +223,33 @@ describe('V-VERSION banner', () => {
 // (g) V-QUIT — renders score block and sets gameOver
 // ---------------------------------------------------------------------------
 describe('V-QUIT', () => {
-  it('(g) quit renders the score line', () => {
+  it('(g) quit renders the score line', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const r = game.turn('quit');
+    const r = await game.turn('quit');
     expect(r.output).toContain('Your score is');
   });
 
-  it('(g) quit renders "ZORK: The Great Underground Empire."', () => {
+  it('(g) quit renders "ZORK: The Great Underground Empire."', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const r = game.turn('quit');
+    const r = await game.turn('quit');
     expect(r.output).toContain('ZORK: The Great Underground Empire.');
   });
 
-  it('(g) quit sets gameOver — subsequent turn returns empty', () => {
+  it('(g) quit sets gameOver — subsequent turn returns empty', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    game.turn('quit');
-    const r = game.turn('north');
+    await game.turn('quit');
+    const r = await game.turn('north');
     expect(r.output).toBe('');
   });
 
-  it('(g) quit is a meta-verb — does not advance move counter', () => {
+  it('(g) quit is a meta-verb — does not advance move counter', async () => {
     const game = createGame({ seed: 42 });
     game.start();
     const before = game.view().moves;
-    game.turn('quit');
+    await game.turn('quit');
     expect(game.view().moves).toBe(before);
   });
 });
@@ -258,18 +258,18 @@ describe('V-QUIT', () => {
 // V-SCRIPT — web no-op + transcript header
 // ---------------------------------------------------------------------------
 describe('V-SCRIPT', () => {
-  it('script command includes transcript header', () => {
+  it('script command includes transcript header', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const r = game.turn('script');
+    const r = await game.turn('script');
     expect(r.output).toContain('Here begins a transcript');
   });
 
-  it('script is a meta-verb — does not advance move counter', () => {
+  it('script is a meta-verb — does not advance move counter', async () => {
     const game = createGame({ seed: 42 });
     game.start();
     const before = game.view().moves;
-    game.turn('script');
+    await game.turn('script');
     expect(game.view().moves).toBe(before);
   });
 });

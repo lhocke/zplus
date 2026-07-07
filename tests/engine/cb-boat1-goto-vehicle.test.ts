@@ -94,10 +94,10 @@ function makeCtx(
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT1 — GOTO: land→land on foot (baseline, no regression)', () => {
-  it('can walk from one land room to another land room', () => {
+  it('can walk from one land room to another land room', async () => {
     const { landRoom, player, world } = makeFixture();
     const ctx = makeCtx(player, landRoom, world, 'north');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.moved).toBe(true);
     expect(player.parent?.id).toBe('LAND2');
   });
@@ -108,18 +108,18 @@ describe('CB-BOAT1 — GOTO: land→land on foot (baseline, no regression)', () 
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT1 — GOTO clause 1: on foot into NonLand blocked', () => {
-  it('blocks on-foot walk east into water: "without a vehicle"', () => {
+  it('blocks on-foot walk east into water: "without a vehicle"', async () => {
     const { landRoom, player, world } = makeFixture();
     const ctx = makeCtx(player, landRoom, world, 'east');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.moved).toBe(false);
     expect(result.output).toContain('without a vehicle');
   });
 
-  it('does NOT block on-foot walk into a land room', () => {
+  it('does NOT block on-foot walk into a land room', async () => {
     const { landRoom, player, world } = makeFixture();
     const ctx = makeCtx(player, landRoom, world, 'north');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.moved).toBe(true);
   });
 });
@@ -129,32 +129,32 @@ describe('CB-BOAT1 — GOTO clause 1: on foot into NonLand blocked', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT1 — GOTO clause 2: boat into non-water blocked', () => {
-  it('boat in water, destination is a second water room → allowed', () => {
+  it('boat in water, destination is a second water room → allowed', async () => {
     const { waterRoom, player, boat, world } = makeFixture();
     // Put player in the boat, boat in water
     boat.moveTo(waterRoom);
     player.moveTo(boat);
     const ctx = makeCtx(player, waterRoom, world, 'east');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.moved).toBe(true);
   });
 
-  it('boat in water, destination is land → allowed (landing)', () => {
+  it('boat in water, destination is land → allowed (landing)', async () => {
     const { waterRoom, player, boat, world } = makeFixture();
     boat.moveTo(waterRoom);
     player.moveTo(boat);
     const ctx = makeCtx(player, waterRoom, world, 'west');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     // Landing on land is allowed — moves vehicle to land room
     expect(result.moved).toBe(true);
   });
 
-  it('boat in water, no exit in that direction → normal no-exit message', () => {
+  it('boat in water, no exit in that direction → normal no-exit message', async () => {
     const { waterRoom, player, boat, world } = makeFixture();
     boat.moveTo(waterRoom);
     player.moveTo(boat);
     const ctx = makeCtx(player, waterRoom, world, 'north');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     // No exit north — standard no-exit fatal
     expect(result.moved).toBe(false);
   });
@@ -165,23 +165,23 @@ describe('CB-BOAT1 — GOTO clause 2: boat into non-water blocked', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT1 — GOTO clause 3: water-vehicle on land can\'t walk to another land room', () => {
-  it('boat beached on land, walk to another land room → blocked ("in a <vehicle>")', () => {
+  it('boat beached on land, walk to another land room → blocked ("in a <vehicle>")', async () => {
     const { landRoom, player, boat, world } = makeFixture();
     // Boat is on the shore (land room); player in the boat
     boat.moveTo(landRoom);
     player.moveTo(boat);
     const ctx = makeCtx(player, landRoom, world, 'north');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.moved).toBe(false);
     expect(result.output).toContain("in a");
   });
 
-  it('boat beached on land, walk into water → allowed (launch direction)', () => {
+  it('boat beached on land, walk into water → allowed (launch direction)', async () => {
     const { landRoom, player, boat, world } = makeFixture();
     boat.moveTo(landRoom);
     player.moveTo(boat);
     const ctx = makeCtx(player, landRoom, world, 'east');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     // Water destination has NONLANDBIT = VTYPE, so it is allowed
     expect(result.moved).toBe(true);
   });
@@ -192,30 +192,30 @@ describe('CB-BOAT1 — GOTO clause 3: water-vehicle on land can\'t walk to anoth
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT1 — GOTO: landing message when boat reaches shore', () => {
-  it('emits "comes to a rest on the shore." when boat lands from water', () => {
+  it('emits "comes to a rest on the shore." when boat lands from water', async () => {
     const { waterRoom, player, boat, world } = makeFixture();
     boat.moveTo(waterRoom);
     player.moveTo(boat);
     const ctx = makeCtx(player, waterRoom, world, 'west');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.moved).toBe(true);
     expect(result.output).toContain('comes to a rest on the shore.');
   });
 
-  it('no landing message for water→water boat movement', () => {
+  it('no landing message for water→water boat movement', async () => {
     const { waterRoom, player, boat, world } = makeFixture();
     boat.moveTo(waterRoom);
     player.moveTo(boat);
     const ctx = makeCtx(player, waterRoom, world, 'east');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.moved).toBe(true);
     expect(result.output).not.toContain('comes to a rest');
   });
 
-  it('no landing message when on foot moving to land', () => {
+  it('no landing message when on foot moving to land', async () => {
     const { landRoom, player, world } = makeFixture();
     const ctx = makeCtx(player, landRoom, world, 'north');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.moved).toBe(true);
     expect(result.output).not.toContain('comes to a rest');
   });
@@ -226,24 +226,24 @@ describe('CB-BOAT1 — GOTO: landing message when boat reaches shore', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT1 — GOTO: vehicle-in-vehicle movement moves vehicle to dest', () => {
-  it('boat (not player) is moved to the destination water room', () => {
+  it('boat (not player) is moved to the destination water room', async () => {
     const { waterRoom, player, boat, world } = makeFixture();
     boat.moveTo(waterRoom);
     player.moveTo(boat);
     const ctx = makeCtx(player, waterRoom, world, 'east');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.moved).toBe(true);
     // Boat moved to WATER2; player stays in boat
     expect(boat.parent?.id).toBe('WATER2');
     expect(player.parent?.id).toBe('INFLATED-BOAT');
   });
 
-  it('landing: boat is moved to land room, player stays in boat', () => {
+  it('landing: boat is moved to land room, player stays in boat', async () => {
     const { waterRoom, player, boat, world } = makeFixture();
     boat.moveTo(waterRoom);
     player.moveTo(boat);
     const ctx = makeCtx(player, waterRoom, world, 'west');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.moved).toBe(true);
     expect(boat.parent?.id).toBe('LAND');
     expect(player.parent?.id).toBe('INFLATED-BOAT');
@@ -255,20 +255,20 @@ describe('CB-BOAT1 — GOTO: vehicle-in-vehicle movement moves vehicle to dest',
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT1 — NO-GO-TELL messages', () => {
-  it('on foot into water: "You can\'t go there without a vehicle."', () => {
+  it('on foot into water: "You can\'t go there without a vehicle."', async () => {
     const { landRoom, player, world } = makeFixture();
     const ctx = makeCtx(player, landRoom, world, 'east');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.output).toBe("You can't go there without a vehicle.");
   });
 
-  it('in boat, dest lacks NONLANDBIT: "You can\'t go there in a magic boat."', () => {
+  it('in boat, dest lacks NONLANDBIT: "You can\'t go there in a magic boat."', async () => {
     const { landRoom, player, boat, world } = makeFixture();
     // Boat on land, player in boat, destination is another land room (no NONLANDBIT)
     boat.moveTo(landRoom);
     player.moveTo(boat);
     const ctx = makeCtx(player, landRoom, world, 'north');
-    const result = executeVerb(ctx, 'V-WALK');
+    const result = await executeVerb(ctx, 'V-WALK');
     expect(result.output).toBe("You can't go there in a magic boat.");
   });
 });

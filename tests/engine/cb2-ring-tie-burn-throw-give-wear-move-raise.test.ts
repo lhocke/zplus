@@ -146,9 +146,9 @@ function ctx(fix: Fix, overrides: Partial<VerbContext> & { verb: string }): Verb
 // ---------------------------------------------------------------------------
 
 describe('V-RING', () => {
-  it('returns "How, exactly, can you ring that?" — gverbs.zil:1163', () => {
+  it('returns "How, exactly, can you ring that?" — gverbs.zil:1163', async () => {
     const fix = makeFixture();
-    const r = executeVerb(ctx(fix, { verb: 'ring', action: 'V-RING', dobj: fix.bell }), 'V-RING');
+    const r = await executeVerb(ctx(fix, { verb: 'ring', action: 'V-RING', dobj: fix.bell }), 'V-RING');
     expect(r.output).toBe('How, exactly, can you ring that?');
   });
 });
@@ -158,18 +158,18 @@ describe('V-RING', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-TIE', () => {
-  it('PRSI=player → "You can\'t tie anything to yourself."', () => {
+  it('PRSI=player → "You can\'t tie anything to yourself."', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'tie', action: 'V-TIE', dobj: fix.rope, iobj: fix.player }),
       'V-TIE',
     );
     expect(r.output).toBe("You can't tie anything to yourself.");
   });
 
-  it('PRSI=other → "You can\'t tie the rope to that."', () => {
+  it('PRSI=other → "You can\'t tie the rope to that."', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'tie', action: 'V-TIE', dobj: fix.rope, iobj: fix.bell }),
       'V-TIE',
     );
@@ -182,9 +182,9 @@ describe('V-TIE', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-UNTIE', () => {
-  it('returns "This cannot be tied, so it cannot be untied!" — gverbs.zil:1512', () => {
+  it('returns "This cannot be tied, so it cannot be untied!" — gverbs.zil:1512', async () => {
     const fix = makeFixture();
-    const r = executeVerb(ctx(fix, { verb: 'untie', action: 'V-UNTIE', dobj: fix.rope }), 'V-UNTIE');
+    const r = await executeVerb(ctx(fix, { verb: 'untie', action: 'V-UNTIE', dobj: fix.rope }), 'V-UNTIE');
     expect(r.output).toBe('This cannot be tied, so it cannot be untied!');
   });
 });
@@ -194,9 +194,9 @@ describe('V-UNTIE', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-TIE-UP (verify-only)', () => {
-  it('still returns "You could certainly never tie it with that!" — gverbs.zil:1472', () => {
+  it('still returns "You could certainly never tie it with that!" — gverbs.zil:1472', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'tie', action: 'V-TIE-UP', dobj: fix.rope, iobj: fix.stone }),
       'V-TIE-UP',
     );
@@ -209,27 +209,27 @@ describe('V-TIE-UP (verify-only)', () => {
 // ---------------------------------------------------------------------------
 
 describe('PRE-BURN', () => {
-  it('no PRSI → "You didn\'t say with what!" (TELL-NO-PRSI)', () => {
+  it('no PRSI → "You didn\'t say with what!" (TELL-NO-PRSI)', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'burn', action: 'PRE-BURN', dobj: fix.book }),
       'PRE-BURN',
     );
     expect(r.output).toBe("You didn't say with what!");
   });
 
-  it('PRSI not FLAMING → "With a <obj>??!?" — gverbs.zil:249', () => {
+  it('PRSI not FLAMING → "With a <obj>??!?" — gverbs.zil:249', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'burn', action: 'PRE-BURN', dobj: fix.book, iobj: fix.stone }),
       'PRE-BURN',
     );
     expect(r.output).toBe('With a stone??!?');
   });
 
-  it('PRSI FLAMING → passes (empty output, no block)', () => {
+  it('PRSI FLAMING → passes (empty output, no block)', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'burn', action: 'PRE-BURN', dobj: fix.book, iobj: fix.torch }),
       'PRE-BURN',
     );
@@ -243,20 +243,20 @@ describe('PRE-BURN', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-BURN', () => {
-  it('no BURNBIT → "You can\'t burn a <obj>." — gverbs.zil:274', () => {
+  it('no BURNBIT → "You can\'t burn a <obj>." — gverbs.zil:274', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'burn', action: 'V-BURN', dobj: fix.stone, iobj: fix.torch }),
       'V-BURN',
     );
     expect(r.output).toBe("You can't burn a stone.");
   });
 
-  it('BURNBIT not held → "catches fire and is consumed." — gverbs.zil:271–272', () => {
+  it('BURNBIT not held → "catches fire and is consumed." — gverbs.zil:271–272', async () => {
     const fix = makeFixture();
     // book is in room, not held
     expect(fix.book.parent).toBe(fix.room);
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'burn', action: 'V-BURN', dobj: fix.book, iobj: fix.torch }),
       'V-BURN',
     );
@@ -266,12 +266,12 @@ describe('V-BURN', () => {
     expect(fix.book.parent).toBeNull();
   });
 
-  it('BURNBIT held → jigsUp called with "holding it at the time" — gverbs.zil:265–268', () => {
+  it('BURNBIT held → jigsUp called with "holding it at the time" — gverbs.zil:265–268', async () => {
     const fix = makeFixture();
     // heldBook is in player's inventory
     expect(fix.heldBook.parent).toBe(fix.player);
     let deathMsg = '';
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, {
         verb: 'burn',
         action: 'V-BURN',
@@ -289,7 +289,7 @@ describe('V-BURN', () => {
     expect(fix.heldBook.parent).toBeNull();
   });
 
-  it('BURNBIT, player inside (container case) → "in it at the time" — gverbs.zil:265–267', () => {
+  it('BURNBIT, player inside (container case) → "in it at the time" — gverbs.zil:265–267', async () => {
     // Build a burnbit container with player inside
     const room = new Room('R2', 'Room 2', { ldesc: 'A room.', exits: [] });
     room.set(Flag.On);
@@ -305,7 +305,7 @@ describe('V-BURN', () => {
     flame.moveTo(player);
     const world = World.fromObjects([room, container, player, flame]);
     let death = '';
-    const r = executeVerb({
+    const r = await executeVerb({
       verb: 'burn', action: 'V-BURN',
       dobj: container, iobj: flame,
       player, here: room, world,
@@ -321,21 +321,21 @@ describe('V-BURN', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-THROW', () => {
-  it('IDROP fails (not carried) → "Huh?" — gverbs.zil:1460', () => {
+  it('IDROP fails (not carried) → "Huh?" — gverbs.zil:1460', async () => {
     const fix = makeFixture();
     // bell is in room, not held — IDROP fails
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'throw', action: 'V-THROW', dobj: fix.bell }),
       'V-THROW',
     );
     expect(r.output).toBe('Huh?');
   });
 
-  it('IDROP succeeds, PRSI=player → jigsUp called with death msg — gverbs.zil:1447–1454', () => {
+  it('IDROP succeeds, PRSI=player → jigsUp called with death msg — gverbs.zil:1447–1454', async () => {
     const fix = makeFixture();
     // sword is held; throw at self (iobj = player = ME)
     let deathMsg = '';
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, {
         verb: 'throw',
         action: 'V-THROW',
@@ -352,9 +352,9 @@ describe('V-THROW', () => {
     expect(r.fatal).toBe(true);
   });
 
-  it('IDROP succeeds, PRSI=actor → "<actor> ducks..." — gverbs.zil:1455–1458', () => {
+  it('IDROP succeeds, PRSI=actor → "<actor> ducks..." — gverbs.zil:1455–1458', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, {
         verb: 'throw',
         action: 'V-THROW',
@@ -370,9 +370,9 @@ describe('V-THROW', () => {
     expect(fix.sword.parent).toBe(fix.room);
   });
 
-  it('IDROP succeeds, PRSI none/non-actor → "Thrown." — gverbs.zil:1459', () => {
+  it('IDROP succeeds, PRSI none/non-actor → "Thrown." — gverbs.zil:1459', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'throw', action: 'V-THROW', dobj: fix.sword }),
       'V-THROW',
     );
@@ -386,10 +386,10 @@ describe('V-THROW', () => {
 // ---------------------------------------------------------------------------
 
 describe('PRE-GIVE', () => {
-  it('not holding PRSO → "That\'s easy for you to say..." — gverbs.zil:710–711', () => {
+  it('not holding PRSO → "That\'s easy for you to say..." — gverbs.zil:710–711', async () => {
     const fix = makeFixture();
     // bell is in room, not in player inventory
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'give', action: 'PRE-GIVE', dobj: fix.bell, iobj: fix.npc }),
       'PRE-GIVE',
     );
@@ -397,10 +397,10 @@ describe('PRE-GIVE', () => {
     expect(r.output).toContain('small bell');
   });
 
-  it('holding PRSO → empty (passes, no block)', () => {
+  it('holding PRSO → empty (passes, no block)', async () => {
     const fix = makeFixture();
     // sword is in player
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'give', action: 'PRE-GIVE', dobj: fix.sword, iobj: fix.npc }),
       'PRE-GIVE',
     );
@@ -413,18 +413,18 @@ describe('PRE-GIVE', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-GIVE', () => {
-  it('PRSI not ACTORBIT → "You can\'t give a <obj> to a <prsi>!" — gverbs.zil:715', () => {
+  it('PRSI not ACTORBIT → "You can\'t give a <obj> to a <prsi>!" — gverbs.zil:715', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'give', action: 'V-GIVE', dobj: fix.sword, iobj: fix.bucket }),
       'V-GIVE',
     );
     expect(r.output).toBe("You can't give a sword to a bucket!");
   });
 
-  it('PRSI ACTORBIT → "The <prsi> refuses it politely." — gverbs.zil:717', () => {
+  it('PRSI ACTORBIT → "The <prsi> refuses it politely." — gverbs.zil:717', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'give', action: 'V-GIVE', dobj: fix.sword, iobj: fix.npc }),
       'V-GIVE',
     );
@@ -437,20 +437,20 @@ describe('V-GIVE', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-WEAR', () => {
-  it('no WEARBIT → "You can\'t wear the <obj>." — gverbs.zil:1599', () => {
+  it('no WEARBIT → "You can\'t wear the <obj>." — gverbs.zil:1599', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'wear', action: 'V-WEAR', dobj: fix.stone }),
       'V-WEAR',
     );
     expect(r.output).toBe("You can't wear the stone.");
   });
 
-  it('WEARBIT → performs TAKE: "You are now wearing the cloak." — gverbs.zil:1601, V-TAKE:1384', () => {
+  it('WEARBIT → performs TAKE: "You are now wearing the cloak." — gverbs.zil:1601, V-TAKE:1384', async () => {
     const fix = makeFixture();
     // cloak is in room (not in player)
     expect(fix.cloak.parent).toBe(fix.room);
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'wear', action: 'V-WEAR', dobj: fix.cloak }),
       'V-WEAR',
     );
@@ -464,19 +464,19 @@ describe('V-WEAR', () => {
 // ---------------------------------------------------------------------------
 
 describe('PRE-MOVE', () => {
-  it('PRSO held → "You aren\'t an accomplished enough juggler." — gverbs.zil:912', () => {
+  it('PRSO held → "You aren\'t an accomplished enough juggler." — gverbs.zil:912', async () => {
     const fix = makeFixture();
     // rope is in player
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'move', action: 'PRE-MOVE', dobj: fix.rope }),
       'PRE-MOVE',
     );
     expect(r.output).toBe("You aren't an accomplished enough juggler.");
   });
 
-  it('PRSO not held → passes (empty)', () => {
+  it('PRSO not held → passes (empty)', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'move', action: 'PRE-MOVE', dobj: fix.rug }),
       'PRE-MOVE',
     );
@@ -489,18 +489,18 @@ describe('PRE-MOVE', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-MOVE', () => {
-  it('TAKEBIT → "Moving the <obj> reveals nothing." — gverbs.zil:916', () => {
+  it('TAKEBIT → "Moving the <obj> reveals nothing." — gverbs.zil:916', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'move', action: 'V-MOVE', dobj: fix.rug }),
       'V-MOVE',
     );
     expect(r.output).toBe('Moving the rug reveals nothing.');
   });
 
-  it('no TAKEBIT → "You can\'t move the <obj>." — gverbs.zil:918', () => {
+  it('no TAKEBIT → "You can\'t move the <obj>." — gverbs.zil:918', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'move', action: 'V-MOVE', dobj: fix.statue }),
       'V-MOVE',
     );
@@ -513,9 +513,9 @@ describe('V-MOVE', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-LOWER', () => {
-  it('normal object → "Playing in this way with the <obj>" + HO-HUM suffix', () => {
+  it('normal object → "Playing in this way with the <obj>" + HO-HUM suffix', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       // rng returning 0 → first hoHum entry " doesn't seem to work."
       ctx(fix, {
         verb: 'lower', action: 'V-LOWER', dobj: fix.rug,
@@ -527,10 +527,10 @@ describe('V-LOWER', () => {
     expect(r.output).toMatch(/ doesn't seem to work\.$| isn't notably helpful\.$| has no effect\.$/);
   });
 
-  it('global-objects item (null parent) → "The <obj> isn\'t here!" — gverbs.zil:2027', () => {
+  it('global-objects item (null parent) → "The <obj> isn\'t here!" — gverbs.zil:2027', async () => {
     const fix = makeFixture();
     expect(fix.wall.parent).toBeNull();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'lower', action: 'V-LOWER', dobj: fix.wall }),
       'V-LOWER',
     );
@@ -540,13 +540,13 @@ describe('V-LOWER', () => {
   // LOCAL-GLOBALS (WHITE-HOUSE, FOREST) are (IN LOCAL-GLOBALS) in ZIL, NOT (IN GLOBAL-OBJECTS).
   // HACK-HACK: <IN? PRSO GLOBAL-OBJECTS> is false for them → HO-HUM, not "isn't here!".
   // Verified: dfrotz R119 at WEST-OF-HOUSE → "Playing in this way with the white house has no effect."
-  it('local-global WHITE-HOUSE (null parent, in ROOM_GLOBAL_IDS) → HO-HUM, not "isn\'t here!"', () => {
+  it('local-global WHITE-HOUSE (null parent, in ROOM_GLOBAL_IDS) → HO-HUM, not "isn\'t here!"', async () => {
     const fix = makeFixture();
     const whiteHouse = new Thing('WHITE-HOUSE', 'white house', { synonyms: ['house'], adjectives: ['white'], ldesc: '' });
     // parent stays null — mimics LOCAL-GLOBALS: never placed in a room directly
     expect(whiteHouse.parent).toBeNull();
     const world2 = World.fromObjects([fix.room, fix.player, whiteHouse]);
-    const r = executeVerb(
+    const r = await executeVerb(
       { verb: 'lower', action: 'V-LOWER', dobj: whiteHouse, player: fix.player, here: fix.room, world: world2, rng: { next: () => 2 } },
       'V-LOWER',
     );
@@ -554,12 +554,12 @@ describe('V-LOWER', () => {
     expect(r.output).not.toContain("isn't here!");
   });
 
-  it('local-global FOREST (null parent, in ROOM_GLOBAL_IDS) → HO-HUM, not "isn\'t here!"', () => {
+  it('local-global FOREST (null parent, in ROOM_GLOBAL_IDS) → HO-HUM, not "isn\'t here!"', async () => {
     const fix = makeFixture();
     const forest = new Thing('FOREST', 'forest', { synonyms: ['forest'], adjectives: [], ldesc: '' });
     expect(forest.parent).toBeNull();
     const world2 = World.fromObjects([fix.room, fix.player, forest]);
-    const r = executeVerb(
+    const r = await executeVerb(
       { verb: 'lower', action: 'V-LOWER', dobj: forest, player: fix.player, here: fix.room, world: world2, rng: { next: () => 2 } },
       'V-LOWER',
     );
@@ -574,9 +574,9 @@ describe('V-LOWER', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-RAISE', () => {
-  it('normal object → HACK-HACK route — NOT "You can\'t raise that." (A.1 fix)', () => {
+  it('normal object → HACK-HACK route — NOT "You can\'t raise that." (A.1 fix)', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, {
         verb: 'raise', action: 'V-RAISE', dobj: fix.rug,
         rng: { next: () => 0 },
@@ -587,9 +587,9 @@ describe('V-RAISE', () => {
     expect(r.output).toMatch(/^Playing in this way with the rug/);
   });
 
-  it('global-objects item → "The <obj> isn\'t here!" — same as V-LOWER', () => {
+  it('global-objects item → "The <obj> isn\'t here!" — same as V-LOWER', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'raise', action: 'V-RAISE', dobj: fix.wall }),
       'V-RAISE',
     );
@@ -597,12 +597,12 @@ describe('V-RAISE', () => {
   });
 
   // Same LOCAL-GLOBALS fix: raise white house / raise forest → HO-HUM, not "isn't here!"
-  it('local-global WHITE-HOUSE → HO-HUM via HACK-HACK (dfrotz: "has no effect.")', () => {
+  it('local-global WHITE-HOUSE → HO-HUM via HACK-HACK (dfrotz: "has no effect.")', async () => {
     const fix = makeFixture();
     const whiteHouse = new Thing('WHITE-HOUSE', 'white house', { synonyms: ['house'], adjectives: ['white'], ldesc: '' });
     expect(whiteHouse.parent).toBeNull();
     const world2 = World.fromObjects([fix.room, fix.player, whiteHouse]);
-    const r = executeVerb(
+    const r = await executeVerb(
       { verb: 'raise', action: 'V-RAISE', dobj: whiteHouse, player: fix.player, here: fix.room, world: world2, rng: { next: () => 2 } },
       'V-RAISE',
     );

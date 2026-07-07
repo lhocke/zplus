@@ -90,11 +90,11 @@ describe('golden master walkthrough', () => {
     expect(firstLine).toMatch(/^# generated-by: engine /);
   });
 
-  it('transcript is byte-identical to the committed golden', () => {
+  it('transcript is byte-identical to the committed golden', async () => {
     resetActionState();
-    const run1 = runEngine(COMMANDS, { seed: 42 });
+    const run1 = await runEngine(COMMANDS, { seed: 42 });
     resetActionState();
-    const run2 = runEngine(COMMANDS, { seed: 42 });
+    const run2 = await runEngine(COMMANDS, { seed: 42 });
     // Determinism proof: two fresh runs with the same seed must be identical.
     // Fails if any module-level state or non-seeded randomness leaks between runs.
     expect(run1).toBe(run2);

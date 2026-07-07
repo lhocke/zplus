@@ -53,13 +53,13 @@ describe('CB-DAM1 — BOLT-F: wrench gate', () => {
     (g as unknown as { flags: { set(n: string, v: boolean): void } }).flags.set('GATE-FLAG', true);
   });
 
-  it('TURN BOLT WITH WRENCH succeeds when GATE-FLAG is set', () => {
-    const out = g.turn('turn bolt with wrench').output;
+  it('TURN BOLT WITH WRENCH succeeds when GATE-FLAG is set', async () => {
+    const out = await (await g.turn('turn bolt with wrench')).output;
     // Either opening or closing — no "won't turn" message
     expect(out).not.toContain("won't turn");
   });
 
-  it('TURN BOLT WITHOUT WRENCH (wrong iobj) → "won\'t turn using the"', () => {
+  it('TURN BOLT WITHOUT WRENCH (wrong iobj) → "won\'t turn using the"', async () => {
     // Put a non-wrench object in reach for the parser to find
     const leaflet = g.world.get('LEAFLET');
     if (leaflet) leaflet.moveTo(g.player);
@@ -70,13 +70,13 @@ describe('CB-DAM1 — BOLT-F: wrench gate', () => {
     // Give player a takeable item that isn't the wrench
     const pump = g.world.get('PUMP');
     if (pump) pump.moveTo(g.player);
-    const out = pump ? g.turn('turn bolt with pump').output : '';
+    const out = pump ? await (await g.turn('turn bolt with pump')).output : '';
     if (pump) expect(out).toMatch(/won't turn using the/);
   });
 
-  it('TURN BOLT WITH WRENCH without GATE-FLAG → "won\'t turn with your best effort"', () => {
+  it('TURN BOLT WITH WRENCH without GATE-FLAG → "won\'t turn with your best effort"', async () => {
     (g as unknown as { flags: { set(n: string, v: boolean): void } }).flags.set('GATE-FLAG', false);
-    const out = g.turn('turn bolt with wrench').output;
+    const out = await (await g.turn('turn bolt with wrench')).output;
     expect(out).toContain("won't turn with your best effort");
   });
 });
@@ -95,10 +95,10 @@ describe('CB-DAM1 — BOLT-F: gate toggle and timer arms (NM-A)', () => {
     (g as unknown as { flags: { set(n: string, v: boolean): void } }).flags.set('GATE-FLAG', true);
   });
 
-  it('opening: sets GATES-OPEN, queues I-REMPTY (enabled), parks I-RFILL (disabled)', () => {
+  it('opening: sets GATES-OPEN, queues I-REMPTY (enabled), parks I-RFILL (disabled)', async () => {
     // Start with gates closed (default)
     expect(flags(g).get('GATES-OPEN')).toBe(false);
-    g.turn('turn bolt with wrench');
+    await g.turn('turn bolt with wrench');
     expect(flags(g).get('GATES-OPEN')).toBe(true);
 
     // NM-A: I-REMPTY is enabled after the bolt turn.
@@ -116,10 +116,10 @@ describe('CB-DAM1 — BOLT-F: gate toggle and timer arms (NM-A)', () => {
     expect(rfill!.enabled).toBe(false);
   });
 
-  it('closing: clears GATES-OPEN, queues I-RFILL (enabled), parks I-REMPTY (disabled)', () => {
+  it('closing: clears GATES-OPEN, queues I-RFILL (enabled), parks I-REMPTY (disabled)', async () => {
     // Open gates first
     (g as unknown as { flags: { set(n: string, v: boolean): void } }).flags.set('GATES-OPEN', true);
-    g.turn('turn bolt with wrench');
+    await g.turn('turn bolt with wrench');
     expect(flags(g).get('GATES-OPEN')).toBe(false);
 
     const rfill = clockEntry(g, 'I-RFILL');
@@ -133,22 +133,22 @@ describe('CB-DAM1 — BOLT-F: gate toggle and timer arms (NM-A)', () => {
     expect(rempty!.enabled).toBe(false);
   });
 
-  it('opening emits sluice-open message (1actions.zil:1202)', () => {
-    const out = g.turn('turn bolt with wrench').output;
+  it('opening emits sluice-open message (1actions.zil:1202)', async () => {
+    const out = await (await g.turn('turn bolt with wrench')).output;
     expect(out).toContain('sluice gates open');
   });
 
-  it('closing emits sluice-close message (1actions.zil:1195)', () => {
+  it('closing emits sluice-close message (1actions.zil:1195)', async () => {
     (g as unknown as { flags: { set(n: string, v: boolean): void } }).flags.set('GATES-OPEN', true);
-    const out = g.turn('turn bolt with wrench').output;
+    const out = await (await g.turn('turn bolt with wrench')).output;
     expect(out).toContain('sluice gates close');
   });
 
-  it('closing clears RESERVOIR-SOUTH TOUCHBIT (1actions.zil:1191)', () => {
+  it('closing clears RESERVOIR-SOUTH TOUCHBIT (1actions.zil:1191)', async () => {
     // RESERVOIR-SOUTH should be re-described after toggle
     const resSouth = g.world.get('RESERVOIR-SOUTH')!;
     resSouth.set(Flag.Touched);
-    g.turn('turn bolt with wrench');
+    await g.turn('turn bolt with wrench');
     // After open, TOUCHBIT cleared
     // (closing path also clears LOUD-ROOM; both go via the shared clear of RESERVOIR-SOUTH)
     // The closing bolt path also clears LOUD-ROOM.TOUCHBIT
@@ -167,17 +167,17 @@ describe('CB-DAM1 — BOLT-F: TAKE and OIL fall-throughs', () => {
     g = newGameAt('DAM-ROOM');
   });
 
-  it('TAKE BOLT → "integral part of the control panel" (1actions.zil:1213)', () => {
-    const out = g.turn('take bolt').output;
+  it('TAKE BOLT → "integral part of the control panel" (1actions.zil:1213)', async () => {
+    const out = await (await g.turn('take bolt')).output;
     expect(out).toBe('It is an integral part of the control panel.');
   });
 
-  it('OIL BOLT WITH TUBE → "glue, not oil" message (1actions.zil:1215)', () => {
+  it('OIL BOLT WITH TUBE → "glue, not oil" message (1actions.zil:1215)', async () => {
     // "oil" is a synonym for LUBRICATE which takes 2 objects (WITH prep).
     // Move the tube to the player so the parser has an iobj.
     const tube = g.world.get('TUBE');
     if (tube) tube.moveTo(g.player);
-    const out = g.turn('oil bolt with tube').output;
+    const out = await (await g.turn('oil bolt with tube')).output;
     expect(out).toContain('glue, not oil');
   });
 });
@@ -199,51 +199,51 @@ describe('CB-DAM1 — DAM-ROOM-FCN: 4-state description (1actions.zil:1156–118
     fs.set('LOW-TIDE', lowTide);
   }
 
-  function look() {
-    return g.turn('look').output;
+  async function look() {
+    return await (await g.turn('look')).output;
   }
 
-  it('S0 sealed (GATES-OPEN=F, LOW-TIDE=F): "Water is pouring over the top"', () => {
+  it('S0 sealed (GATES-OPEN=F, LOW-TIDE=F): "Water is pouring over the top"', async () => {
     setFlags(false, false);
-    const out = look();
+    const out = await look();
     expect(out).toContain('Water is pouring over the top of the now');
   });
 
-  it('S2 draining (GATES-OPEN=T, LOW-TIDE=F): "water level behind the dam is still high"', () => {
+  it('S2 draining (GATES-OPEN=T, LOW-TIDE=F): "water level behind the dam is still high"', async () => {
     setFlags(true, false);
-    const out = look();
+    const out = await look();
     expect(out).toContain('water level behind the dam is still high');
   });
 
-  it('S3 drained (GATES-OPEN=T, LOW-TIDE=T): "The sluice gates have been opened. Water rushes"', () => {
+  it('S3 drained (GATES-OPEN=T, LOW-TIDE=T): "The sluice gates have been opened. Water rushes"', async () => {
     setFlags(true, true);
-    const out = look();
+    const out = await look();
     expect(out).toContain('sluice gates have been');
   });
 
-  it('S4 refilling (GATES-OPEN=F, LOW-TIDE=T): "level is rising quickly"', () => {
+  it('S4 refilling (GATES-OPEN=F, LOW-TIDE=T): "level is rising quickly"', async () => {
     setFlags(false, true);
-    const out = look();
+    const out = await look();
     expect(out).toContain('level is rising quickly');
   });
 
-  it('control panel text appears in all states', () => {
+  it('control panel text appears in all states', async () => {
     for (const [go, lt] of [[false, false], [true, false], [true, true], [false, true]] as const) {
       setFlags(go, lt);
-      const out = look();
+      const out = await look();
       expect(out).toContain('control panel');
     }
   });
 
-  it('bubble is "glowing serenely" when GATE-FLAG is true (1actions.zil:1182)', () => {
+  it('bubble is "glowing serenely" when GATE-FLAG is true (1actions.zil:1182)', async () => {
     (g as unknown as { flags: { set(n: string, v: boolean): void } }).flags.set('GATE-FLAG', true);
-    const out = look();
+    const out = await look();
     expect(out).toContain('glowing serenely');
   });
 
-  it('bubble does NOT mention "glowing serenely" when GATE-FLAG is false', () => {
+  it('bubble does NOT mention "glowing serenely" when GATE-FLAG is false', async () => {
     (g as unknown as { flags: { set(n: string, v: boolean): void } }).flags.set('GATE-FLAG', false);
-    const out = look();
+    const out = await look();
     expect(out).not.toContain('glowing serenely');
   });
 });
@@ -259,13 +259,13 @@ describe('CB-DAM1 — DAM-FUNCTION: joke verbs (1actions.zil:1400–1410)', () =
     g = newGameAt('DAM-ROOM');
   });
 
-  it('OPEN DAM → "Sounds reasonable, but this isn\'t how."', () => {
-    const out = g.turn('open dam').output;
+  it('OPEN DAM → "Sounds reasonable, but this isn\'t how."', async () => {
+    const out = await (await g.turn('open dam')).output;
     expect(out).toBe("Sounds reasonable, but this isn't how.");
   });
 
-  it('CLOSE DAM → "Sounds reasonable, but this isn\'t how."', () => {
-    const out = g.turn('close dam').output;
+  it('CLOSE DAM → "Sounds reasonable, but this isn\'t how."', async () => {
+    const out = await (await g.turn('close dam')).output;
     expect(out).toBe("Sounds reasonable, but this isn't how.");
   });
 
@@ -288,10 +288,10 @@ describe('CB-DAM1 — DAM-FUNCTION: joke verbs (1actions.zil:1400–1410)', () =
     expect(out.join(' ')).toContain('little Dutch boy');
   });
 
-  it('PLUG DAM WITH non-hands → "how big this dam is" message', () => {
+  it('PLUG DAM WITH non-hands → "how big this dam is" message', async () => {
     const wrench = g.world.get('WRENCH')!;
     wrench.moveTo(g.player);
-    const out = g.turn('plug dam with wrench').output;
+    const out = await (await g.turn('plug dam with wrench')).output;
     expect(out).toContain('how big this dam is');
   });
 });
@@ -301,9 +301,9 @@ describe('CB-DAM1 — DAM-FUNCTION: joke verbs (1actions.zil:1400–1410)', () =
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM1 — BUBBLE-F: TAKE bubble (1actions.zil:1219–1221)', () => {
-  it('TAKE BUBBLE → "integral part of the control panel"', () => {
+  it('TAKE BUBBLE → "integral part of the control panel"', async () => {
     const g = newGameAt('DAM-ROOM');
-    const out = g.turn('take bubble').output;
+    const out = await (await g.turn('take bubble')).output;
     expect(out).toBe('It is an integral part of the control panel.');
   });
 });
@@ -318,14 +318,14 @@ describe('CB-DAM1 — BUBBLE-F: TAKE bubble (1actions.zil:1219–1221)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM1 — NM-A: parked opposite timer stays disabled', () => {
-  it('after opening: I-RFILL parked (turnsLeft=0, enabled=false) throughout 10 advances', () => {
+  it('after opening: I-RFILL parked (turnsLeft=0, enabled=false) throughout 10 advances', async () => {
     const g = newGameAt('DAM-ROOM');
     const wrench = g.world.get('WRENCH')!;
     wrench.moveTo(g.player);
     (g as unknown as { flags: { set(n: string, v: boolean): void } }).flags.set('GATE-FLAG', true);
 
     // Open gates
-    g.turn('turn bolt with wrench');
+    await g.turn('turn bolt with wrench');
 
     // Check that I-RFILL is the parked one (turnsLeft=0, disabled)
     const rfill = clockEntry(g, 'I-RFILL');
@@ -334,13 +334,13 @@ describe('CB-DAM1 — NM-A: parked opposite timer stays disabled', () => {
     expect(rfill!.enabled).toBe(false);
 
     // Advance several turns — I-RFILL must stay parked
-    for (let i = 0; i < 10; i++) g.turn('wait');
+    for (let i = 0; i < 10; i++) await g.turn('wait');
     const rfill2 = clockEntry(g, 'I-RFILL');
     expect(rfill2!.turnsLeft).toBe(0);
     expect(rfill2!.enabled).toBe(false);
   });
 
-  it('after closing: I-REMPTY parked (turnsLeft=0, enabled=false) throughout 10 advances', () => {
+  it('after closing: I-REMPTY parked (turnsLeft=0, enabled=false) throughout 10 advances', async () => {
     const g = newGameAt('DAM-ROOM');
     const wrench = g.world.get('WRENCH')!;
     wrench.moveTo(g.player);
@@ -349,7 +349,7 @@ describe('CB-DAM1 — NM-A: parked opposite timer stays disabled', () => {
     fs.set('GATES-OPEN', true);  // start with gates open
 
     // Close gates
-    g.turn('turn bolt with wrench');
+    await g.turn('turn bolt with wrench');
 
     const rempty = clockEntry(g, 'I-REMPTY');
     expect(rempty).toBeDefined();
@@ -357,7 +357,7 @@ describe('CB-DAM1 — NM-A: parked opposite timer stays disabled', () => {
     expect(rempty!.enabled).toBe(false);
 
     // Advance — I-REMPTY must stay parked
-    for (let i = 0; i < 10; i++) g.turn('wait');
+    for (let i = 0; i < 10; i++) await g.turn('wait');
     const rempty2 = clockEntry(g, 'I-REMPTY');
     expect(rempty2!.turnsLeft).toBe(0);
     expect(rempty2!.enabled).toBe(false);

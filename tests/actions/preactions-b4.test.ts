@@ -221,7 +221,7 @@ describe('PRE-TAKE handler (direct invocation, gverbs.zil:1353)', () => {
 // ---------------------------------------------------------------------------
 
 describe('PRE-TAKE (end-to-end via Game.turn)', () => {
-  it('"You already have that!" when item is already in player inventory', () => {
+  it('"You already have that!" when item is already in player inventory', async () => {
     // Object is in player's inventory — parser CAN resolve it (player children are in scope).
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A test room.' });
     room.set(Flag.On);
@@ -235,7 +235,7 @@ describe('PRE-TAKE (end-to-end via Game.turn)', () => {
     const game = new Game(world, { rng, clock: new Clock(), events: new SimpleEventEmitter() });
     game.start();
 
-    const r = game.turn('take gem');
+    const r = await game.turn('take gem');
     // PRE-TAKE guard 2 fires at step 3 BEFORE the default V-TAKE.
     // Verbatim from gverbs.zil:1358: "You already have that!"
     expect(r.output).toContain('You already have that!');
@@ -725,7 +725,7 @@ describe('PRE-TURN (gverbs.zil:1488)', () => {
 // ---------------------------------------------------------------------------
 
 describe('Step 3 gate: PRE-* block suppresses default verb via Game.turn()', () => {
-  it('PRE-TAKE "already have that" fires at step 3, suppressing "Taken."', () => {
+  it('PRE-TAKE "already have that" fires at step 3, suppressing "Taken."', async () => {
     // Player holds the gem → PRE-TAKE fires at step 3 → blocks V-TAKE.
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A room.' });
     room.set(Flag.On);
@@ -740,7 +740,7 @@ describe('Step 3 gate: PRE-* block suppresses default verb via Game.turn()', () 
     const game = new Game(world, { rng, clock: new Clock(), events: new SimpleEventEmitter() });
     game.start();
 
-    const r = game.turn('take gem');
+    const r = await game.turn('take gem');
     expect(r.output).toContain('You already have that!');
     expect(r.output).not.toContain('Taken.');
   });

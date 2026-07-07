@@ -26,13 +26,13 @@ import type { Rng } from '../../src/engine/game';
 const rng: Rng = { next: () => 0, prob: (base) => base > 0 };
 
 describe('action dispatch — MAZE-DIODES (PER routine)', () => {
-  it('is a one-way passage that warns and lands deterministically in MAZE-4', () => {
+  it('is a one-way passage that warns and lands deterministically in MAZE-4', async () => {
     // Use seed 999999 which produces values > 0.8 (safe from grue) so the
     // MAZE-DIODES routing can be verified without interference from the grue gate.
     const g = createGame({ startRoom: 'MAZE-2', seed: 999999 });
     // Override rng to never trigger grue (rng.next()=0.99 → 99 ≥ 80 → no grue).
     (g as unknown as { rng: Rng }).rng = { next: () => 0.99, prob: (base) => 0.99 * 100 < base };
-    const r = g.turn('down');
+    const r = await g.turn('down');
 
     // The no-return warning from <ROUTINE MAZE-DIODES> (1actions.zil:898).
     expect(r.output).toContain("You won't be able to get back up");
@@ -59,20 +59,20 @@ describe('action dispatch — WEST-HOUSE (room M-LOOK handler)', () => {
 });
 
 describe('action dispatch — MAILBOX-F (object handler short-circuits default)', () => {
-  it('intercepts TAKE on the mailbox even though it carries TAKEBIT', () => {
+  it('intercepts TAKE on the mailbox even though it carries TAKEBIT', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('take mailbox');
+    const r = await g.turn('take mailbox');
     // <ROUTINE MAILBOX-F> RTRUEs, suppressing the default TAKE ("Taken.").
     expect(r.output).toContain('It is securely anchored.');
     expect(r.output).not.toContain('Taken.');
   });
 
-  it('leaves an unhandled verb to fall through to the default routine', () => {
+  it('leaves an unhandled verb to fall through to the default routine', async () => {
     const g = createGame();
     g.start();
     // OPEN is not claimed by MAILBOX-F → default verbOpen runs and lists contents.
-    const r = g.turn('open mailbox');
+    const r = await g.turn('open mailbox');
     expect(r.output).toContain('leaflet');
   });
 });
@@ -121,18 +121,18 @@ describe('action dispatch — order and short-circuit semantics', () => {
     return { game, log };
   }
 
-  it('runs the room M-BEG handler before the PRSO handler', () => {
+  it('runs the room M-BEG handler before the PRSO handler', async () => {
     const { game, log } = makeOrderGame({ roomHandled: false });
     game.start();
-    game.turn('take widget');
+    await game.turn('take widget');
     // Room handler observed the verb first, then the PRSO handler claimed it.
     expect(log).toEqual(['room', 'prso']);
   });
 
-  it('short-circuits: a true from M-BEG suppresses the PRSO handler and default', () => {
+  it('short-circuits: a true from M-BEG suppresses the PRSO handler and default', async () => {
     const { game, log } = makeOrderGame({ roomHandled: true });
     game.start();
-    const r = game.turn('take widget');
+    const r = await game.turn('take widget');
     // Only the room ran; PRSO never fired and the default TAKE never spoke.
     expect(log).toEqual(['room']);
     expect(r.output).toContain('Room intercepts.');

@@ -30,15 +30,15 @@ import { Flag } from '../../src/domain/flags.js';
 // Helper: inflate the boat at DAM-BASE and board it
 // ---------------------------------------------------------------------------
 
-function inflateAt(g: Game): void {
+async function inflateAt(g: Game): Promise<void> {
   const pump = g.world.get('PUMP')!;
   pump.moveTo(g.player);
-  g.turn('inflate boat with pump');
+  await g.turn('inflate boat with pump');
 }
 
-function inflateAndBoard(g: Game): void {
-  inflateAt(g);
-  g.turn('board boat');
+async function inflateAndBoard(g: Game): Promise<void> {
+  await inflateAt(g);
+  await g.turn('board boat');
 }
 
 // ---------------------------------------------------------------------------
@@ -54,25 +54,25 @@ describe('CB-BOAT3 — NM-G: BOARD sharp-object puncture (1actions.zil:2787)', (
 
   it.each(SHARP_OBJECTS)(
     'boarding boat while holding %s → puncture message',
-    (weaponId) => {
+    async (weaponId) => {
       const g = newGameAt('DAM-BASE');
-      inflateAt(g);
+      await inflateAt(g);
       const weapon = g.world.get(weaponId);
       expect(weapon).not.toBeUndefined();
       weapon!.moveTo(g.player);
-      const out = g.turn('board boat').output;
+      const out = await (await g.turn('board boat')).output;
       expect(out).toContain('punctured');
     },
   );
 
   it.each(SHARP_OBJECTS)(
     'boarding boat while holding %s → swaps to PUNCTURED-BOAT',
-    (weaponId) => {
+    async (weaponId) => {
       const g = newGameAt('DAM-BASE');
-      inflateAt(g);
+      await inflateAt(g);
       const weapon = g.world.get(weaponId);
       weapon!.moveTo(g.player);
-      g.turn('board boat');
+      await g.turn('board boat');
       const inflated   = g.world.get('INFLATED-BOAT')!;
       const punctured  = g.world.get('PUNCTURED-BOAT')!;
       const room = g.world.get('DAM-BASE')!;
@@ -81,25 +81,25 @@ describe('CB-BOAT3 — NM-G: BOARD sharp-object puncture (1actions.zil:2787)', (
     },
   );
 
-  it('boarding without sharp objects → no puncture (player boards successfully)', () => {
+  it('boarding without sharp objects → no puncture (player boards successfully)', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAt(g);
+    await inflateAt(g);
     // No sharp objects in inventory
-    const out = g.turn('board boat').output;
+    const out = await (await g.turn('board boat')).output;
     expect(out).not.toContain('punctured');
     // Player should be inside the boat
     const inflated = g.world.get('INFLATED-BOAT')!;
     expect(g.player.parent).toBe(inflated);
   });
 
-  it('WEAPONBIT-only weapon (not in sharp set) does NOT puncture on BOARD', () => {
+  it('WEAPONBIT-only weapon (not in sharp set) does NOT puncture on BOARD', async () => {
     // Troll axe has WEAPONBIT but is not in the named sharp-object set.
     // A broadsword stub — test that only the 6 named objects trigger puncture.
     // We verify by confirming an arbitrary non-listed weapon doesn't puncture.
     const g = newGameAt('DAM-BASE');
-    inflateAt(g);
+    await inflateAt(g);
     // TROLL-SWORD (not in the 6) — if not present, just confirm no puncture without items
-    const out = g.turn('board boat').output;
+    const out = await (await g.turn('board boat')).output;
     expect(out).not.toContain('punctured');
   });
 });
@@ -109,32 +109,32 @@ describe('CB-BOAT3 — NM-G: BOARD sharp-object puncture (1actions.zil:2787)', (
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT3 — M-BEG WALK: direction restriction in boat (1actions.zil:2725)', () => {
-  it('west direction allowed from RIVER-1 (passes through to GOTO)', () => {
+  it('west direction allowed from RIVER-1 (passes through to GOTO)', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');
+    await inflateAndBoard(g);
+    await g.turn('launch');
     // RIVER-1 has a west exit to DAM-BASE (land); WEST is in the whitelist
     // Landing message should appear ("comes to a rest on the shore")
-    const out = g.turn('west').output;
+    const out = await (await g.turn('west')).output;
     // Should NOT say "Read the label" (the direction restriction message)
     expect(out).not.toContain("label for the boat's instructions");
     // Should land on shore
     expect(out).toContain('rest on the shore');
   });
 
-  it('north direction blocked inside boat on RIVER-1 — "Read the label..."', () => {
+  it('north direction blocked inside boat on RIVER-1 — "Read the label..."', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');
+    await inflateAndBoard(g);
+    await g.turn('launch');
     // North is not in the whitelist (only E/W/LAND pass through, plus N/S in RESERVOIR)
-    const out = g.turn('north').output;
+    const out = await (await g.turn('north')).output;
     expect(out).toContain('label');
   });
 
-  it('N/S allowed in RESERVOIR (1actions.zil:2728)', () => {
+  it('N/S allowed in RESERVOIR (1actions.zil:2728)', async () => {
     // Move player to RESERVOIR in boat
     const g = newGameAt('RESERVOIR');
-    inflateAt(g);
+    await inflateAt(g);
     // Place inflated boat in RESERVOIR, player inside it
     const inflated = g.world.get('INFLATED-BOAT')!;
     const reservoir = g.world.get('RESERVOIR')!;
@@ -142,7 +142,7 @@ describe('CB-BOAT3 — M-BEG WALK: direction restriction in boat (1actions.zil:2
     inflated.moveTo(reservoir);
     g.player.moveTo(inflated);
     // North from RESERVOIR (exits go to RESERVOIR-NORTH)
-    const out = g.turn('north').output;
+    const out = await (await g.turn('north')).output;
     expect(out).not.toContain('label');
   });
 });
@@ -152,19 +152,19 @@ describe('CB-BOAT3 — M-BEG WALK: direction restriction in boat (1actions.zil:2
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT3 — LAUNCH: GO-NEXT + I-RIVER arm (1actions.zil:2738)', () => {
-  it('launch from DAM-BASE moves boat to RIVER-1', () => {
+  it('launch from DAM-BASE moves boat to RIVER-1', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');
+    await inflateAndBoard(g);
+    await g.turn('launch');
     const inflated  = g.world.get('INFLATED-BOAT')!;
     const river1    = g.world.get('RIVER-1')!;
     expect(inflated.parent).toBe(river1);
   });
 
-  it('launch from DAM-BASE arms I-RIVER', () => {
+  it('launch from DAM-BASE arms I-RIVER', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');
+    await inflateAndBoard(g);
+    await g.turn('launch');
     // I-RIVER should be enabled. turnsLeft starts at RIVER-SPEEDS[RIVER-1]=4 but the
     // launch turn's clock.advance() immediately decrements once → turnsLeft=3.
     const entry = (g as unknown as { clock: { getEntry(id: string): { enabled: boolean; turnsLeft: number } | undefined } }).clock.getEntry('I-RIVER');
@@ -173,15 +173,15 @@ describe('CB-BOAT3 — LAUNCH: GO-NEXT + I-RIVER arm (1actions.zil:2738)', () =>
     expect(entry!.turnsLeft).toBe(3);
   });
 
-  it('launch while already on RIVER-1 → blocked with "river" message', () => {
+  it('launch while already on RIVER-1 → blocked with "river" message', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');  // now on RIVER-1
-    const out = g.turn('launch').output;
+    await inflateAndBoard(g);
+    await g.turn('launch');  // now on RIVER-1
+    const out = await (await g.turn('launch')).output;
     expect(out).toContain('river');
   });
 
-  it('launch while already on RESERVOIR → blocked with "reservoir" message', () => {
+  it('launch while already on RESERVOIR → blocked with "reservoir" message', async () => {
     const g = newGameAt('RESERVOIR');
     const inflated = g.world.get('INFLATED-BOAT')!;
     const reservoir = g.world.get('RESERVOIR')!;
@@ -190,26 +190,26 @@ describe('CB-BOAT3 — LAUNCH: GO-NEXT + I-RIVER arm (1actions.zil:2738)', () =>
     reservoir.set(Flag.On);
     inflated.moveTo(reservoir);
     g.player.moveTo(inflated);
-    const out = g.turn('launch').output;
+    const out = await (await g.turn('launch')).output;
     expect(out).toContain('reservoir');
   });
 
-  it('launch from unlaunchable room (STONE-BARROW) → "can\'t launch it here"', () => {
+  it('launch from unlaunchable room (STONE-BARROW) → "can\'t launch it here"', async () => {
     const g = newGameAt('STONE-BARROW');
-    inflateAt(g);
+    await inflateAt(g);
     // Move inflated boat here
     const inflated = g.world.get('INFLATED-BOAT')!;
     const room = g.world.get('STONE-BARROW')!;
     inflated.moveTo(room);
     g.player.moveTo(inflated);
-    const out = g.turn('launch').output;
+    const out = await (await g.turn('launch')).output;
     expect(out).toContain("can't launch");
   });
 
-  it('launch verb when NOT inside boat → "You\'re not in the boat!"', () => {
+  it('launch verb when NOT inside boat → "You\'re not in the boat!"', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAt(g);  // inflate but don't board
-    const out = g.turn('launch').output;
+    await inflateAt(g);  // inflate but don't board
+    const out = await (await g.turn('launch')).output;
     // Player is not in the boat, so RBOAT-FUNCTION fires the "not in the boat" branch
     expect(out).toContain("not in the boat");
   });
@@ -217,19 +217,19 @@ describe('CB-BOAT3 — LAUNCH: GO-NEXT + I-RIVER arm (1actions.zil:2738)', () =>
   // RIVER-5 is NOT in the ZIL "already on water" check (1actions.zil:2739-2740).
   // The list is RIVER-1..4, RESERVOIR, IN-STREAM only. RIVER-5 is also not a key
   // in RIVER-LAUNCH (:2698-2706), so GO-NEXT returns false → "can't launch it here."
-  it('launch while at RIVER-5 (in boat) → "can\'t launch it here" not "on the river"', () => {
+  it('launch while at RIVER-5 (in boat) → "can\'t launch it here" not "on the river"', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
+    await inflateAndBoard(g);
     // Drift to RIVER-5: launch(→RIVER-1) + 5 waits total (multi-CLOCKER timing).
     // wait 1: RIVER-1→2, wait 2: RIVER-2 hold, wait 3: RIVER-2→3,
     // wait 4: RIVER-3→4, wait 5: RIVER-4→5.
-    g.turn('launch');
-    for (let i = 0; i < 5; i++) g.turn('wait');
+    await g.turn('launch');
+    for (let i = 0; i < 5; i++) await g.turn('wait');
     const inflated = g.world.get('INFLATED-BOAT')!;
     const river5   = g.world.get('RIVER-5')!;
     expect(inflated.parent).toBe(river5);
     // Now attempt launch — ZIL falls through to "can't launch it here"
-    const out = g.turn('launch').output;
+    const out = await (await g.turn('launch')).output;
     expect(out).toContain("can't launch");
     expect(out).not.toContain('or have you forgotten');
   });
@@ -240,46 +240,46 @@ describe('CB-BOAT3 — LAUNCH: GO-NEXT + I-RIVER arm (1actions.zil:2738)', () =>
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT3 — DROP/ATTACK WEAPONBIT in boat → puncture (1actions.zil:2756)', () => {
-  it('dropping a weapon (SWORD) inside the boat → puncture message', () => {
+  it('dropping a weapon (SWORD) inside the boat → puncture message', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
+    await inflateAndBoard(g);
     const sword = g.world.get('SWORD')!;
     sword.moveTo(g.player);
-    const out = g.turn('drop sword').output;
+    const out = await (await g.turn('drop sword')).output;
     expect(out).toContain("didn't agree with the boat");
   });
 
-  it('dropping a weapon inside the boat → swaps to PUNCTURED-BOAT', () => {
+  it('dropping a weapon inside the boat → swaps to PUNCTURED-BOAT', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
+    await inflateAndBoard(g);
     const sword = g.world.get('SWORD')!;
     sword.moveTo(g.player);
-    g.turn('drop sword');
+    await g.turn('drop sword');
     const inflated  = g.world.get('INFLATED-BOAT')!;
     const punctured = g.world.get('PUNCTURED-BOAT')!;
     expect(inflated.parent).toBeNull();
     expect(punctured.parent).not.toBeNull();
   });
 
-  it('dropping a weapon inside the boat → ejects player to room (land)', () => {
+  it('dropping a weapon inside the boat → ejects player to room (land)', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
+    await inflateAndBoard(g);
     const sword = g.world.get('SWORD')!;
     sword.moveTo(g.player);
-    g.turn('drop sword');
+    await g.turn('drop sword');
     // Player should be ejected to DAM-BASE (land), not inside boat
     const inflated = g.world.get('INFLATED-BOAT')!;
     expect(g.player.parent).not.toBe(inflated);
   });
 
-  it('dropping weapon in boat on NonLand water room → JIGS-UP (Frigid River death)', () => {
+  it('dropping weapon in boat on NonLand water room → JIGS-UP (Frigid River death)', async () => {
     // Place boat on RIVER-1 (NonLand)
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');  // now on RIVER-1 (NonLand)
+    await inflateAndBoard(g);
+    await g.turn('launch');  // now on RIVER-1 (NonLand)
     const sword = g.world.get('SWORD')!;
     sword.moveTo(g.player);
-    const out = g.turn('drop sword').output;
+    const out = await (await g.turn('drop sword')).output;
     // Should contain the river death message (fighting fierce currents)
     expect(out).toContain('currents');
   });
@@ -300,10 +300,10 @@ describe('CB-BOAT3 — NM-H: I-RIVER drift speeds (1actions.zil:2708–2720)', (
   //   wait 5: 2 ticks (2→1→0 FIRE)  → RIVER-5, rearm 1
   //   wait 6: 1 tick  (1→0 FIRE)    → waterfall death
 
-  it('I-RIVER fires after 1 wait from RIVER-1, moves to RIVER-2', () => {
+  it('I-RIVER fires after 1 wait from RIVER-1, moves to RIVER-2', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');  // I-RIVER armed at speed 4; launch clock advance → turnsLeft=3
+    await inflateAndBoard(g);
+    await g.turn('launch');  // I-RIVER armed at speed 4; launch clock advance → turnsLeft=3
 
     const inflated = g.world.get('INFLATED-BOAT')!;
     const river1   = g.world.get('RIVER-1')!;
@@ -311,19 +311,19 @@ describe('CB-BOAT3 — NM-H: I-RIVER drift speeds (1actions.zil:2708–2720)', (
     expect(inflated.parent).toBe(river1);
 
     // 1st wait: 3 clock ticks (3→2→1→0 FIRE) → moves to RIVER-2
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toContain('downstream');
     const river2 = g.world.get('RIVER-2')!;
     expect(inflated.parent).toBe(river2);
   });
 
-  it('I-RIVER re-arms at RIVER-2 speed (4 turns) (NM-H: re-arm at NEW section speed)', () => {
+  it('I-RIVER re-arms at RIVER-2 speed (4 turns) (NM-H: re-arm at NEW section speed)', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');
+    await inflateAndBoard(g);
+    await g.turn('launch');
     // Drift to RIVER-2: fires on wait 1 (turnsLeft 3→2→1→0 fire).
     // After the fire tick(), re-arm sets turnsLeft=4 (RIVER-2 speed).
-    g.turn('wait');  // 1 wait to fire RIVER-1→RIVER-2
+    await g.turn('wait');  // 1 wait to fire RIVER-1→RIVER-2
 
     // turnsLeft was set to 4 during the fire tick; advance() already finished,
     // so the value is 4 (not yet decremented by the next turn).
@@ -332,71 +332,71 @@ describe('CB-BOAT3 — NM-H: I-RIVER drift speeds (1actions.zil:2708–2720)', (
     expect(entry!.turnsLeft).toBe(4);
   });
 
-  it('I-RIVER fires after 3 waits from RIVER-3', () => {
+  it('I-RIVER fires after 3 waits from RIVER-3', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');
+    await inflateAndBoard(g);
+    await g.turn('launch');
     // RIVER-1→2: wait 1 (turnsLeft 3→2→1→0).
     // RIVER-2→3: re-arms at 4; wait 2 (4→3→2→1), wait 3 (1→0 FIRE).
-    for (let i = 0; i < 3; i++) g.turn('wait');
+    for (let i = 0; i < 3; i++) await g.turn('wait');
     const inflated = g.world.get('INFLATED-BOAT')!;
     const river3   = g.world.get('RIVER-3')!;
     expect(inflated.parent).toBe(river3);
 
     // RIVER-3 speed = 3; turnsLeft=3 after re-arm.
     // Wait 4: 3 ticks (3→2→1→0 FIRE) → moves to RIVER-4 immediately.
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toContain('downstream');
     const river4 = g.world.get('RIVER-4')!;
     expect(inflated.parent).toBe(river4);
   });
 
-  it('I-RIVER fires after 5 waits total (RIVER-4 → RIVER-5)', () => {
+  it('I-RIVER fires after 5 waits total (RIVER-4 → RIVER-5)', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');
+    await inflateAndBoard(g);
+    await g.turn('launch');
     // RIVER-1→2: wait 1, RIVER-2→3: wait 3, RIVER-3→4: wait 4.
-    for (let i = 0; i < 4; i++) g.turn('wait');
+    for (let i = 0; i < 4; i++) await g.turn('wait');
     const inflated = g.world.get('INFLATED-BOAT')!;
     const river4   = g.world.get('RIVER-4')!;
     expect(inflated.parent).toBe(river4);
 
     // RIVER-4 speed = 2; turnsLeft=2 after re-arm.
     // Wait 5: 2 ticks (2→1→0 FIRE) → moves to RIVER-5.
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toContain('downstream');
     const river5 = g.world.get('RIVER-5')!;
     expect(inflated.parent).toBe(river5);
   });
 
-  it('NM-I: past RIVER-5 (after 6 waits total) → waterfall death (1actions.zil:2716)', () => {
+  it('NM-I: past RIVER-5 (after 6 waits total) → waterfall death (1actions.zil:2716)', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');
+    await inflateAndBoard(g);
+    await g.turn('launch');
     // RIVER-1→2: wait 1, →3: wait 3, →4: wait 4, →5: wait 5.
-    for (let i = 0; i < 5; i++) g.turn('wait');
+    for (let i = 0; i < 5; i++) await g.turn('wait');
     const inflated = g.world.get('INFLATED-BOAT')!;
     const river5   = g.world.get('RIVER-5')!;
     expect(inflated.parent).toBe(river5);
 
     // RIVER-5 speed = 1; turnsLeft=1 after re-arm. One more wait fires the falls death.
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     // Waterfall death message
     expect(out).toContain('waterfalls');
   });
 
-  it('I-RIVER disables when leaving the river (e.g. land west from RIVER-1)', () => {
+  it('I-RIVER disables when leaving the river (e.g. land west from RIVER-1)', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');  // RIVER-1, I-RIVER armed
+    await inflateAndBoard(g);
+    await g.turn('launch');  // RIVER-1, I-RIVER armed
     // Land west (DAM-BASE is a land room, RIVER-1 has a west exit)
-    g.turn('west');  // land at DAM-BASE
+    await g.turn('west');  // land at DAM-BASE
     // After landing, I-RIVER should be disabled (not armed)
     // Wait several turns; no drift should occur
     const inflated = g.world.get('INFLATED-BOAT')!;
     const damBase  = g.world.get('DAM-BASE')!;
     expect(inflated.parent).toBe(damBase);  // boat landed
-    for (let i = 0; i < 6; i++) g.turn('wait');
+    for (let i = 0; i < 6; i++) await g.turn('wait');
     expect(inflated.parent).toBe(damBase);  // stays put
   });
 });
@@ -406,13 +406,13 @@ describe('CB-BOAT3 — NM-H: I-RIVER drift speeds (1actions.zil:2708–2720)', (
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT3 — I-RIVER: downstream message (1actions.zil:2713)', () => {
-  it('drift message contains "downstream"', () => {
+  it('drift message contains "downstream"', async () => {
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');
+    await inflateAndBoard(g);
+    await g.turn('launch');
     // I-RIVER fires on the 3rd wait (turnsLeft: 4→3 on launch turn, 3→2→1→0 fire)
     let out = '';
-    for (let i = 0; i < 3; i++) out = g.turn('wait').output;
+    for (let i = 0; i < 3; i++) out = await (await g.turn('wait')).output;
     expect(out).toContain('downstream');
   });
 });
@@ -431,10 +431,10 @@ describe('CB-BOAT3 — I-RIVER: downstream message (1actions.zil:2713)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-BOAT3 — boat-puncture DROWNING blank line (1actions.zil:2775)', () => {
-  it('RESERVOIR puncture: blank line between deflate message and drowning (1actions.zil:2778)', () => {
+  it('RESERVOIR puncture: blank line between deflate message and drowning (1actions.zil:2778)', async () => {
     // Set up: inflate, board, manually place boat in RESERVOIR (NonLand)
     const g = newGameAt('RESERVOIR');
-    inflateAt(g);
+    await inflateAt(g);
     const inflated   = g.world.get('INFLATED-BOAT')!;
     const reservoir  = g.world.get('RESERVOIR')!;
     reservoir.set(Flag.NonLand);
@@ -443,19 +443,19 @@ describe('CB-BOAT3 — boat-puncture DROWNING blank line (1actions.zil:2775)', (
     g.player.moveTo(inflated);
     const sword = g.world.get('SWORD')!;
     sword.moveTo(g.player);
-    const out = g.turn('drop sword').output;
+    const out = await (await g.turn('drop sword')).output;
     // The ZIL <CRLF> at :2775 produces a blank line — "\n\n" in the chain-joined output.
     expect(out).toContain('leaving you without.\n\n');
   });
 
-  it('falls puncture: blank line between deflate message and drowning (1actions.zil:2781)', () => {
+  it('falls puncture: blank line between deflate message and drowning (1actions.zil:2781)', async () => {
     // Set up: inflate, board, launch onto RIVER-1 (already NonLand)
     const g = newGameAt('DAM-BASE');
-    inflateAndBoard(g);
-    g.turn('launch');  // now on RIVER-1 (NonLand, not RESERVOIR/IN-STREAM)
+    await inflateAndBoard(g);
+    await g.turn('launch');  // now on RIVER-1 (NonLand, not RESERVOIR/IN-STREAM)
     const sword = g.world.get('SWORD')!;
     sword.moveTo(g.player);
-    const out = g.turn('drop sword').output;
+    const out = await (await g.turn('drop sword')).output;
     // Same <CRLF> at :2775 — blank line before the falls death message.
     expect(out).toContain('leaving you without.\n\n');
   });

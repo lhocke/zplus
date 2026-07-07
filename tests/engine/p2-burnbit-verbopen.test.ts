@@ -138,56 +138,56 @@ function ctx(fix: ReturnType<typeof makeOpenFixture>, dobjId: string): VerbConte
 }
 
 describe('P2-2a — verbOpen sets Flag.Touched on container', () => {
-  it('container gets Flag.Touched after being opened', () => {
+  it('container gets Flag.Touched after being opened', async () => {
     const fix = makeOpenFixture();
     expect(fix.pedestal.has(Flag.Touched)).toBe(false);
-    executeVerb(ctx(fix, 'PEDESTAL'), 'V-OPEN');
+    await executeVerb(ctx(fix, 'PEDESTAL'), 'V-OPEN');
     expect(fix.pedestal.has(Flag.Touched)).toBe(true);
   });
 
-  it('mailbox gets Flag.Touched after being opened (no-fdesc child)', () => {
+  it('mailbox gets Flag.Touched after being opened (no-fdesc child)', async () => {
     const fix = makeOpenFixture();
     expect(fix.mailbox.has(Flag.Touched)).toBe(false);
-    executeVerb(ctx(fix, 'MAILBOX'), 'V-OPEN');
+    await executeVerb(ctx(fix, 'MAILBOX'), 'V-OPEN');
     expect(fix.mailbox.has(Flag.Touched)).toBe(true);
   });
 });
 
 describe('P2-2b — verbOpen single-child FDESC path', () => {
-  it('prints "The <container> opens." when single untouched child has fdesc', () => {
+  it('prints "The <container> opens." when single untouched child has fdesc', async () => {
     const fix = makeOpenFixture();
-    const result = executeVerb(ctx(fix, 'PEDESTAL'), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, 'PEDESTAL'), 'V-OPEN');
     // Should contain "The stone pedestal opens." — NOT "Opening the stone pedestal reveals..."
     expect(result.output).toContain('The stone pedestal opens.');
   });
 
-  it('appends the child FDESC on the single-child FDESC path', () => {
+  it('appends the child FDESC on the single-child FDESC path', async () => {
     const fix = makeOpenFixture();
-    const result = executeVerb(ctx(fix, 'PEDESTAL'), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, 'PEDESTAL'), 'V-OPEN');
     expect(result.output).toContain('Sitting on the pedestal is a flaming torch, made of ivory.');
   });
 
-  it('does NOT say "Opening the ... reveals ..." for single-child with fdesc', () => {
+  it('does NOT say "Opening the ... reveals ..." for single-child with fdesc', async () => {
     const fix = makeOpenFixture();
-    const result = executeVerb(ctx(fix, 'PEDESTAL'), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, 'PEDESTAL'), 'V-OPEN');
     expect(result.output).not.toMatch(/Opening the.*reveals/);
   });
 });
 
 describe('P2-2c — verbOpen single-child WITHOUT fdesc uses reveals path (mailbox oracle)', () => {
-  it('prints "Opening the small mailbox reveals a leaflet." (oracle match)', () => {
+  it('prints "Opening the small mailbox reveals a leaflet." (oracle match)', async () => {
     const fix = makeOpenFixture();
-    const result = executeVerb(ctx(fix, 'MAILBOX'), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, 'MAILBOX'), 'V-OPEN');
     expect(result.output).toBe('Opening the small mailbox reveals a leaflet.');
   });
 });
 
 describe('P2-2d — FDESC path skipped when child already has Touched', () => {
-  it('uses "reveals" path when single child has Touched (already seen)', () => {
+  it('uses "reveals" path when single child has Touched (already seen)', async () => {
     const fix = makeOpenFixture();
     // Mark the torch as already touched
     fix.torch.set(Flag.Touched);
-    const result = executeVerb(ctx(fix, 'PEDESTAL'), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, 'PEDESTAL'), 'V-OPEN');
     // Touched child → reveals path, not FDESC path
     expect(result.output).toContain('Opening the stone pedestal reveals a flaming torch.');
     expect(result.output).not.toContain('Sitting on the pedestal');

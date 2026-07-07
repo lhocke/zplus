@@ -136,19 +136,19 @@ export interface VerbContext {
   /**
    * Write the current game snapshot to the given slot via SavePort.
    * Slot is already canonicalized by the session layer (§4.5).
-   * Throws on failure (quota/IO) so V-SAVE catches and emits Failed.
+   * Rejects on failure (quota/IO) so V-SAVE catches and emits Failed.
    * Absent when no SavePort is wired (test contexts without save infra).
    */
-  readonly saveGame?: (slot: string) => void;
+  readonly saveGame?: (slot: string) => Promise<void>;
   /**
    * Read a snapshot from the given slot and restore game state.
-   * Returns:
+   * Resolves to:
    *   - string: post-restore room description (success — emit Ok. then this)
    *   - { inVoice: string }: in-voice refusal message (corrupt/version — emit as-is)
    *   - undefined: slot was empty (emit "Failed.")
    * Absent when no SavePort is wired (emit "Failed.").
    */
-  readonly restoreGame?: (slot: string) => string | { inVoice: string } | undefined;
+  readonly restoreGame?: (slot: string) => Promise<string | { inVoice: string } | undefined>;
   /**
    * Re-bootstrap the session — shell-level restart (§4.4, OQ-4).
    * Absent when no restart handler is wired.
@@ -1053,11 +1053,12 @@ function verbQuit(ctx: VerbContext): VerbResult {
 // V-SAVE (gverbs.zil:78–82) — write snapshot to SavePort.
 // Text is byte-exact: Ok. on success, Failed. on any write failure (§4.2, FD-2).
 // Slot is pre-resolved by the session layer (§4.5); defaults to "1" when absent.
-function verbSave(ctx: VerbContext): VerbResult {
+// Amendment A: the port write is awaited — a rejected write emits Failed.
+async function verbSave(ctx: VerbContext): Promise<VerbResult> {
   if (!ctx.saveGame) return result('Failed.');
   const slot = ctx.saveSlot ?? '1';
   try {
-    ctx.saveGame(slot);
+    await ctx.saveGame(slot);
     return result('Ok.');
   } catch {
     return result('Failed.');
@@ -1068,10 +1069,10 @@ function verbSave(ctx: VerbContext): VerbResult {
 // Ok. + room re-describe on success; Failed. when slot is empty (§4.3, FD-2, OQ-3);
 // in-voice message for corrupt/version (§5.3, OQ-3) — never "Failed." for those.
 // Slot is pre-resolved by the session layer (§4.5); defaults to "1" when absent.
-function verbRestore(ctx: VerbContext): VerbResult {
+async function verbRestore(ctx: VerbContext): Promise<VerbResult> {
   if (!ctx.restoreGame) return result('Failed.');
   const slot = ctx.saveSlot ?? '1';
-  const r = ctx.restoreGame(slot);
+  const r = await ctx.restoreGame(slot);
   if (r === undefined) return result('Failed.');
   if (typeof r === 'object') return result(r.inVoice);
   // string: success — Ok. then V-FIRST-LOOK room description
@@ -1781,7 +1782,7 @@ function verbClimbUpAction(ctx: VerbContext): VerbResult {
   return verbClimbUp('up', nilCtx, false);
 }
 
-type VerbHandler = (ctx: VerbContext) => VerbResult;
+type VerbHandler = (ctx: VerbContext) => VerbResult | Promise<VerbResult>;
 
 // V-ODYSSEUS — gverbs.zil:945–961.
 //
@@ -1974,7 +1975,7 @@ export const META_ACTIONS: ReadonlySet<string> = new Set([
   'V-RESTORE',
 ]);
 
-export function executeVerb(ctx: VerbContext, action?: string): VerbResult {
+export async function executeVerb(ctx: VerbContext, action?: string): Promise<VerbResult> {
   if (action !== undefined) {
     const actionHandler = ACTION_HANDLERS[action];
     if (actionHandler !== undefined) return actionHandler(ctx);

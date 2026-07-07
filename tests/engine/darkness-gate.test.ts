@@ -68,22 +68,22 @@ describe('darkness gate — describeCurrentRoom (game.ts start)', () => {
 // ---------------------------------------------------------------------------
 
 describe('darkness gate — verbLook ("look") in dark room', () => {
-  it('"look" in a dark room returns pitch-black message, no room name', () => {
+  it('"look" in a dark room returns pitch-black message, no room name', async () => {
     const g = newGameAt('CELLAR');
     g.start();
 
-    const r = g.turn('look');
+    const r = await g.turn('look');
 
     expect(r.output).toContain('It is pitch black.');
     expect(r.output).not.toContain('Cellar\n');
     expect(r.output).not.toContain('The trap door');
   });
 
-  it('"look" in a lit room returns full description', () => {
+  it('"look" in a lit room returns full description', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
 
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('West of House');
     expect(r.output).not.toContain('pitch black');
   });
@@ -94,7 +94,7 @@ describe('darkness gate — verbLook ("look") in dark room', () => {
 // ---------------------------------------------------------------------------
 
 describe('darkness gate — entering a dark room via movement', () => {
-  it('moving from KITCHEN (lit) up into ATTIC (dark) shows moved-into-dark message', () => {
+  it('moving from KITCHEN (lit) up into ATTIC (dark) shows moved-into-dark message', async () => {
     // KITCHEN has Flag.On (ONBIT always-lit); ATTIC has no Flag.On and no light source nearby.
     // Player has no lamp.
     //
@@ -106,14 +106,14 @@ describe('darkness gate — entering a dark room via movement', () => {
     const g = newGameAt('KITCHEN');
     g.start();
 
-    const r = g.turn('up');
+    const r = await g.turn('up');
 
     // First step into ATTIC: moved-into-dark notice (not pitch-black yet).
     expect(r.output).toContain('You have moved into a dark place.');
     expect(r.output).not.toContain('This is the attic');
 
     // Subsequent LOOK gives the pitch-black message.
-    const look = g.turn('look');
+    const look = await g.turn('look');
     expect(look.output).toContain('It is pitch black.');
   });
 });
@@ -167,7 +167,7 @@ describe('darkness gate — lamp restores normal description', () => {
     expect(out).toContain('Cellar');
   });
 
-  it('turning lamp off in CELLAR makes the next look return pitch-black', () => {
+  it('turning lamp off in CELLAR makes the next look return pitch-black', async () => {
     const g = newGameAt('CELLAR');
     const w = worldOf(g);
     const lamp = w.get('LAMP')!;
@@ -178,8 +178,8 @@ describe('darkness gate — lamp restores normal description', () => {
     g.start(); // CELLAR description shown (lit)
 
     // Turn off lamp; look should show dark
-    g.turn('turn off lantern');
-    const r = g.turn('look');
+    await g.turn('turn off lantern');
+    const r = await g.turn('look');
 
     expect(r.output).toContain('It is pitch black.');
     expect(r.output).not.toContain('Cellar\n');

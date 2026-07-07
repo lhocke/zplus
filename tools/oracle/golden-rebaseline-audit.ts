@@ -100,14 +100,14 @@ function checkGoldenHeader(): void {
 // ---------------------------------------------------------------------------
 // Check 2: golden matches engine (post-header strip)
 // ---------------------------------------------------------------------------
-function checkGoldenMatchesEngine(): void {
+async function checkGoldenMatchesEngine(): Promise<void> {
   process.stdout.write('\nCheck 2: golden matches engine output\n');
 
   const rawGolden = readFileSync(GOLDEN_PATH, 'utf8');
   const firstNewline = rawGolden.indexOf('\n');
   const goldenBody = rawGolden.slice(firstNewline + 1); // strip header line
 
-  const engineOutput = runEngine(GOLDEN_COMMANDS, { seed: 42 });
+  const engineOutput = await runEngine(GOLDEN_COMMANDS, { seed: 42 });
 
   if (goldenBody !== engineOutput) {
     // Find the first differing line for diagnostics
@@ -267,7 +267,7 @@ function checkWritePathAbsent(): void {
 process.stdout.write('=== golden-rebaseline-audit (spec §8 / §10.2) ===\n\n');
 
 checkGoldenHeader();
-checkGoldenMatchesEngine();
+await checkGoldenMatchesEngine();
 checkDGCStringsPresent();
 checkTranscriptHeader();
 checkDFrotzCorroboration();

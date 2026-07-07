@@ -101,10 +101,10 @@ function buildProbeWorld(opts: { fatalVerb?: string } = {}): ProbeWorld {
 // ---------------------------------------------------------------------------
 
 describe('B2 — runMEnd: M-END fires on every non-fatal turn', () => {
-  it('M-END fires after a look command (unconditional post-turn callback)', () => {
+  it('M-END fires after a look command (unconditional post-turn callback)', async () => {
     const { game, mEndCalls } = buildProbeWorld();
     game.start();
-    game.turn('look');
+    await game.turn('look');
     // M-END should have fired exactly once.
     expect(mEndCalls.length).toBeGreaterThanOrEqual(1);
     // The most recent M-END call should carry rarg = M_END (checked by the handler recording).
@@ -113,28 +113,28 @@ describe('B2 — runMEnd: M-END fires on every non-fatal turn', () => {
     expect(last.verb).toBe('look');
   });
 
-  it('M-END fires after a take command', () => {
+  it('M-END fires after a take command', async () => {
     const { game, mEndCalls } = buildProbeWorld();
     game.start();
-    game.turn('take item');
+    await game.turn('take item');
     expect(mEndCalls.length).toBeGreaterThanOrEqual(1);
     const last = mEndCalls[mEndCalls.length - 1]!;
     expect(last.verb).toBe('take');
   });
 
-  it('M-END fires even when no handler claimed the command (unconditional)', () => {
+  it('M-END fires even when no handler claimed the command (unconditional)', async () => {
     // "examine item" falls through to the default verb (step 7), not short-circuited.
     // M-END must STILL fire.
     const { game, mEndCalls } = buildProbeWorld();
     game.start();
-    game.turn('examine item');
+    await game.turn('examine item');
     expect(mEndCalls.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('M-END carries the just-executed dobj id when a dobj was present', () => {
+  it('M-END carries the just-executed dobj id when a dobj was present', async () => {
     const { game, mEndCalls, item } = buildProbeWorld();
     game.start();
-    game.turn('examine item');
+    await game.turn('examine item');
     const last = mEndCalls[mEndCalls.length - 1]!;
     // The dobj id should be the item we acted on.
     expect(last.dobjId).toBe(item.id);
@@ -146,7 +146,7 @@ describe('B2 — runMEnd: M-END fires on every non-fatal turn', () => {
 // ---------------------------------------------------------------------------
 
 describe('B2 — runMEnd: M-END is skipped when M-FATAL fires', () => {
-  it('M-END does NOT fire when the room M-BEG handler calls ctx.fatal()', () => {
+  it('M-END does NOT fire when the room M-BEG handler calls ctx.fatal()', async () => {
     // Install a handler that signals fatal on verb 'look'.
     const { game, mEndCalls } = buildProbeWorld({ fatalVerb: 'look' });
     game.start();
@@ -155,20 +155,20 @@ describe('B2 — runMEnd: M-END is skipped when M-FATAL fires', () => {
     // not turn(), so there should be none; but be explicit).
     mEndCalls.length = 0;
 
-    game.turn('look');
+    await game.turn('look');
 
     // M-END must NOT have fired because the chain returned M-FATAL.
     expect(mEndCalls.length).toBe(0);
   });
 
-  it('M-FATAL aborts a chained command (P-CONT cleared — second segment skipped)', () => {
+  it('M-FATAL aborts a chained command (P-CONT cleared — second segment skipped)', async () => {
     // "look . examine item" — fatal on 'look' should abort; 'examine item' never runs.
     const { game, mEndCalls } = buildProbeWorld({ fatalVerb: 'look' });
     game.start();
     mEndCalls.length = 0;
 
     // "look. examine item" — 'look' fires M-FATAL; 'examine item' should be skipped.
-    game.turn('look. examine item');
+    await game.turn('look. examine item');
 
     // No M-END calls because both segments were aborted (P-CONT cleared).
     // The second segment (examine item) was never reached.
@@ -176,16 +176,16 @@ describe('B2 — runMEnd: M-END is skipped when M-FATAL fires', () => {
     expect(mEndCalls.length).toBe(0);
   });
 
-  it('M-FATAL only aborts the current chained line, not the next turn call', () => {
+  it('M-FATAL only aborts the current chained line, not the next turn call', async () => {
     // After a fatal turn, the next independent turn() call should work normally.
     const { game, mEndCalls } = buildProbeWorld({ fatalVerb: 'look' });
     game.start();
     mEndCalls.length = 0;
 
-    game.turn('look');               // fatal — no M-END
+    await game.turn('look');               // fatal — no M-END
     expect(mEndCalls.length).toBe(0);
 
-    game.turn('examine item');       // non-fatal — M-END fires
+    await game.turn('examine item');       // non-fatal — M-END fires
     expect(mEndCalls.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -195,7 +195,7 @@ describe('B2 — runMEnd: M-END is skipped when M-FATAL fires', () => {
 // ---------------------------------------------------------------------------
 
 describe('B2 — runMEnd: M-END fires on the destination room after movement', () => {
-  it('after moving north, M-END fires on the new room (not the starting room)', () => {
+  it('after moving north, M-END fires on the new room (not the starting room)', async () => {
     // Build a two-room world; both rooms have probe handlers so we can
     // distinguish which room's M-END was called.
     const destEndCalls: string[] = [];
@@ -225,7 +225,7 @@ describe('B2 — runMEnd: M-END fires on the destination room after movement', (
     const game = new Game(world, { rng, clock: new Clock(), events: new SimpleEventEmitter() });
 
     game.start();
-    game.turn('north');
+    await game.turn('north');
 
     // After moving north, M-END should have fired on destRoom (verb = 'walk').
     expect(destEndCalls.length).toBeGreaterThanOrEqual(1);
@@ -238,22 +238,22 @@ describe('B2 — runMEnd: M-END fires on the destination room after movement', (
 // ---------------------------------------------------------------------------
 
 describe('B2 — runMEnd: stashed verb/dobj/iobj visible in M-END ctx', () => {
-  it('M-END ctx.verb matches the just-executed verb', () => {
+  it('M-END ctx.verb matches the just-executed verb', async () => {
     const { game, mEndCalls } = buildProbeWorld();
     game.start();
     mEndCalls.length = 0;
 
-    game.turn('examine item');
+    await game.turn('examine item');
     const last = mEndCalls[mEndCalls.length - 1]!;
     expect(last.verb).toBe('examine');
   });
 
-  it('M-END ctx.dobj is the direct object of the just-executed command', () => {
+  it('M-END ctx.dobj is the direct object of the just-executed command', async () => {
     const { game, mEndCalls, item } = buildProbeWorld();
     game.start();
     mEndCalls.length = 0;
 
-    game.turn('take item');
+    await game.turn('take item');
     const last = mEndCalls[mEndCalls.length - 1]!;
     expect(last.dobjId).toBe(item.id);
   });

@@ -109,22 +109,22 @@ function ctx(fix: WalkFixture, opts: {
 
 describe('P1-1 V-WALK fatal channel — blocked paths return fatal=true', () => {
 
-  it('NEXIT (elseMessage, no destination): fatal=true, moved=false', () => {
+  it('NEXIT (elseMessage, no destination): fatal=true, moved=false', async () => {
     const fix = makeWalkFixture();
-    const r = executeVerb(ctx(fix, { prep: 'south' }), 'walk');
+    const r = await executeVerb(ctx(fix, { prep: 'south' }), 'walk');
     expect(r.fatal).toBe(true);
     expect(r.moved).toBe(false);
   });
 
-  it('NEXIT still prints the elseMessage', () => {
+  it('NEXIT still prints the elseMessage', async () => {
     const fix = makeWalkFixture();
-    const r = executeVerb(ctx(fix, { prep: 'south' }), 'walk');
+    const r = await executeVerb(ctx(fix, { prep: 'south' }), 'walk');
     expect(r.output).toContain('portcullis');
   });
 
-  it('CEXIT (flag gate closed): fatal=true, moved=false', () => {
+  it('CEXIT (flag gate closed): fatal=true, moved=false', async () => {
     const fix = makeWalkFixture();
-    const r = executeVerb(ctx(fix, {
+    const r = await executeVerb(ctx(fix, {
       prep: 'east',
       getGlobal: (name) => name === 'MAGIC-FLAG' ? false : false,
     }), 'walk');
@@ -132,40 +132,40 @@ describe('P1-1 V-WALK fatal channel — blocked paths return fatal=true', () => 
     expect(r.moved).toBe(false);
   });
 
-  it('CEXIT still prints the elseMessage when flag is false', () => {
+  it('CEXIT still prints the elseMessage when flag is false', async () => {
     const fix = makeWalkFixture();
-    const r = executeVerb(ctx(fix, {
+    const r = await executeVerb(ctx(fix, {
       prep: 'east',
       getGlobal: () => false,
     }), 'walk');
     expect(r.output).toContain('magic barrier');
   });
 
-  it('DEXIT (object gate closed): fatal=true, moved=false', () => {
+  it('DEXIT (object gate closed): fatal=true, moved=false', async () => {
     const fix = makeWalkFixture();
     // gateObj starts closed (no Flag.Open).
-    const r = executeVerb(ctx(fix, { prep: 'west' }), 'walk');
+    const r = await executeVerb(ctx(fix, { prep: 'west' }), 'walk');
     expect(r.fatal).toBe(true);
     expect(r.moved).toBe(false);
   });
 
-  it('DEXIT still prints the elseMessage when gate is closed', () => {
+  it('DEXIT still prints the elseMessage when gate is closed', async () => {
     const fix = makeWalkFixture();
-    const r = executeVerb(ctx(fix, { prep: 'west' }), 'walk');
+    const r = await executeVerb(ctx(fix, { prep: 'west' }), 'walk');
     expect(r.output).toContain('gate is shut');
   });
 
-  it('no exit in direction: fatal=true, moved=false', () => {
+  it('no exit in direction: fatal=true, moved=false', async () => {
     const fix = makeWalkFixture();
     // 'up' has no exit defined in ROOM-A.
-    const r = executeVerb(ctx(fix, { prep: 'up' }), 'walk');
+    const r = await executeVerb(ctx(fix, { prep: 'up' }), 'walk');
     expect(r.fatal).toBe(true);
     expect(r.moved).toBe(false);
   });
 
-  it('per-routine resolver returning undefined (blocked): fatal=true', () => {
+  it('per-routine resolver returning undefined (blocked): fatal=true', async () => {
     const fix = makeWalkFixture();
-    const r = executeVerb(ctx(fix, {
+    const r = await executeVerb(ctx(fix, {
       prep: 'down',
       perResolver: (_name, _here) => undefined, // resolver says blocked
     }), 'walk');
@@ -173,9 +173,9 @@ describe('P1-1 V-WALK fatal channel — blocked paths return fatal=true', () => 
     expect(r.moved).toBe(false);
   });
 
-  it('per-routine resolver returning a destination: fatal=false, moved=true', () => {
+  it('per-routine resolver returning a destination: fatal=false, moved=true', async () => {
     const fix = makeWalkFixture();
-    const r = executeVerb(ctx(fix, {
+    const r = await executeVerb(ctx(fix, {
       prep: 'down',
       perResolver: (_name, _here) => 'ROOM-B',
     }), 'walk');
@@ -191,16 +191,16 @@ describe('P1-1 V-WALK fatal channel — blocked paths return fatal=true', () => 
 
 describe('P1-1 V-WALK fatal channel — successful moves are NOT fatal', () => {
 
-  it('UEXIT (plain destination, lit): fatal is not true', () => {
+  it('UEXIT (plain destination, lit): fatal is not true', async () => {
     const fix = makeWalkFixture();
-    const r = executeVerb(ctx(fix, { prep: 'north' }), 'walk');
+    const r = await executeVerb(ctx(fix, { prep: 'north' }), 'walk');
     expect(r.fatal ?? false).toBe(false);
     expect(r.moved).toBe(true);
   });
 
-  it('CEXIT with flag open: fatal is not true, move succeeds', () => {
+  it('CEXIT with flag open: fatal is not true, move succeeds', async () => {
     const fix = makeWalkFixture();
-    const r = executeVerb(ctx(fix, {
+    const r = await executeVerb(ctx(fix, {
       prep: 'east',
       getGlobal: (name) => name === 'MAGIC-FLAG' ? true : false,
     }), 'walk');
@@ -208,10 +208,10 @@ describe('P1-1 V-WALK fatal channel — successful moves are NOT fatal', () => {
     expect(r.moved).toBe(true);
   });
 
-  it('DEXIT with gate open: fatal is not true, move succeeds', () => {
+  it('DEXIT with gate open: fatal is not true, move succeeds', async () => {
     const fix = makeWalkFixture();
     fix.gateObj.set(Flag.Open); // open the gate
-    const r = executeVerb(ctx(fix, { prep: 'west' }), 'walk');
+    const r = await executeVerb(ctx(fix, { prep: 'west' }), 'walk');
     expect(r.fatal ?? false).toBe(false);
     expect(r.moved).toBe(true);
   });
@@ -229,7 +229,7 @@ describe('P1-1 V-WALK fatal channel — integration: chained commands abort on b
    * chained command: the second command must NOT execute.
    */
 
-  it('blocked walk aborts the remainder of a chained command', () => {
+  it('blocked walk aborts the remainder of a chained command', async () => {
     // Use the real bootstrapped game. WEST-OF-HOUSE has no "east" exit.
     // Chain: "go east. north" — "east" is blocked, "north" must not run.
     const g = newGameAt('WEST-OF-HOUSE');
@@ -238,10 +238,10 @@ describe('P1-1 V-WALK fatal channel — integration: chained commands abort on b
     // Record player room before the command.
     // After "go east" fails fatally, the chained "north" should NOT execute.
     // If "north" ran, the player would be in NORTH-OF-HOUSE.
-    const result = g.turn('go east. north');
+    const result = await g.turn('go east. north');
     // The player must still be at WEST-OF-HOUSE (chain aborted).
     // We verify by issuing a "look" and checking the room name.
-    const lookOut = g.turn('look');
+    const lookOut = await g.turn('look');
     expect(lookOut.output).toContain('West of House');
     // Also verify the blocked-walk message appeared in the result.
     // (The east exit from WEST-OF-HOUSE has a verbatim elseMessage.)
@@ -250,13 +250,13 @@ describe('P1-1 V-WALK fatal channel — integration: chained commands abort on b
     expect(result.output).not.toContain('North of House');
   });
 
-  it('successful walk does NOT abort chained commands', () => {
+  it('successful walk does NOT abort chained commands', async () => {
     // "go north. look" from WEST-OF-HOUSE — north succeeds → look should run.
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
     // "north" moves player; the chained "look" should fire.
     // We verify the output contains the North of House room description.
-    const result = g.turn('north. look');
+    const result = await g.turn('north. look');
     expect(result.output).toContain('North of House');
   });
 });

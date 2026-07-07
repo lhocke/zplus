@@ -40,7 +40,7 @@ class MapStorage implements Storage {
 // ---------------------------------------------------------------------------
 
 describe('PB-REST verbRestore — text contracts', () => {
-  it('emits exactly "Failed." when restoreGame is absent', () => {
+  it('emits exactly "Failed." when restoreGame is absent', async () => {
     const ctx: VerbContext = {
       verb: 'restore',
       action: 'V-RESTORE',
@@ -48,11 +48,11 @@ describe('PB-REST verbRestore — text contracts', () => {
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
     };
-    const r = executeVerb(ctx, 'V-RESTORE');
+    const r = await executeVerb(ctx, 'V-RESTORE');
     expect(r.output).toBe('Failed.');
   });
 
-  it('emits "Ok." prefix + room description on success', () => {
+  it('emits "Ok." prefix + room description on success', async () => {
     const roomDesc = 'West of House\nYou are standing in an open field.';
     const ctx: VerbContext = {
       verb: 'restore',
@@ -60,27 +60,27 @@ describe('PB-REST verbRestore — text contracts', () => {
       player: {} as VerbContext['player'],
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
-      restoreGame: (_slot) => roomDesc,
+      restoreGame: async (_slot) => roomDesc,
     };
-    const r = executeVerb(ctx, 'V-RESTORE');
+    const r = await executeVerb(ctx, 'V-RESTORE');
     expect(r.output).toContain('Ok.');
     expect(r.output).toContain('West of House');
   });
 
-  it('emits exactly "Failed." when restoreGame returns undefined (empty slot)', () => {
+  it('emits exactly "Failed." when restoreGame returns undefined (empty slot)', async () => {
     const ctx: VerbContext = {
       verb: 'restore',
       action: 'V-RESTORE',
       player: {} as VerbContext['player'],
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
-      restoreGame: (_slot) => undefined,
+      restoreGame: async (_slot) => undefined,
     };
-    const r = executeVerb(ctx, 'V-RESTORE');
+    const r = await executeVerb(ctx, 'V-RESTORE');
     expect(r.output).toBe('Failed.');
   });
 
-  it('emits in-voice message (not "Failed.") when restoreGame returns an inVoice error', () => {
+  it('emits in-voice message (not "Failed.") when restoreGame returns an inVoice error', async () => {
     const inVoiceMsg = 'That saved game appears to be damaged.';
     const ctx: VerbContext = {
       verb: 'restore',
@@ -88,14 +88,14 @@ describe('PB-REST verbRestore — text contracts', () => {
       player: {} as VerbContext['player'],
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
-      restoreGame: (_slot) => ({ inVoice: inVoiceMsg }),
+      restoreGame: async (_slot) => ({ inVoice: inVoiceMsg }),
     };
-    const r = executeVerb(ctx, 'V-RESTORE');
+    const r = await executeVerb(ctx, 'V-RESTORE');
     expect(r.output).toBe(inVoiceMsg);
     expect(r.output).not.toBe('Failed.');
   });
 
-  it('uses ctx.saveSlot for slot arg, defaulting to "1"', () => {
+  it('uses ctx.saveSlot for slot arg, defaulting to "1"', async () => {
     const captured: string[] = [];
     const ctx: VerbContext = {
       verb: 'restore',
@@ -103,13 +103,13 @@ describe('PB-REST verbRestore — text contracts', () => {
       player: {} as VerbContext['player'],
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
-      restoreGame: (slot) => { captured.push(slot); return undefined; },
+      restoreGame: async (slot) => { captured.push(slot); return undefined; },
     };
-    executeVerb(ctx, 'V-RESTORE');
+    await executeVerb(ctx, 'V-RESTORE');
     expect(captured).toEqual(['1']);
   });
 
-  it('passes ctx.saveSlot "2" to restoreGame', () => {
+  it('passes ctx.saveSlot "2" to restoreGame', async () => {
     const captured: string[] = [];
     const ctx: VerbContext = {
       verb: 'restore',
@@ -118,9 +118,9 @@ describe('PB-REST verbRestore — text contracts', () => {
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
       saveSlot: '2',
-      restoreGame: (slot) => { captured.push(slot); return undefined; },
+      restoreGame: async (slot) => { captured.push(slot); return undefined; },
     };
-    executeVerb(ctx, 'V-RESTORE');
+    await executeVerb(ctx, 'V-RESTORE');
     expect(captured).toEqual(['2']);
   });
 });
@@ -134,13 +134,13 @@ describe('PB-REST — V-RESTORE stays in META_ACTIONS', () => {
     expect(META_ACTIONS.has('V-RESTORE')).toBe(true);
   });
 
-  it('RESTORE is meta — move count does not advance', () => {
+  it('RESTORE is meta — move count does not advance', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const session = createSession({ sink: nullSink, savePort: port, seed: 42 });
     session.start();
     const before = session.snapshot().moves;
-    session.submit('restore');  // empty slot — no save written
+    await session.submit('restore');  // empty slot — no save written
     const after = session.snapshot().moves;
     expect(after).toBe(before);
   });
@@ -151,36 +151,36 @@ describe('PB-REST — V-RESTORE stays in META_ACTIONS', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-REST — end-to-end via Game with wired SavePort', () => {
-  it('restore from a valid slot prints Ok. and room description', () => {
+  it('restore from a valid slot prints Ok. and room description', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const game = createGame({ seed: 42, savePort: port });
     game.start();
-    game.turn('save');
+    await game.turn('save');
 
-    const result = game.turn('restore');
+    const result = await game.turn('restore');
     expect(result.output).toContain('Ok.');
     // V-FIRST-LOOK fires: room description must appear
     expect(result.output.length).toBeGreaterThan('Ok.'.length);
   });
 
-  it('restore from empty slot prints exactly "Failed."', () => {
+  it('restore from empty slot prints exactly "Failed."', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const game = createGame({ seed: 42, savePort: port });
     game.start();
     // No save written
-    const result = game.turn('restore');
+    const result = await game.turn('restore');
     expect(result.output).toBe('Failed.');
   });
 
-  it('restore mutates nothing when slot is empty', () => {
+  it('restore mutates nothing when slot is empty', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const game = createGame({ seed: 42, savePort: port });
     game.start();
     const before = game.view();
-    game.turn('restore');  // slot empty
+    await game.turn('restore');  // slot empty
     const after = game.view();
     expect(after.moves).toBe(before.moves);
     expect(after.score).toBe(before.score);
@@ -193,12 +193,12 @@ describe('PB-REST — end-to-end via Game with wired SavePort', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-REST — version mismatch gives in-voice message', () => {
-  it('formatVersion mismatch: in-voice message, not "Failed."', () => {
+  it('formatVersion mismatch: in-voice message, not "Failed."', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const game = createGame({ seed: 42, savePort: port });
     game.start();
-    game.turn('save');  // write slot 1
+    await game.turn('save');  // write slot 1
 
     // Corrupt the formatVersion
     const raw = storage.getItem('zork-save-1')!;
@@ -206,22 +206,22 @@ describe('PB-REST — version mismatch gives in-voice message', () => {
     mangled.formatVersion = SAVE_FORMAT_VERSION + 99;
     storage.setItem('zork-save-1', JSON.stringify(mangled));
 
-    const result = game.turn('restore');
+    const result = await game.turn('restore');
     // Must NOT be "Failed." — must be in-voice
     expect(result.output).not.toBe('Failed.');
     // Must mention incompatibility in some form
     expect(result.output.toLowerCase()).toMatch(/version|incompatible/);
   });
 
-  it('formatVersion mismatch: state not mutated', () => {
+  it('formatVersion mismatch: state not mutated', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const game = createGame({ seed: 42, savePort: port });
     game.start();
-    game.turn('look');   // advance to move 1
-    game.turn('save');   // save at move 1
+    await game.turn('look');   // advance to move 1
+    await game.turn('save');   // save at move 1
 
-    game.turn('look');   // advance to move 2
+    await game.turn('look');   // advance to move 2
     const beforeMoves = game.view().moves;
 
     // Corrupt the formatVersion in storage
@@ -230,7 +230,7 @@ describe('PB-REST — version mismatch gives in-voice message', () => {
     mangled.formatVersion = SAVE_FORMAT_VERSION + 99;
     storage.setItem('zork-save-1', JSON.stringify(mangled));
 
-    game.turn('restore');  // should refuse with in-voice, not mutate
+    await game.turn('restore');  // should refuse with in-voice, not mutate
     // move count should NOT have rewound to the saved value
     expect(game.view().moves).toBe(beforeMoves);
   });
@@ -241,28 +241,28 @@ describe('PB-REST — version mismatch gives in-voice message', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-REST — corruption gives in-voice message', () => {
-  it('truncated JSON: in-voice message, not "Failed."', () => {
+  it('truncated JSON: in-voice message, not "Failed."', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const game = createGame({ seed: 42, savePort: port });
     game.start();
-    game.turn('save');
+    await game.turn('save');
 
     // Truncate to force a JSON parse error
     storage.setItem('zork-save-1', '{"formatVersion":1,"buildId":"dev"');
 
-    const result = game.turn('restore');
+    const result = await game.turn('restore');
     // Corrupt → in-voice (damaged message), not "Failed."
     expect(result.output).not.toBe('Failed.');
     expect(result.output.toLowerCase()).toMatch(/damaged|corrupt/);
   });
 
-  it('schema-invalid save (unknown field): in-voice message', () => {
+  it('schema-invalid save (unknown field): in-voice message', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const game = createGame({ seed: 42, savePort: port });
     game.start();
-    game.turn('save');
+    await game.turn('save');
 
     // Inject an unknown field that the validator rejects
     const raw = storage.getItem('zork-save-1')!;
@@ -270,26 +270,26 @@ describe('PB-REST — corruption gives in-voice message', () => {
     mangled.__injected = 'attack-field';
     storage.setItem('zork-save-1', JSON.stringify(mangled));
 
-    const result = game.turn('restore');
+    const result = await game.turn('restore');
     expect(result.output).not.toBe('Failed.');
     expect(result.output.toLowerCase()).toMatch(/damaged|corrupt/);
   });
 
-  it('corruption: state not mutated', () => {
+  it('corruption: state not mutated', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const game = createGame({ seed: 42, savePort: port });
     game.start();
-    game.turn('look');
-    game.turn('save');
+    await game.turn('look');
+    await game.turn('save');
     const atSave = game.view();
 
-    game.turn('look');  // advance past save
+    await game.turn('look');  // advance past save
     const beforeRestore = game.view();
 
     storage.setItem('zork-save-1', '{"truncated":"yes"');
 
-    game.turn('restore');
+    await game.turn('restore');
     // moves should still be at beforeRestore, not rewound to atSave
     expect(game.view().moves).toBe(beforeRestore.moves);
     void atSave;  // ensure we measured something real
@@ -308,26 +308,26 @@ describe('PB-REST — session-layer slot resolution via createSession', () => {
     return session;
   }
 
-  it('"restore" (no slot) reads from slot "1"', () => {
+  it('"restore" (no slot) reads from slot "1"', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
-    session.submit('save');   // write slot 1
-    const output = session.submit('restore');
+    await session.submit('save');   // write slot 1
+    const output = await session.submit('restore');
     expect(output).toContain('Ok.');
   });
 
-  it('"restore 2" reads from slot "2"', () => {
+  it('"restore 2" reads from slot "2"', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
-    session.submit('save 2');
-    const output = session.submit('restore 2');
+    await session.submit('save 2');
+    const output = await session.submit('restore 2');
     expect(output).toContain('Ok.');
   });
 
-  it('"restore 4" returns in-voice no-slot message (out of range)', () => {
+  it('"restore 4" returns in-voice no-slot message (out of range)', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
-    const output = session.submit('restore 4');
+    const output = await session.submit('restore 4');
     expect(output).toContain('no save slot');
   });
 });

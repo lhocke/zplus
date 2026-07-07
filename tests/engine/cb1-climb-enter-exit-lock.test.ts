@@ -135,17 +135,17 @@ function makeCtx(fix: Fix, overrides: Partial<VerbContext> & { verb: string }): 
 // ---------------------------------------------------------------------------
 
 describe('V-LOCK', () => {
-  it('returns "It doesn\'t seem to work." — gverbs.zil:856', () => {
+  it('returns "It doesn\'t seem to work." — gverbs.zil:856', async () => {
     const fix = makeFixture();
-    const r = executeVerb(makeCtx(fix, { verb: 'lock', action: 'V-LOCK', dobj: fix.mailbox }), 'V-LOCK');
+    const r = await executeVerb(makeCtx(fix, { verb: 'lock', action: 'V-LOCK', dobj: fix.mailbox }), 'V-LOCK');
     expect(r.output).toBe("It doesn't seem to work.");
   });
 });
 
 describe('V-UNLOCK', () => {
-  it('returns "It doesn\'t seem to work." — same as V-LOCK (gverbs.zil:1509)', () => {
+  it('returns "It doesn\'t seem to work." — same as V-LOCK (gverbs.zil:1509)', async () => {
     const fix = makeFixture();
-    const r = executeVerb(makeCtx(fix, { verb: 'unlock', action: 'V-UNLOCK', dobj: fix.mailbox }), 'V-UNLOCK');
+    const r = await executeVerb(makeCtx(fix, { verb: 'unlock', action: 'V-UNLOCK', dobj: fix.mailbox }), 'V-UNLOCK');
     expect(r.output).toBe("It doesn't seem to work.");
   });
 });
@@ -155,18 +155,18 @@ describe('V-UNLOCK', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-ENTER', () => {
-  it('resolves the "in" exit and moves the player there', () => {
+  it('resolves the "in" exit and moves the player there', async () => {
     const fix = makeFixture();
     fix.player.moveTo(fix.path);
-    const r = executeVerb(makeCtx(fix, { verb: 'enter', action: 'V-ENTER', here: fix.path }), 'V-ENTER');
+    const r = await executeVerb(makeCtx(fix, { verb: 'enter', action: 'V-ENTER', here: fix.path }), 'V-ENTER');
     expect(r.moved).toBe(true);
     expect(fix.player.parent?.id).toBe('TREE-TOP');
   });
 
-  it('returns a blocked message when there is no "in" exit', () => {
+  it('returns a blocked message when there is no "in" exit', async () => {
     const fix = makeFixture();
     fix.player.moveTo(fix.forest);
-    const r = executeVerb(makeCtx(fix, { verb: 'enter', action: 'V-ENTER', here: fix.forest }), 'V-ENTER');
+    const r = await executeVerb(makeCtx(fix, { verb: 'enter', action: 'V-ENTER', here: fix.forest }), 'V-ENTER');
     expect(r.moved).toBe(false);
     expect(r.output.length).toBeGreaterThan(0);
   });
@@ -177,28 +177,28 @@ describe('V-ENTER', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-EXIT', () => {
-  it('no vehicle: resolves the "out" exit and moves the player', () => {
+  it('no vehicle: resolves the "out" exit and moves the player', async () => {
     const fix = makeFixture();
     fix.player.moveTo(fix.path);
-    const r = executeVerb(makeCtx(fix, { verb: 'exit', action: 'V-EXIT', here: fix.path }), 'V-EXIT');
+    const r = await executeVerb(makeCtx(fix, { verb: 'exit', action: 'V-EXIT', here: fix.path }), 'V-EXIT');
     expect(r.moved).toBe(true);
     expect(fix.player.parent?.id).toBe('TREE-TOP');
   });
 
-  it('no vehicle, no "out" exit: returns a blocked message', () => {
+  it('no vehicle, no "out" exit: returns a blocked message', async () => {
     const fix = makeFixture();
     fix.player.moveTo(fix.treeTop);
-    const r = executeVerb(makeCtx(fix, { verb: 'exit', action: 'V-EXIT', here: fix.treeTop }), 'V-EXIT');
+    const r = await executeVerb(makeCtx(fix, { verb: 'exit', action: 'V-EXIT', here: fix.treeTop }), 'V-EXIT');
     expect(r.moved).toBe(false);
     expect(r.output.length).toBeGreaterThan(0);
   });
 
-  it('in vehicle on land: disembarks — "You are on your own feet again."', () => {
+  it('in vehicle on land: disembarks — "You are on your own feet again."', async () => {
     const fix = makeFixture();
     // Player inside boat in a LAND room.
     fix.player.moveTo(fix.boat);
     fix.boat.moveTo(fix.boatRoom);
-    const r = executeVerb(makeCtx(fix, {
+    const r = await executeVerb(makeCtx(fix, {
       verb: 'exit',
       action: 'V-EXIT',
       here: fix.boatRoom,
@@ -214,10 +214,10 @@ describe('V-EXIT', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-CLIMB-UP', () => {
-  it('climb tree from PATH: reaches UP-A-TREE (traverses "up" exit)', () => {
+  it('climb tree from PATH: reaches UP-A-TREE (traverses "up" exit)', async () => {
     const fix = makeFixture();
     fix.player.moveTo(fix.path);
-    const r = executeVerb(makeCtx(fix, {
+    const r = await executeVerb(makeCtx(fix, {
       verb: 'climb',
       action: 'V-CLIMB-UP',
       dobj: fix.tree,
@@ -227,7 +227,7 @@ describe('V-CLIMB-UP', () => {
     expect(fix.player.parent?.id).toBe('TREE-TOP');
   });
 
-  it('climb tree from FOREST: elseMessage-only exit is NEXIT → verb-layer refusal — gverbs.zil:305–306', () => {
+  it('climb tree from FOREST: elseMessage-only exit is NEXIT → verb-layer refusal — gverbs.zil:305–306', async () => {
     // Structural fix: {elseMessage}-only exits (no to/per) are NEXIT at the verb layer.
     // ZIL V-CLIMB-UP always has OBJ=nil (gverbs.zil:300-302); the dobj passed here
     // simulates V-CLIMB-FOO ("climb tree") which DOES pass PRSO as OBJ.
@@ -237,7 +237,7 @@ describe('V-CLIMB-UP', () => {
     // This unit test exercises verbClimbFoo without the M-BEG layer.
     const fix = makeFixture();
     fix.player.moveTo(fix.forest);
-    const r = executeVerb(makeCtx(fix, {
+    const r = await executeVerb(makeCtx(fix, {
       verb: 'climb',
       action: 'V-CLIMB-FOO',
       dobj: fix.tree,
@@ -247,7 +247,7 @@ describe('V-CLIMB-UP', () => {
     expect(r.output).toBe("The tree doesn't lead upward.");
   });
 
-  it('climb wall from FOREST (elseMessage exit, WALL not global of HERE): refusal — gverbs.zil:306–316', () => {
+  it('climb wall from FOREST (elseMessage exit, WALL not global of HERE): refusal — gverbs.zil:306–316', async () => {
     // DIV-1 repair: FOREST up exit has elseMessage but WALL is not a local-global
     // of FOREST (GLOBAL:TREE only). ZIL CEXIT check: NOT GLOBAL-IN? PRSO HERE →
     // "The surrounding wall doesn't lead upward."
@@ -259,7 +259,7 @@ describe('V-CLIMB-UP', () => {
     wallObj.moveTo(fix.forest);
     fix.player.moveTo(fix.forest);
     const w = World.fromObjects([fix.path, fix.treeTop, fix.forest, fix.boatRoom, fix.player, fix.tree, fix.mailbox, fix.boat, wallObj]);
-    const r = executeVerb({
+    const r = await executeVerb({
       verb: 'climb',
       action: 'V-CLIMB-FOO',
       dobj: wallObj,
@@ -271,7 +271,7 @@ describe('V-CLIMB-UP', () => {
     expect(r.output).toBe("The surrounding wall doesn't lead upward.");
   });
 
-  it('climb tree from room with bare NEXIT up: still "The X doesn\'t lead upward." — gverbs.zil:306', () => {
+  it('climb tree from room with bare NEXIT up: still "The X doesn\'t lead upward." — gverbs.zil:306', async () => {
     // DIV-1 control: a genuinely bare NEXIT (no elseMessage/ifFlag/per) still
     // gets the "doesn't lead upward" refusal, not the room message.
     // Uses V-CLIMB-FOO because V-CLIMB-UP always has OBJ=nil (gverbs.zil:300-302).
@@ -288,12 +288,12 @@ describe('V-CLIMB-UP', () => {
     tree2.moveTo(bareNexitRoom);
     const w2 = World.fromObjects([bareNexitRoom, player2, wallObj, tree2]);
     const ctx2: VerbContext = { verb: 'climb', player: player2, here: bareNexitRoom, world: w2 };
-    const r = executeVerb({ ...ctx2, dobj: tree2 }, 'V-CLIMB-FOO');
+    const r = await executeVerb({ ...ctx2, dobj: tree2 }, 'V-CLIMB-FOO');
     expect(r.moved).toBe(false);
     expect(r.output).toBe("The tree doesn't lead upward.");
   });
 
-  it('climb wall in room with no up exit: WALL synonym → "Climbing the walls is to no avail." — gverbs.zil:320–323 (DIV-2)', () => {
+  it('climb wall in room with no up exit: WALL synonym → "Climbing the walls is to no avail." — gverbs.zil:320–323 (DIV-2)', async () => {
     // DIV-2: no exit in DIR and dobj has WALL in its synonyms → walls branch fires.
     // ZIL gverbs.zil:320–323 is the ELSE branch of GETPT (no exit found).
     // Uses V-CLIMB-FOO because V-CLIMB-UP always has OBJ=nil (gverbs.zil:300-302);
@@ -308,7 +308,7 @@ describe('V-CLIMB-UP', () => {
     wallObj.moveTo(caveRoom);
     player2.moveTo(caveRoom);
     const w2 = World.fromObjects([caveRoom, player2, wallObj]);
-    const r = executeVerb({
+    const r = await executeVerb({
       verb: 'climb',
       action: 'V-CLIMB-FOO',
       dobj: wallObj,
@@ -320,7 +320,7 @@ describe('V-CLIMB-UP', () => {
     expect(r.output).toBe('Climbing the walls is to no avail.');
   });
 
-  it('bare climb (no obj) no up exit: Zork-1 tree branch — "There are no climbable trees here." — gverbs.zil:329', () => {
+  it('bare climb (no obj) no up exit: Zork-1 tree branch — "There are no climbable trees here." — gverbs.zil:329', async () => {
     // Build a room with TREE global and no up exit at all (not even elseMessage).
     // Then V-CLIMB-FOO (no obj) → Zork-1 branch fires.
     const player2 = new Actor('PLAYER2', 'yourself');
@@ -338,17 +338,17 @@ describe('V-CLIMB-UP', () => {
       here: noExitRoom,
       world: miniWorld,
     };
-    const r = executeVerb(ctx2, 'V-CLIMB-FOO');
+    const r = await executeVerb(ctx2, 'V-CLIMB-FOO');
     expect(r.moved).toBe(false);
     expect(r.output).toBe('There are no climbable trees here.');
   });
 });
 
 describe('V-CLIMB-DOWN', () => {
-  it('climb down from UP-A-TREE: moves to PATH via "down" exit', () => {
+  it('climb down from UP-A-TREE: moves to PATH via "down" exit', async () => {
     const fix = makeFixture();
     fix.player.moveTo(fix.treeTop);
-    const r = executeVerb(makeCtx(fix, {
+    const r = await executeVerb(makeCtx(fix, {
       verb: 'climb',
       action: 'V-CLIMB-DOWN',
       dobj: fix.tree,
@@ -360,9 +360,9 @@ describe('V-CLIMB-DOWN', () => {
 });
 
 describe('V-CLIMB-ON', () => {
-  it('climb onto non-vehicle object: "You can\'t climb onto the mailbox." — gverbs.zil:298', () => {
+  it('climb onto non-vehicle object: "You can\'t climb onto the mailbox." — gverbs.zil:298', async () => {
     const fix = makeFixture();
-    const r = executeVerb(makeCtx(fix, {
+    const r = await executeVerb(makeCtx(fix, {
       verb: 'climb',
       action: 'V-CLIMB-ON',
       dobj: fix.mailbox,
@@ -371,10 +371,10 @@ describe('V-CLIMB-ON', () => {
     expect(r.moved).toBe(false);
   });
 
-  it('climb onto vehicle: delegates to V-BOARD (outputs board message)', () => {
+  it('climb onto vehicle: delegates to V-BOARD (outputs board message)', async () => {
     const fix = makeFixture();
     fix.player.moveTo(fix.boatRoom);
-    const r = executeVerb(makeCtx(fix, {
+    const r = await executeVerb(makeCtx(fix, {
       verb: 'climb',
       action: 'V-CLIMB-ON',
       dobj: fix.boat,
@@ -391,25 +391,25 @@ describe('V-CLIMB-ON', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB1 integration: climb tree from real PATH room', () => {
-  it('game.turn("climb tree") from PATH moves player to UP-A-TREE', () => {
+  it('await game.turn("climb tree") from PATH moves player to UP-A-TREE', async () => {
     const g = newGameAt('PATH');
     g.start();
     expect(g.view().here).toBe('PATH');
-    const r = g.turn('climb tree');
+    const r = await g.turn('climb tree');
     expect(r.moved).toBe(true);
     expect(g.view().here).toBe('UP-A-TREE');
   });
 
-  it('V-LOCK action always returns "It doesn\'t seem to work."', () => {
+  it('V-LOCK action always returns "It doesn\'t seem to work."', async () => {
     // Verify via unit-level dispatch: lock on any object uses V-LOCK default.
     const fix = makeFixture();
-    const r = executeVerb(makeCtx(fix, { verb: 'lock', action: 'V-LOCK', dobj: fix.mailbox }), 'V-LOCK');
+    const r = await executeVerb(makeCtx(fix, { verb: 'lock', action: 'V-LOCK', dobj: fix.mailbox }), 'V-LOCK');
     expect(r.output).toBe("It doesn't seem to work.");
   });
 
-  it('V-UNLOCK action always returns "It doesn\'t seem to work."', () => {
+  it('V-UNLOCK action always returns "It doesn\'t seem to work."', async () => {
     const fix = makeFixture();
-    const r = executeVerb(makeCtx(fix, { verb: 'unlock', action: 'V-UNLOCK', dobj: fix.mailbox }), 'V-UNLOCK');
+    const r = await executeVerb(makeCtx(fix, { verb: 'unlock', action: 'V-UNLOCK', dobj: fix.mailbox }), 'V-UNLOCK');
     expect(r.output).toBe("It doesn't seem to work.");
   });
 });
@@ -420,49 +420,49 @@ describe('CB1 integration: climb tree from real PATH room', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB1 repair: V-ENTER resolves "in" exit at EAST-OF-HOUSE', () => {
-  it('enter at EAST-OF-HOUSE with window open moves player to KITCHEN', () => {
+  it('enter at EAST-OF-HOUSE with window open moves player to KITCHEN', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
     // Open the kitchen window first.
-    g.turn('open window');
+    await g.turn('open window');
     expect(g.view().here).toBe('EAST-OF-HOUSE');
-    const r = g.turn('enter');
+    const r = await g.turn('enter');
     expect(r.moved).toBe(true);
     expect(g.view().here).toBe('KITCHEN');
   });
 
-  it('enter at EAST-OF-HOUSE with window closed: "The kitchen window is closed." — ZIL CEXIT auto-message', () => {
+  it('enter at EAST-OF-HOUSE with window closed: "The kitchen window is closed." — ZIL CEXIT auto-message', async () => {
     // ZIL 1dungeon.zil:1303-1304: CEXIT with IF KITCHEN-WINDOW IS OPEN; when condition
     // fails ZIL generates "The kitchen window is closed." from the object desc.
     // dfrotz R119 confirms this exact string.  Engine fix: elseMessage on the exits.
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    const r = g.turn('enter');
+    const r = await g.turn('enter');
     expect(r.moved).toBe(false);
     expect(r.output).toBe('The kitchen window is closed.');
   });
 
-  it('go west at EAST-OF-HOUSE with window closed: "The kitchen window is closed."', () => {
+  it('go west at EAST-OF-HOUSE with window closed: "The kitchen window is closed."', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    const r = g.turn('west');
+    const r = await g.turn('west');
     expect(r.moved).toBe(false);
     expect(r.output).toBe('The kitchen window is closed.');
   });
 
-  it('go east at KITCHEN with window closed: "The kitchen window is closed."', () => {
+  it('go east at KITCHEN with window closed: "The kitchen window is closed."', async () => {
     const g = newGameAt('KITCHEN');
     g.start();
-    const r = g.turn('east');
+    const r = await g.turn('east');
     expect(r.moved).toBe(false);
     expect(r.output).toBe('The kitchen window is closed.');
   });
 
-  it('exit at KITCHEN with window closed: "The kitchen window is closed."', () => {
+  it('exit at KITCHEN with window closed: "The kitchen window is closed."', async () => {
     // V-EXIT → DO-WALK 'out'; KITCHEN out exit is gated by KITCHEN-WINDOW.
     const g = newGameAt('KITCHEN');
     g.start();
-    const r = g.turn('exit');
+    const r = await g.turn('exit');
     expect(r.moved).toBe(false);
     expect(r.output).toBe('The kitchen window is closed.');
   });
@@ -475,27 +475,27 @@ describe('CB1 repair: V-ENTER resolves "in" exit at EAST-OF-HOUSE', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB1 repair: V-CLIMB-UP GLOBAL-IN? for destination room', () => {
-  it('climb chimney at Kitchen: chimney not global in ATTIC → "The chimney doesn\'t lead upward."', () => {
+  it('climb chimney at Kitchen: chimney not global in ATTIC → "The chimney doesn\'t lead upward."', async () => {
     // gverbs.zil:309–316: exit exists (up→ATTIC) but CHIMNEY not in ATTIC globals.
     const g = newGameAt('KITCHEN');
     g.start();
-    const r = g.turn('climb chimney');
+    const r = await g.turn('climb chimney');
     expect(r.moved).toBe(false);
     expect(r.output).toBe("The chimney doesn't lead upward.");
   });
 
-  it('climb window at Kitchen: window not global in ATTIC → "The kitchen window doesn\'t lead upward."', () => {
+  it('climb window at Kitchen: window not global in ATTIC → "The kitchen window doesn\'t lead upward."', async () => {
     const g = newGameAt('KITCHEN');
     g.start();
-    const r = g.turn('climb window');
+    const r = await g.turn('climb window');
     expect(r.moved).toBe(false);
     expect(r.output).toBe("The kitchen window doesn't lead upward.");
   });
 
-  it('climb stairs at Kitchen: STAIRS is global in ATTIC → moves to ATTIC (control)', () => {
+  it('climb stairs at Kitchen: STAIRS is global in ATTIC → moves to ATTIC (control)', async () => {
     const g = newGameAt('KITCHEN');
     g.start();
-    const r = g.turn('climb stairs');
+    const r = await g.turn('climb stairs');
     expect(r.moved).toBe(true);
     expect(g.view().here).toBe('ATTIC');
   });

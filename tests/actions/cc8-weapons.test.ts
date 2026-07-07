@@ -30,7 +30,7 @@ import { Flag } from '../../src/domain/flags.js';
 // ---------------------------------------------------------------------------
 
 describe('CC8 — RUSTY-KNIFE-FCN: blue pulse on take with sword (1actions.zil:908–912)', () => {
-  it('taking rusty-knife while carrying sword emits blue-light pulse', () => {
+  it('taking rusty-knife while carrying sword emits blue-light pulse', async () => {
     const g = newGameAt('MAZE-5');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -51,11 +51,11 @@ describe('CC8 — RUSTY-KNIFE-FCN: blue pulse on take with sword (1actions.zil:9
     expect(room, 'MAZE-5 must exist').toBeDefined();
     knife!.moveTo(room!);
 
-    const out = g.turn('take rusty knife').output;
+    const out = await (await g.turn('take rusty knife')).output;
     expect(out).toContain('blue');
   });
 
-  it('blue pulse message contains "sword" reference (1actions.zil:911)', () => {
+  it('blue pulse message contains "sword" reference (1actions.zil:911)', async () => {
     const g = newGameAt('MAZE-5');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -74,12 +74,12 @@ describe('CC8 — RUSTY-KNIFE-FCN: blue pulse on take with sword (1actions.zil:9
     expect(room, 'MAZE-5 must exist').toBeDefined();
     knife!.moveTo(room!);
 
-    const out = g.turn('take rusty knife').output;
+    const out = await (await g.turn('take rusty knife')).output;
     // ZIL: "your sword gives a single pulse of blinding blue light."
     expect(out).toContain('sword');
   });
 
-  it('take rusty-knife with sword: handler returns false (take succeeds)', () => {
+  it('take rusty-knife with sword: handler returns false (take succeeds)', async () => {
     const g = newGameAt('MAZE-5');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -98,13 +98,13 @@ describe('CC8 — RUSTY-KNIFE-FCN: blue pulse on take with sword (1actions.zil:9
     expect(room, 'MAZE-5 must exist').toBeDefined();
     knife!.moveTo(room!);
 
-    g.turn('take rusty knife');
+    await g.turn('take rusty knife');
     // The handler returns false (RFALSE), so the take verb continues — knife
     // ends up in player's inventory.
     expect(knife!.parent?.id).toBe(g.player.id);
   });
 
-  it('take rusty-knife WITHOUT sword: no blue pulse', () => {
+  it('take rusty-knife WITHOUT sword: no blue pulse', async () => {
     const g = newGameAt('MAZE-5');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -126,13 +126,13 @@ describe('CC8 — RUSTY-KNIFE-FCN: blue pulse on take with sword (1actions.zil:9
     expect(room, 'MAZE-5 must exist').toBeDefined();
     knife!.moveTo(room!);
 
-    const out = g.turn('take rusty knife').output;
+    const out = await (await g.turn('take rusty knife')).output;
     expect(out).not.toContain('blue');
   });
 });
 
 describe('CC8 — RUSTY-KNIFE-FCN: attack death (1actions.zil:914–923)', () => {
-  it('attack with rusty knife → death message contains "throat"', () => {
+  it('attack with rusty knife → death message contains "throat"', async () => {
     const g = newGameAt('TROLL-ROOM');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -153,11 +153,11 @@ describe('CC8 — RUSTY-KNIFE-FCN: attack death (1actions.zil:914–923)', () =>
     expect(room, 'TROLL-ROOM must exist').toBeDefined();
     troll!.moveTo(room!);
 
-    const out = g.turn('attack troll with rusty knife').output;
+    const out = await (await g.turn('attack troll with rusty knife')).output;
     expect(out).toContain('throat');
   });
 
-  it('attack with rusty knife → rusty knife removed from world', () => {
+  it('attack with rusty knife → rusty knife removed from world', async () => {
     const g = newGameAt('TROLL-ROOM');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -176,12 +176,12 @@ describe('CC8 — RUSTY-KNIFE-FCN: attack death (1actions.zil:914–923)', () =>
     expect(room, 'TROLL-ROOM must exist').toBeDefined();
     troll!.moveTo(room!);
 
-    g.turn('attack troll with rusty knife');
+    await g.turn('attack troll with rusty knife');
     // REMOVE-CAREFULLY before JIGS-UP removes the knife from the world.
     expect(knife!.parent).toBeNull();
   });
 
-  it('attack with rusty knife → death triggers (jigsUp called)', () => {
+  it('attack with rusty knife → death triggers (jigsUp called)', async () => {
     const g = newGameAt('TROLL-ROOM');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -202,7 +202,7 @@ describe('CC8 — RUSTY-KNIFE-FCN: attack death (1actions.zil:914–923)', () =>
 
     // After death the game enters the "You have been killed" / resurrection flow.
     // The death message is the distinguishing marker.
-    const out = g.turn('attack troll with rusty knife').output;
+    const out = await (await g.turn('attack troll with rusty knife')).output;
     // jigsUp preamble / death separator from 1actions.zil:4049
     expect(out).toMatch(/throat|killed|died|dead|slits/i);
   });
@@ -227,7 +227,7 @@ describe('CC8 — KNIFE-F: TAKE clears NDESCBIT on ATTIC-TABLE (1actions.zil:927
     expect(table!.has(Flag.NonDescript), 'ATTIC-TABLE must start NonDescript').toBe(true);
   });
 
-  it('taking the knife clears NonDescript on ATTIC-TABLE', () => {
+  it('taking the knife clears NonDescript on ATTIC-TABLE', async () => {
     const g = newGameAt('ATTIC');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -243,12 +243,12 @@ describe('CC8 — KNIFE-F: TAKE clears NDESCBIT on ATTIC-TABLE (1actions.zil:927
     expect(knife, 'KNIFE must exist').toBeDefined();
     knife!.moveTo(table!);
 
-    g.turn('take knife');
+    await g.turn('take knife');
 
     expect(table!.has(Flag.NonDescript), 'ATTIC-TABLE must lose NonDescript after knife taken').toBe(false);
   });
 
-  it('taking the knife: handler returns false (take verb continues)', () => {
+  it('taking the knife: handler returns false (take verb continues)', async () => {
     const g = newGameAt('ATTIC');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -263,7 +263,7 @@ describe('CC8 — KNIFE-F: TAKE clears NDESCBIT on ATTIC-TABLE (1actions.zil:927
     expect(knife, 'KNIFE must exist').toBeDefined();
     knife!.moveTo(table!);
 
-    g.turn('take knife');
+    await g.turn('take knife');
     // KNIFE-F returns false → take verb continues → knife moves to player.
     expect(knife!.parent?.id).toBe(g.player.id);
   });
@@ -285,7 +285,7 @@ describe('CC8 — AXE-F: WEAPON-FUNCTION when TROLL-FLAG is false (1actions.zil:
     return g;
   }
 
-  it('TAKE axe with troll present and TROLL-FLAG false → white-hot message', () => {
+  it('TAKE axe with troll present and TROLL-FLAG false → white-hot message', async () => {
     const g = gameAtTrollRoom();
     // TROLL-FLAG starts false (troll is alive).
     const troll = g.world.get('TROLL');
@@ -300,11 +300,11 @@ describe('CC8 — AXE-F: WEAPON-FUNCTION when TROLL-FLAG is false (1actions.zil:
     axe!.moveTo(troll!);
 
     // Since axe is with troll (not in room), the "swings it out of reach" branch fires.
-    const out = g.turn('take axe').output;
+    const out = await (await g.turn('take axe')).output;
     expect(out).toMatch(/swings|white-hot|can't hold|out of your reach/i);
   });
 
-  it('TAKE axe in room with troll present → white-hot message (1actions.zil:637)', () => {
+  it('TAKE axe in room with troll present → white-hot message (1actions.zil:637)', async () => {
     const g = gameAtTrollRoom();
     const troll = g.world.get('TROLL');
     expect(troll, 'TROLL must exist').toBeDefined();
@@ -317,11 +317,11 @@ describe('CC8 — AXE-F: WEAPON-FUNCTION when TROLL-FLAG is false (1actions.zil:
     expect(axe, 'AXE must exist').toBeDefined();
     axe!.moveTo(room!);
 
-    const out = g.turn('take axe').output;
+    const out = await (await g.turn('take axe')).output;
     expect(out).toContain('white-hot');
   });
 
-  it('AXE-F with TROLL-FLAG true → returns false (no weapon-function message)', () => {
+  it('AXE-F with TROLL-FLAG true → returns false (no weapon-function message)', async () => {
     const g = gameAtTrollRoom();
     // Set TROLL-FLAG true (troll is dead/fled).
     (g as unknown as { flags: { set(n: string, v: boolean): void } }).flags.set('TROLL-FLAG', true);
@@ -332,13 +332,13 @@ describe('CC8 — AXE-F: WEAPON-FUNCTION when TROLL-FLAG is false (1actions.zil:
     expect(room, 'TROLL-ROOM must exist').toBeDefined();
     axe!.moveTo(room!);
 
-    const out = g.turn('take axe').output;
+    const out = await (await g.turn('take axe')).output;
     // With TROLL-FLAG true, AXE-F returns false immediately — no white-hot msg.
     expect(out).not.toContain('white-hot');
     expect(out).not.toContain('swings it out');
   });
 
-  it('TAKE axe with troll NOT in room → weapon-function returns false (no message)', () => {
+  it('TAKE axe with troll NOT in room → weapon-function returns false (no message)', async () => {
     const g = gameAtTrollRoom();
     // Move troll away from here.
     const troll = g.world.get('TROLL');
@@ -353,7 +353,7 @@ describe('CC8 — AXE-F: WEAPON-FUNCTION when TROLL-FLAG is false (1actions.zil:
     expect(room, 'TROLL-ROOM must exist').toBeDefined();
     axe!.moveTo(room!);
 
-    const out = g.turn('take axe').output;
+    const out = await (await g.turn('take axe')).output;
     expect(out).not.toContain('white-hot');
     expect(out).not.toContain('swings it out');
   });
@@ -364,7 +364,7 @@ describe('CC8 — AXE-F: WEAPON-FUNCTION when TROLL-FLAG is false (1actions.zil:
 // ---------------------------------------------------------------------------
 
 describe('CC8 — STILETTO: still live via treasure-room.ts (spec §6.8, §2-A)', () => {
-  it('STILETTO-FUNCTION is registered in the action registry', () => {
+  it('STILETTO-FUNCTION is registered in the action registry', async () => {
     // The registry must export a handler for STILETTO-FUNCTION.
     // We verify indirectly: if the thief is in the treasure room with the stiletto,
     // trying to take the stiletto should produce the weapon-function message.
@@ -389,7 +389,7 @@ describe('CC8 — STILETTO: still live via treasure-room.ts (spec §6.8, §2-A)'
     // Put stiletto in room (not in thief) → "seems white-hot" branch of WEAPON-FUNCTION.
     stiletto!.moveTo(room!);
 
-    const out = g.turn('take stiletto').output;
+    const out = await (await g.turn('take stiletto')).output;
     expect(out).toContain('white-hot');
   });
 });

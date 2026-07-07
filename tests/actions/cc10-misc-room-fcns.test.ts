@@ -41,17 +41,17 @@ function giveLantern(g: ReturnType<typeof newGameAt>): void {
 // ---------------------------------------------------------------------------
 
 describe('CC10 — BATS-ROOM M-LOOK: room description (1actions.zil:2479)', () => {
-  it('look in BAT-ROOM: description says "doors only to the east and south"', () => {
+  it('look in BAT-ROOM: description says "doors only to the east and south"', async () => {
     const g = newGameAt('BAT-ROOM');
     g.start();
     giveLantern(g);
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('doors only to the east and south');
   });
 });
 
 describe('CC10 — BATS-ROOM M-ENTER: garlic absent triggers bat grab (1actions.zil:2482)', () => {
-  it('enter BAT-ROOM with no garlic: output contains bat grab text', () => {
+  it('enter BAT-ROOM with no garlic: output contains bat grab text', async () => {
     // Start one room away; walk in so M-ENTER fires.
     const g = newGameAt('SHAFT-ROOM');
     g.start();
@@ -63,14 +63,14 @@ describe('CC10 — BATS-ROOM M-ENTER: garlic absent triggers bat grab (1actions.
     const remote = g.world.get('LIVING-ROOM');
     expect(remote, 'LIVING-ROOM must exist for garlic park').toBeDefined();
     garlic!.moveTo(remote!);
-    const out = g.turn('west').output;
+    const out = await (await g.turn('west')).output;
     // FLY-ME fires: grab message must be present.
     expect(out).toContain('scruff of your neck');
   });
 
   // ZIL BATS-ROOM M-ENTER: <V-LOOK> <CRLF> <FLY-ME> (1actions.zil:2484–2486).
   // Room description must appear BEFORE the fweep/grab block.
-  it('enter BAT-ROOM with no garlic: room description appears before bat grab (1actions.zil:2484)', () => {
+  it('enter BAT-ROOM with no garlic: room description appears before bat grab (1actions.zil:2484)', async () => {
     const g = newGameAt('SHAFT-ROOM');
     g.start();
     giveLantern(g);
@@ -79,7 +79,7 @@ describe('CC10 — BATS-ROOM M-ENTER: garlic absent triggers bat grab (1actions.
     const remote = g.world.get('LIVING-ROOM');
     expect(remote, 'LIVING-ROOM must exist for garlic park').toBeDefined();
     garlic!.moveTo(remote!);
-    const out = g.turn('west').output;
+    const out = await (await g.turn('west')).output;
     const descIdx = out.indexOf('doors only to the east and south');
     const grabIdx = out.indexOf('scruff of your neck');
     expect(descIdx, 'room description must appear in output').toBeGreaterThanOrEqual(0);
@@ -90,7 +90,7 @@ describe('CC10 — BATS-ROOM M-ENTER: garlic absent triggers bat grab (1actions.
 
   // BAT-D (1actions.zil:2469–2476): when garlic absent, bat is described as swooping.
   // V-LOOK inside M-ENTER fires DESCRIBE-OBJECTS → BAT's DESCFCN → swoop text.
-  it('enter BAT-ROOM with no garlic: bat described as swooping (BAT-D, 1actions.zil:2475)', () => {
+  it('enter BAT-ROOM with no garlic: bat described as swooping (BAT-D, 1actions.zil:2475)', async () => {
     const g = newGameAt('SHAFT-ROOM');
     g.start();
     giveLantern(g);
@@ -99,24 +99,24 @@ describe('CC10 — BATS-ROOM M-ENTER: garlic absent triggers bat grab (1actions.
     const remote = g.world.get('LIVING-ROOM');
     expect(remote, 'LIVING-ROOM must exist for garlic park').toBeDefined();
     garlic!.moveTo(remote!);
-    const out = g.turn('west').output;
+    const out = await (await g.turn('west')).output;
     expect(out).toContain('swoops down at you');
   });
 
   // BAT-D garlic-present branch: "deranged and holding his nose" (1actions.zil:2471–2473).
-  it('look in BAT-ROOM with garlic in hand: bat described as deranged (BAT-D, 1actions.zil:2471)', () => {
+  it('look in BAT-ROOM with garlic in hand: bat described as deranged (BAT-D, 1actions.zil:2471)', async () => {
     const g = newGameAt('BAT-ROOM');
     g.start();
     giveLantern(g);
     const garlic = g.world.get('GARLIC');
     expect(garlic, 'GARLIC must exist').toBeDefined();
     garlic!.moveTo(g.player);
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('deranged');
   });
 
   // BAT-D garlic-absent branch visible on explicit LOOK in BAT-ROOM.
-  it('look in BAT-ROOM with no garlic: bat described as swooping (BAT-D, 1actions.zil:2475)', () => {
+  it('look in BAT-ROOM with no garlic: bat described as swooping (BAT-D, 1actions.zil:2475)', async () => {
     const g = newGameAt('BAT-ROOM');
     g.start();
     giveLantern(g);
@@ -125,11 +125,11 @@ describe('CC10 — BATS-ROOM M-ENTER: garlic absent triggers bat grab (1actions.
     const remote = g.world.get('LIVING-ROOM');
     expect(remote, 'LIVING-ROOM must exist').toBeDefined();
     garlic!.moveTo(remote!);
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('swoops down at you');
   });
 
-  it('enter BAT-ROOM with no garlic: player is teleported to a BAT-DROPS room', () => {
+  it('enter BAT-ROOM with no garlic: player is teleported to a BAT-DROPS room', async () => {
     const BAT_DROPS = [
       'MINE-1', 'MINE-2', 'MINE-3', 'MINE-4',
       'LADDER-TOP', 'LADDER-BOTTOM', 'SQUEEKY-ROOM', 'MINE-ENTRANCE',
@@ -142,23 +142,23 @@ describe('CC10 — BATS-ROOM M-ENTER: garlic absent triggers bat grab (1actions.
     const remote = g.world.get('LIVING-ROOM');
     expect(remote, 'LIVING-ROOM must exist for garlic park').toBeDefined();
     garlic!.moveTo(remote!);
-    g.turn('west');
+    await g.turn('west');
     expect(BAT_DROPS).toContain(g.player.parent?.id);
   });
 
-  it('enter BAT-ROOM with garlic in inventory: no teleport', () => {
+  it('enter BAT-ROOM with garlic in inventory: no teleport', async () => {
     const g = newGameAt('SHAFT-ROOM');
     g.start();
     giveLantern(g);
     const garlic = g.world.get('GARLIC');
     expect(garlic, 'GARLIC must exist').toBeDefined();
     garlic!.moveTo(g.player);
-    g.turn('west');
+    await g.turn('west');
     // Player stayed in BAT-ROOM (or SHAFT-ROOM if move blocked — actually west should work)
     expect(g.player.parent?.id).toBe('BAT-ROOM');
   });
 
-  it('enter BAT-ROOM with garlic in room: no teleport', () => {
+  it('enter BAT-ROOM with garlic in room: no teleport', async () => {
     const g = newGameAt('SHAFT-ROOM');
     g.start();
     giveLantern(g);
@@ -167,7 +167,7 @@ describe('CC10 — BATS-ROOM M-ENTER: garlic absent triggers bat grab (1actions.
     const batRoom = g.world.get('BAT-ROOM');
     expect(batRoom, 'BAT-ROOM must exist').toBeDefined();
     garlic!.moveTo(batRoom!);
-    g.turn('west');
+    await g.turn('west');
     expect(g.player.parent?.id).toBe('BAT-ROOM');
   });
 });
@@ -185,18 +185,18 @@ describe('CC10 — BOOM-ROOM: carried lit candle → explosion (1actions.zil:245
     return g;
   }
 
-  it('end of turn in GAS-ROOM with lit candles: explosion message fires', () => {
+  it('end of turn in GAS-ROOM with lit candles: explosion message fires', async () => {
     const g = gameAtGasRoom();
     const candles = g.world.get('CANDLES');
     expect(candles, 'CANDLES must exist').toBeDefined();
     candles!.moveTo(g.player);
     candles!.set(Flag.OnFire);
     // Any action to advance the turn (M-END fires).
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('coal gas');
   });
 
-  it('end of turn in GAS-ROOM with lit candles: game ends (jigsUp)', () => {
+  it('end of turn in GAS-ROOM with lit candles: game ends (jigsUp)', async () => {
     const g = gameAtGasRoom();
     const candles = g.world.get('CANDLES');
     expect(candles, 'CANDLES must exist').toBeDefined();
@@ -204,41 +204,41 @@ describe('CC10 — BOOM-ROOM: carried lit candle → explosion (1actions.zil:245
     candles!.set(Flag.OnFire);
     // Any action that doesn't kill the player first; M-END fires at turn end.
     // The action itself may output but the explosion fires in M-END.
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     // Death path: jigsUp inserts a death message.
     expect(out).toContain('BOOOOOOOOOOOM');
   });
 
-  it('end of turn in GAS-ROOM with lit torch: explosion fires', () => {
+  it('end of turn in GAS-ROOM with lit torch: explosion fires', async () => {
     const g = gameAtGasRoom();
     const torch = g.world.get('TORCH');
     expect(torch, 'TORCH must exist').toBeDefined();
     torch!.moveTo(g.player);
     torch!.set(Flag.OnFire);
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('BOOOOOOOOOOOM');
   });
 
-  it('end of turn in GAS-ROOM with lit match: explosion fires', () => {
+  it('end of turn in GAS-ROOM with lit match: explosion fires', async () => {
     const g = gameAtGasRoom();
     const match = g.world.get('MATCH');
     expect(match, 'MATCH must exist').toBeDefined();
     match!.moveTo(g.player);
     match!.set(Flag.OnFire);
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('BOOOOOOOOOOOM');
   });
 
-  it('end of turn in GAS-ROOM with no lit flame: no explosion', () => {
+  it('end of turn in GAS-ROOM with no lit flame: no explosion', async () => {
     // Use a plain lantern (no candles/torch/match lit) — lantern is not a flame object.
     const g2 = newGameAt('GAS-ROOM');
     g2.start();
     giveLantern(g2);
-    const out = g2.turn('look').output;
+    const out = await (await g2.turn('look')).output;
     expect(out).not.toContain('BOOOOOOOOOOOM');
   });
 
-  it('BOOM-ROOM: "dummy" message when last action was LAMP-ON on candles (1actions.zil:2459)', () => {
+  it('BOOM-ROOM: "dummy" message when last action was LAMP-ON on candles (1actions.zil:2459)', async () => {
     // When the player lights a candle in the gas room themselves, the message is "How sad..."
     // instead of "Oh dear..." (DUMMY? branch).
     // This is M-END on a turn where V-LAMP-ON with PRSO=CANDLES just fired.
@@ -252,7 +252,7 @@ describe('CC10 — BOOM-ROOM: carried lit candle → explosion (1actions.zil:245
     match!.moveTo(g.player);
     match!.set(Flag.OnFire);
     // "burn candles with match" → V-BURN with PRSO=CANDLES → DUMMY?=T → "How sad"
-    const out = g.turn('burn candles with match').output;
+    const out = await (await g.turn('burn candles with match')).output;
     expect(out).toContain('aspiring adventurer');
   });
 });
@@ -266,7 +266,7 @@ describe('CC10 — CAVE2-ROOM: candle blow-out fires over seeded run (1actions.z
   // Path B fence: never assert a specific draw.
   // ZPROB(50) with LUCKY=T → 50% probability per turn.
   // Over 100 turns we expect ~50 blow-outs; generous window [20, 80].
-  it('candle blow-out fires in 20–80% of 100 seeded turns (ZPROB 50, 1actions.zil:2419)', () => {
+  it('candle blow-out fires in 20–80% of 100 seeded turns (ZPROB 50, 1actions.zil:2419)', async () => {
     const rng = new Rng(42);
     const g = createGame({ startRoom: 'TINY-CAVE', rng });
     g.start();
@@ -289,14 +289,14 @@ describe('CC10 — CAVE2-ROOM: candle blow-out fires over seeded run (1actions.z
         candles!.set(Flag.OnFire);
         candles!.set(Flag.Light);
       }
-      const out = g.turn('look').output;
+      const out = await (await g.turn('look')).output;
       if (out.includes('gust of wind blows out your candles')) blowCount++;
     }
     expect(blowCount).toBeGreaterThanOrEqual(20);
     expect(blowCount).toBeLessThanOrEqual(80);
   });
 
-  it('candle blow-out message: exact ZIL text (1actions.zil:2423)', () => {
+  it('candle blow-out message: exact ZIL text (1actions.zil:2423)', async () => {
     // Run seeded until we see the blow-out — guaranteed deterministic.
     const rng = new Rng(42);
     const g = createGame({ startRoom: 'TINY-CAVE', rng });
@@ -314,7 +314,7 @@ describe('CC10 — CAVE2-ROOM: candle blow-out fires over seeded run (1actions.z
         candles!.set(Flag.OnFire);
         candles!.set(Flag.Light);
       }
-      const out = g.turn('look').output;
+      const out = await (await g.turn('look')).output;
       if (out.includes('gust of wind')) {
         expect(out).toContain('A gust of wind blows out your candles!');
         found = true;
@@ -323,7 +323,7 @@ describe('CC10 — CAVE2-ROOM: candle blow-out fires over seeded run (1actions.z
     expect(found, 'blow-out must fire within 200 seeded turns').toBe(true);
   });
 
-  it('candle blow-out clears ONBIT (candles go dark, 1actions.zil:2422)', () => {
+  it('candle blow-out clears ONBIT (candles go dark, 1actions.zil:2422)', async () => {
     // Blow-out must clear Flag.OnFire on candles.
     const rng = new Rng(42);
     const g = createGame({ startRoom: 'TINY-CAVE', rng });
@@ -341,7 +341,7 @@ describe('CC10 — CAVE2-ROOM: candle blow-out fires over seeded run (1actions.z
         candles!.set(Flag.OnFire);
         candles!.set(Flag.Light);
       }
-      const out = g.turn('look').output;
+      const out = await (await g.turn('look')).output;
       if (out.includes('gust of wind')) {
         blown = true;
         expect(candles!.has(Flag.OnFire), 'ONBIT must be cleared after blow-out').toBe(false);
@@ -350,7 +350,7 @@ describe('CC10 — CAVE2-ROOM: candle blow-out fires over seeded run (1actions.z
     expect(blown, 'blow-out must occur within 200 turns for state check').toBe(true);
   });
 
-  it('candle blow-out only fires when carrying candles (1actions.zil:2418)', () => {
+  it('candle blow-out only fires when carrying candles (1actions.zil:2418)', async () => {
     // Without candles in inventory: no blow-out.
     const rng = new Rng(42);
     const g = createGame({ startRoom: 'TINY-CAVE', rng });
@@ -367,7 +367,7 @@ describe('CC10 — CAVE2-ROOM: candle blow-out fires over seeded run (1actions.z
     giveLantern(g);
 
     for (let i = 0; i < 50; i++) {
-      const out = g.turn('look').output;
+      const out = await (await g.turn('look')).output;
       expect(out).not.toContain('gust of wind blows out your candles');
     }
   });
@@ -387,25 +387,25 @@ describe('CC10 — SOUTH-TEMPLE-FCN: coffin-gate blocks exit when carrying coffi
     return g;
   }
 
-  it('carrying coffin: down exit blocked with "You haven\'t a prayer" (1actions.zil:2573)', () => {
+  it('carrying coffin: down exit blocked with "You haven\'t a prayer" (1actions.zil:2573)', async () => {
     const g = gameAtSouthTemple();
     const coffin = g.world.get('COFFIN');
     expect(coffin, 'COFFIN must exist').toBeDefined();
     coffin!.moveTo(g.player);
-    const out = g.turn('down').output;
+    const out = await (await g.turn('down')).output;
     expect(out).toContain("prayer");
   });
 
-  it('carrying coffin: player stays in SOUTH-TEMPLE', () => {
+  it('carrying coffin: player stays in SOUTH-TEMPLE', async () => {
     const g = gameAtSouthTemple();
     const coffin = g.world.get('COFFIN');
     expect(coffin, 'COFFIN must exist').toBeDefined();
     coffin!.moveTo(g.player);
-    g.turn('down');
+    await g.turn('down');
     expect(g.player.parent?.id).toBe('SOUTH-TEMPLE');
   });
 
-  it('not carrying coffin: down exit is open (1actions.zil:2575)', () => {
+  it('not carrying coffin: down exit is open (1actions.zil:2575)', async () => {
     const g = gameAtSouthTemple();
     // Coffin is not on player.
     const coffin = g.world.get('COFFIN');
@@ -414,12 +414,12 @@ describe('CC10 — SOUTH-TEMPLE-FCN: coffin-gate blocks exit when carrying coffi
     const north = g.world.get('NORTH-TEMPLE');
     expect(north, 'NORTH-TEMPLE must exist').toBeDefined();
     coffin!.moveTo(north!);
-    g.turn('down');
+    await g.turn('down');
     // Player moved to TINY-CAVE (down exit leads there).
     expect(g.player.parent?.id).toBe('TINY-CAVE');
   });
 
-  it('COFFIN-CURE does NOT set resurrection logic (spec seam: that is Hades only)', () => {
+  it('COFFIN-CURE does NOT set resurrection logic (spec seam: that is Hades only)', async () => {
     // SOUTH-TEMPLE-FCN only sets COFFIN-CURE; the resurrection branch lives in hades.ts.
     // Verify that SOUTH-TEMPLE-FCN does NOT modify LLD-FLAG or any resurrection global.
     const g = gameAtSouthTemple();
@@ -429,7 +429,7 @@ describe('CC10 — SOUTH-TEMPLE-FCN: coffin-gate blocks exit when carrying coffi
     const coffin = g.world.get('COFFIN');
     expect(coffin, 'COFFIN must exist').toBeDefined();
     coffin!.moveTo(g.player);
-    g.turn('look');
+    await g.turn('look');
     // LLD-FLAG unchanged.
     expect(flags.get('LLD-FLAG')).toBe(before);
   });
@@ -441,11 +441,11 @@ describe('CC10 — SOUTH-TEMPLE-FCN: coffin-gate blocks exit when carrying coffi
 // ---------------------------------------------------------------------------
 
 describe('CC10 — MACHINE-ROOM-FCN: registration present (1actions.zil:2488)', () => {
-  it('look in MACHINE-ROOM: lid state visible in description', () => {
+  it('look in MACHINE-ROOM: lid state visible in description', async () => {
     const g = newGameAt('MACHINE-ROOM');
     g.start();
     giveLantern(g);
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('dryer');
   });
 });
@@ -457,18 +457,18 @@ describe('CC10 — MACHINE-ROOM-FCN: registration present (1actions.zil:2488)', 
 // ---------------------------------------------------------------------------
 
 describe('CC10 — CANYON-VIEW-F: M-BEG LEAP causes death (1dungeon.zil:2407)', () => {
-  it('jump (bare leap) at CANYON-VIEW: output contains death text', () => {
+  it('jump (bare leap) at CANYON-VIEW: output contains death text', async () => {
     const g = newGameAt('CANYON-VIEW');
     g.start();
     // CANYON-VIEW has ONBIT (outdoor, always lit).
-    const out = g.turn('jump').output;
+    const out = await (await g.turn('jump')).output;
     expect(out).toContain('Nice view, lousy place to jump');
   });
 
-  it('jump at CANYON-VIEW: game ends (jigsUp fires)', () => {
+  it('jump at CANYON-VIEW: game ends (jigsUp fires)', async () => {
     const g = newGameAt('CANYON-VIEW');
     g.start();
-    const out = g.turn('jump').output;
+    const out = await (await g.turn('jump')).output;
     // jigsUp output contains death sequence.
     expect(out).toContain('****');
   });
@@ -477,17 +477,17 @@ describe('CC10 — CANYON-VIEW-F: M-BEG LEAP causes death (1dungeon.zil:2407)', 
 describe('CC10 — CANYON-VIEW-F: look output matches rooms.json ldesc (A.1 absence evidence)', () => {
   // ZIL citation: 1dungeon.zil:2406–2411. CANYON-VIEW-F has no M-LOOK/M-ENTER clause.
   // The ldesc in rooms.json provides the full room description; no handler override needed.
-  it('look at CANYON-VIEW: output contains "Great Canyon" from ldesc', () => {
+  it('look at CANYON-VIEW: output contains "Great Canyon" from ldesc', async () => {
     const g = newGameAt('CANYON-VIEW');
     g.start();
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('Great Canyon');
   });
 
-  it('look at CANYON-VIEW: output contains "Aragain Falls" from ldesc', () => {
+  it('look at CANYON-VIEW: output contains "Aragain Falls" from ldesc', async () => {
     const g = newGameAt('CANYON-VIEW');
     g.start();
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('Aragain Falls');
   });
 });

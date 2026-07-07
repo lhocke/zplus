@@ -23,9 +23,9 @@ import { World } from '../../src/domain/world.js';
 // ---------------------------------------------------------------------------
 
 describe('LOCAL-GLOBALS/GLOBAL-OBJECTS tier separation', () => {
-  it('CELLAR: "examine white house" → dark (CELLAR is dark, WHITE-HOUSE not in scope)', () => {
+  it('CELLAR: "examine white house" → dark (CELLAR is dark, WHITE-HOUSE not in scope)', async () => {
     const g = newGameAt('CELLAR');
-    const r = g.turn('examine white house');
+    const r = await g.turn('examine white house');
     // WHITE-HOUSE is NOT in CELLAR's GLOBAL list (TRAP-DOOR SLIDE STAIRS).
     // CELLAR is dark (no light) → "It's too dark to see!" (not "not-here")
     // In a lit room the message would be "You can't see any white house here!"
@@ -33,32 +33,32 @@ describe('LOCAL-GLOBALS/GLOBAL-OBJECTS tier separation', () => {
     expect(r.output).toMatch(/It's too dark to see!/i);
   });
 
-  it('CELLAR: "examine forest" → dark (CELLAR is dark, FOREST not in scope)', () => {
+  it('CELLAR: "examine forest" → dark (CELLAR is dark, FOREST not in scope)', async () => {
     const g = newGameAt('CELLAR');
-    const r = g.turn('examine forest');
+    const r = await g.turn('examine forest');
     // FOREST is not in CELLAR's GLOBAL list, and CELLAR is dark
     expect(r.output).toMatch(/It's too dark to see!/i);
   });
 
-  it('WEST-OF-HOUSE: "examine forest" → resolves (FOREST in WOH GLOBAL list)', () => {
+  it('WEST-OF-HOUSE: "examine forest" → resolves (FOREST in WOH GLOBAL list)', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
-    const r = g.turn('examine forest');
+    const r = await g.turn('examine forest');
     // FOREST is in WEST-OF-HOUSE GLOBAL list [WHITE-HOUSE, BOARD, FOREST]
     // It should resolve (not emit "not-here" or "I don't know the word")
     expect(r.output).not.toMatch(/can't see any forest here/i);
     expect(r.output).not.toMatch(/I don't know the word/i);
   });
 
-  it('EAST-OF-HOUSE: "open window" → resolves (KITCHEN-WINDOW in EAST-OF-HOUSE GLOBAL list)', () => {
+  it('EAST-OF-HOUSE: "open window" → resolves (KITCHEN-WINDOW in EAST-OF-HOUSE GLOBAL list)', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
-    const r = g.turn('open window');
+    const r = await g.turn('open window');
     // KITCHEN-WINDOW is in EAST-OF-HOUSE GLOBAL list [WHITE-HOUSE, KITCHEN-WINDOW, FOREST]
     expect(r.output).not.toMatch(/can't see any window here/i);
   });
 
-  it('FOREST-1: "find songbird" → resolves (SONGBIRD in FOREST-1 GLOBAL list)', () => {
+  it('FOREST-1: "find songbird" → resolves (SONGBIRD in FOREST-1 GLOBAL list)', async () => {
     const g = newGameAt('FOREST-1');
-    const r = g.turn('find songbird');
+    const r = await g.turn('find songbird');
     // SONGBIRD is in FOREST-1 GLOBAL list [TREE, SONGBIRD, WHITE-HOUSE, FOREST] — it
     // resolves to SONGBIRD-F (FIND → "not here but nearby"), not a parser miss.
     // (examine/smell faithfully fall to "You can't see any songbird here.", so
@@ -126,9 +126,9 @@ describe('lit() ONBIT vs LIGHTBIT', () => {
 // ---------------------------------------------------------------------------
 
 describe('IT-pronoun messages (verbatim ZIL)', () => {
-  it('IT with no referent → "I don\'t see what you\'re referring to."', () => {
+  it('IT with no referent → "I don\'t see what you\'re referring to."', async () => {
     const g = newGameAt('LIVING-ROOM');
-    const r = g.turn('examine it');
+    const r = await g.turn('examine it');
     // ZIL: "I don't see what you're referring to." (gparser.zil:1261)
     // NOT "You haven't mentioned any thing recently."
     expect(r.output).toContain("I don't see what you're referring to.");

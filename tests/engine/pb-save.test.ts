@@ -38,7 +38,7 @@ class MapStorage implements Storage {
 // ---------------------------------------------------------------------------
 
 describe('PB-SAVE verbSave — Ok. / Failed. text (byte-exact)', () => {
-  it('emits exactly "Ok." when saveGame succeeds', () => {
+  it('emits exactly "Ok." when saveGame succeeds', async () => {
     let savedSlot: string | undefined;
     const ctx: VerbContext = {
       verb: 'save',
@@ -46,14 +46,14 @@ describe('PB-SAVE verbSave — Ok. / Failed. text (byte-exact)', () => {
       player: {} as VerbContext['player'],
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
-      saveGame: (slot) => { savedSlot = slot; },
+      saveGame: async (slot) => { savedSlot = slot; },
     };
-    const result = executeVerb(ctx, 'V-SAVE');
+    const result = await executeVerb(ctx, 'V-SAVE');
     expect(result.output).toBe('Ok.');
     expect(savedSlot).toBeDefined();
   });
 
-  it('emits exactly "Failed." when saveGame is absent', () => {
+  it('emits exactly "Failed." when saveGame is absent', async () => {
     const ctx: VerbContext = {
       verb: 'save',
       action: 'V-SAVE',
@@ -61,11 +61,11 @@ describe('PB-SAVE verbSave — Ok. / Failed. text (byte-exact)', () => {
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
     };
-    const result = executeVerb(ctx, 'V-SAVE');
+    const result = await executeVerb(ctx, 'V-SAVE');
     expect(result.output).toBe('Failed.');
   });
 
-  it('emits exactly "Failed." when saveGame throws (quota/IO)', () => {
+  it('emits exactly "Failed." when saveGame throws (quota/IO)', async () => {
     const ctx: VerbContext = {
       verb: 'save',
       action: 'V-SAVE',
@@ -74,7 +74,7 @@ describe('PB-SAVE verbSave — Ok. / Failed. text (byte-exact)', () => {
       world: {} as VerbContext['world'],
       saveGame: () => { throw new DOMException('QuotaExceededError'); },
     };
-    const result = executeVerb(ctx, 'V-SAVE');
+    const result = await executeVerb(ctx, 'V-SAVE');
     expect(result.output).toBe('Failed.');
   });
 });
@@ -94,7 +94,7 @@ describe('PB-SAVE — V-SAVE is in META_ACTIONS', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-SAVE — slot resolution from VerbContext', () => {
-  it('uses saveSlot "1" (default) when no slot specified in ctx', () => {
+  it('uses saveSlot "1" (default) when no slot specified in ctx', async () => {
     let capturedSlot: string | undefined;
     const ctx: VerbContext = {
       verb: 'save',
@@ -102,14 +102,14 @@ describe('PB-SAVE — slot resolution from VerbContext', () => {
       player: {} as VerbContext['player'],
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
-      saveGame: (slot) => { capturedSlot = slot; },
+      saveGame: async (slot) => { capturedSlot = slot; },
       // no saveSlot provided → falls back to '1'
     };
-    executeVerb(ctx, 'V-SAVE');
+    await executeVerb(ctx, 'V-SAVE');
     expect(capturedSlot).toBe('1');
   });
 
-  it('uses saveSlot from ctx when provided', () => {
+  it('uses saveSlot from ctx when provided', async () => {
     let capturedSlot: string | undefined;
     const ctx: VerbContext = {
       verb: 'save',
@@ -117,14 +117,14 @@ describe('PB-SAVE — slot resolution from VerbContext', () => {
       player: {} as VerbContext['player'],
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
-      saveGame: (slot) => { capturedSlot = slot; },
+      saveGame: async (slot) => { capturedSlot = slot; },
       saveSlot: '2',
     };
-    executeVerb(ctx, 'V-SAVE');
+    await executeVerb(ctx, 'V-SAVE');
     expect(capturedSlot).toBe('2');
   });
 
-  it('uses saveSlot "3" from ctx', () => {
+  it('uses saveSlot "3" from ctx', async () => {
     let capturedSlot: string | undefined;
     const ctx: VerbContext = {
       verb: 'save',
@@ -132,10 +132,10 @@ describe('PB-SAVE — slot resolution from VerbContext', () => {
       player: {} as VerbContext['player'],
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
-      saveGame: (slot) => { capturedSlot = slot; },
+      saveGame: async (slot) => { capturedSlot = slot; },
       saveSlot: '3',
     };
-    executeVerb(ctx, 'V-SAVE');
+    await executeVerb(ctx, 'V-SAVE');
     expect(capturedSlot).toBe('3');
   });
 });
@@ -152,63 +152,63 @@ describe('PB-SAVE — session-layer slot resolution via createSession', () => {
     return session;
   }
 
-  it('"save" (no slot) writes to slot "1"', () => {
+  it('"save" (no slot) writes to slot "1"', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
-    const output = session.submit('save');
+    const output = await session.submit('save');
     expect(output).toBe('Ok.');
     expect(storage.getItem('zork-save-1')).not.toBeNull();
   });
 
-  it('"save 2" writes to slot "2"', () => {
+  it('"save 2" writes to slot "2"', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
-    const output = session.submit('save 2');
+    const output = await session.submit('save 2');
     expect(output).toBe('Ok.');
     expect(storage.getItem('zork-save-2')).not.toBeNull();
     // slot 1 should NOT be written
     expect(storage.getItem('zork-save-1')).toBeNull();
   });
 
-  it('"save 3" writes to slot "3"', () => {
+  it('"save 3" writes to slot "3"', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
-    const output = session.submit('save 3');
+    const output = await session.submit('save 3');
     expect(output).toBe('Ok.');
     expect(storage.getItem('zork-save-3')).not.toBeNull();
   });
 
-  it('"save 1" writes to slot "1"', () => {
+  it('"save 1" writes to slot "1"', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
-    const output = session.submit('save 1');
+    const output = await session.submit('save 1');
     expect(output).toBe('Ok.');
     expect(storage.getItem('zork-save-1')).not.toBeNull();
   });
 
-  it('invalid slot "save 0" returns in-voice message, slot 0 not written', () => {
+  it('invalid slot "save 0" returns in-voice message, slot 0 not written', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
-    const output = session.submit('save 0');
+    const output = await session.submit('save 0');
     // In-voice: "There is no save slot 0." — NOT "Ok." and NOT "Failed."
     expect(output).toContain('no save slot');
     // The invalid manual slot must not be written (autosave slot may be written by rolling autosave)
     expect(storage.getItem('zork-save-0')).toBeNull();
   });
 
-  it('invalid slot "save 4" returns in-voice message, slot 4 not written', () => {
+  it('invalid slot "save 4" returns in-voice message, slot 4 not written', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
-    const output = session.submit('save 4');
+    const output = await session.submit('save 4');
     expect(output).toContain('no save slot');
     expect(storage.getItem('zork-save-4')).toBeNull();
   });
 
-  it('SAVE is meta — move count does not advance', () => {
+  it('SAVE is meta — move count does not advance', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
     const beforeMoves = session.snapshot().moves;
-    session.submit('save');
+    await session.submit('save');
     const afterMoves = session.snapshot().moves;
     expect(afterMoves).toBe(beforeMoves);  // meta verb, no tick
   });
@@ -219,16 +219,16 @@ describe('PB-SAVE — session-layer slot resolution via createSession', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-SAVE — end-to-end via Game with wired SavePort', () => {
-  it('save produces a valid SaveState readable by the port', () => {
+  it('save produces a valid SaveState readable by the port', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const game = createGame({ seed: 42, savePort: port });
     game.start();
 
-    const result = game.turn('save');
+    const result = await game.turn('save');
     expect(result.output).toBe('Ok.');
 
-    const saved = port.read('1');
+    const saved = await port.read('1');
     expect(saved).toBeDefined();
     expect(saved!.moveCount).toBeGreaterThanOrEqual(0);
   });

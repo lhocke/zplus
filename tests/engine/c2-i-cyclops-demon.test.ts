@@ -270,7 +270,7 @@ describe('I-CYCLOPS: integration smoke via createGame', () => {
     expect(entry!.turnsLeft).toBe(-1);
   });
 
-  it('give lunch to cyclops arms I-CYCLOPS (enabled in clock)', () => {
+  it('give lunch to cyclops arms I-CYCLOPS (enabled in clock)', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     const world = (g as unknown as { world: WorldHandle }).world;
@@ -282,7 +282,7 @@ describe('I-CYCLOPS: integration smoke via createGame', () => {
     const lunch = world.get('LUNCH');
     lunch?.moveTo(player);
 
-    g.turn('give lunch to cyclops');
+    await g.turn('give lunch to cyclops');
 
     const entry = (g as unknown as { clock: ClockHandle }).clock.getEntry('I-CYCLOPS');
     expect(entry!.enabled).toBe(true);

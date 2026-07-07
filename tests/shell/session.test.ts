@@ -39,12 +39,12 @@ describe('createSession lifecycle', () => {
     expect(starts[0]!.type).toBe('start');
   });
 
-  it('submit emits exactly one TurnEvent per call', () => {
+  it('submit emits exactly one TurnEvent per call', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    session.submit('look');
-    session.submit('north');
+    await session.submit('look');
+    await session.submit('north');
     const turns = sink.events.filter(e => e.type === 'turn');
     expect(turns).toHaveLength(2);
   });
@@ -69,22 +69,22 @@ describe('createSession lifecycle', () => {
     expect(ends).toHaveLength(1);
   });
 
-  it('TurnEvent has 1-based turn index', () => {
+  it('TurnEvent has 1-based turn index', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    session.submit('look');
-    session.submit('north');
+    await session.submit('look');
+    await session.submit('north');
     const turns = sink.events.filter(e => e.type === 'turn');
     expect(turns[0]).toMatchObject({ type: 'turn', turn: 1 });
     expect(turns[1]).toMatchObject({ type: 'turn', turn: 2 });
   });
 
-  it('TurnEvent fields are consistent with submit return + snapshot', () => {
+  it('TurnEvent fields are consistent with submit return + snapshot', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    const output = session.submit('look');
+    const output = await session.submit('look');
     const snap = session.snapshot();
     const turns = sink.events.filter(e => e.type === 'turn');
     expect(turns[0]).toMatchObject({
@@ -97,40 +97,40 @@ describe('createSession lifecycle', () => {
     });
   });
 
-  it('SessionEnd lastTurn equals the number of submits', () => {
+  it('SessionEnd lastTurn equals the number of submits', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    session.submit('look');
-    session.submit('north');
+    await session.submit('look');
+    await session.submit('north');
     session.close();
     const end = sink.events.find(e => e.type === 'end');
     expect(end).toMatchObject({ type: 'end', lastTurn: 2 });
   });
 
-  it('empty submit("") emits no TurnEvent, no crash', () => {
+  it('empty submit("") emits no TurnEvent, no crash', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    const out = session.submit('');
+    const out = await session.submit('');
     expect(out).toBe('');
     const turns = sink.events.filter(e => e.type === 'turn');
     expect(turns).toHaveLength(0);
   });
 
-  it('whitespace-only submit emits no TurnEvent, no crash', () => {
+  it('whitespace-only submit emits no TurnEvent, no crash', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    session.submit('   ');
+    await session.submit('   ');
     const turns = sink.events.filter(e => e.type === 'turn');
     expect(turns).toHaveLength(0);
   });
 
-  it('submit returns engine output string', () => {
+  it('submit returns engine output string', async () => {
     const session = createSession({ sink: nullSink });
     session.start();
-    const output = session.submit('look');
+    const output = await session.submit('look');
     expect(typeof output).toBe('string');
     expect(output.length).toBeGreaterThan(0);
   });
@@ -157,20 +157,20 @@ describe('createSession lifecycle', () => {
 });
 
 describe('createSession determinism', () => {
-  it('default seed 42 produces deterministic output', () => {
+  it('default seed 42 produces deterministic output', async () => {
     const s1 = createSession({ sink: nullSink });
     const s2 = createSession({ sink: nullSink });
     expect(s1.start()).toBe(s2.start());
-    expect(s1.submit('look')).toBe(s2.submit('look'));
+    expect(await s1.submit('look')).toBe(await s2.submit('look'));
   });
 });
 
 describe('createSession event shapes — no PII fields', () => {
-  it('TurnEvent type has no userAgent field', () => {
+  it('TurnEvent type has no userAgent field', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    session.submit('look');
+    await session.submit('look');
     const turn = sink.events.find(e => e.type === 'turn');
     expect(turn).toBeDefined();
     expect(turn).not.toHaveProperty('userAgent');
@@ -200,28 +200,28 @@ describe('createSession event shapes — no PII fields', () => {
 });
 
 describe('module-state reset across two sessions', () => {
-  it('two sessions in the same process start clean (rug not moved)', () => {
+  it('two sessions in the same process start clean (rug not moved)', async () => {
     // First session: move the rug.
     const s1 = createSession({ sink: nullSink });
     s1.start();
     // Navigate to living room.
-    s1.submit('north');
-    s1.submit('east');
-    s1.submit('open window');
-    s1.submit('west');
-    s1.submit('west');
-    const rugResult = s1.submit('move rug');
+    await s1.submit('north');
+    await s1.submit('east');
+    await s1.submit('open window');
+    await s1.submit('west');
+    await s1.submit('west');
+    const rugResult = await s1.submit('move rug');
     expect(rugResult).toContain('rug is moved');
 
     // Second session should start fresh — rug not moved.
     const s2 = createSession({ sink: nullSink });
     s2.start();
-    s2.submit('north');
-    s2.submit('east');
-    s2.submit('open window');
-    s2.submit('west');
-    s2.submit('west');
-    const rugResult2 = s2.submit('move rug');
+    await s2.submit('north');
+    await s2.submit('east');
+    await s2.submit('open window');
+    await s2.submit('west');
+    await s2.submit('west');
+    const rugResult2 = await s2.submit('move rug');
     // Fresh session: the rug moves again (not "previously moved").
     expect(rugResult2).toContain('rug is moved');
     expect(rugResult2).not.toContain('impossible to move');
@@ -229,12 +229,12 @@ describe('module-state reset across two sessions', () => {
 });
 
 describe('TurnEvent sessionId consistency', () => {
-  it('all events in a session share the same sessionId', () => {
+  it('all events in a session share the same sessionId', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    session.submit('look');
-    session.submit('north');
+    await session.submit('look');
+    await session.submit('north');
     session.close();
     const ids = new Set(sink.events.map(e => e.sessionId));
     expect(ids.size).toBe(1);

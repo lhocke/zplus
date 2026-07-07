@@ -40,18 +40,18 @@ function ghostGame(roomId: string) {
 // ---------------------------------------------------------------------------
 
 describe('DT2-A: ghost-dispatch branch in turn()', () => {
-  it('when dead=true, unknown actions produce the ghost fallback ("You can\'t even do that")', () => {
+  it('when dead=true, unknown actions produce the ghost fallback ("You can\'t even do that")', async () => {
     // Use 'yell' (V-YELL, 0 objects) — hits the ghost fallback T-clause.
     const g = ghostGame('ENTRANCE-TO-HADES');
-    const r = g.turn('yell');
+    const r = await g.turn('yell');
     expect(r.output).toContain("can't even do that");
   });
 
-  it('when dead=false, normal parse occurs (no ghost fallback)', () => {
+  it('when dead=false, normal parse occurs (no ghost fallback)', async () => {
     const g = newGameAt('ENTRANCE-TO-HADES');
     g.start();
     // dead defaults false; should NOT produce ghost fallback
-    const r = g.turn('wave');
+    const r = await g.turn('wave');
     expect(r.output).not.toContain("can't even do that");
   });
 });
@@ -61,50 +61,50 @@ describe('DT2-A: ghost-dispatch branch in turn()', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT2-B: ghost verb responses', () => {
-  it('WALK in Timber Room toward west is blocked (1actions.zil:3115–3117)', () => {
+  it('WALK in Timber Room toward west is blocked (1actions.zil:3115–3117)', async () => {
     const g = ghostGame('TIMBER-ROOM');
-    const r = g.turn('west');
+    const r = await g.turn('west');
     expect(r.output).toContain('cannot enter in your condition');
   });
 
-  it('WALK in other rooms is not blocked by ghost text', () => {
+  it('WALK in other rooms is not blocked by ghost text', async () => {
     // Ghost allows movement in non-Timber-Room locations (pass-through to normal walk)
     // Just verify the specific "cannot enter" line does NOT appear elsewhere
     const g = ghostGame('ENTRANCE-TO-HADES');
-    const r = g.turn('north');
+    const r = await g.turn('north');
     expect(r.output).not.toContain('cannot enter in your condition');
   });
 
-  it('ATTACK/MUNG/SWING produces ghost vain-attacks message (1actions.zil:3121–3122)', () => {
+  it('ATTACK/MUNG/SWING produces ghost vain-attacks message (1actions.zil:3121–3122)', async () => {
     const g = ghostGame('ENTRANCE-TO-HADES');
-    const r = g.turn('attack');
+    const r = await g.turn('attack');
     expect(r.output).toContain('vain in your condition');
   });
 
-  it('WAIT produces ghost eternity message (1actions.zil:3128–3129)', () => {
+  it('WAIT produces ghost eternity message (1actions.zil:3128–3129)', async () => {
     const g = ghostGame('ENTRANCE-TO-HADES');
-    const r = g.turn('wait');
+    const r = await g.turn('wait');
     expect(r.output).toContain("eternity");
   });
 
-  it('LAMP-ON produces ghost no-light message (1actions.zil:3130–3131)', () => {
+  it('LAMP-ON produces ghost no-light message (1actions.zil:3130–3131)', async () => {
     const g = ghostGame('ENTRANCE-TO-HADES');
     // Give the player the lamp so the parser can resolve it.
     const lamp = g.world.get('LAMP')!;
     lamp.set(Flag.Light);
     lamp.moveTo(g.player);
-    const r = g.turn('turn on lamp');
+    const r = await g.turn('turn on lamp');
     expect(r.output).toContain('need no light');
   });
 
-  it('SCORE produces ghost score-is-dead message (1actions.zil:3132–3133)', () => {
+  it('SCORE produces ghost score-is-dead message (1actions.zil:3132–3133)', async () => {
     const g = ghostGame('ENTRANCE-TO-HADES');
-    const r = g.turn('score');
+    const r = await g.turn('score');
     expect(r.output).toContain("dead");
     expect(r.output).toContain("score");
   });
 
-  it('TAKE/RUB: hand passes through (1actions.zil:3134–3135)', () => {
+  it('TAKE/RUB: hand passes through (1actions.zil:3134–3135)', async () => {
     // Use inventory (no object required) to verify possession message, and
     // use take-with-present-object for the hand-passes-through path.
     const g = ghostGame('ENTRANCE-TO-HADES');
@@ -112,51 +112,51 @@ describe('DT2-B: ghost verb responses', () => {
     const lantern = g.world.get('LAMP')!;
     lantern.set(Flag.Light);
     lantern.moveTo(g.player.parent!);
-    const r = g.turn('take lamp');
+    const r = await g.turn('take lamp');
     expect(r.output).toContain('passes through');
   });
 
-  it('DROP/THROW/INVENTORY: no possessions (1actions.zil:3136–3137)', () => {
+  it('DROP/THROW/INVENTORY: no possessions (1actions.zil:3136–3137)', async () => {
     const g = ghostGame('ENTRANCE-TO-HADES');
-    const r = g.turn('inventory');
+    const r = await g.turn('inventory');
     expect(r.output).toContain('no possessions');
   });
 
-  it('DIAGNOSE: you are dead (1actions.zil:3138–3139)', () => {
+  it('DIAGNOSE: you are dead (1actions.zil:3138–3139)', async () => {
     const g = ghostGame('ENTRANCE-TO-HADES');
-    const r = g.turn('diagnose');
+    const r = await g.turn('diagnose');
     expect(r.output).toContain('You are dead');
   });
 
-  it('LOOK: unearthly description when objects present (1actions.zil:3140–3150)', () => {
+  it('LOOK: unearthly description when objects present (1actions.zil:3140–3150)', async () => {
     const g = ghostGame('ENTRANCE-TO-HADES');
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('unearthly');
   });
 
-  it('EXAMINE/LOOK-AT: fallback "You can\'t even do that" — no EXAMINE clause in ZIL table (1actions.zil:3140/3170)', () => {
+  it('EXAMINE/LOOK-AT: fallback "You can\'t even do that" — no EXAMINE clause in ZIL table (1actions.zil:3140/3170)', async () => {
     // <VERB? LOOK> at ZIL:3140 tests PRSA==V?LOOK only.
     // EXAMINE and LOOK AT both map to V-EXAMINE (gsyntax.zil:199,301), not V-LOOK,
     // so they fall to the T-clause (ZIL:3170-3173): "You can't even do that."
     const g = ghostGame('SOUTH-TEMPLE');
     // ALTAR already lives in SOUTH-TEMPLE in the world data — no manual move needed.
-    const examineResult = g.turn('examine altar');
+    const examineResult = await g.turn('examine altar');
     expect(examineResult.output).toContain("can't even do that");
-    const lookAtResult = g.turn('look at altar');
+    const lookAtResult = await g.turn('look at altar');
     expect(lookAtResult.output).toContain("can't even do that");
   });
 
-  it('meta verbs pass through (BRIEF/VERBOSE — 1actions.zil:3118–3120)', () => {
+  it('meta verbs pass through (BRIEF/VERBOSE — 1actions.zil:3118–3120)', async () => {
     const g = ghostGame('ENTRANCE-TO-HADES');
     // These verbs return <> (false) in ZIL so normal dispatch continues
-    const r = g.turn('brief');
+    const r = await g.turn('brief');
     expect(r.output).not.toContain("can't even do that");
   });
 
-  it('ghost fallback fires for unrecognized verbs (1actions.zil:3170–3173)', () => {
+  it('ghost fallback fires for unrecognized verbs (1actions.zil:3170–3173)', async () => {
     // Use 'yell' (V-YELL, 0 required objects) — hits the ghost T-clause fallback.
     const g = ghostGame('ENTRANCE-TO-HADES');
-    const r = g.turn('yell');
+    const r = await g.turn('yell');
     expect(r.output).toContain("can't even do that");
   });
 });
@@ -166,31 +166,31 @@ describe('DT2-B: ghost verb responses', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT2-C: PRAY resurrection at SOUTH-TEMPLE', () => {
-  it('PRAY at SOUTH-TEMPLE clears dead flag', () => {
+  it('PRAY at SOUTH-TEMPLE clears dead flag', async () => {
     const g = ghostGame('SOUTH-TEMPLE');
     // Need to have visited SOUTH-TEMPLE
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
-    g.turn('pray');
+    await g.turn('pray');
     expect((g as unknown as { dead: boolean }).dead).toBe(false);
   });
 
-  it('PRAY at SOUTH-TEMPLE clears alwaysLit', () => {
+  it('PRAY at SOUTH-TEMPLE clears alwaysLit', async () => {
     const g = ghostGame('SOUTH-TEMPLE');
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
-    g.turn('pray');
+    await g.turn('pray');
     expect((g as unknown as { alwaysLit: boolean }).alwaysLit).toBe(false);
   });
 
-  it('PRAY at SOUTH-TEMPLE clears LAMP INVISIBLE flag (1actions.zil:3154)', () => {
+  it('PRAY at SOUTH-TEMPLE clears LAMP INVISIBLE flag (1actions.zil:3154)', async () => {
     const g = ghostGame('SOUTH-TEMPLE');
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
     const lamp = g.world.get('LAMP')!;
     lamp.set(Flag.Invisible);
-    g.turn('pray');
+    await g.turn('pray');
     expect(lamp.has(Flag.Invisible)).toBe(false);
   });
 
-  it('PRAY at SOUTH-TEMPLE: if troll is in TROLL-ROOM, clears TROLL-FLAG (1actions.zil:3159–3160)', () => {
+  it('PRAY at SOUTH-TEMPLE: if troll is in TROLL-ROOM, clears TROLL-FLAG (1actions.zil:3159–3160)', async () => {
     const g = ghostGame('SOUTH-TEMPLE');
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
     // Set TROLL-FLAG and ensure troll is in TROLL-ROOM
@@ -199,27 +199,27 @@ describe('DT2-C: PRAY resurrection at SOUTH-TEMPLE', () => {
     const troll = g.world.get('TROLL');
     const trollRoom = g.world.get('TROLL-ROOM');
     if (troll && trollRoom) troll.moveTo(trollRoom);
-    g.turn('pray');
+    await g.turn('pray');
     expect(flags.get('TROLL-FLAG')).toBe(false);
   });
 
-  it('PRAY at SOUTH-TEMPLE moves player to FOREST-1 (1actions.zil:3167)', () => {
+  it('PRAY at SOUTH-TEMPLE moves player to FOREST-1 (1actions.zil:3167)', async () => {
     const g = ghostGame('SOUTH-TEMPLE');
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
-    g.turn('pray');
+    await g.turn('pray');
     expect(g.view().here).toBe('FOREST-1');
   });
 
-  it('PRAY at SOUTH-TEMPLE output contains trumpet/resurrection text', () => {
+  it('PRAY at SOUTH-TEMPLE output contains trumpet/resurrection text', async () => {
     const g = ghostGame('SOUTH-TEMPLE');
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
-    const r = g.turn('pray');
+    const r = await g.turn('pray');
     expect(r.output).toMatch(/trumpet|bright|disembod/i);
   });
 
-  it('PRAY elsewhere → "Your prayers are not heard." (1actions.zil:3168–3169)', () => {
+  it('PRAY elsewhere → "Your prayers are not heard." (1actions.zil:3168–3169)', async () => {
     const g = ghostGame('ENTRANCE-TO-HADES');
-    const r = g.turn('pray');
+    const r = await g.turn('pray');
     expect(r.output).toContain('not heard');
   });
 });
@@ -229,7 +229,7 @@ describe('DT2-C: PRAY resurrection at SOUTH-TEMPLE', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT2-D: finish() web-shell behavior (B7)', () => {
-  it('finish() sets gameOver (subsequent turn returns empty)', () => {
+  it('finish() sets gameOver (subsequent turn returns empty)', async () => {
     // Trigger endgame by entering STONE-BARROW
     const g = newGameAt('STONE-BARROW');
     g.start();
@@ -241,37 +241,37 @@ describe('DT2-D: finish() web-shell behavior (B7)', () => {
     hadesGame.start();
     (hadesGame as unknown as { rng: Rng }).rng = grueRng();
     (hadesGame as unknown as { deaths: number }).deaths = 2;
-    hadesGame.turn('north'); // 3rd death → gameOver
-    expect(hadesGame.turn('look').output).toBe('');
+    await hadesGame.turn('north'); // 3rd death → gameOver
+    expect(await (await hadesGame.turn('look')).output).toBe('');
   });
 
-  it('finish() output includes V-SCORE text (score + rank)', () => {
+  it('finish() output includes V-SCORE text (score + rank)', async () => {
     const g = newGameAt('MAZE-1');
     g.start();
     (g as unknown as { rng: Rng }).rng = grueRng();
     (g as unknown as { deaths: number }).deaths = 2;
-    const r = g.turn('north');
+    const r = await g.turn('north');
     expect(r.output).toMatch(/score|rank/i);
   });
 
-  it('RESTORE is a no-op during finish (B7)', () => {
+  it('RESTORE is a no-op during finish (B7)', async () => {
     // After gameOver, any turn returns '' — restore never crashes
     const g = newGameAt('MAZE-1');
     g.start();
     (g as unknown as { rng: Rng }).rng = grueRng();
     (g as unknown as { deaths: number }).deaths = 2;
-    g.turn('north'); // gameOver
-    const r = g.turn('restore');
+    await g.turn('north'); // gameOver
+    const r = await g.turn('restore');
     expect(r.output).toBe('');
   });
 
-  it('RESTART is a no-op during finish (B7)', () => {
+  it('RESTART is a no-op during finish (B7)', async () => {
     const g = newGameAt('MAZE-1');
     g.start();
     (g as unknown as { rng: Rng }).rng = grueRng();
     (g as unknown as { deaths: number }).deaths = 2;
-    g.turn('north');
-    const r = g.turn('restart');
+    await g.turn('north');
+    const r = await g.turn('restart');
     expect(r.output).toBe('');
   });
 });
@@ -281,29 +281,29 @@ describe('DT2-D: finish() web-shell behavior (B7)', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT2-E: STONE-BARROW-FCN endgame', () => {
-  it('entering STONE-BARROW outputs victory text', () => {
+  it('entering STONE-BARROW outputs victory text', async () => {
     const g = newGameAt('STONE-BARROW');
     g.start();
     // STONE-BARROW-FCN fires on M-BEG when entering; try ENTER verb
-    const r = g.turn('enter barrow');
+    const r = await g.turn('enter barrow');
     expect(r.output).toMatch(/barrow|bridge|adventure|ZORK/i);
   });
 
-  it('entering STONE-BARROW sets gameOver', () => {
+  it('entering STONE-BARROW sets gameOver', async () => {
     const g = newGameAt('STONE-BARROW');
     g.start();
-    g.turn('enter barrow');
-    expect(g.turn('look').output).toBe('');
+    await g.turn('enter barrow');
+    expect(await (await g.turn('look')).output).toBe('');
   });
 
-  it('STONE-BARROW endgame output contains "ZORK: The Great Underground Empire."', () => {
+  it('STONE-BARROW endgame output contains "ZORK: The Great Underground Empire."', async () => {
     const g = newGameAt('STONE-BARROW');
     g.start();
-    const r = g.turn('enter barrow');
+    const r = await g.turn('enter barrow');
     expect(r.output).toContain('ZORK: The Great Underground Empire.');
   });
 
-  it('walk west into STONE-BARROW also triggers endgame (WALK + WEST/IN)', () => {
+  it('walk west into STONE-BARROW also triggers endgame (WALK + WEST/IN)', async () => {
     // The M-BEG handler fires on WALK+WEST as per spec §9.6 / ZIL:407
     // We can test this by being at a room adjacent to STONE-BARROW
     // STONE-BARROW has exit ne -> WEST-OF-HOUSE; for the reverse direction
@@ -312,7 +312,7 @@ describe('DT2-E: STONE-BARROW-FCN endgame', () => {
     // Use startRoom=STONE-BARROW and walk 'west' or 'in'
     const g = newGameAt('STONE-BARROW');
     g.start();
-    const r = g.turn('go in');
+    const r = await g.turn('go in');
     expect(r.output).toContain('ZORK: The Great Underground Empire.');
   });
 });
@@ -322,12 +322,12 @@ describe('DT2-E: STONE-BARROW-FCN endgame', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT2-F: ghost mode alwaysLit suppresses grue', () => {
-  it('in ghost mode, dark rooms do not produce pitch-black message', () => {
+  it('in ghost mode, dark rooms do not produce pitch-black message', async () => {
     const g = newGameAt('MAZE-1');
     g.start();
     (g as unknown as { dead: boolean }).dead = true;
     (g as unknown as { alwaysLit: boolean }).alwaysLit = true;
-    const r = g.turn('look');
+    const r = await g.turn('look');
     // Ghost LOOK produces unearthly text, not "It is pitch black"
     expect(r.output).not.toContain('pitch black');
     expect(r.output).toContain('unearthly');

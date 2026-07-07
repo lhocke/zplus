@@ -114,21 +114,21 @@ describe('V4 module-global lockstep (spec §10.3)', () => {
 describe('V4 fixpoint over fuzzed long game (spec §10.3)', () => {
   beforeEach(resetAllModuleGlobals);
 
-  it('S1 = S2 after restore over a multi-subsystem scripted game', () => {
+  it('S1 = S2 after restore over a multi-subsystem scripted game', async () => {
     const g = createGame({ seed: 42 });
     g.start();
 
     // --- Spread across multiple rooms (visited set) ---
-    g.turn('look');       // WEST-OF-HOUSE
-    g.turn('north');      // FOREST-1 (visits new room)
-    g.turn('look');
-    g.turn('south');      // back to WEST-OF-HOUSE
-    g.turn('east');       // BEHIND-HOUSE or another neighbor
+    await g.turn('look');       // WEST-OF-HOUSE
+    await g.turn('north');      // FOREST-1 (visits new room)
+    await g.turn('look');
+    await g.turn('south');      // back to WEST-OF-HOUSE
+    await g.turn('east');       // BEHIND-HOUSE or another neighbor
 
     // --- Pick up objects (object tree) ---
     // Return to West of House via a walk cycle so we end somewhere stable.
-    g.turn('west');
-    g.turn('look');
+    await g.turn('west');
+    await g.turn('look');
 
     // Give player a lamp — moves object from its default location to PLAYER.
     const player = g.world.get('PLAYER')!;
@@ -142,11 +142,11 @@ describe('V4 fixpoint over fuzzed long game (spec §10.3)', () => {
 
     // --- Advance clock (I-LANTERN) and visit more rooms (visited + RNG streams) ---
     // Going into the forest with a lamp arms I-LANTERN via game actions.
-    g.turn('look');
-    g.turn('north');      // FOREST-1 — clock ticks
-    g.turn('look');       // I-FOREST-ROOM may fire (RNG main stream via prob(15))
-    g.turn('look');
-    g.turn('look');
+    await g.turn('look');
+    await g.turn('north');      // FOREST-1 — clock ticks
+    await g.turn('look');       // I-FOREST-ROOM may fire (RNG main stream via prob(15))
+    await g.turn('look');
+    await g.turn('look');
 
     // --- Score: pick up a treasure (scoring subsystem) ---
     // Move to a place where a treasure exists in default position — WEST-OF-HOUSE
@@ -172,10 +172,10 @@ describe('V4 fixpoint over fuzzed long game (spec §10.3)', () => {
     restoreLightSourceState({ matchCount: 3 });
 
     // --- More room traversal and commands (visit set + object props) ---
-    g.turn('south');      // back toward WEST-OF-HOUSE area
-    g.turn('look');
-    g.turn('examine lamp');   // sets itRef → LAMP (parser state)
-    g.turn('look');
+    await g.turn('south');      // back toward WEST-OF-HOUSE area
+    await g.turn('look');
+    await g.turn('examine lamp');   // sets itRef → LAMP (parser state)
+    await g.turn('look');
 
     // --- FlagStore: set some flags explicitly via snapshot manipulation ---
     // Use the snapshot round-trip trick: read current flagStore, inject a flag, restore.
@@ -188,7 +188,7 @@ describe('V4 fixpoint over fuzzed long game (spec §10.3)', () => {
     // --- Walk more to advance move counter and both RNG streams ---
     // Enter darkness briefly (no lamp in hand after... actually lamp IS in hand).
     // Do enough turns that RNG draws have accumulated.
-    for (let i = 0; i < 8; i++) g.turn('look');
+    for (let i = 0; i < 8; i++) await g.turn('look');
 
     // --- Take the snapshot (S1) ---
     const s1 = g.snapshot();
@@ -208,12 +208,12 @@ describe('V4 fixpoint over fuzzed long game (spec §10.3)', () => {
     expect(strip(s2)).toEqual(strip(s1));
   });
 
-  it('fixpoint holds when module globals are at non-default values', () => {
+  it('fixpoint holds when module globals are at non-default values', async () => {
     // Isolate the module-global subsystem: set all fields to non-defaults,
     // snapshot, restore, snapshot again — module globals must be preserved.
     const g = createGame({ seed: 99 });
     g.start();
-    g.turn('look');
+    await g.turn('look');
 
     setThiefEngrossed(true);
     setEggSolve(true);
@@ -250,7 +250,7 @@ describe('V4 fixpoint over fuzzed long game (spec §10.3)', () => {
     expect(strip(s2)).toEqual(strip(s1));
   });
 
-  it('fixpoint holds across a cross-instance restore (fresh game → saved state)', () => {
+  it('fixpoint holds across a cross-instance restore (fresh game → saved state)', async () => {
     // Drive a complex game state on g1, restore onto a fresh g2,
     // snapshot g2 (S2), and assert S2 === S1 (modulo savedAt).
     const g1 = createGame({ seed: 42 });
@@ -265,10 +265,10 @@ describe('V4 fixpoint over fuzzed long game (spec §10.3)', () => {
 
     // Visit several rooms.
     for (let i = 0; i < 5; i++) {
-      g1.turn('north');
-      g1.turn('south');
+      await g1.turn('north');
+      await g1.turn('south');
     }
-    g1.turn('look');
+    await g1.turn('look');
 
     // Mutate module globals.
     setThiefEngrossed(true);
@@ -294,7 +294,7 @@ describe('V4 fixpoint over fuzzed long game (spec §10.3)', () => {
     expect(strip(s2)).toEqual(strip(s1));
   });
 
-  it('fixpoint catches a hypothetically omitted field (regression guard structure)', () => {
+  it('fixpoint catches a hypothetically omitted field (regression guard structure)', async () => {
     // This test drives a game to a state where moveCount > 0, score > 0,
     // and visited has multiple entries — so if any of those were dropped by
     // restore, S1 ≠ S2 would be caught here.
@@ -302,12 +302,12 @@ describe('V4 fixpoint over fuzzed long game (spec §10.3)', () => {
     g.start();
 
     for (let i = 0; i < 10; i++) {
-      g.turn('look');
+      await g.turn('look');
     }
-    g.turn('north');
-    g.turn('look');
-    g.turn('south');
-    g.turn('look');
+    await g.turn('north');
+    await g.turn('look');
+    await g.turn('south');
+    await g.turn('look');
 
     const s1 = g.snapshot();
 
