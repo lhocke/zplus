@@ -14,7 +14,7 @@
 
 import type { Dir } from '../domain/game-object.js';
 import { opposite } from './directions.js';
-import { ROOM_CONNECTIONS } from './map-layout.js';
+import { ROOM_CONNECTIONS, ROOM_SEAMS } from './map-layout.js';
 
 export type ExitKind = 'walked' | 'backtrack' | 'blocked';
 
@@ -40,6 +40,20 @@ for (const conn of ROOM_CONNECTIONS) {
 function isReciprocal(from: string, to: string): boolean {
   return RECIPROCAL_LOOKUP.get(`${from}|${to}`) === true;
 }
+
+// Direction-keyed reciprocal-seam source (spec §6.6) — deliberately NOT
+// folded into the pair-keyed RECIPROCAL_LOOKUP above. SMALL-CAVE<->ATLANTIS-ROOM
+// is a mixed-reciprocity pair: `SMALL-CAVE down -> ATLANTIS-ROOM` is
+// reciprocal, `SMALL-CAVE south -> ATLANTIS-ROOM` is not. A pair-keyed set
+// would let the `down` seam's reciprocal flag leak onto the `south` walk,
+// crediting a phantom `north` backtrack on ATLANTIS-ROOM (which has no
+// `north` exit) and hiding the real `up` return seam. Keying by (from, dir)
+// instead is safe because a room has at most one exit per direction, so
+// (from, dir) uniquely identifies the edge — it can never conflate a
+// reciprocal and a non-reciprocal edge of the same room pair.
+const RECIPROCAL_SEAM_DIRS = new Set<string>(
+  ROOM_SEAMS.filter(s => s.reciprocal).map(s => `${s.from}|${s.dir}`),
+);
 
 export class MapState {
   private readonly _visited = new Set<string>();
@@ -95,8 +109,11 @@ export class MapState {
         // Record walked on prior room.
         this.setRecord(prev, walkedDir, { kind: 'walked', dir: walkedDir, to: next });
 
-        // Auto-credit backtrack on new room only when edge is reciprocal.
-        if (isReciprocal(prev, next)) {
+        // Auto-credit backtrack when the edge is an intra-region reciprocal
+        // connection OR a reciprocal cross-region seam (spec §6.6). The two
+        // sources are checked independently — RECIPROCAL_SEAM_DIRS is keyed
+        // by (prev, walkedDir), never by the unordered room pair.
+        if (isReciprocal(prev, next) || RECIPROCAL_SEAM_DIRS.has(`${prev}|${walkedDir}`)) {
           const backDir = opposite(walkedDir);
           this.setRecord(next, backDir, { kind: 'backtrack', dir: backDir, to: prev });
         }

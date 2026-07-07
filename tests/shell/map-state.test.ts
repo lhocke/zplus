@@ -210,3 +210,46 @@ describe('MapState — regression: exits[].known is never read', () => {
     expect(ms.exitsFor('WEST-OF-HOUSE').size).toBe(0);
   });
 });
+
+// ── NEW: reciprocal cross-region seam widening (spec §6.6, §11) ───────────────
+// Synthetic fixtures — this test does not import ROOM_SEAMS/ROOM_LAYOUT, so it
+// stays independent of any per-region task landing.
+
+describe('MapState — reciprocal cross-region seam backtrack (spec §6.6)', () => {
+  it('case 1 — reciprocal seam credits a backtrack record on arrival', () => {
+    // ROUND-ROOM south -> NARROW-PASSAGE is a reciprocal seam (§6.6's table).
+    const ms = new MapState();
+    ms.update(view('ROUND-ROOM'), null);
+    ms.update(view('NARROW-PASSAGE'), 'south');
+    const exits = ms.exitsFor('NARROW-PASSAGE');
+    expect(exits.get('north')).toEqual({ kind: 'backtrack', dir: 'north', to: 'ROUND-ROOM' });
+  });
+
+  it('case 2 — non-reciprocal uniform-pair seam credits nothing on arrival', () => {
+    // RIVER-1 out -> DAM-BASE is non-reciprocal (outbound-only).
+    const ms = new MapState();
+    ms.update(view('RIVER-1'), null);
+    ms.update(view('DAM-BASE'), 'out');
+    const exits = ms.exitsFor('DAM-BASE');
+    expect(exits.has('in')).toBe(false);
+    expect(exits.size).toBe(0);
+  });
+
+  it('case 3 (mandatory regression guard) — the SMALL-CAVE/ATLANTIS-ROOM mixed pair is handled direction-precisely', () => {
+    // SMALL-CAVE down -> ATLANTIS-ROOM is reciprocal (credits up).
+    const msDown = new MapState();
+    msDown.update(view('SMALL-CAVE'), null);
+    msDown.update(view('ATLANTIS-ROOM'), 'down');
+    expect(msDown.exitsFor('ATLANTIS-ROOM').get('up')).toEqual({ kind: 'backtrack', dir: 'up', to: 'SMALL-CAVE' });
+
+    // SMALL-CAVE south -> ATLANTIS-ROOM is NOT reciprocal — must credit
+    // nothing, and specifically must NOT phantom-credit north (ATLANTIS-ROOM
+    // has no north exit; a pair-keyed implementation would wrongly credit it).
+    const msSouth = new MapState();
+    msSouth.update(view('SMALL-CAVE'), null);
+    msSouth.update(view('ATLANTIS-ROOM'), 'south');
+    const exits = msSouth.exitsFor('ATLANTIS-ROOM');
+    expect(exits.has('north')).toBe(false);
+    expect(exits.size).toBe(0);
+  });
+});

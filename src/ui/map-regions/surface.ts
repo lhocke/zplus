@@ -1,0 +1,46 @@
+import type { RoomLayout, RoomConnection } from '../map-layout.js';
+
+export const ROOMS: RoomLayout[] = [
+  { id: 'NORTH-OF-HOUSE',   label: 'N House',      region: 'surface', col: 3, row: 1 },
+  { id: 'WEST-OF-HOUSE',    label: 'W House',      region: 'surface', col: 2, row: 2 },
+  { id: 'EAST-OF-HOUSE',    label: 'E House',      region: 'surface', col: 4, row: 2 },
+  { id: 'SOUTH-OF-HOUSE',   label: 'S House',      region: 'surface', col: 3, row: 3 },
+  { id: 'FOREST-1',         label: 'Forest',       region: 'surface', col: 1, row: 2 },
+  { id: 'FOREST-2',         label: 'Forest',       region: 'surface', col: 1, row: 0 },
+  { id: 'FOREST-3',         label: 'Forest',       region: 'surface', col: 2, row: 4 },
+  { id: 'PATH',             label: 'For Path',     region: 'surface', col: 1, row: 1 },
+  { id: 'UP-A-TREE',        label: 'Up-a-Tree',    region: 'surface', col: 0, row: 1 },
+  // Moved from (1,0) — collided with FOREST-2 in the pre-spec file. See task note above.
+  { id: 'GRATING-CLEARING', label: 'Grate Clr',    region: 'surface', col: 0, row: 0 },
+  { id: 'CLEARING',         label: 'Clearing',     region: 'surface', col: 5, row: 2 },
+  { id: 'MOUNTAINS',        label: 'Mountains',    region: 'surface', col: 6, row: 0 },
+  { id: 'KITCHEN',          label: 'Kitchen',      region: 'surface', col: 4, row: 1 },
+  { id: 'ATTIC',            label: 'Attic',        region: 'surface', col: 4, row: 0 },
+  { id: 'LIVING-ROOM',      label: 'Living Rm',    region: 'surface', col: 3, row: 2 },
+  { id: 'STONE-BARROW',     label: 'Barrow',       region: 'surface', col: 2, row: 3 },
+];
+
+export const CONNECTIONS: RoomConnection[] = [
+  { a: 'WEST-OF-HOUSE',   b: 'NORTH-OF-HOUSE',  reciprocal: true  },
+  { a: 'NORTH-OF-HOUSE',  b: 'EAST-OF-HOUSE',   reciprocal: true  },
+  { a: 'EAST-OF-HOUSE',   b: 'SOUTH-OF-HOUSE',  reciprocal: true  },
+  { a: 'SOUTH-OF-HOUSE',  b: 'WEST-OF-HOUSE',   reciprocal: true  },
+  { a: 'WEST-OF-HOUSE',   b: 'FOREST-1',        reciprocal: false },
+  { a: 'NORTH-OF-HOUSE',  b: 'PATH',            reciprocal: true  },
+  { a: 'EAST-OF-HOUSE',   b: 'CLEARING',        reciprocal: true  },
+  { a: 'SOUTH-OF-HOUSE',  b: 'FOREST-3',        reciprocal: false },
+  { a: 'FOREST-1',        b: 'PATH',            reciprocal: true  },
+  { a: 'FOREST-1',        b: 'FOREST-3',        reciprocal: false },
+  { a: 'FOREST-1',        b: 'GRATING-CLEARING',reciprocal: false },
+  { a: 'PATH',             b: 'FOREST-2',        reciprocal: true  },
+  { a: 'PATH',             b: 'GRATING-CLEARING',reciprocal: true  },
+  { a: 'PATH',             b: 'UP-A-TREE',       reciprocal: true  },
+  { a: 'FOREST-2',        b: 'MOUNTAINS',       reciprocal: true  },
+  { a: 'FOREST-2',        b: 'CLEARING',        reciprocal: true  },
+  { a: 'FOREST-3',        b: 'CLEARING',        reciprocal: true  },
+  { a: 'EAST-OF-HOUSE',   b: 'KITCHEN',         reciprocal: true  },
+  { a: 'KITCHEN',         b: 'LIVING-ROOM',     reciprocal: true  },
+  { a: 'KITCHEN',         b: 'ATTIC',           reciprocal: true  },
+  { a: 'WEST-OF-HOUSE',   b: 'STONE-BARROW',    reciprocal: true  },
+  { a: 'GRATING-CLEARING',b: 'FOREST-2',        reciprocal: false },
+];
