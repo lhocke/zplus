@@ -97,3 +97,54 @@ describe('import — untrusted input goes through validateSaveState (phase-4 §5
     expect(restoreOut).toContain('Failed.');
   });
 });
+
+describe('update notice — desktop-only, gated on update availability', () => {
+  let app: HTMLDivElement;
+
+  beforeEach(() => {
+    app = document.createElement('div');
+    document.body.appendChild(app);
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    document.body.removeChild(app);
+    vi.restoreAllMocks();
+  });
+
+  it('does not appear on the web (non-Tauri) build', async () => {
+    vi.doMock('@tauri-apps/api/core', () => ({ isTauri: () => false }));
+    const { mountShell } = await import('../../src/ui/shell.js');
+    mountShell(app);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(document.querySelector('[data-testid="update-notice"]')).toBeNull();
+  });
+
+  it('appears when checkForUpdate reports an available update under Tauri', async () => {
+    vi.doMock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
+    vi.doMock('@tauri-apps/api/app', () => ({ getVersion: async () => '1.0.0' }));
+    vi.doMock('@tauri-apps/plugin-http', () => ({
+      fetch: async () => ({
+        ok: true,
+        json: async () => ({ tag_name: 'v9.9.9', html_url: 'https://example.test/releases/v9.9.9' }),
+      }),
+    }));
+    vi.doMock('../../src/shell/tauri-fs-ops.js', () => ({
+      createTauriFsOps: async () => ({
+        exists: async () => false, mkdir: async () => {}, readDir: async () => [],
+        readTextFile: async () => { throw new Error('unused'); },
+        writeTextFile: async () => {}, remove: async () => {},
+      }),
+    }));
+
+    const { mountShell } = await import('../../src/ui/shell.js');
+    mountShell(app);
+    // The update-check IIFE awaits two dynamic imports + a fetch — give the
+    // microtask queue a few turns.
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    const notice = document.querySelector('[data-testid="update-notice"]');
+    expect(notice).not.toBeNull();
+    expect(notice!.textContent).toContain('v9.9.9');
+  });
+});

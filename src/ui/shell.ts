@@ -27,6 +27,7 @@ import {
 import { parseDirection } from './directions.js';
 import { isThemeName, DEFAULT_THEME, type ThemeName } from './themes.js';
 import { shapeFeedbackPayload, collectBrowserInfo } from './feedback.js';
+import { checkForUpdate, isDismissed, dismiss } from '../shell/update-check.js';
 import { ALLOWED_CATEGORIES } from '../../functions/lib/sanitize.js';
 
 // Turnstile global — injected by the CF script after lazy load.
@@ -1398,6 +1399,35 @@ function buildGameOverAffordance(
   return wrap;
 }
 
+function buildUpdateNotice(latestVersion: string, releaseUrl: string, onDismiss: () => void): HTMLElement {
+  const wrap = el('div', [
+    'text-xs border border-[var(--zork-accent)] rounded p-2 mt-2 flex flex-col gap-1',
+  ].join(' '));
+  wrap.setAttribute('data-testid', 'update-notice');
+
+  const msg = el('p', '');
+  msg.textContent = `A new version, ${latestVersion}, is available.`;
+
+  const link = el('a', 'underline text-[var(--zork-accent)]', {
+    href: releaseUrl,
+    target: '_blank',
+    rel: 'noopener noreferrer',
+  });
+  link.textContent = 'View release';
+
+  const dismissBtn = el('button', 'self-start opacity-60 underline mt-1', { type: 'button' });
+  dismissBtn.textContent = 'Dismiss';
+  dismissBtn.addEventListener('click', () => {
+    onDismiss();
+    wrap.remove();
+  });
+
+  wrap.appendChild(msg);
+  wrap.appendChild(link);
+  wrap.appendChild(dismissBtn);
+  return wrap;
+}
+
 // ── Shell mount ───────────────────────────────────────────────────────────────
 
 export function mountShell(app: HTMLElement): {
@@ -1818,6 +1848,33 @@ export function mountShell(app: HTMLElement): {
     session.close();
     sink.drainBeacon();
   });
+
+  // Update check — desktop-only, silent-failure, once-daily (design doc
+  // component 4). Uses the opener capability's scoped URL for the "View
+  // release" link and plugin-http's api.github.com-scoped fetch.
+  if (isTauri()) {
+    void (async () => {
+      try {
+        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+        const { getVersion } = await import('@tauri-apps/api/app');
+        const currentVersion = await getVersion();
+        const result = await checkForUpdate({
+          currentVersion,
+          fetchImpl: tauriFetch as unknown as typeof fetch,
+          store: localStorage,
+        });
+        if (!result.updateAvailable || !result.latestVersion || !result.releaseUrl) return;
+        if (isDismissed(localStorage, result.latestVersion)) return;
+        const notice = buildUpdateNotice(result.latestVersion, result.releaseUrl, () => {
+          dismiss(localStorage, result.latestVersion!);
+        });
+        sidebar.appendChild(notice);
+      } catch {
+        // Silent by design — the update check is best-effort and must never
+        // surface as an error (design doc component 4).
+      }
+    })();
+  }
 
   return {
     mapState,
