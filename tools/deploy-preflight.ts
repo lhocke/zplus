@@ -4,14 +4,14 @@
  * Asserts that dist/ is build-output-only:
  *   - no source maps (.map files)
  *   - no TypeScript sources (.ts files)
- *   - no ops/docs artifacts (.md, .claude/, docs/, .remember/, hidden dirs)
+ *   - no ops/docs artifacts (.md files, hidden directories)
  *   - __BUILD_ID__ baked into the built JS (not the literal placeholder)
  *
  * Exits 0 on pass, 1 on fail. Intended to catch "accidentally shipped source"
  * before the artifact leaves the machine.
  */
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, extname, basename } from 'node:path';
+import { join, extname } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const DIST = new URL('../dist', import.meta.url).pathname;
@@ -58,15 +58,14 @@ for (const f of sources) failures.push(`TypeScript source present: ${rel(f)}`);
 const markdown = files.filter(f => extname(f) === '.md');
 for (const f of markdown) failures.push(`Markdown present: ${rel(f)}`);
 
-// No hidden/ops dirs (.claude, .remember, docs in root of dist).
+// No hidden/dot directories or dotfiles anywhere in dist, and no docs/ dir
+// at the root.
 const opsPaths = files.filter(f => {
   const relative = rel(f);
   return (
-    relative.startsWith('.claude/') ||
-    relative.startsWith('.remember/') ||
     relative.startsWith('docs/') ||
-    // any hidden file at the top level
-    basename(relative).startsWith('.')
+    // any path segment starting with a dot (hidden directory or dotfile)
+    relative.split('/').some(segment => segment.startsWith('.'))
   );
 });
 for (const f of opsPaths) failures.push(`ops/hidden artifact present: ${rel(f)}`);

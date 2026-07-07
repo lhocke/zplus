@@ -7,7 +7,6 @@
  *   3. FOREST-ROOM M-BEG intercept (climb tree → doWalk up)
  *   4. CELLAR data fix (up exit elseMessage "The trap door is closed.")
  *
- * Decision table: /tmp/claude-501/cb1/decision-table.md
  * ZIL ref: gverbs.zil:300-334, 1actions.zil:3004-3009
  */
 

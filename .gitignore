@@ -1,8 +1,4 @@
-# tooling & planning — never commit
-.claude/
-CLAUDE.md
-.superpowers/
-.remember/
+# local working notes — never commit
 docs/
 # build
 node_modules/
