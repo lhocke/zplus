@@ -10,7 +10,10 @@ import { createSession } from '../shell/session.js';
 import type { GameView } from '../engine/game.js';
 import { HttpSink } from '../shell/http-sink.js';
 import { LocalStorageSavePort } from '../shell/save-port.js';
-import type { SaveSlotMeta } from '../shell/save-port.js';
+import type { SaveSlotMeta, SavePort } from '../shell/save-port.js';
+import { isTauri } from '@tauri-apps/api/core';
+import { createTauriFsOps } from '../shell/tauri-fs-ops.js';
+import { FsSavePort } from '../shell/save-port-fs.js';
 import { MapState, type ExitRecord } from './map-state.js';
 import {
   REGION_DISPLAY_NAMES,
@@ -1386,8 +1389,14 @@ export function mountShell(app: HTMLElement): {
     close() { sink.close(); },
   };
 
-  // Save port — localStorage-backed, same key namespace as zork-theme (§5.2, §7.1).
-  const savePort = new LocalStorageSavePort(localStorage);
+  // Save port — filesystem-backed under Tauri (app-data saves dir), the
+  // existing localStorage adapter everywhere else (design doc component 2 +
+  // Amendment A). Both branches are synchronous to construct: FsSavePort
+  // takes the ops PROMISE and awaits it inside each method, so mountShell
+  // never needs to await here.
+  const savePort: SavePort = isTauri()
+    ? new FsSavePort(createTauriFsOps())
+    : new LocalStorageSavePort(localStorage);
 
   const session = createSession({ sink: trackingSink, savePort });
 
