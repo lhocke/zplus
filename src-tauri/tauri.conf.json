@@ -32,6 +32,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": ["resources/THIRD-PARTY-NOTICES.txt"],
     "macOS": {
       "signingIdentity": "-"
     }
