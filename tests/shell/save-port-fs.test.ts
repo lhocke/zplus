@@ -42,42 +42,12 @@ async function makeTempFsOps(): Promise<{ ops: FsOps; root: string; cleanup: () 
 
 import { FsSavePort } from '../../src/shell/save-port-fs.js';
 import { SAVE_FORMAT_VERSION } from '../../src/engine/save-state.js';
-import type { SaveState } from '../../src/engine/save-state.js';
+import { runSavePortContract, minimalState } from './save-port-contract.js';
 
-function minimalState(overrides: Partial<SaveState> = {}): SaveState {
-  return {
-    formatVersion: SAVE_FORMAT_VERSION,
-    buildId: 'test-build',
-    savedAt: '2026-01-01T00:00:00.000Z',
-    moveCount: 5,
-    deaths: 0,
-    dead: false,
-    alwaysLit: false,
-    gameOver: false,
-    lucky: false,
-    loadAllowed: 5,
-    loadMax: 5,
-    waterLevel: 0,
-    beachDig: 0,
-    hereId: 'WEST-OF-HOUSE',
-    visited: [],
-    lastVerb: '',
-    lastAction: '',
-    rngMain: 12345,
-    rngCombat: 67890,
-    clock: [],
-    scoring: { baseScore: 0, score: 0, wonFlag: false },
-    flagStore: [],
-    objects: [],
-    parser: {},
-    moduleGlobals: {
-      thiefState: { thiefHere: false, thiefEngrossed: false, eggSolve: false, cyclowrath: 0, thiefLdesc: '' },
-      aboveGroundState: { kitchenWindowFlag: false, rugMoved: false, grateRevealed: false, grunlock: false, singSong: false },
-      lightSourceState: { matchCount: 0 },
-    },
-    ...overrides,
-  };
-}
+runSavePortContract('FsSavePort', async () => {
+  const { ops } = await makeTempFsOps();
+  return new FsSavePort(ops);
+});
 
 describe('makeTempFsOps test harness', () => {
   it('exists() is false before mkdir, true after', async () => {
