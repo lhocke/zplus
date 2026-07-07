@@ -868,7 +868,7 @@ whose tests violate (1)/(2) regardless of green.
 
 ---
 
-## 11. Build-Task DAG (authored for a pod-wave)
+## 11. Build-Task DAG (authored for a staged build wave)
 
 `foundation (clock) → parallel verb/puzzle clusters → bug worklist → verification`. Each task
 lists deps / files (verdict) / done-criteria, sized so clusters are independently verifiable.

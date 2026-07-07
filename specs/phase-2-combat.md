@@ -873,7 +873,7 @@ mitigations; "tests pass" alone does not retire combat risk.
 ## 12. Build-Task DAG
 
 Each task lists deps, files (verdict), and done-criteria. Authored to drive a
-later pod-wave (foundation → parallel units → integrate). Independently verifiable.
+later staged build wave (foundation → parallel units → integrate). Independently verifiable.
 
 ### Wave 0 — Foundation (parallel; no combat logic)
 
@@ -980,7 +980,7 @@ later pod-wave (foundation → parallel units → integrate). Independently veri
   troll-wall tests pass against real combat path; troll-kill walkthrough (test H) green.
 
 > **Sequencing note for the wave author:** CB1 and G1 are coupled by the guard test.
-> The pod-wave harness supports per-task `expectedRed` allowances — tasks CB1 through
+> The build harness supports per-task `expectedRed` allowances — tasks CB1 through
 > TR1 carry an expected-red allowance for exactly the test *'PHASE-1 marker does not
 > coexist with a Phase-2 combat module'*; the allowance expires at G1. Do not merge a
 > half-built combat that leaves the guard red without this allowance declared.

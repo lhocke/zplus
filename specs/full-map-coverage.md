@@ -1,6 +1,6 @@
 # Full Map Coverage — Regional Maps
 
-**Status:** FINALIZED 2026-07-01 — decisions locked (legend-only seams; symmetric reveal via a direction-keyed MapState extension); full review panel + targeted re-review folded, including the `SMALL-CAVE`↔`ATLANTIS-ROOM` mixed-reciprocity fix (§6.6, §11 case 3). Ready for plan → pod-wave. Data spine (partition, seam derivation, 10-pair reciprocal set) independently re-verified against `rooms.json`.
+**Status:** FINALIZED 2026-07-01 — decisions locked (legend-only seams; symmetric reveal via a direction-keyed MapState extension); full review panel + targeted re-review folded, including the `SMALL-CAVE`↔`ATLANTIS-ROOM` mixed-reciprocity fix (§6.6, §11 case 3). Ready for implementation planning. Data spine (partition, seam derivation, 10-pair reciprocal set) independently re-verified against `rooms.json`.
 **Date:** 2026-06-30
 **Owner:** Dylan
 **Repo:** lhocke/zork-workflow (private)
