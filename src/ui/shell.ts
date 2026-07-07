@@ -10,7 +10,13 @@ import { createSession } from '../shell/session.js';
 import type { GameView } from '../engine/game.js';
 import { HttpSink } from '../shell/http-sink.js';
 import { LocalStorageSavePort } from '../shell/save-port.js';
-import type { SaveSlotMeta } from '../shell/save-port.js';
+import type { SaveSlotMeta, SavePort } from '../shell/save-port.js';
+import { isTauri } from '@tauri-apps/api/core';
+import { createTauriFsOps } from '../shell/tauri-fs-ops.js';
+import { FsSavePort } from '../shell/save-port-fs.js';
+import { save as saveDialog, open as openDialog } from '@tauri-apps/plugin-dialog';
+import { writeTextFile as writeExportFile, readTextFile as readImportFile } from '@tauri-apps/plugin-fs';
+import { validateSaveState, VALIDATION_OK } from '../shell/save-port.js';
 import { MapState, type ExitRecord } from './map-state.js';
 import {
   REGION_DISPLAY_NAMES,
@@ -21,6 +27,7 @@ import {
 import { parseDirection } from './directions.js';
 import { isThemeName, DEFAULT_THEME, type ThemeName } from './themes.js';
 import { shapeFeedbackPayload, collectBrowserInfo } from './feedback.js';
+import { checkForUpdate, isDismissed, dismiss } from '../shell/update-check.js';
 import { ALLOWED_CATEGORIES } from '../../functions/lib/sanitize.js';
 
 // Turnstile global — injected by the CF script after lazy load.
@@ -1188,6 +1195,10 @@ function buildSlotPickerModal(
   getSlots: () => Promise<SaveSlotMeta[]>,
   onSave: (slot: string) => void | Promise<void>,
   onRestore: (slot: string) => void | Promise<void>,
+  exportImport?: {
+    onExport: (slot: string) => void | Promise<void>;
+    onImport: (slot: string) => void | Promise<void>;
+  },
 ): { open: () => void; close: () => void; element: HTMLElement } {
   const overlay = el('div', [
     'hidden fixed inset-0 z-50 overflow-y-auto',
@@ -1275,6 +1286,34 @@ function buildSlotPickerModal(
 
       btnRow.appendChild(saveBtn);
       btnRow.appendChild(restoreBtn);
+
+      if (exportImport) {
+        const exportBtn = el('button', [
+          'px-2 py-0.5 text-xs rounded border border-[var(--zork-accent)]',
+          meta ? '' : 'opacity-40 cursor-not-allowed',
+        ].join(' '), { type: 'button' });
+        exportBtn.textContent = 'Export';
+        exportBtn.setAttribute('data-testid', 'slot-export-btn');
+        if (!meta) exportBtn.setAttribute('disabled', 'true');
+        exportBtn.addEventListener('click', () => {
+          if (!meta) return;
+          void exportImport.onExport(slot);
+        });
+
+        const importBtn = el('button', [
+          'px-2 py-0.5 text-xs rounded border border-[var(--zork-accent)]',
+        ].join(' '), { type: 'button' });
+        importBtn.textContent = 'Import';
+        importBtn.setAttribute('data-testid', 'slot-import-btn');
+        importBtn.addEventListener('click', () => {
+          void exportImport.onImport(slot);
+          closeModal();
+        });
+
+        btnRow.appendChild(exportBtn);
+        btnRow.appendChild(importBtn);
+      }
+
       row.appendChild(label);
       row.appendChild(btnRow);
       slotList.appendChild(row);
@@ -1360,6 +1399,35 @@ function buildGameOverAffordance(
   return wrap;
 }
 
+function buildUpdateNotice(latestVersion: string, releaseUrl: string, onDismiss: () => void): HTMLElement {
+  const wrap = el('div', [
+    'text-xs border border-[var(--zork-accent)] rounded p-2 mt-2 flex flex-col gap-1',
+  ].join(' '));
+  wrap.setAttribute('data-testid', 'update-notice');
+
+  const msg = el('p', '');
+  msg.textContent = `A new version, ${latestVersion}, is available.`;
+
+  const link = el('a', 'underline text-[var(--zork-accent)]', {
+    href: releaseUrl,
+    target: '_blank',
+    rel: 'noopener noreferrer',
+  });
+  link.textContent = 'View release';
+
+  const dismissBtn = el('button', 'self-start opacity-60 underline mt-1', { type: 'button' });
+  dismissBtn.textContent = 'Dismiss';
+  dismissBtn.addEventListener('click', () => {
+    onDismiss();
+    wrap.remove();
+  });
+
+  wrap.appendChild(msg);
+  wrap.appendChild(link);
+  wrap.appendChild(dismissBtn);
+  return wrap;
+}
+
 // ── Shell mount ───────────────────────────────────────────────────────────────
 
 export function mountShell(app: HTMLElement): {
@@ -1386,8 +1454,14 @@ export function mountShell(app: HTMLElement): {
     close() { sink.close(); },
   };
 
-  // Save port — localStorage-backed, same key namespace as zork-theme (§5.2, §7.1).
-  const savePort = new LocalStorageSavePort(localStorage);
+  // Save port — filesystem-backed under Tauri (app-data saves dir), the
+  // existing localStorage adapter everywhere else (design doc component 2 +
+  // Amendment A). Both branches are synchronous to construct: FsSavePort
+  // takes the ops PROMISE and awaits it inside each method, so mountShell
+  // never needs to await here.
+  const savePort: SavePort = isTauri()
+    ? new FsSavePort(createTauriFsOps())
+    : new LocalStorageSavePort(localStorage);
 
   const session = createSession({ sink: trackingSink, savePort });
 
@@ -1495,6 +1569,59 @@ export function mountShell(app: HTMLElement): {
     }
   }
 
+  async function doExportSlot(slot: string) {
+    const state = await savePort.read(slot);
+    if (!state) return;
+    const path = await saveDialog({
+      defaultPath: `zplus-save-${slot}.json`,
+      filters: [{ name: 'Z+ save', extensions: ['json'] }],
+    });
+    if (!path) return; // user cancelled
+    try {
+      await writeExportFile(path, JSON.stringify(state));
+    } catch {
+      appendOutput('Failed.');   // Amendment A: an IO failure is never silent
+    }
+  }
+
+  async function doImportSlot(slot: string) {
+    const selected = await openDialog({
+      multiple: false,
+      filters: [{ name: 'Z+ save', extensions: ['json'] }],
+    });
+    if (!selected || Array.isArray(selected)) return; // cancelled or unexpected multi-select
+    let raw: string;
+    try {
+      raw = await readImportFile(selected);
+    } catch {
+      appendOutput('That saved game appears to be damaged.');
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      appendOutput('That saved game appears to be damaged.');
+      return;
+    }
+    // Untrusted input — the imported file is an arbitrary file the user
+    // picked, exactly like a hand-edited localStorage entry (phase-4 spec
+    // §5.1's attacker-controllable-snapshot note). Route through the same
+    // validator the localStorage/fs read paths use before it ever reaches
+    // savePort.write() or Game.restore().
+    if (validateSaveState(parsed) !== VALIDATION_OK) {
+      appendOutput('That saved game appears to be damaged.');
+      return;
+    }
+    try {
+      await savePort.write(slot, parsed as import('../engine/save-state.js').SaveState);
+    } catch {
+      appendOutput('Failed.');   // slot write rejected (disk full etc.)
+      return;
+    }
+    slotPicker.close();
+  }
+
   const slotPicker = buildSlotPickerModal(
     () => savePort.list(),
     async (slot) => {
@@ -1510,6 +1637,9 @@ export function mountShell(app: HTMLElement): {
       void map.refresh();
       pathsPanel.refresh();
     },
+    isTauri()
+      ? { onExport: doExportSlot, onImport: doImportSlot }
+      : undefined,
   );
 
   const { container: terminal, appendOutput, appendCommand } = buildTerminal(async (cmd) => {
@@ -1718,6 +1848,33 @@ export function mountShell(app: HTMLElement): {
     session.close();
     sink.drainBeacon();
   });
+
+  // Update check — desktop-only, silent-failure, once-daily (design doc
+  // component 4). Uses the opener capability's scoped URL for the "View
+  // release" link and plugin-http's api.github.com-scoped fetch.
+  if (isTauri()) {
+    void (async () => {
+      try {
+        const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+        const { getVersion } = await import('@tauri-apps/api/app');
+        const currentVersion = await getVersion();
+        const result = await checkForUpdate({
+          currentVersion,
+          fetchImpl: tauriFetch as unknown as typeof fetch,
+          store: localStorage,
+        });
+        if (!result.updateAvailable || !result.latestVersion || !result.releaseUrl) return;
+        if (isDismissed(localStorage, result.latestVersion)) return;
+        const notice = buildUpdateNotice(result.latestVersion, result.releaseUrl, () => {
+          dismiss(localStorage, result.latestVersion!);
+        });
+        sidebar.appendChild(notice);
+      } catch {
+        // Silent by design — the update check is best-effort and must never
+        // surface as an error (design doc component 4).
+      }
+    })();
+  }
 
   return {
     mapState,

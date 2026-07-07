@@ -1,0 +1,94 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - id: tag
+        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.tag.outputs.tag }}" \
+            --title "Z+ ${{ steps.tag.outputs.tag }}" \
+            --notes-file .github/release-notes-template.md \
+            --draft
+
+  build:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            bundle_glob: 'src-tauri/target/release/bundle/dmg/*.dmg'
+          - os: ubuntu-latest
+            bundle_glob: 'src-tauri/target/release/bundle/appimage/*.AppImage src-tauri/target/release/bundle/deb/*.deb'
+          - os: windows-latest
+            bundle_glob: 'src-tauri/target/release/bundle/msi/*.msi'
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22'
+
+      - name: Install Linux WebKitGTK dependency (ubuntu only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build Tauri bundle
+        run: npx tauri build
+        env:
+          VITE_BUILD_ID: ${{ github.sha }}
+
+      - name: Verify macOS ad-hoc signature (macOS only, sanity check)
+        if: matrix.os == 'macos-latest'
+        run: |
+          APP_PATH=$(find src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app' | head -n1)
+          codesign --verify --deep --strict "$APP_PATH"
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ needs.create-release.outputs.tag }}" \
+            ${{ matrix.bundle_glob }} --clobber
+
+  publish:
+    needs: [create-release, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${{ needs.create-release.outputs.tag }}" --draft=false

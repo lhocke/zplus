@@ -1032,8 +1032,15 @@ function verbSuperBrief(ctx: VerbContext): VerbResult {
 // Release/Serial pinned to 88/840726 (OQ-5) — dfrotz emits R119 but the
 // golden encodes the pinned divergence, so we hardcode rather than read
 // the Z-machine header.
+//
+// Plus a Z+ attribution line (native-shell spec component 7; approved target:
+// the About & Credits dialog). The banner itself stays byte-exact; the
+// attribution is a pure addition, never a rewrite of the ZIL-sourced text,
+// so it can't be mistaken for a fidelity bug.
+const VERSION_ATTRIBUTION_LINE = 'Third-party notices: see About & Credits.';
+
 function verbVersion(_ctx: VerbContext): VerbResult {
-  return result(vVersion.banner);
+  return result(`${vVersion.banner}\n${VERSION_ATTRIBUTION_LINE}`);
 }
 
 // V-SCRIPT (gverbs.zil:86–90) — prints the transcript header + version banner.
