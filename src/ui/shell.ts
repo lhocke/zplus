@@ -14,6 +14,9 @@ import type { SaveSlotMeta, SavePort } from '../shell/save-port.js';
 import { isTauri } from '@tauri-apps/api/core';
 import { createTauriFsOps } from '../shell/tauri-fs-ops.js';
 import { FsSavePort } from '../shell/save-port-fs.js';
+import { save as saveDialog, open as openDialog } from '@tauri-apps/plugin-dialog';
+import { writeTextFile as writeExportFile, readTextFile as readImportFile } from '@tauri-apps/plugin-fs';
+import { validateSaveState, VALIDATION_OK } from '../shell/save-port.js';
 import { MapState, type ExitRecord } from './map-state.js';
 import {
   REGION_DISPLAY_NAMES,
@@ -1191,6 +1194,10 @@ function buildSlotPickerModal(
   getSlots: () => Promise<SaveSlotMeta[]>,
   onSave: (slot: string) => void | Promise<void>,
   onRestore: (slot: string) => void | Promise<void>,
+  exportImport?: {
+    onExport: (slot: string) => void | Promise<void>;
+    onImport: (slot: string) => void | Promise<void>;
+  },
 ): { open: () => void; close: () => void; element: HTMLElement } {
   const overlay = el('div', [
     'hidden fixed inset-0 z-50 overflow-y-auto',
@@ -1278,6 +1285,34 @@ function buildSlotPickerModal(
 
       btnRow.appendChild(saveBtn);
       btnRow.appendChild(restoreBtn);
+
+      if (exportImport) {
+        const exportBtn = el('button', [
+          'px-2 py-0.5 text-xs rounded border border-[var(--zork-accent)]',
+          meta ? '' : 'opacity-40 cursor-not-allowed',
+        ].join(' '), { type: 'button' });
+        exportBtn.textContent = 'Export';
+        exportBtn.setAttribute('data-testid', 'slot-export-btn');
+        if (!meta) exportBtn.setAttribute('disabled', 'true');
+        exportBtn.addEventListener('click', () => {
+          if (!meta) return;
+          void exportImport.onExport(slot);
+        });
+
+        const importBtn = el('button', [
+          'px-2 py-0.5 text-xs rounded border border-[var(--zork-accent)]',
+        ].join(' '), { type: 'button' });
+        importBtn.textContent = 'Import';
+        importBtn.setAttribute('data-testid', 'slot-import-btn');
+        importBtn.addEventListener('click', () => {
+          void exportImport.onImport(slot);
+          closeModal();
+        });
+
+        btnRow.appendChild(exportBtn);
+        btnRow.appendChild(importBtn);
+      }
+
       row.appendChild(label);
       row.appendChild(btnRow);
       slotList.appendChild(row);
@@ -1504,6 +1539,59 @@ export function mountShell(app: HTMLElement): {
     }
   }
 
+  async function doExportSlot(slot: string) {
+    const state = await savePort.read(slot);
+    if (!state) return;
+    const path = await saveDialog({
+      defaultPath: `zplus-save-${slot}.json`,
+      filters: [{ name: 'Z+ save', extensions: ['json'] }],
+    });
+    if (!path) return; // user cancelled
+    try {
+      await writeExportFile(path, JSON.stringify(state));
+    } catch {
+      appendOutput('Failed.');   // Amendment A: an IO failure is never silent
+    }
+  }
+
+  async function doImportSlot(slot: string) {
+    const selected = await openDialog({
+      multiple: false,
+      filters: [{ name: 'Z+ save', extensions: ['json'] }],
+    });
+    if (!selected || Array.isArray(selected)) return; // cancelled or unexpected multi-select
+    let raw: string;
+    try {
+      raw = await readImportFile(selected);
+    } catch {
+      appendOutput('That saved game appears to be damaged.');
+      return;
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      appendOutput('That saved game appears to be damaged.');
+      return;
+    }
+    // Untrusted input — the imported file is an arbitrary file the user
+    // picked, exactly like a hand-edited localStorage entry (phase-4 spec
+    // §5.1's attacker-controllable-snapshot note). Route through the same
+    // validator the localStorage/fs read paths use before it ever reaches
+    // savePort.write() or Game.restore().
+    if (validateSaveState(parsed) !== VALIDATION_OK) {
+      appendOutput('That saved game appears to be damaged.');
+      return;
+    }
+    try {
+      await savePort.write(slot, parsed as import('../engine/save-state.js').SaveState);
+    } catch {
+      appendOutput('Failed.');   // slot write rejected (disk full etc.)
+      return;
+    }
+    slotPicker.close();
+  }
+
   const slotPicker = buildSlotPickerModal(
     () => savePort.list(),
     async (slot) => {
@@ -1519,6 +1607,9 @@ export function mountShell(app: HTMLElement): {
       void map.refresh();
       pathsPanel.refresh();
     },
+    isTauri()
+      ? { onExport: doExportSlot, onImport: doImportSlot }
+      : undefined,
   );
 
   const { container: terminal, appendOutput, appendCommand } = buildTerminal(async (cmd) => {
