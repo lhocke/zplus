@@ -19,11 +19,14 @@
     "oracle": "tsx tools/oracle/run-corpus.ts",
     "typecheck": "tsc --noEmit",
     "preflight": "tsx tools/deploy-preflight.ts",
-    "playtest:read": "tsx tools/read-playtest.ts"
+    "playtest:read": "tsx tools/read-playtest.ts",
+    "tauri": "tauri",
+    "tauri:build": "tauri build"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260607.1",
     "@tailwindcss/vite": "^4.3.0",
+    "@tauri-apps/cli": "^2.11.4",
     "@types/node": "^22.10.0",
     "aws4fetch": "1.0.20",
     "es-module-lexer": "^2.3.0",
