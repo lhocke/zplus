@@ -21,7 +21,7 @@
     "fs:allow-remove",
     {
       "identifier": "fs:scope",
-      "allow": ["$APPDATA/saves/**"]
+      "allow": ["$APPDATA/saves", "$APPDATA/saves/**"]
     },
     {
       "identifier": "http:default",

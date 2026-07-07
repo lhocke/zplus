@@ -23,7 +23,11 @@ describe('src-tauri/capabilities/default.json — scoped tight', () => {
     const { permissions } = loadCaps();
     const scope = findScope(permissions, 'fs:scope');
     expect(scope).toBeDefined();
-    expect(scope!.allow).toEqual(['$APPDATA/saves/**']);
+    // Both entries are load-bearing: the bare dir entry lets mkdir/readDir
+    // target the saves directory itself (a /** glob matches contents only —
+    // Tauri's own scope examples grant the dir and its contents separately),
+    // and the glob covers the slot files inside.
+    expect(scope!.allow).toEqual(['$APPDATA/saves', '$APPDATA/saves/**']);
   });
 
   it('scopes http fetch to api.github.com only', () => {
