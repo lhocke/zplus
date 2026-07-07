@@ -8,7 +8,7 @@
  */
 
 import type { SyntaxEntry } from './types.js';
-import syntaxJson from '../../data/syntax.json' assert { type: 'json' };
+import syntaxJson from '../../data/syntax.json' with { type: 'json' };
 
 export type { SyntaxEntry };
 

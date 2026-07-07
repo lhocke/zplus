@@ -6,8 +6,8 @@
  * in syntax.json.
  */
 
-import vocabJson from '../../data/vocabulary.json' assert { type: 'json' };
-import syntaxJson from '../../data/syntax.json' assert { type: 'json' };
+import vocabJson from '../../data/vocabulary.json' with { type: 'json' };
+import syntaxJson from '../../data/syntax.json' with { type: 'json' };
 
 const vocab = vocabJson as unknown as {
   verbSynonyms:      Record<string, string[]>;
