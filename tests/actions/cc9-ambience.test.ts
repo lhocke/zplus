@@ -54,10 +54,10 @@ function clockOf(g: ReturnType<typeof createGame>): ClockLike {
 // ---------------------------------------------------------------------------
 
 describe('CC9 — WHITE-HOUSE-F: V-EXAMINE (1actions.zil:113)', () => {
-  it('examine house → describes the beautiful colonial house', () => {
+  it('examine house → describes the beautiful colonial house', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
-    const out = g.turn('examine house').output;
+    const out = await (await g.turn('examine house')).output;
     expect(out).toContain('beautiful colonial house');
     expect(out).toContain('painted white');
     expect(out).toContain('extremely wealthy');
@@ -65,38 +65,38 @@ describe('CC9 — WHITE-HOUSE-F: V-EXAMINE (1actions.zil:113)', () => {
 });
 
 describe('CC9 — WHITE-HOUSE-F: V-FIND (1actions.zil:107)', () => {
-  it('find house from west side → "It\'s right here!"', () => {
+  it('find house from west side → "It\'s right here!"', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
-    const out = g.turn('find house').output;
+    const out = await (await g.turn('find house')).output;
     expect(out).toContain("It's right here!");
   });
 
-  it('find house from north side → "It\'s right here!"', () => {
+  it('find house from north side → "It\'s right here!"', async () => {
     const g = newGameAt('NORTH-OF-HOUSE');
     g.start();
-    const out = g.turn('find house').output;
+    const out = await (await g.turn('find house')).output;
     expect(out).toContain("It's right here!");
   });
 
-  it('find house from east side → "It\'s right here!"', () => {
+  it('find house from east side → "It\'s right here!"', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    const out = g.turn('find house').output;
+    const out = await (await g.turn('find house')).output;
     expect(out).toContain("It's right here!");
   });
 
-  it('find house from CLEARING → "It seems to be to the west."', () => {
+  it('find house from CLEARING → "It seems to be to the west."', async () => {
     const g = newGameAt('CLEARING');
     g.start();
-    const out = g.turn('find house').output;
+    const out = await (await g.turn('find house')).output;
     expect(out).toContain('It seems to be to the west.');
   });
 
-  it('find house from forest → "It was here just a minute ago...."', () => {
+  it('find house from forest → "It was here just a minute ago...."', async () => {
     const g = newGameAt('FOREST-1');
     g.start();
-    const out = g.turn('find house').output;
+    const out = await (await g.turn('find house')).output;
     expect(out).toContain('It was here just a minute ago');
   });
 });
@@ -105,21 +105,21 @@ describe('CC9 — WHITE-HOUSE-F: non-side catch-all (1actions.zil:106)', () => {
   // ZIL's non-sides inner COND is (FIND ...) then (T → "You're not at the house.")
   // — a catch-all for EVERY non-FIND verb. dfrotz R119 at the Forest: examine and
   // walk-around house both → "You're not at the house." (not a fall-through).
-  it('examine house from forest → "You\'re not at the house."', () => {
+  it('examine house from forest → "You\'re not at the house."', async () => {
     const g = newGameAt('FOREST-1');
     g.start();
-    expect(g.turn('examine house').output).toContain("You're not at the house.");
+    expect(await (await g.turn('examine house')).output).toContain("You're not at the house.");
   });
 
-  it('walk around house from forest → "You\'re not at the house."', () => {
+  it('walk around house from forest → "You\'re not at the house."', async () => {
     const g = newGameAt('FOREST-1');
     g.start();
-    expect(g.turn('walk around house').output).toContain("You're not at the house.");
+    expect(await (await g.turn('walk around house')).output).toContain("You're not at the house.");
   });
 });
 
 describe('CC9 — WHITE-HOUSE-F: V-BURN (1actions.zil:127)', () => {
-  it('burn house → "You must be joking."', () => {
+  it('burn house → "You must be joking."', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
     // Give player torch so PRE-BURN passes (needs a FLAMING source as PRSI).
@@ -132,7 +132,7 @@ describe('CC9 — WHITE-HOUSE-F: V-BURN (1actions.zil:127)', () => {
     expect(torch, 'TORCH must exist').toBeDefined();
     torch!.set(Flag.OnFire);
     torch!.moveTo(g.player);
-    const out = g.turn('burn house with torch').output;
+    const out = await (await g.turn('burn house with torch')).output;
     expect(out).toContain('You must be joking.');
   });
 });
@@ -142,19 +142,19 @@ describe('CC9 — WHITE-HOUSE-F: V-BURN (1actions.zil:127)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CC9 — FOREST-F: V-FIND (1actions.zil:147)', () => {
-  it('find forest in forest → "You cannot see the forest for the trees."', () => {
+  it('find forest in forest → "You cannot see the forest for the trees."', async () => {
     const g = newGameAt('FOREST-1');
     g.start();
-    const out = g.turn('find forest').output;
+    const out = await (await g.turn('find forest')).output;
     expect(out).toContain('You cannot see the forest for the trees.');
   });
 });
 
 describe('CC9 — FOREST-F: V-LISTEN (1actions.zil:149)', () => {
-  it('listen to forest → "The pines and the hemlocks seem to be murmuring."', () => {
+  it('listen to forest → "The pines and the hemlocks seem to be murmuring."', async () => {
     const g = newGameAt('FOREST-1');
     g.start();
-    const out = g.turn('listen to forest').output;
+    const out = await (await g.turn('listen to forest')).output;
     expect(out).toContain('pines');
     expect(out).toContain('hemlocks');
     expect(out).toContain('murmuring');
@@ -177,30 +177,30 @@ describe('CC9 — FOREST-F: V-LISTEN (1actions.zil:149)', () => {
 // Rooms absent from FOREST-AROUND (e.g. UP-A-TREE): same false-return path.
 
 describe('CC9 — FOREST-F: V-WALK-AROUND at house side emits both lines (1actions.zil:138)', () => {
-  it('walk around forest at WEST-OF-HOUSE → "not in forest" + compass default', () => {
+  it('walk around forest at WEST-OF-HOUSE → "not in forest" + compass default', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
-    const out = g.turn('walk around forest').output;
+    const out = await (await g.turn('walk around forest')).output;
     expect(out).toContain("You aren't even in the forest.");
     expect(out).toContain('Use compass directions for movement.');
   });
 
-  it('walk around forest at NORTH-OF-HOUSE → "not in forest" + compass default', () => {
+  it('walk around forest at NORTH-OF-HOUSE → "not in forest" + compass default', async () => {
     const g = newGameAt('NORTH-OF-HOUSE');
     g.start();
-    const out = g.turn('walk around forest').output;
+    const out = await (await g.turn('walk around forest')).output;
     expect(out).toContain("You aren't even in the forest.");
     expect(out).toContain('Use compass directions for movement.');
   });
 });
 
 describe('CC9 — FOREST-F: V-WALK-AROUND at non-table forest room emits compass default (1actions.zil:143)', () => {
-  it('walk around forest at UP-A-TREE → compass default only (not in FOREST-AROUND)', () => {
+  it('walk around forest at UP-A-TREE → compass default only (not in FOREST-AROUND)', async () => {
     // UP-A-TREE is absent from FOREST-AROUND so GO-NEXT returns false →
     // FOREST-F returns false → V-WALK-AROUND default fires.
     const g = newGameAt('UP-A-TREE');
     g.start();
-    const out = g.turn('walk around forest').output;
+    const out = await (await g.turn('walk around forest')).output;
     expect(out).not.toContain("You aren't even in the forest.");
     expect(out).toContain('Use compass directions for movement.');
   });
@@ -211,42 +211,42 @@ describe('CC9 — FOREST-F: V-WALK-AROUND at non-table forest room emits compass
 // ---------------------------------------------------------------------------
 
 describe('CC9 — GRANITE-WALL-F: at NORTH-TEMPLE (1actions.zil:65)', () => {
-  it('V-FIND at NORTH-TEMPLE → "The west wall is solid granite here."', () => {
+  it('V-FIND at NORTH-TEMPLE → "The west wall is solid granite here."', async () => {
     const g = newGameAt('NORTH-TEMPLE');
     g.start();
-    const out = g.turn('find granite wall').output;
+    const out = await (await g.turn('find granite wall')).output;
     expect(out).toContain('west wall is solid granite');
   });
 
-  it('V-TAKE (take wall) at NORTH-TEMPLE → "It\'s solid granite."', () => {
+  it('V-TAKE (take wall) at NORTH-TEMPLE → "It\'s solid granite."', async () => {
     const g = newGameAt('NORTH-TEMPLE');
     g.start();
-    const out = g.turn('take granite wall').output;
+    const out = await (await g.turn('take granite wall')).output;
     expect(out).toContain("It's solid granite.");
   });
 });
 
 describe('CC9 — GRANITE-WALL-F: at TREASURE-ROOM (1actions.zil:70)', () => {
-  it('V-FIND at TREASURE-ROOM → "The east wall is solid granite here."', () => {
+  it('V-FIND at TREASURE-ROOM → "The east wall is solid granite here."', async () => {
     const g = newGameAt('TREASURE-ROOM');
     g.start();
-    const out = g.turn('find granite wall').output;
+    const out = await (await g.turn('find granite wall')).output;
     expect(out).toContain('east wall is solid granite');
   });
 });
 
 describe('CC9 — GRANITE-WALL-F: at SLIDE-ROOM (1actions.zil:75)', () => {
-  it('V-FIND at SLIDE-ROOM → \'It only SAYS "Granite Wall".\'', () => {
+  it('V-FIND at SLIDE-ROOM → \'It only SAYS "Granite Wall".\'', async () => {
     const g = newGameAt('SLIDE-ROOM');
     g.start();
-    const out = g.turn('find granite wall').output;
+    const out = await (await g.turn('find granite wall')).output;
     expect(out).toContain('only SAYS');
     expect(out).toContain('Granite Wall');
   });
 });
 
 describe('CC9 — GRANITE-WALL-F: elsewhere (1actions.zil:79)', () => {
-  it('V-FIND wall in CAVE — "There is no granite wall here."', () => {
+  it('V-FIND wall in CAVE — "There is no granite wall here."', async () => {
     const g = newGameAt('CELLAR');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -254,7 +254,7 @@ describe('CC9 — GRANITE-WALL-F: elsewhere (1actions.zil:79)', () => {
     lamp!.set(Flag.OnFire);
     lamp!.set(Flag.Light);
     lamp!.moveTo(g.player);
-    const out = g.turn('find granite wall').output;
+    const out = await (await g.turn('find granite wall')).output;
     expect(out).toContain('There is no granite wall here.');
   });
 });
@@ -264,7 +264,7 @@ describe('CC9 — GRANITE-WALL-F: elsewhere (1actions.zil:79)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CC9 — WCLIF-OBJECT: climb (1actions.zil:3012)', () => {
-  it('climb white cliff → "The cliff is too steep for climbing."', () => {
+  it('climb white cliff → "The cliff is too steep for climbing."', async () => {
     const g = newGameAt('WHITE-CLIFFS-NORTH');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -274,7 +274,7 @@ describe('CC9 — WCLIF-OBJECT: climb (1actions.zil:3012)', () => {
     lamp!.moveTo(g.player);
     const whiteCliff = g.world.get('WHITE-CLIFF');
     expect(whiteCliff, 'WHITE-CLIFF must exist').toBeDefined();
-    const out = g.turn('climb white cliff').output;
+    const out = await (await g.turn('climb white cliff')).output;
     expect(out).toContain('too steep for climbing');
   });
 });
@@ -284,7 +284,7 @@ describe('CC9 — WCLIF-OBJECT: climb (1actions.zil:3012)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CC9 — CLIFF-OBJECT: V-LEAP (1actions.zil:3016)', () => {
-  it('jump off cliff → "That would be very unwise. Perhaps even fatal."', () => {
+  it('jump off cliff → "That would be very unwise. Perhaps even fatal."', async () => {
     const g = newGameAt('CANYON-BOTTOM');
     g.start();
     const lamp = g.world.get('LAMP');
@@ -294,7 +294,7 @@ describe('CC9 — CLIFF-OBJECT: V-LEAP (1actions.zil:3016)', () => {
     lamp!.moveTo(g.player);
     const cliff = g.world.get('CLIMBABLE-CLIFF');
     expect(cliff, 'CLIMBABLE-CLIFF must exist').toBeDefined();
-    const out = g.turn('jump off cliff').output;
+    const out = await (await g.turn('jump off cliff')).output;
     expect(out).toContain('very unwise');
     expect(out).toContain('fatal');
   });
@@ -320,7 +320,7 @@ describe('CC9 — I-FOREST-ROOM: slot registered in bootstrap', () => {
 });
 
 describe('CC9 — I-FOREST-ROOM: enabled on forest room M-ENTER', () => {
-  it('entering FOREST-1 enables I-FOREST-ROOM', () => {
+  it('entering FOREST-1 enables I-FOREST-ROOM', async () => {
     // Start outside forest, move in — M-ENTER fires for FOREST-ROOM action routine.
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
@@ -331,14 +331,14 @@ describe('CC9 — I-FOREST-ROOM: enabled on forest room M-ENTER', () => {
     lamp!.set(Flag.Light);
     lamp!.moveTo(g.player);
     // Move north → NORTH-OF-HOUSE, then continue into forest
-    g.turn('north');  // NORTH-OF-HOUSE
-    g.turn('north');  // FOREST area
+    await g.turn('north');  // NORTH-OF-HOUSE
+    await g.turn('north');  // FOREST area
     const entry = clockOf(g).getEntry('I-FOREST-ROOM');
     expect(entry, 'I-FOREST-ROOM must be registered').toBeDefined();
     expect(entry!.enabled).toBe(true);
   });
 
-  it('moving into FOREST-1 from PATH enables I-FOREST-ROOM', () => {
+  it('moving into FOREST-1 from PATH enables I-FOREST-ROOM', async () => {
     // Start at PATH (has FOREST-ROOM action routine); move south to FOREST-3,
     // then back to confirm M-ENTER fires the enableClock call.
     const g = newGameAt('PATH');
@@ -350,7 +350,7 @@ describe('CC9 — I-FOREST-ROOM: enabled on forest room M-ENTER', () => {
     lamp!.moveTo(g.player);
     // Move in any direction that reaches a room with FOREST-ROOM handler.
     // PATH → east → FOREST-1 (both have FOREST-ROOM; M-ENTER fires on arrival).
-    g.turn('east');  // → FOREST-1; M-ENTER fires → enableClock('I-FOREST-ROOM')
+    await g.turn('east');  // → FOREST-1; M-ENTER fires → enableClock('I-FOREST-ROOM')
     const entry = clockOf(g).getEntry('I-FOREST-ROOM');
     expect(entry, 'I-FOREST-ROOM must be registered').toBeDefined();
     expect(entry!.enabled).toBe(true);
@@ -362,7 +362,7 @@ describe('CC9 — I-FOREST-ROOM: 15% chirp (1actions.zil:2996, seeded structural
   // Never assert a specific draw; assert the count is in range [floor(n*0.05), ceil(n*0.30)].
   //
   // Setup: move player from PATH to FOREST-1 to trigger M-ENTER + enableClock.
-  function setupForestGame(seed: number): ReturnType<typeof createGame> {
+  async function setupForestGame(seed: number): Promise<ReturnType<typeof createGame>> {
     const rng = new Rng(seed);
     const g = createGame({ startRoom: 'PATH', rng });
     g.start();
@@ -372,19 +372,19 @@ describe('CC9 — I-FOREST-ROOM: 15% chirp (1actions.zil:2996, seeded structural
     lamp!.set(Flag.Light);
     lamp!.moveTo(g.player);
     // Move west: PATH → FOREST-1 (M-ENTER fires → I-FOREST-ROOM enabled).
-    g.turn('west');
+    await g.turn('west');
     return g;
   }
 
-  it('chirp fires at ~15% rate over 200 seeded forest turns', () => {
-    const g = setupForestGame(42);
+  it('chirp fires at ~15% rate over 200 seeded forest turns', async () => {
+    const g = await setupForestGame(42);
 
     // Use 'look' (1 clock tick per turn) to get a clean per-turn probability measure.
     // V-WAIT advances 3 ticks which conflates the per-turn rate.
     let chirpCount = 0;
     const N = 200;
     for (let i = 0; i < N; i++) {
-      const r = g.turn('look');
+      const r = await g.turn('look');
       if (r.output.includes('chirping of a song bird')) chirpCount++;
     }
 
@@ -393,14 +393,14 @@ describe('CC9 — I-FOREST-ROOM: 15% chirp (1actions.zil:2996, seeded structural
     expect(chirpCount).toBeLessThanOrEqual(Math.ceil(N * 0.30));
   });
 
-  it('chirp output contains the exact ZIL string (1actions.zil:3001)', () => {
-    const g = setupForestGame(99);
+  it('chirp output contains the exact ZIL string (1actions.zil:3001)', async () => {
+    const g = await setupForestGame(99);
 
     // Run turns until we get one chirp or 500 turns — seeded so deterministic.
     // Use 'look' (1 clock tick) for a clean per-turn probability.
     let found = false;
     for (let i = 0; i < 500 && !found; i++) {
-      const r = g.turn('look');
+      const r = await g.turn('look');
       if (r.output.includes('chirping of a song bird')) {
         expect(r.output).toContain(
           'You hear in the distance the chirping of a song bird.',
@@ -413,7 +413,7 @@ describe('CC9 — I-FOREST-ROOM: 15% chirp (1actions.zil:2996, seeded structural
 });
 
 describe('CC9 — I-FOREST-ROOM: disables when leaving forest (1actions.zil:2997)', () => {
-  it('entering non-forest room: I-FOREST-ROOM disables on next clock tick', () => {
+  it('entering non-forest room: I-FOREST-ROOM disables on next clock tick', async () => {
     // Start at PATH (has FOREST-ROOM action), move to FOREST-1 to arm I-FOREST-ROOM,
     // then teleport to WEST-OF-HOUSE to confirm self-disable on next turn.
     const g = newGameAt('PATH');
@@ -425,7 +425,7 @@ describe('CC9 — I-FOREST-ROOM: disables when leaving forest (1actions.zil:2997
     lamp!.moveTo(g.player);
 
     // Move west: PATH → FOREST-1; M-ENTER fires → enableClock('I-FOREST-ROOM').
-    g.turn('west');
+    await g.turn('west');
     const beforeLeave = clockOf(g).getEntry('I-FOREST-ROOM');
     expect(beforeLeave, 'I-FOREST-ROOM must be registered').toBeDefined();
     expect(beforeLeave!.enabled, 'I-FOREST-ROOM must be enabled in FOREST-1').toBe(true);
@@ -437,7 +437,7 @@ describe('CC9 — I-FOREST-ROOM: disables when leaving forest (1actions.zil:2997
 
     // A turn in a non-forest room: clock fires I-FOREST-ROOM, finds we're not in
     // a forest room, disables itself (1actions.zil:2997: <DISABLE <INT I-FOREST-ROOM>>).
-    g.turn('look');
+    await g.turn('look');
     const afterLeave = clockOf(g).getEntry('I-FOREST-ROOM');
     expect(afterLeave, 'I-FOREST-ROOM must still be registered').toBeDefined();
     expect(afterLeave!.enabled, 'I-FOREST-ROOM must self-disable outside forest').toBe(false);
@@ -452,36 +452,36 @@ describe('CC9 — I-FOREST-ROOM: disables when leaving forest (1actions.zil:2997
 // ---------------------------------------------------------------------------
 
 describe('CC9 — SONGBIRD-F: verb dispatch (1actions.zil:82)', () => {
-  it('find songbird → not here but probably nearby', () => {
+  it('find songbird → not here but probably nearby', async () => {
     const g = newGameAt('FOREST-1');
     g.start();
-    expect(g.turn('find songbird').output).toContain(
+    expect(await (await g.turn('find songbird')).output).toContain(
       'The songbird is not here but is probably nearby.',
     );
   });
 
-  it('listen to songbird → cannot hear it now', () => {
+  it('listen to songbird → cannot hear it now', async () => {
     const g = newGameAt('FOREST-1');
     g.start();
-    expect(g.turn('listen to songbird').output).toContain(
+    expect(await (await g.turn('listen to songbird')).output).toContain(
       "You can't hear the songbird now.",
     );
   });
 
-  it('examine and smell songbird → fall through to "can\'t see any songbird here"', () => {
+  it('examine and smell songbird → fall through to "can\'t see any songbird here"', async () => {
     const g = newGameAt('FOREST-1');
     g.start();
-    expect(g.turn('examine songbird').output).toContain(
+    expect(await (await g.turn('examine songbird')).output).toContain(
       "You can't see any songbird here.",
     );
-    expect(g.turn('smell songbird').output).toContain(
+    expect(await (await g.turn('smell songbird')).output).toContain(
       "You can't see any songbird here.",
     );
   });
 
-  it('follow songbird → cannot be followed', () => {
+  it('follow songbird → cannot be followed', async () => {
     const g = newGameAt('FOREST-1');
     g.start();
-    expect(g.turn('follow songbird').output).toContain("It can't be followed.");
+    expect(await (await g.turn('follow songbird')).output).toContain("It can't be followed.");
   });
 });

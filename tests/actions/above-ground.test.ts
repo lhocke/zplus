@@ -47,26 +47,26 @@ function worldOf(g: ReturnType<typeof createGame>): World {
 describe('EAST-HOUSE: room M-LOOK description', () => {
   beforeEach(() => resetKitchenWindowFlag());
 
-  it('shows window as slightly ajar before opening', () => {
+  it('shows window as slightly ajar before opening', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('slightly ajar');
     expect(r.output).not.toContain('open.');
   });
 
-  it('shows window as open after opening', () => {
+  it('shows window as open after opening', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');
-    const r = g.turn('look');
+    await g.turn('open window');
+    const r = await g.turn('look');
     expect(r.output).toContain('which is open.');
   });
 
-  it('includes the forest path description', () => {
+  it('includes the forest path description', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('You are behind the white house');
     expect(r.output).toContain('path leads into the forest');
   });
@@ -79,90 +79,90 @@ describe('EAST-HOUSE: room M-LOOK description', () => {
 describe('KITCHEN-WINDOW-F: open/close/enter', () => {
   beforeEach(() => resetKitchenWindowFlag());
 
-  it('open window: exact ZIL text', () => {
+  it('open window: exact ZIL text', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    const r = g.turn('open window');
+    const r = await g.turn('open window');
     expect(r.output).toContain(
       'With great effort, you open the window far enough to allow entry.',
     );
   });
 
-  it('open window sets Flag.Open on KITCHEN-WINDOW', () => {
+  it('open window sets Flag.Open on KITCHEN-WINDOW', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');
+    await g.turn('open window');
     const win = worldOf(g).get('KITCHEN-WINDOW')!;
     expect(win.has(Flag.Open)).toBe(true);
   });
 
-  it('open already-open window returns a DUMMY table entry (ZIL PICK-ONE)', () => {
+  it('open already-open window returns a DUMMY table entry (ZIL PICK-ONE)', async () => {
     // ZIL OPEN-CLOSE uses <TELL <PICK-ONE ,DUMMY>> for the already-done case.
     // DUMMY entries: "Look around." / "Too late for that." / "Have your eyes checked."
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');
-    const r = g.turn('open window');
+    await g.turn('open window');
+    const r = await g.turn('open window');
     const dummyEntries = ['Look around.', 'Too late for that.', 'Have your eyes checked.'];
     expect(dummyEntries).toContain(r.output);
   });
 
-  it('close window: exact ZIL text', () => {
+  it('close window: exact ZIL text', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');
-    const r = g.turn('close window');
+    await g.turn('open window');
+    const r = await g.turn('close window');
     expect(r.output).toContain(
       'The window closes (more easily than it opened).',
     );
   });
 
-  it('close window clears Flag.Open', () => {
+  it('close window clears Flag.Open', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');
-    g.turn('close window');
+    await g.turn('open window');
+    await g.turn('close window');
     const win = worldOf(g).get('KITCHEN-WINDOW')!;
     expect(win.has(Flag.Open)).toBe(false);
   });
 
-  it('examine before opening reports slightly ajar', () => {
+  it('examine before opening reports slightly ajar', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    const r = g.turn('examine window');
+    const r = await g.turn('examine window');
     expect(r.output).toContain(
       'The window is slightly ajar, but not enough to allow entry.',
     );
   });
 
-  it('enter window (open) moves player into KITCHEN', () => {
+  it('enter window (open) moves player into KITCHEN', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');
-    g.turn('enter window');
+    await g.turn('open window');
+    await g.turn('enter window');
     expect(g.view().here).toBe('KITCHEN');
   });
 
-  it('enter window prints kitchen description', () => {
+  it('enter window prints kitchen description', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');
-    const r = g.turn('enter window');
+    await g.turn('open window');
+    const r = await g.turn('enter window');
     expect(r.output).toContain('You are in the kitchen of the white house');
   });
 
-  it('west exit to KITCHEN works after window is open (ifFlag)', () => {
+  it('west exit to KITCHEN works after window is open (ifFlag)', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');
-    g.turn('west');
+    await g.turn('open window');
+    await g.turn('west');
     expect(g.view().here).toBe('KITCHEN');
   });
 
-  it('west exit to KITCHEN blocked when window is closed', () => {
+  it('west exit to KITCHEN blocked when window is closed', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    const r = g.turn('west');
+    const r = await g.turn('west');
     expect(r.output).toBe('The kitchen window is closed.');
     expect(g.view().here).toBe('EAST-OF-HOUSE');
   });
@@ -175,18 +175,18 @@ describe('KITCHEN-WINDOW-F: open/close/enter', () => {
 describe('KITCHEN-FCN: room M-LOOK description', () => {
   beforeEach(() => resetKitchenWindowFlag());
 
-  it('shows window as slightly ajar when closed', () => {
+  it('shows window as slightly ajar when closed', async () => {
     const g = newGameAt('KITCHEN');
     g.start();
     // Window starts closed in Kitchen.
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('slightly ajar');
   });
 
-  it('includes the kitchen narrative text', () => {
+  it('includes the kitchen narrative text', async () => {
     const g = newGameAt('KITCHEN');
     g.start();
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain(
       'You are in the kitchen of the white house',
     );
@@ -197,12 +197,12 @@ describe('KITCHEN-FCN: room M-LOOK description', () => {
     expect(r.output).toContain('dark chimney');
   });
 
-  it('shows window as open after opening from outside', () => {
+  it('shows window as open after opening from outside', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');
-    g.turn('west'); // into KITCHEN
-    const r = g.turn('look');
+    await g.turn('open window');
+    await g.turn('west'); // into KITCHEN
+    const r = await g.turn('look');
     expect(r.output).toContain('window which is open.');
     expect(r.output).not.toContain('slightly ajar');
   });
@@ -213,14 +213,14 @@ describe('KITCHEN-FCN: room M-LOOK description', () => {
 // ---------------------------------------------------------------------------
 
 describe('Attic: up from kitchen', () => {
-  it('go up from KITCHEN lands in ATTIC', () => {
+  it('go up from KITCHEN lands in ATTIC', async () => {
     const g = newGameAt('KITCHEN');
     g.start();
-    g.turn('up');
+    await g.turn('up');
     expect(g.view().here).toBe('ATTIC');
   });
 
-  it('attic is dark — entering without a light source shows moved-into-dark message', () => {
+  it('attic is dark — entering without a light source shows moved-into-dark message', async () => {
     // ATTIC has no Flag.On (ONBIT); player has no lamp.
     //
     // ZIL GOTO (gverbs.zil:2117-2120): when old room was lit (KITCHEN has Flag.On)
@@ -229,16 +229,16 @@ describe('Attic: up from kitchen', () => {
     // pitch-black message.
     const g = newGameAt('KITCHEN');
     g.start();
-    const r = g.turn('up');
+    const r = await g.turn('up');
     expect(r.output).toContain('You have moved into a dark place.');
     // ldesc NOT shown in the dark
     expect(r.output).not.toContain('This is the attic');
     // Subsequent look gives pitch-black
-    const look = g.turn('look');
+    const look = await g.turn('look');
     expect(look.output).toContain('It is pitch black.');
   });
 
-  it('attic shows ldesc when lit (lamp in hand)', () => {
+  it('attic shows ldesc when lit (lamp in hand)', async () => {
     const g = newGameAt('KITCHEN');
     g.start();
     // Move the lamp into player's inventory via world access, then go up.
@@ -247,7 +247,7 @@ describe('Attic: up from kitchen', () => {
     const player = w.get('PLAYER')!;
     lamp.moveTo(player);
     lamp.set(Flag.OnFire); // turn on the lamp
-    const r = g.turn('up');
+    const r = await g.turn('up');
     expect(r.output).toContain('This is the attic');
     expect(r.output).toContain('stairway leading down');
   });
@@ -267,60 +267,60 @@ describe('Attic: up from kitchen', () => {
 describe('LIVING-ROOM-FCN: M-LOOK dynamic description', () => {
   beforeEach(() => resetRugMoved());
 
-  it('initial state: large oriental rug in the center', () => {
+  it('initial state: large oriental rug in the center', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain(
       'and a large oriental rug in the center of the room.',
     );
   });
 
-  it('after rug moved: closed trap door at feet', () => {
+  it('after rug moved: closed trap door at feet', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    const r = g.turn('look');
+    await g.turn('move rug');
+    const r = await g.turn('look');
     expect(r.output).toContain('and a closed trap door at your feet.');
   });
 
-  it('after trap door opened (rug not moved): open trap door at feet', () => {
+  it('after trap door opened (rug not moved): open trap door at feet', async () => {
     // Move rug first to make trap door accessible, then open, then reset rug state
     // by checking the branch when trap is open but rug hasn't been moved.
     // In ZIL: FSET? TRAP-DOOR OPENBIT without RUG-MOVED => "open trap door at feet"
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');                // sets rugMoved
-    g.turn('open trap door');          // opens trap door
+    await g.turn('move rug');                // sets rugMoved
+    await g.turn('open trap door');          // opens trap door
     // Now force rugMoved to false by resetting and re-opening without moving rug
     // (We can't easily reset mid-game, so test the condition directly via world state)
     const trap = worldOf(g).get('TRAP-DOOR')!;
     expect(trap.has(Flag.Open)).toBe(true);
   });
 
-  it('rug moved + trap door open: rug beside open trap door', () => {
+  it('rug moved + trap door open: rug beside open trap door', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    g.turn('open trap door');
-    const r = g.turn('look');
+    await g.turn('move rug');
+    await g.turn('open trap door');
+    const r = await g.turn('look');
     expect(r.output).toContain(
       'and a rug lying beside an open trap door.',
     );
   });
 
-  it('includes trophy case and doorway references', () => {
+  it('includes trophy case and doorway references', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('a trophy case');
     expect(r.output).toContain('doorway to the east');
   });
 
-  it('west door is nailed shut before cyclops breaks it', () => {
+  it('west door is nailed shut before cyclops breaks it', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('nailed shut');
   });
 });
@@ -332,55 +332,55 @@ describe('LIVING-ROOM-FCN: M-LOOK dynamic description', () => {
 describe('RUG-FCN: rug interactions', () => {
   beforeEach(() => resetRugMoved());
 
-  it('move rug: exact ZIL text', () => {
+  it('move rug: exact ZIL text', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('move rug');
+    const r = await g.turn('move rug');
     expect(r.output).toContain(
       'With a great effort, the rug is moved to one side of the room, revealing\n' +
         'the dusty cover of a closed trap door.',
     );
   });
 
-  it('move rug clears Invisible flag on TRAP-DOOR', () => {
+  it('move rug clears Invisible flag on TRAP-DOOR', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
+    await g.turn('move rug');
     const trap = worldOf(g).get('TRAP-DOOR')!;
     expect(trap.has(Flag.Invisible)).toBe(false);
   });
 
-  it('move rug twice refuses second attempt', () => {
+  it('move rug twice refuses second attempt', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    const r = g.turn('move rug');
+    await g.turn('move rug');
+    const r = await g.turn('move rug');
     expect(r.output).toContain(
       'Having moved the carpet previously, you find it impossible to move\nit again.',
     );
   });
 
-  it('raise rug: too heavy, mentions irregularity on first try', () => {
+  it('raise rug: too heavy, mentions irregularity on first try', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('raise rug');
+    const r = await g.turn('raise rug');
     expect(r.output).toContain('too heavy to lift');
     expect(r.output).toContain('noticed an irregularity');
   });
 
-  it('raise rug after already moved: just too heavy', () => {
+  it('raise rug after already moved: just too heavy', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    const r = g.turn('raise rug');
+    await g.turn('move rug');
+    const r = await g.turn('raise rug');
     expect(r.output).toContain('too heavy to lift');
     expect(r.output).not.toContain('irregularity');
   });
 
-  it('take rug: extremely heavy and cannot be carried', () => {
+  it('take rug: extremely heavy and cannot be carried', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('take rug');
+    const r = await g.turn('take rug');
     expect(r.output).toContain(
       'The rug is extremely heavy and cannot be carried.',
     );
@@ -394,31 +394,31 @@ describe('RUG-FCN: rug interactions', () => {
 describe('TRAP-DOOR-FCN: open/close from living room', () => {
   beforeEach(() => resetRugMoved());
 
-  it('open trap door: exact ZIL text (rug moved first)', () => {
+  it('open trap door: exact ZIL text (rug moved first)', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    const r = g.turn('open trap door');
+    await g.turn('move rug');
+    const r = await g.turn('open trap door');
     expect(r.output).toContain(
       'The door reluctantly opens to reveal a rickety staircase descending into\ndarkness.',
     );
   });
 
-  it('open trap door sets Flag.Open', () => {
+  it('open trap door sets Flag.Open', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    g.turn('open trap door');
+    await g.turn('move rug');
+    await g.turn('open trap door');
     const trap = worldOf(g).get('TRAP-DOOR')!;
     expect(trap.has(Flag.Open)).toBe(true);
   });
 
-  it('close trap door: exact ZIL text', () => {
+  it('close trap door: exact ZIL text', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    g.turn('open trap door');
-    const r = g.turn('close trap door');
+    await g.turn('move rug');
+    await g.turn('open trap door');
+    const r = await g.turn('close trap door');
     expect(r.output).toContain('The door swings shut and closes.');
   });
 
@@ -437,49 +437,49 @@ describe('TRAP-DOOR-FCN: open/close from living room', () => {
 describe('TRAP-DOOR-EXIT per-routine: going down to CELLAR', () => {
   beforeEach(() => resetRugMoved());
 
-  it('down blocked when rug not moved', () => {
+  it('down blocked when rug not moved', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('down');
+    const r = await g.turn('down');
     expect(r.output).toContain("You can't go that way.");
     expect(g.view().here).toBe('LIVING-ROOM');
   });
 
-  it('down blocked when rug moved but trap door not open', () => {
+  it('down blocked when rug moved but trap door not open', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    const r = g.turn('down');
+    await g.turn('move rug');
+    const r = await g.turn('down');
     expect(r.output).toContain('The trap door is closed.');
     expect(g.view().here).toBe('LIVING-ROOM');
   });
 
-  it('down succeeds with rug moved and trap door open', () => {
+  it('down succeeds with rug moved and trap door open', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    g.turn('open trap door');
-    g.turn('down');
+    await g.turn('move rug');
+    await g.turn('open trap door');
+    await g.turn('down');
     expect(g.view().here).toBe('CELLAR');
   });
 
-  it('cellar M-ENTER: trap door crashes shut on first descent', () => {
+  it('cellar M-ENTER: trap door crashes shut on first descent', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    g.turn('open trap door');
-    const r = g.turn('down');
+    await g.turn('move rug');
+    await g.turn('open trap door');
+    const r = await g.turn('down');
     expect(r.output).toContain(
       'The trap door crashes shut, and you hear someone barring it.',
     );
   });
 
-  it('cellar M-ENTER clears Flag.Open on trap door', () => {
+  it('cellar M-ENTER clears Flag.Open on trap door', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    g.turn('open trap door');
-    g.turn('down');
+    await g.turn('move rug');
+    await g.turn('open trap door');
+    await g.turn('down');
     const trap = worldOf(g).get('TRAP-DOOR')!;
     expect(trap.has(Flag.Open)).toBe(false);
   });
@@ -490,7 +490,7 @@ describe('TRAP-DOOR-EXIT per-routine: going down to CELLAR', () => {
 // ---------------------------------------------------------------------------
 
 describe('CELLAR-FCN: M-LOOK description', () => {
-  it('describes the dark damp cellar when lit (lamp in hand)', () => {
+  it('describes the dark damp cellar when lit (lamp in hand)', async () => {
     // CELLAR has no Flag.On (ONBIT); M-LOOK fires only when lit (gverbs.zil:1671).
     // Give the player the lit lamp so the darkness gate is satisfied.
     const g = newGameAt('CELLAR');
@@ -500,7 +500,7 @@ describe('CELLAR-FCN: M-LOOK description', () => {
     lamp.moveTo(player);
     lamp.set(Flag.OnFire); // turn on the lamp
     g.start();
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain(
       'You are in a dark and damp cellar with a narrow passageway leading\n' +
         'north, and a crawlway to the south.',
@@ -508,10 +508,10 @@ describe('CELLAR-FCN: M-LOOK description', () => {
     expect(r.output).toContain('steep metal ramp which is unclimbable');
   });
 
-  it('CELLAR is dark without a light source', () => {
+  it('CELLAR is dark without a light source', async () => {
     const g = newGameAt('CELLAR');
     g.start();
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('It is pitch black.');
     expect(r.output).not.toContain('dark and damp cellar');
   });
@@ -527,59 +527,59 @@ describe('full opening path integration test', () => {
     resetRugMoved();
   });
 
-  it('start → north → east → open window → west → kitchen (exact room check)', () => {
+  it('start → north → east → open window → west → kitchen (exact room check)', async () => {
     const g = createGame();
     g.start();
 
-    g.turn('north');
-    g.turn('east');
+    await g.turn('north');
+    await g.turn('east');
     expect(g.view().here).toBe('EAST-OF-HOUSE');
 
-    g.turn('open window');
-    g.turn('west');
+    await g.turn('open window');
+    await g.turn('west');
     expect(g.view().here).toBe('KITCHEN');
   });
 
-  it('kitchen → west → living room', () => {
+  it('kitchen → west → living room', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');
-    g.turn('west');
-    g.turn('west');
+    await g.turn('open window');
+    await g.turn('west');
+    await g.turn('west');
     expect(g.view().here).toBe('LIVING-ROOM');
   });
 
-  it('living room → move rug → open trap door → down → cellar', () => {
+  it('living room → move rug → open trap door → down → cellar', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    g.turn('open trap door');
-    g.turn('down');
+    await g.turn('move rug');
+    await g.turn('open trap door');
+    await g.turn('down');
     expect(g.view().here).toBe('CELLAR');
   });
 
-  it('take sword from living room succeeds', () => {
+  it('take sword from living room succeeds', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('take sword');
+    const r = await g.turn('take sword');
     expect(r.output).toContain('Taken.');
     const sword = worldOf(g).get('SWORD')!;
     expect(sword.parent?.id).toBe('PLAYER');
   });
 
-  it('take brass lantern from living room succeeds', () => {
+  it('take brass lantern from living room succeeds', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('take brass lantern');
+    const r = await g.turn('take brass lantern');
     expect(r.output).toContain('Taken.');
     const lamp = worldOf(g).get('LAMP')!;
     expect(lamp.parent?.id).toBe('PLAYER');
   });
 
-  it('take trophy case is refused with exact ZIL text', () => {
+  it('take trophy case is refused with exact ZIL text', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('take trophy case');
+    const r = await g.turn('take trophy case');
     expect(r.output).toContain(
       'The trophy case is securely fastened to the wall.',
     );
@@ -591,60 +591,60 @@ describe('full opening path integration test', () => {
 // ---------------------------------------------------------------------------
 
 describe('TREE-ROOM: climbing and M-LOOK', () => {
-  it('up from PATH lands in UP-A-TREE', () => {
+  it('up from PATH lands in UP-A-TREE', async () => {
     const g = newGameAt('PATH');
     g.start();
-    g.turn('up');
+    await g.turn('up');
     expect(g.view().here).toBe('UP-A-TREE');
   });
 
-  it('UP-A-TREE M-LOOK: 10 feet above the ground', () => {
+  it('UP-A-TREE M-LOOK: 10 feet above the ground', async () => {
     const g = newGameAt('PATH');
     g.start();
-    const r = g.turn('up');
+    const r = await g.turn('up');
     expect(r.output).toContain(
       'You are about 10 feet above the ground nestled among some large\nbranches.',
     );
   });
 
-  it('UP-A-TREE M-LOOK: nearest branch above is out of reach', () => {
+  it('UP-A-TREE M-LOOK: nearest branch above is out of reach', async () => {
     const g = newGameAt('PATH');
     g.start();
-    const r = g.turn('up');
+    const r = await g.turn('up');
     expect(r.output).toContain(
       'The nearest branch above you is above your reach.',
     );
   });
 
-  it('take bird nest in the tree', () => {
+  it('take bird nest in the tree', async () => {
     const g = newGameAt('UP-A-TREE');
     g.start();
-    const r = g.turn('take nest');
+    const r = await g.turn('take nest');
     expect(r.output).toContain('Taken.');
     const nest = worldOf(g).get('NEST')!;
     expect(nest.parent?.id).toBe('PLAYER');
   });
 
-  it('take egg from nest in the tree', () => {
+  it('take egg from nest in the tree', async () => {
     const g = newGameAt('UP-A-TREE');
     g.start();
-    const r = g.turn('take egg');
+    const r = await g.turn('take egg');
     expect(r.output).toContain('Taken.');
     const egg = worldOf(g).get('EGG')!;
     expect(egg.parent?.id).toBe('PLAYER');
   });
 
-  it('down from tree returns to PATH', () => {
+  it('down from tree returns to PATH', async () => {
     const g = newGameAt('UP-A-TREE');
     g.start();
-    g.turn('down');
+    await g.turn('down');
     expect(g.view().here).toBe('PATH');
   });
 
-  it('up from UP-A-TREE is blocked (nearest branch out of reach)', () => {
+  it('up from UP-A-TREE is blocked (nearest branch out of reach)', async () => {
     const g = newGameAt('UP-A-TREE');
     g.start();
-    const r = g.turn('up');
+    const r = await g.turn('up');
     expect(r.output).toContain('cannot climb any higher');
   });
 });
@@ -665,10 +665,10 @@ describe('BOARD-F: boarded door boards', () => {
 });
 
 describe('FRONT-DOOR-FCN: front door cannot be opened', () => {
-  it('open front door is refused', () => {
+  it('open front door is refused', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
-    const r = g.turn('open door');
+    const r = await g.turn('open door');
     // Either FRONT-DOOR-FCN fires or the door isn't open-able
     expect(
       r.output.includes('The door cannot be opened.') ||
@@ -712,10 +712,10 @@ describe('CHIMNEY-F: handler registration', () => {
     expect(chimney?.handler).toBeDefined();
   });
 
-  it('examine chimney from STUDIO says upward', () => {
+  it('examine chimney from STUDIO says upward', async () => {
     const g = newGameAt('STUDIO');
     g.start();
-    const r = g.turn('examine chimney');
+    const r = await g.turn('examine chimney');
     expect(r.output).toContain('upward');
     expect(r.output).toContain('climbable');
   });
@@ -726,7 +726,7 @@ describe('CHIMNEY-F: handler registration', () => {
 // ---------------------------------------------------------------------------
 
 describe('GUNK-FUNCTION: slag crumbles', () => {
-  it('touching gunk crumbles it to dust', () => {
+  it('touching gunk crumbles it to dust', async () => {
     // GUNK has no parent (floating item), so place it in a room for the test.
     const g = createGame({ startRoom: 'WEST-OF-HOUSE' });
     g.start();
@@ -735,7 +735,7 @@ describe('GUNK-FUNCTION: slag crumbles', () => {
     expect(gunk, 'GUNK must exist in world').toBeDefined();
     const player = w.get('PLAYER')!;
     gunk!.moveTo(player); // put in inventory
-    const r = g.turn('examine gunk');
+    const r = await g.turn('examine gunk');
     expect(r.output).toContain(
       'The slag was rather insubstantial, and crumbles into dust at your touch.',
     );
@@ -747,10 +747,10 @@ describe('GUNK-FUNCTION: slag crumbles', () => {
 // ---------------------------------------------------------------------------
 
 describe('SWORD-FCN: take enables glow interrupt', () => {
-  it('taking the sword enables I-SWORD clock', () => {
+  it('taking the sword enables I-SWORD clock', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('take sword');
+    const r = await g.turn('take sword');
     // The handler enables the clock and falls through to default TAKE.
     expect(r.output).toContain('Taken.');
   });
@@ -761,11 +761,11 @@ describe('SWORD-FCN: take enables glow interrupt', () => {
 // ---------------------------------------------------------------------------
 
 describe('EGG-OBJECT: open attempts', () => {
-  it('open egg with no tool: neither tools nor expertise', () => {
+  it('open egg with no tool: neither tools nor expertise', async () => {
     const g = newGameAt('UP-A-TREE');
     g.start();
-    g.turn('take egg');
-    const r = g.turn('open egg');
+    await g.turn('take egg');
+    const r = await g.turn('open egg');
     expect(r.output).toContain(
       'You have neither the tools nor the expertise.',
     );
@@ -777,16 +777,16 @@ describe('EGG-OBJECT: open attempts', () => {
 // ---------------------------------------------------------------------------
 
 describe('CANARY-OBJECT: wind in forest', () => {
-  it('wind canary in UP-A-TREE summons songbird and drops bauble', () => {
+  it('wind canary in UP-A-TREE summons songbird and drops bauble', async () => {
     const g = newGameAt('UP-A-TREE');
     g.start();
     // Take the egg (which contains canary)
-    g.turn('take egg');
+    await g.turn('take egg');
     // Move canary directly to player so wind command can target it
     const canary = worldOf(g).get('CANARY')!;
     // Move canary to player directly for testing
     canary.moveTo(worldOf(g).get('PLAYER')!);
-    const r = g.turn('wind canary');
+    const r = await g.turn('wind canary');
     expect(r.output).toContain(
       'The canary chirps, slightly off-key, an aria from a forgotten opera.',
     );
@@ -794,12 +794,12 @@ describe('CANARY-OBJECT: wind in forest', () => {
     expect(r.output).toContain('brass bauble');
   });
 
-  it('wind canary outside forest: chirps blithely', () => {
+  it('wind canary outside forest: chirps blithely', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
     const canary = worldOf(g).get('CANARY')!;
     canary.moveTo(worldOf(g).get('PLAYER')!);
-    const r = g.turn('wind canary');
+    const r = await g.turn('wind canary');
     expect(r.output).toContain(
       'The canary chirps blithely, if somewhat tinnily, for a short time.',
     );
@@ -811,10 +811,10 @@ describe('CANARY-OBJECT: wind in forest', () => {
 // ---------------------------------------------------------------------------
 
 describe('CLEARING-FCN: M-LOOK', () => {
-  it('grating-clearing look: forest surrounding, path south', () => {
+  it('grating-clearing look: forest surrounding, path south', async () => {
     const g = newGameAt('GRATING-CLEARING');
     g.start();
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain(
       'You are in a clearing, with a forest surrounding you on all sides.',
     );

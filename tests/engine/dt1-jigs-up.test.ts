@@ -55,47 +55,47 @@ const grueRng = (): Rng =>
 // ---------------------------------------------------------------------------
 
 describe('DT1-A: first/second death → FOREST-1 resurrection', () => {
-  it('first death: player moves to FOREST-1', () => {
+  it('first death: player moves to FOREST-1', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
-    g.turn('north'); // grue kill, death 1
+    await g.turn('north'); // grue kill, death 1
     expect(g.view().here).toBe('FOREST-1');
   });
 
-  it('first death: score decreases by 10', () => {
+  it('first death: score decreases by 10', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     const before = g.view().score;
-    g.turn('north');
+    await g.turn('north');
     expect(g.view().score).toBe(before - 10);
   });
 
-  it('first death: output contains "You have died"', () => {
+  it('first death: output contains "You have died"', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
-    const r = g.turn('north');
+    const r = await g.turn('north');
     expect(r.output).toContain('You have died');
   });
 
-  it('second death: player moves to FOREST-1', () => {
+  it('second death: player moves to FOREST-1', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
-    g.turn('north'); // death 1
+    await g.turn('north'); // death 1
     // Set deaths=1 so next grue kill is death 2
     (g as unknown as { deaths: number }).deaths = 1;
     // Also put player back in maze by forcing location
     (g as unknown as { here: unknown }).here = g.world.get('MAZE-1');
     g.player.moveTo(g.world.get('MAZE-1')!);
 
-    g.turn('north'); // death 2
+    await g.turn('north'); // death 2
     expect(g.view().here).toBe('FOREST-1');
   });
 });
@@ -105,24 +105,24 @@ describe('DT1-A: first/second death → FOREST-1 resurrection', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT1-B: third death → FINISH (gameOver)', () => {
-  it('third death outputs suicidal maniac message', () => {
+  it('third death outputs suicidal maniac message', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     (g as unknown as { deaths: number }).deaths = 2;
-    const r = g.turn('north');
+    const r = await g.turn('north');
     expect(r.output).toContain('suicidal maniac');
   });
 
-  it('third death sets gameOver (turn returns empty afterward)', () => {
+  it('third death sets gameOver (turn returns empty afterward)', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     (g as unknown as { deaths: number }).deaths = 2;
-    g.turn('north');
-    expect(g.turn('look').output).toBe('');
+    await g.turn('north');
+    expect(await (await g.turn('look')).output).toBe('');
   });
 });
 
@@ -131,15 +131,15 @@ describe('DT1-B: third death → FINISH (gameOver)', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT1-C: death-while-dead → FINISH', () => {
-  it('when dead=true, jigsUp outputs talented message and sets gameOver', () => {
+  it('when dead=true, jigsUp outputs talented message and sets gameOver', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     (g as unknown as { dead: boolean }).dead = true;
-    const r = g.turn('north');
+    const r = await g.turn('north');
     expect(r.output).toContain('talented');
-    expect(g.turn('look').output).toBe('');
+    expect(await (await g.turn('look')).output).toBe('');
   });
 });
 
@@ -148,25 +148,25 @@ describe('DT1-C: death-while-dead → FINISH', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT1-D: Bad luck / LUCKY branch', () => {
-  it('when lucky=true, "Bad luck, huh?" is NOT in output', () => {
+  it('when lucky=true, "Bad luck, huh?" is NOT in output', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     // lucky defaults true
     expect((g as unknown as { lucky: boolean }).lucky).toBe(true);
-    const r = g.turn('north');
+    const r = await g.turn('north');
     expect(r.output).not.toContain('Bad luck, huh?');
   });
 
-  it('when lucky=false, "Bad luck, huh?" appears in output', () => {
+  it('when lucky=false, "Bad luck, huh?" appears in output', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     // Force lucky=false (mirror munged)
     (g as unknown as { lucky: boolean }).lucky = false;
-    const r = g.turn('north');
+    const r = await g.turn('north');
     expect(r.output).toContain('Bad luck, huh?');
   });
 });
@@ -177,55 +177,55 @@ describe('DT1-D: Bad luck / LUCKY branch', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT1-E: Hades branch when SOUTH-TEMPLE visited', () => {
-  it('after death with SOUTH-TEMPLE visited, player is at ENTRANCE-TO-HADES', () => {
+  it('after death with SOUTH-TEMPLE visited, player is at ENTRANCE-TO-HADES', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     // Simulate having visited SOUTH-TEMPLE
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
-    g.turn('north'); // grue kill
+    await g.turn('north'); // grue kill
     expect(g.view().here).toBe('ENTRANCE-TO-HADES');
   });
 
-  it('after Hades resurrection, dead=true', () => {
+  it('after Hades resurrection, dead=true', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
-    g.turn('north');
+    await g.turn('north');
     expect((g as unknown as { dead: boolean }).dead).toBe(true);
   });
 
-  it('after Hades resurrection, alwaysLit=true', () => {
+  it('after Hades resurrection, alwaysLit=true', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
-    g.turn('north');
+    await g.turn('north');
     expect((g as unknown as { alwaysLit: boolean }).alwaysLit).toBe(true);
   });
 
-  it('after Hades resurrection, TROLL-FLAG is set in flag store', () => {
+  it('after Hades resurrection, TROLL-FLAG is set in flag store', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     (g as unknown as { visited: Set<string> }).visited.add('SOUTH-TEMPLE');
-    g.turn('north');
+    await g.turn('north');
     const flags = (g as unknown as { flags: { get(k: string): boolean } }).flags;
     expect(flags.get('TROLL-FLAG')).toBe(true);
   });
 
-  it('without SOUTH-TEMPLE visited, player goes to FOREST-1 (not Hades)', () => {
+  it('without SOUTH-TEMPLE visited, player goes to FOREST-1 (not Hades)', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     // SOUTH-TEMPLE not visited
-    g.turn('north');
+    await g.turn('north');
     expect(g.view().here).toBe('FOREST-1');
     expect((g as unknown as { dead: boolean }).dead).toBe(false);
   });
@@ -237,7 +237,7 @@ describe('DT1-E: Hades branch when SOUTH-TEMPLE visited', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT1-F: RFATAL short-circuit', () => {
-  it('a chained command after a fatal death turn is not executed', () => {
+  it('a chained command after a fatal death turn is not executed', async () => {
     // Drive the grue death in a dark→dark path, then check chaining.
     // The simplest proxy: after death, subsequent turn() calls return ''
     // (already covered by gameOver), but within a SINGLE chained input
@@ -253,7 +253,7 @@ describe('DT1-F: RFATAL short-circuit', () => {
     // We can't do this directly via the API without a chained command.
     // Instead verify that the turn result after death doesn't re-include
     // the room description twice (which would indicate M-FATAL was ignored).
-    const r = g.turn('north');
+    const r = await g.turn('north');
     // After death+resurrection the output includes the death message and FOREST-1 desc.
     // It must NOT include two copies of FOREST-1 or the maze description.
     const forestCount = (r.output.match(/Forest/gi) ?? []).length;
@@ -268,15 +268,15 @@ describe('DT1-F: RFATAL short-circuit', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT1-G: killInterrupts called on resurrection', () => {
-  it('after death, the game is still playable (killInterrupts does not crash)', () => {
+  it('after death, the game is still playable (killInterrupts does not crash)', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
 
     // Die and resurrect; if killInterrupts throws this test fails.
-    g.turn('north');
+    await g.turn('north');
     // Player should be at FOREST-1 and able to take another turn.
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toMatch(/forest/i);
   });
 });
@@ -288,7 +288,7 @@ describe('DT1-G: killInterrupts called on resurrection', () => {
 // ---------------------------------------------------------------------------
 
 describe('DT1-H: randomizeObjects called on resurrection', () => {
-  it('player inventory is empty after grue death (items scattered)', () => {
+  it('player inventory is empty after grue death (items scattered)', async () => {
     // Give the player the lamp and die in the maze; JIGS-UP scatters inventory.
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
@@ -298,11 +298,11 @@ describe('DT1-H: randomizeObjects called on resurrection', () => {
     lamp.moveTo(g.player);
     expect(g.player.children.size).toBeGreaterThan(0);
 
-    g.turn('north'); // grue kill + resurrection
+    await g.turn('north'); // grue kill + resurrection
     expect(g.player.children.size).toBe(0);
   });
 
-  it('LAMP is moved to LIVING-ROOM on death, not left with player', () => {
+  it('LAMP is moved to LIVING-ROOM on death, not left with player', async () => {
     const g = newGameAt('MAZE-1');
     (g as unknown as { rng: Rng }).rng = grueRng();
     g.start();
@@ -310,7 +310,7 @@ describe('DT1-H: randomizeObjects called on resurrection', () => {
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.player);
 
-    g.turn('north');
+    await g.turn('north');
     expect(lamp.parent?.id).toBe('LIVING-ROOM');
   });
 });

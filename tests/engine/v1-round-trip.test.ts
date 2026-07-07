@@ -33,8 +33,12 @@ import {
  * Play a sequence of commands, returning each turn's output.
  * Returns empty string for commands played on a dead game (gameOver).
  */
-function play(g: ReturnType<typeof createGame>, cmds: string[]): string[] {
-  return cmds.map(cmd => g.turn(cmd).output);
+async function play(g: ReturnType<typeof createGame>, cmds: string[]): Promise<string[]> {
+  const outputs: string[] = [];
+  for (const cmd of cmds) {
+    outputs.push((await g.turn(cmd)).output);
+  }
+  return outputs;
 }
 
 // ---------------------------------------------------------------------------
@@ -45,36 +49,36 @@ function play(g: ReturnType<typeof createGame>, cmds: string[]): string[] {
 // ---------------------------------------------------------------------------
 
 describe('V1-A deterministic round-trip', () => {
-  it('M-segment outputs are byte-identical after restore', () => {
+  it('M-segment outputs are byte-identical after restore', async () => {
     const g = createGame({ seed: 42 });
     g.start();
 
     // N: navigate west of house (lit, no randomness)
-    g.turn('look');
-    g.turn('look');
+    await g.turn('look');
+    await g.turn('look');
 
     const snap = g.snapshot();
 
     // M: deterministic commands — all-text, no RNG draws
     const M = ['look', 'north', 'look'];
-    const path1 = play(g, M);
+    const path1 = await play(g, M);
 
     // Restore and replay
     g.restore(snap);
-    const path2 = play(g, M);
+    const path2 = await play(g, M);
 
     expect(path2).toEqual(path1);
   });
 
-  it('move count, score, and room are restored identically', () => {
+  it('move count, score, and room are restored identically', async () => {
     const g = createGame({ seed: 42 });
     g.start();
 
-    g.turn('look');  // move 1
+    await g.turn('look');  // move 1
     const snap = g.snapshot();
 
-    g.turn('look');  // move 2
-    g.turn('look');  // move 3
+    await g.turn('look');  // move 2
+    await g.turn('look');  // move 3
 
     g.restore(snap);
 
@@ -98,7 +102,7 @@ describe('V1-A deterministic round-trip', () => {
 // ---------------------------------------------------------------------------
 
 describe('V1-B dual-RNG-stream round-trip', () => {
-  it('M-segment (combat + dark grue check) is byte-identical after restore', () => {
+  it('M-segment (combat + dark grue check) is byte-identical after restore', async () => {
     // Start at TROLL-ROOM with lit lamp + sword so combat is possible.
     const g = createGame({ seed: 42, startRoom: 'TROLL-ROOM' });
     g.start();
@@ -113,8 +117,8 @@ describe('V1-B dual-RNG-stream round-trip', () => {
     sword.moveTo(player);
 
     // N: non-RNG setup (examines only)
-    g.turn('look');
-    g.turn('examine troll');
+    await g.turn('look');
+    await g.turn('examine troll');
 
     const snapBefore = g.snapshot();
     const rngMainBefore = snapBefore.rngMain;
@@ -124,7 +128,7 @@ describe('V1-B dual-RNG-stream round-trip', () => {
     //    (2) turn off lamp — deterministic
     //    (3) north (no exit, dark) — fires main rng via prob(80) grue check
     const M = ['attack troll with sword', 'turn off lamp', 'north'];
-    const path1 = play(g, M);
+    const path1 = await play(g, M);
 
     const snapAfter = g.snapshot();
     const rngMainAfter = snapAfter.rngMain;
@@ -138,7 +142,7 @@ describe('V1-B dual-RNG-stream round-trip', () => {
 
     // Restore and replay — outputs must be byte-identical.
     g.restore(snapBefore);
-    const path2 = play(g, M);
+    const path2 = await play(g, M);
 
     expect(path2).toEqual(path1);
   });
@@ -153,7 +157,7 @@ describe('V1-B dual-RNG-stream round-trip', () => {
 // ---------------------------------------------------------------------------
 
 describe('V1-C fuel-stage round-trip (SS2)', () => {
-  it('lamp warning fires at the same turn after restore', () => {
+  it('lamp warning fires at the same turn after restore', async () => {
     const g = createGame({ seed: 42, startRoom: 'TROLL-ROOM' });
     g.start();
 
@@ -181,21 +185,21 @@ describe('V1-C fuel-stage round-trip (SS2)', () => {
     g.restore({ ...setupSnap, clock: clockSnaps });
 
     // N: one look (1 of the 2 ticks drains)
-    const r0 = g.turn('look');
+    const r0 = await g.turn('look');
     expect(r0.output).not.toContain('dimmer');
 
     const snap = g.snapshot();
 
     // M: turn that fires the warning
     const M = ['look'];
-    const path1 = play(g, M);
+    const path1 = await play(g, M);
 
     // §10.5 non-thin: the warning must appear in M (proves fuel stage fires).
     expect(path1[0]).toContain('dimmer');
 
     // Restore and replay
     g.restore(snap);
-    const path2 = play(g, M);
+    const path2 = await play(g, M);
 
     expect(path2).toEqual(path1);
   });
@@ -218,10 +222,10 @@ describe('V1-D module-global round-trip (SS6)', () => {
     resetThiefState();
   });
 
-  it('thiefEngrossed survives snapshot/restore', () => {
+  it('thiefEngrossed survives snapshot/restore', async () => {
     const g = createGame({ seed: 42 });
     g.start();
-    g.turn('look');
+    await g.turn('look');
 
     // N: set module-global to a non-default value, then snapshot.
     setThiefEngrossed(true);
@@ -244,10 +248,10 @@ describe('V1-D module-global round-trip (SS6)', () => {
     expect(snapPost.moduleGlobals.thiefState.thiefEngrossed).toBe(true);
   });
 
-  it('restore onto fresh game restores module global to the saved value', () => {
+  it('restore onto fresh game restores module global to the saved value', async () => {
     const g1 = createGame({ seed: 42 });
     g1.start();
-    g1.turn('look');
+    await g1.turn('look');
 
     // N on g1: set thief global.
     setThiefEngrossed(true);
@@ -259,7 +263,7 @@ describe('V1-D module-global round-trip (SS6)', () => {
 
     // M commands: deterministic (thiefEngrossed doesn't affect room-look text).
     const M = ['look', 'look'];
-    const path1 = play(g1, M);
+    const path1 = await play(g1, M);
 
     // Restore onto a freshly bootstrapped game.
     const g2 = createGame({ seed: 42 });
@@ -269,7 +273,7 @@ describe('V1-D module-global round-trip (SS6)', () => {
     // §10.5: module global must reflect the SAVED value after cross-instance restore.
     expect(thiefEngrossed()).toBe(true);
 
-    const path2 = play(g2, M);
+    const path2 = await play(g2, M);
     expect(path2).toEqual(path1);
   });
 });
@@ -282,14 +286,14 @@ describe('V1-D module-global round-trip (SS6)', () => {
 // ---------------------------------------------------------------------------
 
 describe('V1-E restore onto a fresh game', () => {
-  it('view() matches saved state after restoring onto a fresh game', () => {
+  it('view() matches saved state after restoring onto a fresh game', async () => {
     const g1 = createGame({ seed: 42 });
     g1.start();
 
     // Advance to a non-trivial state.
-    g1.turn('look');
-    g1.turn('north');  // move to forest
-    g1.turn('look');
+    await g1.turn('look');
+    await g1.turn('north');  // move to forest
+    await g1.turn('look');
 
     const snap = g1.snapshot();
     const view1 = g1.view();
@@ -307,7 +311,7 @@ describe('V1-E restore onto a fresh game', () => {
     expect(view2.gameOver).toBe(view1.gameOver);
   });
 
-  it('inventory is restored: objects moved to player survive cross-instance restore', () => {
+  it('inventory is restored: objects moved to player survive cross-instance restore', async () => {
     const g1 = createGame({ seed: 42 });
     g1.start();
 
@@ -316,7 +320,7 @@ describe('V1-E restore onto a fresh game', () => {
     const lamp1 = g1.world.get('LAMP')!;
     lamp1.moveTo(player1);
 
-    g1.turn('look');
+    await g1.turn('look');
     const snap = g1.snapshot();
 
     const g2 = createGame({ seed: 42 });
@@ -329,11 +333,11 @@ describe('V1-E restore onto a fresh game', () => {
     expect(lamp2.parent).toBe(player2);
   });
 
-  it('visited set survives cross-instance restore', () => {
+  it('visited set survives cross-instance restore', async () => {
     const g1 = createGame({ seed: 42 });
     g1.start();
 
-    g1.turn('north');  // visit FOREST-1
+    await g1.turn('north');  // visit FOREST-1
     const snap = g1.snapshot();
     const visited1 = snap.visited;
 
@@ -356,13 +360,13 @@ describe('V1-E restore onto a fresh game', () => {
 // ---------------------------------------------------------------------------
 
 describe('V1-F snapshot/restore/snapshot fixpoint', () => {
-  it('S1 = S2 after restore (idempotence over all fields)', () => {
+  it('S1 = S2 after restore (idempotence over all fields)', async () => {
     const g = createGame({ seed: 42 });
     g.start();
 
     // Advance to a state with some non-default values.
-    g.turn('look');
-    g.turn('north');
+    await g.turn('look');
+    await g.turn('north');
 
     const snap1 = g.snapshot();
 
@@ -379,15 +383,15 @@ describe('V1-F snapshot/restore/snapshot fixpoint', () => {
     expect(strip(snap2)).toEqual(strip(snap1));
   });
 
-  it('fixpoint holds after a more complex game state', () => {
+  it('fixpoint holds after a more complex game state', async () => {
     const g = createGame({ seed: 42 });
     g.start();
 
     // Move rug, visit multiple rooms, mutate score.
-    g.turn('look');
-    g.turn('north');
-    g.turn('look');
-    g.turn('south');
+    await g.turn('look');
+    await g.turn('north');
+    await g.turn('look');
+    await g.turn('south');
 
     const snap1 = g.snapshot();
     g.restore(snap1);

@@ -111,9 +111,9 @@ describe('F0 — dam/river verbs wired (not unknown-verb fallback)', () => {
   ];
 
   for (const { verb, action } of cases) {
-    it(`${action} does not hit unknown-verb fallback`, () => {
+    it(`${action} does not hit unknown-verb fallback`, async () => {
       const ctx = makeMinimalCtx(verb);
-      const result = executeVerb(ctx, action);
+      const result = await executeVerb(ctx, action);
       expect(result.output).not.toContain("I don't know how to");
     });
   }
@@ -285,15 +285,15 @@ function makeVerbCtx(verb: string, _action: string, dobj?: Thing, iobj?: Thing):
 describe('F0 — verb fall-through ZIL fidelity', () => {
   // V-WAVE: HACK-HACK "Waving the " → "Waving the <name> <HO-HUM suffix>"
   // gverbs.zil:1594-1595, HACK-HACK gverbs.zil:2024-2029, HO-HUM gverbs.zil:2031-2036.
-  it('wave <held object>: output starts with "Waving the" (not "Nothing happens.")', () => {
+  it('wave <held object>: output starts with "Waving the" (not "Nothing happens.")', async () => {
     const leaflet = new Thing('LEAFLET', 'leaflet', { synonyms: ['leaflet'] });
     const ctx = makeVerbCtx('wave', 'V-WAVE', leaflet);
-    const out = executeVerb(ctx, 'V-WAVE').output;
+    const out = await (await executeVerb(ctx, 'V-WAVE')).output;
     expect(out).toMatch(/^Waving the leaflet/);
     expect(out).not.toBe('Nothing happens.');
   });
 
-  it('wave <held object>: suffix is one of the HO-HUM set (gverbs.zil:2031-2036)', () => {
+  it('wave <held object>: suffix is one of the HO-HUM set (gverbs.zil:2031-2036)', async () => {
     const leaflet = new Thing('LEAFLET', 'leaflet', { synonyms: ['leaflet'] });
     const hoHumSuffixes = [" doesn't seem to work.", " isn't notably helpful.", " has no effect."];
     // Seed each rng outcome to exercise all three entries.
@@ -301,49 +301,49 @@ describe('F0 — verb fall-through ZIL fidelity', () => {
       const idx = i;
       const ctx = makeVerbCtx('wave', 'V-WAVE', leaflet);
       (ctx as unknown as { rng: { next(): number } }).rng = { next: () => idx / 3 };
-      const out = executeVerb(ctx, 'V-WAVE').output;
+      const out = await (await executeVerb(ctx, 'V-WAVE')).output;
       expect(hoHumSuffixes.some(s => out.endsWith(s))).toBe(true);
     }
   });
 
   // V-INFLATE fall-through: "How can you inflate that?" (gverbs.zil:758)
-  it('inflate fall-through: "How can you inflate that?"', () => {
+  it('inflate fall-through: "How can you inflate that?"', async () => {
     const leaflet = new Thing('LEAFLET', 'leaflet', { synonyms: ['leaflet'] });
     const ctx = makeVerbCtx('inflate', 'V-INFLATE', leaflet);
-    const out = executeVerb(ctx, 'V-INFLATE').output;
+    const out = await (await executeVerb(ctx, 'V-INFLATE')).output;
     expect(out).toBe('How can you inflate that?');
   });
 
   // V-DEFLATE fall-through: "Come on, now!" (gverbs.zil:403)
-  it('deflate fall-through: "Come on, now!"', () => {
+  it('deflate fall-through: "Come on, now!"', async () => {
     const leaflet = new Thing('LEAFLET', 'leaflet', { synonyms: ['leaflet'] });
     const ctx = makeVerbCtx('deflate', 'V-DEFLATE', leaflet);
-    const out = executeVerb(ctx, 'V-DEFLATE').output;
+    const out = await (await executeVerb(ctx, 'V-DEFLATE')).output;
     expect(out).toBe('Come on, now!');
   });
 
   // V-LAUNCH non-vehicle: "That's pretty weird." (gverbs.zil:808)
-  it('launch non-vehicle fall-through: "That\'s pretty weird."', () => {
+  it('launch non-vehicle fall-through: "That\'s pretty weird."', async () => {
     const leaflet = new Thing('LEAFLET', 'leaflet', { synonyms: ['leaflet'] });
     const ctx = makeVerbCtx('launch', 'V-LAUNCH', leaflet);
-    const out = executeVerb(ctx, 'V-LAUNCH').output;
+    const out = await (await executeVerb(ctx, 'V-LAUNCH')).output;
     expect(out).toBe("That's pretty weird.");
   });
 
   // V-LAUNCH vehicle: "You can't launch that by saying \"launch\"!" (gverbs.zil:806)
-  it('launch vehicle fall-through: "You can\'t launch that by saying \\"launch\\"!"', () => {
+  it('launch vehicle fall-through: "You can\'t launch that by saying \\"launch\\"!"', async () => {
     const boat = new Thing('BOAT', 'rubber boat', { synonyms: ['boat'] });
     boat.set(Flag.Vehicle);
     const ctx = makeVerbCtx('launch', 'V-LAUNCH', boat);
-    const out = executeVerb(ctx, 'V-LAUNCH').output;
+    const out = await (await executeVerb(ctx, 'V-LAUNCH')).output;
     expect(out).toBe('You can\'t launch that by saying "launch"!');
   });
 
   // V-DIG with shovel iobj: "There's no reason to be digging here." (gverbs.zil:411)
-  it('dig with shovel fall-through: "There\'s no reason to be digging here."', () => {
+  it('dig with shovel fall-through: "There\'s no reason to be digging here."', async () => {
     const shovel = new Thing('SHOVEL', 'shovel', { synonyms: ['shovel'] });
     const ctx = makeVerbCtx('dig', 'V-DIG', undefined, shovel);
-    const out = executeVerb(ctx, 'V-DIG').output;
+    const out = await (await executeVerb(ctx, 'V-DIG')).output;
     expect(out).toBe("There's no reason to be digging here.");
   });
 });

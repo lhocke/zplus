@@ -84,9 +84,9 @@ function newLitGameAt(roomId: string): Game {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — BUTTON-F: READ any button', () => {
-  it('READ button → "They\'re greek to you."', () => {
+  it('READ button → "They\'re greek to you."', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    const out = g.turn('read yellow button').output;
+    const out = await (await g.turn('read yellow button')).output;
     expect(out).toContain("greek to you");
   });
 });
@@ -96,11 +96,11 @@ describe('CB-DAM3 — BUTTON-F: READ any button', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — BUTTON-F: blue button starts leak', () => {
-  it('PUSH BLUE-BUTTON when WATER-LEVEL==0: clears LEAK INVISIBLE, sets WL=1, arms I-MAINT-ROOM', () => {
+  it('PUSH BLUE-BUTTON when WATER-LEVEL==0: clears LEAK INVISIBLE, sets WL=1, arms I-MAINT-ROOM', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     expect(getWaterLevel(g)).toBe(0);
 
-    const out = g.turn('push blue button').output;
+    const out = await (await g.turn('push blue button')).output;
     expect(out).toMatch(/stream of water/i);
 
     // LEAK is now visible
@@ -118,18 +118,18 @@ describe('CB-DAM3 — BUTTON-F: blue button starts leak', () => {
     expect(entry!.turnsLeft).toBe(-1);
   });
 
-  it('PUSH BLUE-BUTTON when WATER-LEVEL != 0 → "jammed"', () => {
+  it('PUSH BLUE-BUTTON when WATER-LEVEL != 0 → "jammed"', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     setWaterLevel(g, 3);
-    const out = g.turn('push blue button').output;
+    const out = await (await g.turn('push blue button')).output;
     expect(out).toMatch(/jammed/i);
     expect(getWaterLevel(g)).toBe(3);  // unchanged
   });
 
-  it('PUSH BLUE-BUTTON when WATER-LEVEL == -1 (repaired) → "jammed"', () => {
+  it('PUSH BLUE-BUTTON when WATER-LEVEL == -1 (repaired) → "jammed"', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     setWaterLevel(g, -1);
-    const out = g.turn('push blue button').output;
+    const out = await (await g.turn('push blue button')).output;
     expect(out).toMatch(/jammed/i);
   });
 });
@@ -139,22 +139,22 @@ describe('CB-DAM3 — BUTTON-F: blue button starts leak', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — BUTTON-F: red button toggles lights', () => {
-  it('PUSH RED-BUTTON (room lit) → "shut off"; room loses ONBIT', () => {
+  it('PUSH RED-BUTTON (room lit) → "shut off"; room loses ONBIT', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const mroom = g.world.get('MAINTENANCE-ROOM')!;
     mroom.set(Flag.On);
 
-    const out = g.turn('push red button').output;
+    const out = await (await g.turn('push red button')).output;
     expect(out).toMatch(/shut off/i);
     expect(mroom.has(Flag.On)).toBe(false);
   });
 
-  it('PUSH RED-BUTTON (room dark) → "come on"; room gains ONBIT', () => {
+  it('PUSH RED-BUTTON (room dark) → "come on"; room gains ONBIT', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const mroom = g.world.get('MAINTENANCE-ROOM')!;
     mroom.clear(Flag.On);
 
-    const out = g.turn('push red button').output;
+    const out = await (await g.turn('push red button')).output;
     expect(out).toMatch(/come on/i);
     expect(mroom.has(Flag.On)).toBe(true);
   });
@@ -165,25 +165,25 @@ describe('CB-DAM3 — BUTTON-F: red button toggles lights', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — BUTTON-F: brown/yellow panel lock buttons', () => {
-  it('PUSH BROWN-BUTTON: GATE-FLAG=false + clears DAM-ROOM TOUCHBIT + prints "Click."', () => {
+  it('PUSH BROWN-BUTTON: GATE-FLAG=false + clears DAM-ROOM TOUCHBIT + prints "Click."', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     flags(g).set('GATE-FLAG', true);
     const damRoom = g.world.get('DAM-ROOM')!;
     damRoom.set(Flag.Touched);
 
-    const out = g.turn('push brown button').output;
+    const out = await (await g.turn('push brown button')).output;
     expect(out).toContain('Click.');
     expect(flags(g).get('GATE-FLAG')).toBe(false);
     expect(damRoom.has(Flag.Touched)).toBe(false);
   });
 
-  it('PUSH YELLOW-BUTTON: GATE-FLAG=true + clears DAM-ROOM TOUCHBIT + prints "Click."', () => {
+  it('PUSH YELLOW-BUTTON: GATE-FLAG=true + clears DAM-ROOM TOUCHBIT + prints "Click."', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     flags(g).set('GATE-FLAG', false);
     const damRoom = g.world.get('DAM-ROOM')!;
     damRoom.set(Flag.Touched);
 
-    const out = g.turn('push yellow button').output;
+    const out = await (await g.turn('push yellow button')).output;
     expect(out).toContain('Click.');
     expect(flags(g).get('GATE-FLAG')).toBe(true);
     expect(damRoom.has(Flag.Touched)).toBe(false);
@@ -195,32 +195,32 @@ describe('CB-DAM3 — BUTTON-F: brown/yellow panel lock buttons', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — I-MAINT-ROOM: DROWNINGS message at WATER-LEVEL/2 (NM-C)', () => {
-  it('DROWNINGS[0] = "up to your ankles." when WL=1, player in MAINTENANCE-ROOM', () => {
+  it('DROWNINGS[0] = "up to your ankles." when WL=1, player in MAINTENANCE-ROOM', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     // Arm the demon directly so we control WL precisely (push-blue-button would
     // fire the demon once in the same turn, advancing WL from 1 to 2 before wait).
     setWaterLevel(g, 1);
     armClock(g, 'I-MAINT-ROOM', -1, true);
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toContain('up to your ankles');
     // After the tick, WL incremented to 2
     expect(getWaterLevel(g)).toBe(2);
   });
 
-  it('DROWNINGS[2] = "up to your knees." when WL=4 (index=4/2=2)', () => {
+  it('DROWNINGS[2] = "up to your knees." when WL=4 (index=4/2=2)', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    g.turn('push blue button');
+    await g.turn('push blue button');
     setWaterLevel(g, 4);
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toContain('up to your knees');
   });
 
-  it('DROWNINGS not printed when player is NOT in MAINTENANCE-ROOM', () => {
+  it('DROWNINGS not printed when player is NOT in MAINTENANCE-ROOM', async () => {
     const g = newGameAt('DAM-LOBBY');
     // Arm the demon by manipulating the clock directly
     setWaterLevel(g, 1);
     armClock(g, 'I-MAINT-ROOM', -1, true);
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     // No level message when player is not in MAINTENANCE-ROOM
     expect(out).not.toContain('up to your');
     // WL increments on every clock advance.  V-WAIT (multi-CLOCKER) calls CLOCKER up
@@ -235,28 +235,28 @@ describe('CB-DAM3 — I-MAINT-ROOM: DROWNINGS message at WATER-LEVEL/2 (NM-C)', 
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — I-MAINT-ROOM: drown at WL >= 14 (NM-C)', () => {
-  it('player drowns when WATER-LEVEL reaches 14 in MAINTENANCE-ROOM', () => {
+  it('player drowns when WATER-LEVEL reaches 14 in MAINTENANCE-ROOM', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    g.turn('push blue button');
+    await g.turn('push blue button');
     setWaterLevel(g, 13);  // next tick increments to 14 → drown
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toMatch(/drowned/i);
   });
 
-  it('MAINT-ROOM ldesc replaced with flooded message on drown', () => {
+  it('MAINT-ROOM ldesc replaced with flooded message on drown', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    g.turn('push blue button');
+    await g.turn('push blue button');
     setWaterLevel(g, 13);
-    g.turn('wait');
+    await g.turn('wait');
     const mroom = g.world.get('MAINTENANCE-ROOM')!;
     expect(mroom.ldesc).toMatch(/full of water/i);
   });
 
-  it('I-MAINT-ROOM demon is stopped after room floods', () => {
+  it('I-MAINT-ROOM demon is stopped after room floods', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    g.turn('push blue button');
+    await g.turn('push blue button');
     setWaterLevel(g, 13);
-    g.turn('wait');
+    await g.turn('wait');
     const entry = clockEntry(g, 'I-MAINT-ROOM');
     expect(entry).toBeDefined();
     // Must not still be an active demon after the flood
@@ -270,7 +270,7 @@ describe('CB-DAM3 — I-MAINT-ROOM: drown at WL >= 14 (NM-C)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — I-MAINT-ROOM: player in boat near dam drowns', () => {
-  it('player in inflated boat in DAM-ROOM drowns when water rises (WL < 14)', () => {
+  it('player in inflated boat in DAM-ROOM drowns when water rises (WL < 14)', async () => {
     const g = newGameAt('DAM-ROOM');
     const inflatedBoat = g.world.get('INFLATED-BOAT')!;
     inflatedBoat.moveTo(g.world.get('DAM-ROOM')!);
@@ -279,7 +279,7 @@ describe('CB-DAM3 — I-MAINT-ROOM: player in boat near dam drowns', () => {
     setWaterLevel(g, 1);
     armClock(g, 'I-MAINT-ROOM', -1, true);
 
-    const out = g.turn('wait').output;
+    const out = await (await g.turn('wait')).output;
     expect(out).toMatch(/over the dam|over the falls|tsk/i);
   });
 });
@@ -291,37 +291,37 @@ describe('CB-DAM3 — I-MAINT-ROOM: player in boat near dam drowns', () => {
 describe('CB-DAM3 — LEAK-FUNCTION: putty repairs the leak', () => {
   // ZIL: PUTTY object has SYNONYM MATERIAL GUNK — the word "putty" is NOT in the
   // dictionary. Tests use "material" (the canonical noun) to match reference behavior.
-  it('PUT MATERIAL ON LEAK → "miracle" + WATER-LEVEL = -1', () => {
+  it('PUT MATERIAL ON LEAK → "miracle" + WATER-LEVEL = -1', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    g.turn('push blue button');  // WL=1, arms demon, makes LEAK visible
+    await g.turn('push blue button');  // WL=1, arms demon, makes LEAK visible
     const putty = g.world.get('PUTTY')!;
     putty.moveTo(g.player);
 
-    const out = g.turn('put material on leak').output;
+    const out = await (await g.turn('put material on leak')).output;
     expect(out).toMatch(/miracle|stop the leak/i);
     expect(getWaterLevel(g)).toBe(-1);
   });
 
-  it('PLUG LEAK WITH MATERIAL also repairs', () => {
+  it('PLUG LEAK WITH MATERIAL also repairs', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    g.turn('push blue button');
+    await g.turn('push blue button');
     const putty = g.world.get('PUTTY')!;
     putty.moveTo(g.player);
     // Make LEAK visible/accessible for the parser
     const leak = g.world.get('LEAK')!;
     leak.clear(Flag.Invisible);
 
-    const out = g.turn('plug leak with material').output;
+    const out = await (await g.turn('plug leak with material')).output;
     expect(out).toMatch(/miracle|stop the leak/i);
     expect(getWaterLevel(g)).toBe(-1);
   });
 
-  it('I-MAINT-ROOM stops after repair', () => {
+  it('I-MAINT-ROOM stops after repair', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    g.turn('push blue button');
+    await g.turn('push blue button');
     const putty = g.world.get('PUTTY')!;
     putty.moveTo(g.player);
-    g.turn('put material on leak');
+    await g.turn('put material on leak');
 
     const entry = clockEntry(g, 'I-MAINT-ROOM');
     expect(entry).toBeDefined();
@@ -329,18 +329,18 @@ describe('CB-DAM3 — LEAK-FUNCTION: putty repairs the leak', () => {
     expect(active).toBe(false);
   });
 
-  it('blue button is "jammed" after repair (WATER-LEVEL = -1, one-shot)', () => {
+  it('blue button is "jammed" after repair (WATER-LEVEL = -1, one-shot)', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    g.turn('push blue button');
+    await g.turn('push blue button');
     const putty = g.world.get('PUTTY')!;
     putty.moveTo(g.player);
-    g.turn('put material on leak');
+    await g.turn('put material on leak');
 
-    const out = g.turn('push blue button').output;
+    const out = await (await g.turn('push blue button')).output;
     expect(out).toMatch(/jammed/i);
   });
 
-  it('PLUG LEAK WITH non-putty → "With a <prsi>?"', () => {
+  it('PLUG LEAK WITH non-putty → "With a <prsi>?"', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     // Set up an active leak without letting the demon advance WL.
     setWaterLevel(g, 1);
@@ -350,12 +350,12 @@ describe('CB-DAM3 — LEAK-FUNCTION: putty repairs the leak', () => {
     const wrench = g.world.get('WRENCH')!;
     wrench.moveTo(g.player);
 
-    const out = g.turn('plug leak with wrench').output;
+    const out = await (await g.turn('plug leak with wrench')).output;
     expect(out).toMatch(/With a /i);
     expect(getWaterLevel(g)).toBe(1);  // plug action did not fix the leak
   });
 
-  it('LEAK-FUNCTION is no-op when WATER-LEVEL == 0', () => {
+  it('LEAK-FUNCTION is no-op when WATER-LEVEL == 0', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     // WL=0 means no active leak — handler returns false without acting
     const putty = g.world.get('PUTTY')!;
@@ -363,7 +363,7 @@ describe('CB-DAM3 — LEAK-FUNCTION: putty repairs the leak', () => {
     const leak = g.world.get('LEAK')!;
     leak.clear(Flag.Invisible);
 
-    const out = g.turn('put material on leak').output;
+    const out = await (await g.turn('put material on leak')).output;
     expect(out).not.toMatch(/miracle|stop the leak/i);
     // WL stays 0
     expect(getWaterLevel(g)).toBe(0);
@@ -466,7 +466,7 @@ describe('CB-DAM3 — PUTTY-FCN: rejects OIL use', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — TUBE-FUNCTION', () => {
-  it('PUT <object> IN TUBE → "The tube refuses to accept anything."', () => {
+  it('PUT <object> IN TUBE → "The tube refuses to accept anything."', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const tube = g.world.get('TUBE')!;
     tube.moveTo(g.player);
@@ -474,11 +474,11 @@ describe('CB-DAM3 — TUBE-FUNCTION', () => {
     const wrench = g.world.get('WRENCH')!;
     wrench.moveTo(g.player);
 
-    const out = g.turn('put wrench in tube').output;
+    const out = await (await g.turn('put wrench in tube')).output;
     expect(out).toMatch(/refuses to accept/i);
   });
 
-  it('SQUEEZE TUBE (open + putty inside) → putty moves to player hand', () => {
+  it('SQUEEZE TUBE (open + putty inside) → putty moves to player hand', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const tube = g.world.get('TUBE')!;
     tube.moveTo(g.player);
@@ -486,29 +486,29 @@ describe('CB-DAM3 — TUBE-FUNCTION', () => {
     const putty = g.world.get('PUTTY')!;
     expect(putty.parent?.id).toBe('TUBE');
 
-    const out = g.turn('squeeze tube').output;
+    const out = await (await g.turn('squeeze tube')).output;
     expect(out).toMatch(/oozes into your hand/i);
     expect(putty.parent?.id).toBe('PLAYER');
   });
 
-  it('SQUEEZE TUBE (open, empty) → "The tube is apparently empty."', () => {
+  it('SQUEEZE TUBE (open, empty) → "The tube is apparently empty."', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const tube = g.world.get('TUBE')!;
     tube.moveTo(g.player);
     tube.set(Flag.Open);
     g.world.get('PUTTY')!.moveTo(null);
 
-    const out = g.turn('squeeze tube').output;
+    const out = await (await g.turn('squeeze tube')).output;
     expect(out).toMatch(/apparently empty/i);
   });
 
-  it('SQUEEZE TUBE (closed) → "The tube is closed."', () => {
+  it('SQUEEZE TUBE (closed) → "The tube is closed."', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const tube = g.world.get('TUBE')!;
     tube.moveTo(g.player);
     tube.clear(Flag.Open);
 
-    const out = g.turn('squeeze tube').output;
+    const out = await (await g.turn('squeeze tube')).output;
     expect(out).toMatch(/tube is closed/i);
   });
 });
@@ -519,23 +519,23 @@ describe('CB-DAM3 — TUBE-FUNCTION', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — BUTTON-F: red button output is a single line (no spurious newline)', () => {
-  it('PUSH RED-BUTTON (room lit) → single-line "The lights within the room shut off."', () => {
+  it('PUSH RED-BUTTON (room lit) → single-line "The lights within the room shut off."', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const mroom = g.world.get('MAINTENANCE-ROOM')!;
     mroom.set(Flag.On);
 
-    const out = g.turn('push red button').output;
+    const out = await (await g.turn('push red button')).output;
     // Must be ONE line — no embedded newline between "room" and "shut off."
     expect(out).not.toMatch(/room\s*\nshut/);
     expect(out).toContain('The lights within the room shut off.');
   });
 
-  it('PUSH RED-BUTTON (room dark) → single-line "The lights within the room come on."', () => {
+  it('PUSH RED-BUTTON (room dark) → single-line "The lights within the room come on."', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const mroom = g.world.get('MAINTENANCE-ROOM')!;
     mroom.clear(Flag.On);
 
-    const out = g.turn('push red button').output;
+    const out = await (await g.turn('push red button')).output;
     expect(out).not.toMatch(/room\s*\ncome/);
     expect(out).toContain('The lights within the room come on.');
   });
@@ -548,7 +548,7 @@ describe('CB-DAM3 — BUTTON-F: red button output is a single line (no spurious 
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — TUBE-FUNCTION: PUT ON tube gives surface error (not tube refusal)', () => {
-  it('PUT screwdriver ON tube → "no good surface on the tube" (not "refuses")', () => {
+  it('PUT screwdriver ON tube → "no good surface on the tube" (not "refuses")', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const tube = g.world.get('TUBE')!;
     tube.moveTo(g.player);
@@ -557,18 +557,18 @@ describe('CB-DAM3 — TUBE-FUNCTION: PUT ON tube gives surface error (not tube r
       // No SCREWDRIVER object — use wrench as stand-in
       const wrench = g.world.get('WRENCH')!;
       wrench.moveTo(g.player);
-      const out = g.turn('put wrench on tube').output;
+      const out = await (await g.turn('put wrench on tube')).output;
       expect(out).not.toMatch(/refuses to accept/i);
       expect(out).toMatch(/no good surface/i);
     } else {
       screwdriver.moveTo(g.player);
-      const out = g.turn('put screwdriver on tube').output;
+      const out = await (await g.turn('put screwdriver on tube')).output;
       expect(out).not.toMatch(/refuses to accept/i);
       expect(out).toMatch(/no good surface/i);
     }
   });
 
-  it('PUT screwdriver IN tube still gives "refuses to accept" (V-PUT unchanged)', () => {
+  it('PUT screwdriver IN tube still gives "refuses to accept" (V-PUT unchanged)', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const tube = g.world.get('TUBE')!;
     tube.moveTo(g.player);
@@ -576,7 +576,7 @@ describe('CB-DAM3 — TUBE-FUNCTION: PUT ON tube gives surface error (not tube r
     const wrench = g.world.get('WRENCH')!;
     wrench.moveTo(g.player);
 
-    const out = g.turn('put wrench in tube').output;
+    const out = await (await g.turn('put wrench in tube')).output;
     expect(out).toMatch(/refuses to accept/i);
   });
 });
@@ -587,16 +587,16 @@ describe('CB-DAM3 — TUBE-FUNCTION: PUT ON tube gives surface error (not tube r
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — PUTTY: word "putty" is not in dictionary (only MATERIAL/GUNK)', () => {
-  it('"plug leak with putty" → unknown word, leak not repaired', () => {
+  it('"plug leak with putty" → unknown word, leak not repaired', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     // Set up an active leak
-    g.turn('push blue button');
+    await g.turn('push blue button');
     const putty = g.world.get('PUTTY')!;
     putty.moveTo(g.player);
     const leak = g.world.get('LEAK')!;
     leak.clear(Flag.Invisible);
 
-    const out = g.turn('plug leak with putty').output;
+    const out = await (await g.turn('plug leak with putty')).output;
     // Must NOT repair the leak
     expect(out).not.toMatch(/miracle|stop the leak/i);
     // Must reject "putty" as unknown word
@@ -605,28 +605,28 @@ describe('CB-DAM3 — PUTTY: word "putty" is not in dictionary (only MATERIAL/GU
     expect(getWaterLevel(g)).toBeGreaterThan(0);
   });
 
-  it('"plug leak with gunk" → repairs the leak (GUNK is a valid synonym)', () => {
+  it('"plug leak with gunk" → repairs the leak (GUNK is a valid synonym)', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    g.turn('push blue button');
+    await g.turn('push blue button');
     const putty = g.world.get('PUTTY')!;
     putty.moveTo(g.player);
     const leak = g.world.get('LEAK')!;
     leak.clear(Flag.Invisible);
 
-    const out = g.turn('plug leak with gunk').output;
+    const out = await (await g.turn('plug leak with gunk')).output;
     expect(out).toMatch(/miracle|stop the leak/i);
     expect(getWaterLevel(g)).toBe(-1);
   });
 
-  it('"plug leak with material" → repairs the leak (MATERIAL is a valid synonym)', () => {
+  it('"plug leak with material" → repairs the leak (MATERIAL is a valid synonym)', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
-    g.turn('push blue button');
+    await g.turn('push blue button');
     const putty = g.world.get('PUTTY')!;
     putty.moveTo(g.player);
     const leak = g.world.get('LEAK')!;
     leak.clear(Flag.Invisible);
 
-    const out = g.turn('plug leak with material').output;
+    const out = await (await g.turn('plug leak with material')).output;
     expect(out).toMatch(/miracle|stop the leak/i);
     expect(getWaterLevel(g)).toBe(-1);
   });
@@ -637,21 +637,21 @@ describe('CB-DAM3 — PUTTY: word "putty" is not in dictionary (only MATERIAL/GU
 // ---------------------------------------------------------------------------
 
 describe('CB-DAM3 — TOOL-CHEST-FCN', () => {
-  it('EXAMINE TOOL-CHEST → "The chests are all empty."', () => {
+  it('EXAMINE TOOL-CHEST → "The chests are all empty."', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const chest = g.world.get('TOOL-CHEST');
     expect(chest).toBeDefined();
-    const out = g.turn('examine tool chest').output;
+    const out = await (await g.turn('examine tool chest')).output;
     expect(out).toMatch(/all empty/i);
   });
 
-  it('TAKE/OPEN TOOL-CHEST → crumble message + chest removed', () => {
+  it('TAKE/OPEN TOOL-CHEST → crumble message + chest removed', async () => {
     const g = newLitGameAt('MAINTENANCE-ROOM');
     const chest = g.world.get('TOOL-CHEST')!;
     // TAKE path — ensure it's takeable so parser dispatches
     chest.set(Flag.Takeable);
 
-    const out = g.turn('take tool chest').output;
+    const out = await (await g.turn('take tool chest')).output;
     expect(out).toMatch(/crumble/i);
     expect(chest.parent).toBeNull();
   });

@@ -676,30 +676,30 @@ describe('CYCLOPS-ROOM-FCN: end-to-end look via game.turn', () => {
   // Reset cyclowrath module state between cases so tests are independent.
   beforeEach(() => setCyclowrath(0));
 
-  it('default awake look (wrath=0): shows "eat horses" staircase text', () => {
+  it('default awake look (wrath=0): shows "eat horses" staircase text', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     litLamp(g);
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('eat horses');
     expect(r.output).toContain('blocks the staircase');
   });
 
-  it('CYCLOPS-FLAG=true → "sleeping blissfully" via game.turn', () => {
+  it('CYCLOPS-FLAG=true → "sleeping blissfully" via game.turn', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     litLamp(g);
     (g as unknown as { flags: Flags }).flags.set('CYCLOPS-FLAG', true);
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('sleeping blissfully');
   });
 
-  it('MAGIC-FLAG=true → "cyclops-sized opening" via game.turn', () => {
+  it('MAGIC-FLAG=true → "cyclops-sized opening" via game.turn', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     litLamp(g);
     (g as unknown as { flags: Flags }).flags.set('MAGIC-FLAG', true);
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('cyclops-sized opening');
   });
 });
@@ -713,7 +713,7 @@ describe('CYCLOPS-ROOM-FCN: end-to-end look via game.turn', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-TIE-UP: end-to-end via game.turn', () => {
-  it('"tie up cyclops with rope" → default V-TIE-UP message (gverbs.zil:1471)', () => {
+  it('"tie up cyclops with rope" → default V-TIE-UP message (gverbs.zil:1471)', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     litLamp(g);
@@ -721,7 +721,7 @@ describe('V-TIE-UP: end-to-end via game.turn', () => {
     const w = (g as unknown as { world: WorldHandle }).world;
     const player = w.get('PLAYER') as never;
     w.get('ROPE')?.moveTo(player);
-    const r = g.turn('tie up cyclops with rope');
+    const r = await g.turn('tie up cyclops with rope');
     expect(r.output).toContain('You could certainly never tie it with that!');
   });
 });

@@ -429,7 +429,7 @@ describe('TD3-1-G: room first-visit VALUE (real world)', () => {
     expect(found).toBe(true);
   });
 
-  it('entering KITCHEN again does NOT re-award the VALUE', () => {
+  it('entering KITCHEN again does NOT re-award the VALUE', async () => {
     const emitter = new SimpleEventEmitter();
     const game = createGame({ startRoom: 'WEST-OF-HOUSE', events: emitter });
     game.start();
@@ -457,9 +457,9 @@ describe('TD3-1-G: room first-visit VALUE (real world)', () => {
     expect(afterFirstVisit).toBeGreaterThan(0);
 
     // Move somewhere and come back — VALUE is now 0, no re-award.
-    singleGame.turn('west'); // to LIVING-ROOM
+    await singleGame.turn('west'); // to LIVING-ROOM
     const before = scoreEvents.filter(e => e.delta === 10).length;
-    singleGame.turn('east'); // back to KITCHEN
+    await singleGame.turn('east'); // back to KITCHEN
     const after = scoreEvents.filter(e => e.delta === 10).length;
 
     // We might have gained points from other rooms, but the delta=10 count
@@ -485,7 +485,7 @@ describe('TD3-1-G: room first-visit VALUE (real world)', () => {
 // ---------------------------------------------------------------------------
 
 describe('TD3-1-H: object TAKE VALUE (real world)', () => {
-  it('taking SKULL awards VALUE=10 to BASE-SCORE exactly once', () => {
+  it('taking SKULL awards VALUE=10 to BASE-SCORE exactly once', async () => {
     // SKULL.VALUE = 10 per spec §4.1.
     // SKULL is in LAND-OF-LIVING-DEAD (a lit room).
     const emitter = new SimpleEventEmitter();
@@ -495,13 +495,13 @@ describe('TD3-1-H: object TAKE VALUE (real world)', () => {
     const game = createGame({ startRoom: 'LAND-OF-LIVING-DEAD', events: emitter });
     game.start(); // LAND-OF-LIVING-DEAD has no VALUE (not in spec §4.2)
     scoreEvents.length = 0; // reset to track only the TAKE
-    game.turn('take skull');
+    await game.turn('take skull');
 
     const skullEvents = scoreEvents.filter(e => e.delta === 10);
     expect(skullEvents).toHaveLength(1);
   });
 
-  it('re-taking SKULL does NOT re-award VALUE (idempotency)', () => {
+  it('re-taking SKULL does NOT re-award VALUE (idempotency)', async () => {
     // SKULL.VALUE is zeroed after first take; second take awards 0.
     const emitter = new SimpleEventEmitter();
     const scoreEvents: Array<{ score: number; delta: number }> = [];
@@ -511,19 +511,19 @@ describe('TD3-1-H: object TAKE VALUE (real world)', () => {
     game.start();
     scoreEvents.length = 0;
 
-    game.turn('take skull');           // first take — awards VALUE=10
+    await game.turn('take skull');           // first take — awards VALUE=10
     const afterFirstTake = scoreEvents.filter(e => e.delta === 10).length;
     expect(afterFirstTake).toBe(1);
 
-    game.turn('drop skull');           // drop it back to room
+    await game.turn('drop skull');           // drop it back to room
     scoreEvents.length = 0;
-    game.turn('take skull');           // re-take — VALUE is now 0, no award
+    await game.turn('take skull');           // re-take — VALUE is now 0, no award
 
     const afterSecondTake = scoreEvents.filter(e => e.delta === 10).length;
     expect(afterSecondTake).toBe(0);   // must not re-award
   });
 
-  it('taking PAINTING awards VALUE=4', () => {
+  it('taking PAINTING awards VALUE=4', async () => {
     // PAINTING.VALUE = 4 per spec §4.1.
     // PAINTING is in GALLERY (a lit room).
     const emitter = new SimpleEventEmitter();
@@ -534,7 +534,7 @@ describe('TD3-1-H: object TAKE VALUE (real world)', () => {
     game.start();
     scoreEvents.length = 0;
 
-    game.turn('take painting');
+    await game.turn('take painting');
     const found = scoreEvents.some(e => e.delta === 4);
     expect(found).toBe(true);
   });
@@ -558,7 +558,7 @@ describe('TD3-1-I: trophy-case M-END recompute (LIVING-ROOM integration)', () =>
    * here that the wiring fires without corrupting score.
    */
 
-  it('LIVING-ROOM M-END on TAKE with empty trophy case: score stays at baseScore', () => {
+  it('LIVING-ROOM M-END on TAKE with empty trophy case: score stays at baseScore', async () => {
     // Start in LIVING-ROOM (no VALUE award for this room).
     // TAKE the rug (which handler refuses) — M-END still fires.
     // Trophy case is empty → OTVAL-FROB = 0 → score = baseScore = 0.
@@ -569,12 +569,12 @@ describe('TD3-1-I: trophy-case M-END recompute (LIVING-ROOM integration)', () =>
     expect(game.view().score).toBe(0);
 
     // "take rug" — rug refuses pickup but M-END fires (verb=take) → recompute.
-    game.turn('take rug');
+    await game.turn('take rug');
     // baseScore + OTVAL-FROB(empty case) = 0 + 0 = 0.
     expect(game.view().score).toBe(0);
   });
 
-  it('LIVING-ROOM M-END on LOOK does NOT recompute (verb guard)', () => {
+  it('LIVING-ROOM M-END on LOOK does NOT recompute (verb guard)', async () => {
     // LOOK is not TAKE and not PUT-to-TROPHY-CASE → M-END fires but recompute branch
     // is not entered (1actions.zil:478 guard: VERB = TAKE OR ...).
     // Score stays unchanged.
@@ -586,12 +586,12 @@ describe('TD3-1-I: trophy-case M-END recompute (LIVING-ROOM integration)', () =>
     game.start();
     scoreEvents.length = 0;
 
-    game.turn('look');
+    await game.turn('look');
     // No score-changed event expected from LOOK.
     expect(scoreEvents.length).toBe(0);
   });
 
-  it('take SKULL then PUT in TROPHY-CASE from LIVING-ROOM: score reflects TVALUE', () => {
+  it('take SKULL then PUT in TROPHY-CASE from LIVING-ROOM: score reflects TVALUE', async () => {
     // Full integration test using only Game.turn() calls.
     //
     // Setup: take SKULL (VALUE=10, TVALUE=10) from LAND-OF-LIVING-DEAD,
@@ -616,14 +616,14 @@ describe('TD3-1-I: trophy-case M-END recompute (LIVING-ROOM integration)', () =>
     game.start(); // no room VALUE for LAND-OF-LIVING-DEAD
     scoreEvents.length = 0;
 
-    game.turn('take skull');
+    await game.turn('take skull');
     // VALUE=10 awarded to baseScore; score = 10 (no trophy contents).
     const skullAward = scoreEvents.some(e => e.delta === 10);
     expect(skullAward).toBe(true);
     expect(game.view().score).toBe(10);
   });
 
-  it('PUT painting in TROPHY-CASE while in LIVING-ROOM updates score by TVALUE', () => {
+  it('PUT painting in TROPHY-CASE while in LIVING-ROOM updates score by TVALUE', async () => {
     // PAINTING has VALUE=4 and TVALUE=6.
     // We need to get PAINTING to LIVING-ROOM.  PAINTING is in GALLERY (a lit room).
     // From LIVING-ROOM to GALLERY requires navigating the map.  Instead,
@@ -640,7 +640,7 @@ describe('TD3-1-I: trophy-case M-END recompute (LIVING-ROOM integration)', () =>
     game.start();
     scoreEvents.length = 0;
 
-    game.turn('take painting');
+    await game.turn('take painting');
     const paintingAward = scoreEvents.some(e => e.delta === 4);
     expect(paintingAward).toBe(true);
     expect(game.view().score).toBe(4); // baseScore = 4, no trophies

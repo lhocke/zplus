@@ -109,50 +109,50 @@ describe('CC6 — MIRROR: world prerequisites', () => {
 // ---------------------------------------------------------------------------
 
 describe('CC6 — MIRROR-MIRROR: rub swaps room contents (1actions.zil:979–990)', () => {
-  it('rub mirror: MIRROR-1 moves to MIRROR-ROOM-2', () => {
+  it('rub mirror: MIRROR-1 moves to MIRROR-ROOM-2', async () => {
     const g = gameAtRoom1();
     const mirror1 = g.world.get('MIRROR-1');
     expect(mirror1, 'MIRROR-1 must exist').toBeDefined();
 
-    g.turn('rub mirror');
+    await g.turn('rub mirror');
 
     expect(mirror1!.parent?.id, 'MIRROR-1 must move to MIRROR-ROOM-2 after rub').toBe(ROOM2);
   });
 
-  it('rub mirror: MIRROR-2 moves to MIRROR-ROOM-1', () => {
+  it('rub mirror: MIRROR-2 moves to MIRROR-ROOM-1', async () => {
     const g = gameAtRoom1();
     const mirror2 = g.world.get('MIRROR-2');
     expect(mirror2, 'MIRROR-2 must exist').toBeDefined();
 
-    g.turn('rub mirror');
+    await g.turn('rub mirror');
 
     expect(mirror2!.parent?.id, 'MIRROR-2 must move to MIRROR-ROOM-1 after rub').toBe(ROOM1);
   });
 
-  it('rub mirror: player teleports to MIRROR-ROOM-2', () => {
+  it('rub mirror: player teleports to MIRROR-ROOM-2', async () => {
     const g = gameAtRoom1();
-    g.turn('rub mirror');
+    await g.turn('rub mirror');
     expect(g.player.parent?.id, 'player must be in MIRROR-ROOM-2 after rub').toBe(ROOM2);
   });
 
-  it('rub mirror: rumble message emitted', () => {
+  it('rub mirror: rumble message emitted', async () => {
     const g = gameAtRoom1();
-    const out = g.turn('rub mirror').output;
+    const out = await (await g.turn('rub mirror')).output;
     expect(out).toContain('rumble');
   });
 
-  it('rub mirror: does NOT print "seven years" (no break)', () => {
+  it('rub mirror: does NOT print "seven years" (no break)', async () => {
     const g = gameAtRoom1();
-    const out = g.turn('rub mirror').output;
+    const out = await (await g.turn('rub mirror')).output;
     expect(out).not.toContain('seven years');
   });
 
   // spec §6.6 "(no LOOK)" — ZIL <GOTO .RM2 <>> passes V?=false, so V-FIRST-LOOK
   // is skipped (gverbs.zil:2134–2136).  The engine must not auto-describe the
   // arrival room after the handler-driven teleport.
-  it('rub mirror: no room description printed (no LOOK — spec §6.6, gverbs.zil:2134)', () => {
+  it('rub mirror: no room description printed (no LOOK — spec §6.6, gverbs.zil:2134)', async () => {
     const g = gameAtRoom1();
-    const out = g.turn('rub mirror').output;
+    const out = await (await g.turn('rub mirror')).output;
     // Room title and ldesc must be absent — only the rumble line should appear.
     expect(out).not.toContain('Mirror Room');
     expect(out).not.toContain('tall ceilings');
@@ -161,7 +161,7 @@ describe('CC6 — MIRROR-MIRROR: rub swaps room contents (1actions.zil:979–990
 });
 
 describe('CC6 — MIRROR-MIRROR: rub swaps items in both rooms (1actions.zil:979–990)', () => {
-  it('item in MIRROR-ROOM-1 moves to MIRROR-ROOM-2 after rub', () => {
+  it('item in MIRROR-ROOM-1 moves to MIRROR-ROOM-2 after rub', async () => {
     const g = gameAtRoom1();
     const room1 = g.world.get(ROOM1);
     expect(room1, 'MIRROR-ROOM-1 must exist').toBeDefined();
@@ -170,12 +170,12 @@ describe('CC6 — MIRROR-MIRROR: rub swaps items in both rooms (1actions.zil:979
     g.world.register(gem);
     gem.moveTo(room1!);
 
-    g.turn('rub mirror');
+    await g.turn('rub mirror');
 
     expect(gem.parent?.id, 'gem from ROOM1 must be in MIRROR-ROOM-2 after swap').toBe(ROOM2);
   });
 
-  it('item in MIRROR-ROOM-2 moves to MIRROR-ROOM-1 after rub', () => {
+  it('item in MIRROR-ROOM-2 moves to MIRROR-ROOM-1 after rub', async () => {
     const g = gameAtRoom1();
     const room2 = g.world.get(ROOM2);
     expect(room2, 'MIRROR-ROOM-2 must exist').toBeDefined();
@@ -184,7 +184,7 @@ describe('CC6 — MIRROR-MIRROR: rub swaps items in both rooms (1actions.zil:979
     g.world.register(coin);
     coin.moveTo(room2!);
 
-    g.turn('rub mirror');
+    await g.turn('rub mirror');
 
     expect(coin.parent?.id, 'coin from ROOM2 must be in MIRROR-ROOM-1 after swap').toBe(ROOM1);
   });
@@ -195,24 +195,24 @@ describe('CC6 — MIRROR-MIRROR: rub swaps items in both rooms (1actions.zil:979
 // ---------------------------------------------------------------------------
 
 describe('CC6 — MIRROR-MIRROR: rub with instrument → tingling (1actions.zil:973–976)', () => {
-  it('rub mirror with lamp: tingling message', () => {
+  it('rub mirror with lamp: tingling message', async () => {
     const g = gameAtRoom1();
-    const out = g.turn('rub mirror with lamp').output;
+    const out = await (await g.turn('rub mirror with lamp')).output;
     expect(out).toContain('tingling');
   });
 
-  it('rub mirror with lamp: no swap (player stays in MIRROR-ROOM-1)', () => {
+  it('rub mirror with lamp: no swap (player stays in MIRROR-ROOM-1)', async () => {
     const g = gameAtRoom1();
-    g.turn('rub mirror with lamp');
+    await g.turn('rub mirror with lamp');
     expect(g.player.parent?.id, 'player must stay in MIRROR-ROOM-1 when instrument used').toBe(ROOM1);
   });
 
-  it('rub mirror with lamp: MIRROR-1 stays in MIRROR-ROOM-1 (no swap)', () => {
+  it('rub mirror with lamp: MIRROR-1 stays in MIRROR-ROOM-1 (no swap)', async () => {
     const g = gameAtRoom1();
     const mirror1 = g.world.get('MIRROR-1');
     expect(mirror1, 'MIRROR-1 must exist').toBeDefined();
 
-    g.turn('rub mirror with lamp');
+    await g.turn('rub mirror with lamp');
 
     expect(mirror1!.parent?.id, 'MIRROR-1 must not move when instrument used').toBe(ROOM1);
   });
@@ -223,17 +223,17 @@ describe('CC6 — MIRROR-MIRROR: rub with instrument → tingling (1actions.zil:
 // ---------------------------------------------------------------------------
 
 describe('CC6 — MIRROR-MIRROR: examine mirror (1actions.zil:994–999)', () => {
-  it('examine intact mirror: ugly person message', () => {
+  it('examine intact mirror: ugly person message', async () => {
     const g = gameAtRoom1();
-    const out = g.turn('examine mirror').output;
+    const out = await (await g.turn('examine mirror')).output;
     expect(out).toContain('ugly person');
   });
 
-  it('examine broken mirror: broken-pieces message', () => {
+  it('examine broken mirror: broken-pieces message', async () => {
     const g = gameAtRoom1();
     armWithSword(g);
-    g.turn('break mirror with sword');
-    const out = g.turn('examine mirror').output;
+    await g.turn('break mirror with sword');
+    const out = await (await g.turn('examine mirror')).output;
     expect(out).toContain('broken into many pieces');
   });
 });
@@ -243,18 +243,18 @@ describe('CC6 — MIRROR-MIRROR: examine mirror (1actions.zil:994–999)', () =>
 // ---------------------------------------------------------------------------
 
 describe('CC6 — MIRROR-MIRROR: take mirror → size message (1actions.zil:1000–1002)', () => {
-  it('take mirror: "many times your size" message', () => {
+  it('take mirror: "many times your size" message', async () => {
     const g = gameAtRoom1();
-    const out = g.turn('take mirror').output;
+    const out = await (await g.turn('take mirror')).output;
     expect(out).toContain('many times your size');
   });
 
-  it('take mirror: mirror not in player inventory', () => {
+  it('take mirror: mirror not in player inventory', async () => {
     const g = gameAtRoom1();
     const mirror1 = g.world.get('MIRROR-1');
     expect(mirror1, 'MIRROR-1 must exist').toBeDefined();
 
-    g.turn('take mirror');
+    await g.turn('take mirror');
 
     expect(mirror1!.parent?.id, 'mirror must not be in player inventory').not.toBe('PLAYER');
   });
@@ -265,19 +265,19 @@ describe('CC6 — MIRROR-MIRROR: take mirror → size message (1actions.zil:1000
 // ---------------------------------------------------------------------------
 
 describe('CC6 — MIRROR-MIRROR: break mirror sets MIRROR-MUNG and LUCKY=false (1actions.zil:1008–1009)', () => {
-  it('break mirror with sword: bad-luck message emitted', () => {
+  it('break mirror with sword: bad-luck message emitted', async () => {
     const g = gameAtRoom1();
     armWithSword(g);
-    const out = g.turn('break mirror with sword').output;
+    const out = await (await g.turn('break mirror with sword')).output;
     expect(out).toContain('seven years');
   });
 
-  it('break mirror: LUCKY is false after break', () => {
+  it('break mirror: LUCKY is false after break', async () => {
     const g = gameAtRoom1();
     armWithSword(g);
     expect(g.lucky, 'LUCKY must start true').toBe(true);
 
-    g.turn('break mirror with sword');
+    await g.turn('break mirror with sword');
 
     // Phase-2 zprob reads this.lucky via getLucky(); breaking the mirror
     // shifts LOSE-WEAPON from denom=100 to denom=300 (~1/3 as likely).
@@ -285,19 +285,19 @@ describe('CC6 — MIRROR-MIRROR: break mirror sets MIRROR-MUNG and LUCKY=false (
     expect(g.lucky, 'LUCKY must be false after mirror is broken').toBe(false);
   });
 
-  it('break mirror twice: second break yields "enough damage" message', () => {
+  it('break mirror twice: second break yields "enough damage" message', async () => {
     const g = gameAtRoom1();
     armWithSword(g);
-    g.turn('break mirror with sword');
-    const out = g.turn('break mirror with sword').output;
+    await g.turn('break mirror with sword');
+    const out = await (await g.turn('break mirror with sword')).output;
     expect(out).toContain('enough damage');
   });
 
-  it('break mirror: LUCKY stays false after second break attempt', () => {
+  it('break mirror: LUCKY stays false after second break attempt', async () => {
     const g = gameAtRoom1();
     armWithSword(g);
-    g.turn('break mirror with sword');
-    g.turn('break mirror with sword');
+    await g.turn('break mirror with sword');
+    await g.turn('break mirror with sword');
     expect(g.lucky, 'LUCKY must remain false').toBe(false);
   });
 });
@@ -307,29 +307,29 @@ describe('CC6 — MIRROR-MIRROR: break mirror sets MIRROR-MUNG and LUCKY=false (
 // ---------------------------------------------------------------------------
 
 describe('CC6 — MIRROR-ROOM: M-LOOK description (1actions.zil:958–966)', () => {
-  it('MIRROR-ROOM-1 look: base description present', () => {
+  it('MIRROR-ROOM-1 look: base description present', async () => {
     const g = gameAtRoom1();
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('enormous mirror');
   });
 
-  it('MIRROR-ROOM-1 look: exits mentioned', () => {
+  it('MIRROR-ROOM-1 look: exits mentioned', async () => {
     const g = gameAtRoom1();
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('exits');
   });
 
-  it('MIRROR-ROOM-1 look when intact: no mung addendum', () => {
+  it('MIRROR-ROOM-1 look when intact: no mung addendum', async () => {
     const g = gameAtRoom1();
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).not.toContain('recklessness');
   });
 
-  it('MIRROR-ROOM-1 look after break: mung addendum present', () => {
+  it('MIRROR-ROOM-1 look after break: mung addendum present', async () => {
     const g = gameAtRoom1();
     armWithSword(g);
-    g.turn('break mirror with sword');
-    const out = g.turn('look').output;
+    await g.turn('break mirror with sword');
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('recklessness');
   });
 });

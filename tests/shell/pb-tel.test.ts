@@ -51,11 +51,11 @@ function makeSession(storage: MapStorage, sink: PlaytestSink & { events: Playtes
 
 // A SavePort that always throws on write() — for testing failed saves.
 class FailPort implements SavePort {
-  write(_slot: string, _state: SaveState): void { throw new DOMException('QuotaExceededError'); }
-  read(_slot: string): SaveState | undefined { return undefined; }
-  readWithReason(_slot: string): SaveState | RestoreFailReason { return 'empty'; }
-  list(): SaveSlotMeta[] { return []; }
-  remove(_slot: string): void {}
+  async write(_slot: string, _state: SaveState): Promise<void> { throw new DOMException('QuotaExceededError'); }
+  async read(_slot: string): Promise<SaveState | undefined> { return undefined; }
+  async readWithReason(_slot: string): Promise<SaveState | RestoreFailReason> { return 'empty'; }
+  async list(): Promise<SaveSlotMeta[]> { return []; }
+  async remove(_slot: string): Promise<void> {}
 }
 
 // ---------------------------------------------------------------------------
@@ -63,39 +63,39 @@ class FailPort implements SavePort {
 // ---------------------------------------------------------------------------
 
 describe('PB-TEL — SaveEvent on successful save', () => {
-  it('save emits a SaveEvent with ok=true', () => {
+  it('save emits a SaveEvent with ok=true', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('save');
+    await session.submit('save');
     const ev = sink.events.find(e => e.type === 'save') as SaveEvent | undefined;
     expect(ev).toBeDefined();
     expect(ev!.ok).toBe(true);
   });
 
-  it('SaveEvent carries slot "1" for bare "save"', () => {
+  it('SaveEvent carries slot "1" for bare "save"', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('save');
+    await session.submit('save');
     const ev = sink.events.find(e => e.type === 'save') as SaveEvent | undefined;
     expect(ev!.slot).toBe('1');
   });
 
-  it('SaveEvent carries slot "2" for "save 2"', () => {
+  it('SaveEvent carries slot "2" for "save 2"', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('save 2');
+    await session.submit('save 2');
     const ev = sink.events.find(e => e.type === 'save') as SaveEvent | undefined;
     expect(ev!.slot).toBe('2');
   });
 
-  it('SaveEvent has sessionId, buildId, turn, ts', () => {
+  it('SaveEvent has sessionId, buildId, turn, ts', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('save');
+    await session.submit('save');
     const ev = sink.events.find(e => e.type === 'save') as SaveEvent | undefined;
     expect(typeof ev!.sessionId).toBe('string');
     expect(typeof ev!.buildId).toBe('string');
@@ -103,12 +103,12 @@ describe('PB-TEL — SaveEvent on successful save', () => {
     expect(typeof ev!.ts).toBe('string');
   });
 
-  it('SaveEvent turn is 1-based and matches turn count', () => {
+  it('SaveEvent turn is 1-based and matches turn count', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('look');   // turn 1
-    session.submit('save');   // turn 2
+    await session.submit('look');   // turn 1
+    await session.submit('save');   // turn 2
     const ev = sink.events.find(e => e.type === 'save') as SaveEvent | undefined;
     expect(ev!.turn).toBe(2);
   });
@@ -119,21 +119,21 @@ describe('PB-TEL — SaveEvent on successful save', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-TEL — SaveEvent on failed save', () => {
-  it('forced save failure → SaveEvent ok=false', () => {
+  it('forced save failure → SaveEvent ok=false', async () => {
     const sink = captureSink();
     const session = createSession({ sink, savePort: new FailPort(), seed: 42 });
     session.start();
-    session.submit('save');
+    await session.submit('save');
     const ev = sink.events.find(e => e.type === 'save') as SaveEvent | undefined;
     expect(ev).toBeDefined();
     expect(ev!.ok).toBe(false);
   });
 
-  it('failed save still emits the slot', () => {
+  it('failed save still emits the slot', async () => {
     const sink = captureSink();
     const session = createSession({ sink, savePort: new FailPort(), seed: 42 });
     session.start();
-    session.submit('save 3');
+    await session.submit('save 3');
     const ev = sink.events.find(e => e.type === 'save') as SaveEvent | undefined;
     expect(ev!.slot).toBe('3');
   });
@@ -144,34 +144,34 @@ describe('PB-TEL — SaveEvent on failed save', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-TEL — RestoreEvent on successful restore', () => {
-  it('restore from a written slot → RestoreEvent ok=true, reason="ok"', () => {
+  it('restore from a written slot → RestoreEvent ok=true, reason="ok"', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('save');
-    session.submit('restore');
+    await session.submit('save');
+    await session.submit('restore');
     const ev = sink.events.find(e => e.type === 'restore') as RestoreEvent | undefined;
     expect(ev).toBeDefined();
     expect(ev!.ok).toBe(true);
     expect(ev!.reason).toBe('ok');
   });
 
-  it('RestoreEvent carries slot "2" for "restore 2"', () => {
+  it('RestoreEvent carries slot "2" for "restore 2"', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('save 2');
-    session.submit('restore 2');
+    await session.submit('save 2');
+    await session.submit('restore 2');
     const ev = sink.events.find(e => e.type === 'restore') as RestoreEvent | undefined;
     expect(ev!.slot).toBe('2');
   });
 
-  it('RestoreEvent has sessionId, buildId, ts', () => {
+  it('RestoreEvent has sessionId, buildId, ts', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('save');
-    session.submit('restore');
+    await session.submit('save');
+    await session.submit('restore');
     const ev = sink.events.find(e => e.type === 'restore') as RestoreEvent | undefined;
     expect(typeof ev!.sessionId).toBe('string');
     expect(typeof ev!.buildId).toBe('string');
@@ -184,23 +184,23 @@ describe('PB-TEL — RestoreEvent on successful restore', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-TEL — RestoreEvent on failed restore (empty slot)', () => {
-  it('restore from empty slot → RestoreEvent ok=false, reason="empty"', () => {
+  it('restore from empty slot → RestoreEvent ok=false, reason="empty"', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
     // Nothing saved — slot is empty
-    session.submit('restore');
+    await session.submit('restore');
     const ev = sink.events.find(e => e.type === 'restore') as RestoreEvent | undefined;
     expect(ev).toBeDefined();
     expect(ev!.ok).toBe(false);
     expect(ev!.reason).toBe('empty');
   });
 
-  it('RestoreEvent slot matches the attempted slot', () => {
+  it('RestoreEvent slot matches the attempted slot', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('restore 3');
+    await session.submit('restore 3');
     const ev = sink.events.find(e => e.type === 'restore') as RestoreEvent | undefined;
     expect(ev!.slot).toBe('3');
   });
@@ -211,20 +211,20 @@ describe('PB-TEL — RestoreEvent on failed restore (empty slot)', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-TEL — RestartEvent on restart', () => {
-  it('restart verb emits a RestartEvent', () => {
+  it('restart verb emits a RestartEvent', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('restart');
+    await session.submit('restart');
     const ev = sink.events.find(e => e.type === 'restart') as RestartEvent | undefined;
     expect(ev).toBeDefined();
   });
 
-  it('RestartEvent has sessionId and ts', () => {
+  it('RestartEvent has sessionId and ts', async () => {
     const storage = new MapStorage();
     const sink = captureSink();
     const session = makeSession(storage, sink);
-    session.submit('restart');
+    await session.submit('restart');
     const ev = sink.events.find(e => e.type === 'restart') as RestartEvent | undefined;
     expect(typeof ev!.sessionId).toBe('string');
     expect(typeof ev!.ts).toBe('string');
@@ -303,14 +303,14 @@ describe('PB-TEL — FileSink renders save/restore/restart markers', () => {
     expect(content).toContain('restart');
   });
 
-  it('save/restore markers appear in the transcript (integration via session)', () => {
+  it('save/restore markers appear in the transcript (integration via session)', async () => {
     const storage = new MapStorage();
     const fileSink = new FileSink(logsDir);
     const port = new LocalStorageSavePort(storage);
     const session = createSession({ sink: fileSink, savePort: port, seed: 42 });
     session.start();
-    session.submit('save');
-    session.submit('restore');
+    await session.submit('save');
+    await session.submit('restore');
     session.close();
 
     const content = readLog();

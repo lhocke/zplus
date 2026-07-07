@@ -59,10 +59,10 @@ function saveOrCompare(name: string, actual: string): void {
 
 // runEngineFrom — like runEngine but takes a startRoom + post-start setup callback.
 // Keeps tools/oracle/engine-runner.ts untouched.
-function runEngineFrom(
+async function runEngineFrom(
   commands: readonly string[],
   opts: { startRoom?: string; seed?: number; setup?: (g: Game) => void } = {},
-): string {
+): Promise<string> {
   const game = createGame({ seed: opts.seed ?? 42, startRoom: opts.startRoom });
   const lines: string[] = [];
   lines.push(game.start());
@@ -70,7 +70,7 @@ function runEngineFrom(
   for (const cmd of commands) {
     lines.push('');
     lines.push(`> ${cmd}`);
-    const result = game.turn(cmd);
+    const result = await game.turn(cmd);
     if (result.output.length > 0) lines.push(result.output);
   }
   return lines.join('\n');
@@ -92,7 +92,7 @@ function runEngineFrom(
 // -------------------------------------------------------------------------
 
 describe('V2 corpus 1 — cyclops give-responses (1actions.zil:1543–1574)', () => {
-  it('give-responses are byte-identical to committed golden', () => {
+  it('give-responses are byte-identical to committed golden', async () => {
     const withLamp = (g: Game) => {
       const w = g.world;
       const player = w.get('PLAYER')!;
@@ -108,9 +108,9 @@ describe('V2 corpus 1 — cyclops give-responses (1actions.zil:1543–1574)', ()
       withLamp(g);
       g.world.get('LUNCH')?.moveTo(g.world.get('PLAYER')!);
     };
-    const runLunch1 = runEngineFrom(['give lunch to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupLunch });
+    const runLunch1 = await runEngineFrom(['give lunch to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupLunch });
     resetAll();
-    const runLunch2 = runEngineFrom(['give lunch to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupLunch });
+    const runLunch2 = await runEngineFrom(['give lunch to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupLunch });
     expect(runLunch1).toBe(runLunch2);
 
     // --- sub-run B: give garlic → "there is a limit" ---
@@ -119,9 +119,9 @@ describe('V2 corpus 1 — cyclops give-responses (1actions.zil:1543–1574)', ()
       withLamp(g);
       g.world.get('GARLIC')?.moveTo(g.world.get('PLAYER')!);
     };
-    const runGarlic1 = runEngineFrom(['give garlic to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupGarlic });
+    const runGarlic1 = await runEngineFrom(['give garlic to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupGarlic });
     resetAll();
-    const runGarlic2 = runEngineFrom(['give garlic to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupGarlic });
+    const runGarlic2 = await runEngineFrom(['give garlic to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupGarlic });
     expect(runGarlic1).toBe(runGarlic2);
 
     // --- sub-run C: give water (not thirsty, CYCLOWRATH=0) → refusal ---
@@ -131,9 +131,9 @@ describe('V2 corpus 1 — cyclops give-responses (1actions.zil:1543–1574)', ()
       g.world.get('WATER')?.moveTo(g.world.get('PLAYER')!);
       // CYCLOWRATH=0 (default) — cyclops not thirsty
     };
-    const runWaterNo1 = runEngineFrom(['give water to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupWaterNotThirsty });
+    const runWaterNo1 = await runEngineFrom(['give water to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupWaterNotThirsty });
     resetAll();
-    const runWaterNo2 = runEngineFrom(['give water to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupWaterNotThirsty });
+    const runWaterNo2 = await runEngineFrom(['give water to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupWaterNotThirsty });
     expect(runWaterNo1).toBe(runWaterNo2);
 
     // --- sub-run D: give water (thirsty, CYCLOWRATH<0) → sleep ---
@@ -143,9 +143,9 @@ describe('V2 corpus 1 — cyclops give-responses (1actions.zil:1543–1574)', ()
       g.world.get('WATER')?.moveTo(g.world.get('PLAYER')!);
       setCyclowrath(-2);  // already thirsty
     };
-    const runWaterYes1 = runEngineFrom(['give water to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupWaterThirsty });
+    const runWaterYes1 = await runEngineFrom(['give water to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupWaterThirsty });
     resetAll();
-    const runWaterYes2 = runEngineFrom(['give water to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupWaterThirsty });
+    const runWaterYes2 = await runEngineFrom(['give water to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupWaterThirsty });
     expect(runWaterYes1).toBe(runWaterYes2);
 
     // --- sub-run E: give inedible (sword) → "not so stupid" ---
@@ -154,9 +154,9 @@ describe('V2 corpus 1 — cyclops give-responses (1actions.zil:1543–1574)', ()
       withLamp(g);
       g.world.get('SWORD')?.moveTo(g.world.get('PLAYER')!);
     };
-    const runJunk1 = runEngineFrom(['give sword to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupJunk });
+    const runJunk1 = await runEngineFrom(['give sword to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupJunk });
     resetAll();
-    const runJunk2 = runEngineFrom(['give sword to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupJunk });
+    const runJunk2 = await runEngineFrom(['give sword to cyclops'], { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupJunk });
     expect(runJunk1).toBe(runJunk2);
 
     const combined = [runLunch1, '', runGarlic1, '', runWaterNo1, '', runWaterYes1, '', runJunk1].join('\n');
@@ -175,7 +175,7 @@ describe('V2 corpus 1 — cyclops give-responses (1actions.zil:1543–1574)', ()
 // -------------------------------------------------------------------------
 
 describe('V2 corpus 2 — thief give-responses (1actions.zil:1986–2012)', () => {
-  it('give-treasure and give-junk responses are byte-identical to committed golden', () => {
+  it('give-treasure and give-junk responses are byte-identical to committed golden', async () => {
     // Use TROLL-ROOM as a neutral lit room (troll present but the give commands
     // target the thief, which we place in the room explicitly).
 
@@ -195,17 +195,17 @@ describe('V2 corpus 2 — thief give-responses (1actions.zil:1986–2012)', () =
     // Sub-run A: give treasure (EGG, TVALUE=5) → engrossed message
     resetAll();
     const setupTreasure = (g: Game) => withThiefVisible(g, 'EGG');
-    const runTreasure1 = runEngineFrom(['give egg to thief'], { startRoom: 'TROLL-ROOM', seed: 42, setup: setupTreasure });
+    const runTreasure1 = await runEngineFrom(['give egg to thief'], { startRoom: 'TROLL-ROOM', seed: 42, setup: setupTreasure });
     resetAll();
-    const runTreasure2 = runEngineFrom(['give egg to thief'], { startRoom: 'TROLL-ROOM', seed: 42, setup: setupTreasure });
+    const runTreasure2 = await runEngineFrom(['give egg to thief'], { startRoom: 'TROLL-ROOM', seed: 42, setup: setupTreasure });
     expect(runTreasure1).toBe(runTreasure2);
 
     // Sub-run B: give junk (KNIFE, TVALUE=0) → places in bag
     resetAll();
     const setupJunk = (g: Game) => withThiefVisible(g, 'KNIFE');
-    const runJunk1 = runEngineFrom(['give knife to thief'], { startRoom: 'TROLL-ROOM', seed: 42, setup: setupJunk });
+    const runJunk1 = await runEngineFrom(['give knife to thief'], { startRoom: 'TROLL-ROOM', seed: 42, setup: setupJunk });
     resetAll();
-    const runJunk2 = runEngineFrom(['give knife to thief'], { startRoom: 'TROLL-ROOM', seed: 42, setup: setupJunk });
+    const runJunk2 = await runEngineFrom(['give knife to thief'], { startRoom: 'TROLL-ROOM', seed: 42, setup: setupJunk });
     expect(runJunk1).toBe(runJunk2);
 
     const combined = [runTreasure1, '', runJunk1].join('\n');
@@ -222,7 +222,7 @@ describe('V2 corpus 2 — thief give-responses (1actions.zil:1986–2012)', () =
 // -------------------------------------------------------------------------
 
 describe('V2 corpus 3 — V-ODYSSEUS (gverbs.zil:945–961)', () => {
-  it('wall-break message is byte-identical to committed golden', () => {
+  it('wall-break message is byte-identical to committed golden', async () => {
     resetAll();
 
     const setup = (g: Game) => {
@@ -237,9 +237,9 @@ describe('V2 corpus 3 — V-ODYSSEUS (gverbs.zil:945–961)', () => {
     const cmds = ['odysseus'] as const;
 
     // In CYCLOPS-ROOM with awake cyclops → wall-break + MAGIC-FLAG
-    const runInRoom1 = runEngineFrom(cmds, { startRoom: 'CYCLOPS-ROOM', seed: 42, setup });
+    const runInRoom1 = await runEngineFrom(cmds, { startRoom: 'CYCLOPS-ROOM', seed: 42, setup });
     resetAll();
-    const runInRoom2 = runEngineFrom(cmds, { startRoom: 'CYCLOPS-ROOM', seed: 42, setup });
+    const runInRoom2 = await runEngineFrom(cmds, { startRoom: 'CYCLOPS-ROOM', seed: 42, setup });
     expect(runInRoom1).toBe(runInRoom2);
 
     // Off-room → "Wasn't he a sailor?"
@@ -253,9 +253,9 @@ describe('V2 corpus 3 — V-ODYSSEUS (gverbs.zil:945–961)', () => {
     };
 
     resetAll();
-    const runOffRoom1 = runEngineFrom(cmds, { startRoom: 'TROLL-ROOM', seed: 42, setup: setupOffRoom });
+    const runOffRoom1 = await runEngineFrom(cmds, { startRoom: 'TROLL-ROOM', seed: 42, setup: setupOffRoom });
     resetAll();
-    const runOffRoom2 = runEngineFrom(cmds, { startRoom: 'TROLL-ROOM', seed: 42, setup: setupOffRoom });
+    const runOffRoom2 = await runEngineFrom(cmds, { startRoom: 'TROLL-ROOM', seed: 42, setup: setupOffRoom });
     expect(runOffRoom1).toBe(runOffRoom2);
 
     // After the wall-break: look at CYCLOPS-ROOM to confirm MAGIC-FLAG re-description.
@@ -274,9 +274,9 @@ describe('V2 corpus 3 — V-ODYSSEUS (gverbs.zil:945–961)', () => {
 
     const cmdsLook = ['look'] as const;
     resetAll();
-    const runPostOdysseus1 = runEngineFrom(cmdsLook, { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupAfterOdysseus });
+    const runPostOdysseus1 = await runEngineFrom(cmdsLook, { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupAfterOdysseus });
     resetAll();
-    const runPostOdysseus2 = runEngineFrom(cmdsLook, { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupAfterOdysseus });
+    const runPostOdysseus2 = await runEngineFrom(cmdsLook, { startRoom: 'CYCLOPS-ROOM', seed: 42, setup: setupAfterOdysseus });
     expect(runPostOdysseus1).toBe(runPostOdysseus2);
 
     const combined = [runInRoom1, '', runOffRoom1, '', runPostOdysseus1].join('\n');
@@ -292,7 +292,7 @@ describe('V2 corpus 3 — V-ODYSSEUS (gverbs.zil:945–961)', () => {
 // -------------------------------------------------------------------------
 
 describe('V2 corpus 4 — treasure-room reveal on thief death (1actions.zil:2040–2059)', () => {
-  it('treasure-room reveal is byte-identical to committed golden', () => {
+  it('treasure-room reveal is byte-identical to committed golden', async () => {
     resetAll();
 
     // Strategy: set thief pStrength to -1 (already KO'd) so heroBlow's
@@ -336,9 +336,9 @@ describe('V2 corpus 4 — treasure-room reveal on thief death (1actions.zil:2040
 
     const cmds = ['attack thief with sword'] as const;
 
-    const run1 = runEngineFrom(cmds, { startRoom: 'TREASURE-ROOM', seed: 42, setup });
+    const run1 = await runEngineFrom(cmds, { startRoom: 'TREASURE-ROOM', seed: 42, setup });
     resetAll();
-    const run2 = runEngineFrom(cmds, { startRoom: 'TREASURE-ROOM', seed: 42, setup });
+    const run2 = await runEngineFrom(cmds, { startRoom: 'TREASURE-ROOM', seed: 42, setup });
     expect(run1).toBe(run2);
 
     saveOrCompare('v2-treasure-room-reveal', run1);
@@ -354,7 +354,7 @@ describe('V2 corpus 4 — treasure-room reveal on thief death (1actions.zil:2040
 // -------------------------------------------------------------------------
 
 describe('V2 corpus 5 — cyclops M-LOOK state branches (1actions.zil:1616–1642)', () => {
-  it('all five state branches are byte-identical to committed golden', () => {
+  it('all five state branches are byte-identical to committed golden', async () => {
     type Flags = { set(k: string, v: boolean): void };
 
     const withLamp = (g: Game) => {
@@ -370,12 +370,12 @@ describe('V2 corpus 5 — cyclops M-LOOK state branches (1actions.zil:1616–164
 
     // Branch 1 — neutral, CYCLOWRATH=0, cyclops awake (default state)
     resetAll();
-    const run1 = runEngineFrom(look, {
+    const run1 = await runEngineFrom(look, {
       startRoom: 'CYCLOPS-ROOM', seed: 42,
       setup: (g) => { withLamp(g); /* CYCLOWRATH=0 is the reset default */ },
     });
     resetAll();
-    const run1b = runEngineFrom(look, {
+    const run1b = await runEngineFrom(look, {
       startRoom: 'CYCLOPS-ROOM', seed: 42,
       setup: (g) => { withLamp(g); },
     });
@@ -383,12 +383,12 @@ describe('V2 corpus 5 — cyclops M-LOOK state branches (1actions.zil:1616–164
 
     // Branch 2 — CYCLOWRATH > 0 (angry)
     resetAll();
-    const run2 = runEngineFrom(look, {
+    const run2 = await runEngineFrom(look, {
       startRoom: 'CYCLOPS-ROOM', seed: 42,
       setup: (g) => { withLamp(g); setCyclowrath(3); },
     });
     resetAll();
-    const run2b = runEngineFrom(look, {
+    const run2b = await runEngineFrom(look, {
       startRoom: 'CYCLOPS-ROOM', seed: 42,
       setup: (g) => { withLamp(g); setCyclowrath(3); },
     });
@@ -396,12 +396,12 @@ describe('V2 corpus 5 — cyclops M-LOOK state branches (1actions.zil:1616–164
 
     // Branch 3 — CYCLOWRATH < 0 (thirsty/gasping after peppers)
     resetAll();
-    const run3 = runEngineFrom(look, {
+    const run3 = await runEngineFrom(look, {
       startRoom: 'CYCLOPS-ROOM', seed: 42,
       setup: (g) => { withLamp(g); setCyclowrath(-2); },
     });
     resetAll();
-    const run3b = runEngineFrom(look, {
+    const run3b = await runEngineFrom(look, {
       startRoom: 'CYCLOPS-ROOM', seed: 42,
       setup: (g) => { withLamp(g); setCyclowrath(-2); },
     });
@@ -409,7 +409,7 @@ describe('V2 corpus 5 — cyclops M-LOOK state branches (1actions.zil:1616–164
 
     // Branch 4 — CYCLOPS-FLAG=true (sleeping), MAGIC-FLAG=false
     resetAll();
-    const run4 = runEngineFrom(look, {
+    const run4 = await runEngineFrom(look, {
       startRoom: 'CYCLOPS-ROOM', seed: 42,
       setup: (g) => {
         withLamp(g);
@@ -417,7 +417,7 @@ describe('V2 corpus 5 — cyclops M-LOOK state branches (1actions.zil:1616–164
       },
     });
     resetAll();
-    const run4b = runEngineFrom(look, {
+    const run4b = await runEngineFrom(look, {
       startRoom: 'CYCLOPS-ROOM', seed: 42,
       setup: (g) => {
         withLamp(g);
@@ -428,7 +428,7 @@ describe('V2 corpus 5 — cyclops M-LOOK state branches (1actions.zil:1616–164
 
     // Branch 5 — MAGIC-FLAG=true (wall broken by ODYSSEUS)
     resetAll();
-    const run5 = runEngineFrom(look, {
+    const run5 = await runEngineFrom(look, {
       startRoom: 'CYCLOPS-ROOM', seed: 42,
       setup: (g) => {
         withLamp(g);
@@ -438,7 +438,7 @@ describe('V2 corpus 5 — cyclops M-LOOK state branches (1actions.zil:1616–164
       },
     });
     resetAll();
-    const run5b = runEngineFrom(look, {
+    const run5b = await runEngineFrom(look, {
       startRoom: 'CYCLOPS-ROOM', seed: 42,
       setup: (g) => {
         withLamp(g);

@@ -77,36 +77,36 @@ function rawMangle(storage: MapStorage, slot: string, patch: (obj: Record<string
 // ---------------------------------------------------------------------------
 
 describe('V2 — empty slot', () => {
-  it('restore from an empty slot prints exactly "Failed."', () => {
+  it('restore from an empty slot prints exactly "Failed."', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
     // No save written to slot 1
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     expect(r.output).toBe('Failed.');
   });
 
-  it('empty slot does not mutate move count', () => {
+  it('empty slot does not mutate move count', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('look');
+    await game.turn('look');
     const before = game.view();
-    game.turn('restore');
+    await game.turn('restore');
     expect(game.view().moves).toBe(before.moves);
   });
 
-  it('empty slot does not mutate room', () => {
+  it('empty slot does not mutate room', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('north');  // move to FOREST-1
+    await game.turn('north');  // move to FOREST-1
     const here = game.view().here;
-    game.turn('restore');
+    await game.turn('restore');
     expect(game.view().here).toBe(here);
   });
 
-  it('session: "restore" on empty slot returns "Failed."', () => {
+  it('session: "restore" on empty slot returns "Failed."', async () => {
     const storage = new MapStorage();
     const session = makeSession(storage);
-    const out = session.submit('restore');
+    const out = await session.submit('restore');
     expect(out).toBe('Failed.');
   });
 });
@@ -117,60 +117,60 @@ describe('V2 — empty slot', () => {
 // ---------------------------------------------------------------------------
 
 describe('V2 — truncated / non-JSON input', () => {
-  it('truncated JSON: in-voice damaged message, not "Failed."', () => {
+  it('truncated JSON: in-voice damaged message, not "Failed."', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawSet(storage, '1', '{"formatVersion":1,"buildId":"dev"');
 
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     expect(r.output).not.toBe('Failed.');
     expect(r.output.toLowerCase()).toMatch(/damaged|corrupt/);
   });
 
-  it('non-JSON string: in-voice damaged message', () => {
+  it('non-JSON string: in-voice damaged message', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawSet(storage, '1', 'not-json-at-all');
 
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     expect(r.output).not.toBe('Failed.');
     expect(r.output.toLowerCase()).toMatch(/damaged|corrupt/);
   });
 
-  it('empty string in slot: in-voice damaged message', () => {
+  it('empty string in slot: in-voice damaged message', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawSet(storage, '1', '');
 
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     // Empty string fails JSON.parse → corrupt
     expect(r.output).not.toBe('Failed.');
     expect(r.output.toLowerCase()).toMatch(/damaged|corrupt/);
   });
 
-  it('truncated JSON: live game move count unchanged', () => {
+  it('truncated JSON: live game move count unchanged', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('look');
-    game.turn('save');
-    game.turn('look');
+    await game.turn('look');
+    await game.turn('save');
+    await game.turn('look');
     const before = game.view();
     rawSet(storage, '1', '{"partial":true');
-    game.turn('restore');
+    await game.turn('restore');
     expect(game.view().moves).toBe(before.moves);
   });
 
-  it('truncated JSON: live game room unchanged', () => {
+  it('truncated JSON: live game room unchanged', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('north');
-    game.turn('save');
+    await game.turn('north');
+    await game.turn('save');
     const here = game.view().here;
     rawSet(storage, '1', '{"bad');
-    game.turn('restore');
+    await game.turn('restore');
     expect(game.view().here).toBe(here);
   });
 });
@@ -181,58 +181,58 @@ describe('V2 — truncated / non-JSON input', () => {
 // ---------------------------------------------------------------------------
 
 describe('V2 — formatVersion mismatch', () => {
-  it('future formatVersion: in-voice version/incompatible message', () => {
+  it('future formatVersion: in-voice version/incompatible message', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.formatVersion = SAVE_FORMAT_VERSION + 99; });
 
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     expect(r.output).not.toBe('Failed.');
     expect(r.output.toLowerCase()).toMatch(/version|incompatible/);
   });
 
-  it('past formatVersion (0): in-voice version/incompatible message', () => {
+  it('past formatVersion (0): in-voice version/incompatible message', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.formatVersion = 0; });
 
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     expect(r.output).not.toBe('Failed.');
     expect(r.output.toLowerCase()).toMatch(/version|incompatible/);
   });
 
-  it('formatVersion mismatch: move count not rewound', () => {
+  it('formatVersion mismatch: move count not rewound', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('look');  // move 1 — snapshot at this point
-    game.turn('save');
-    game.turn('look');  // move 2
+    await game.turn('look');  // move 1 — snapshot at this point
+    await game.turn('save');
+    await game.turn('look');  // move 2
     const before = game.view().moves;
     rawMangle(storage, '1', o => { o.formatVersion = SAVE_FORMAT_VERSION + 1; });
-    game.turn('restore');
+    await game.turn('restore');
     expect(game.view().moves).toBe(before);  // still at move 2, not rewound to 1
   });
 
-  it('formatVersion mismatch: room not changed', () => {
+  it('formatVersion mismatch: room not changed', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('north');   // go to FOREST-1 — save here
-    game.turn('save');
-    game.turn('south');   // back to start
+    await game.turn('north');   // go to FOREST-1 — save here
+    await game.turn('save');
+    await game.turn('south');   // back to start
     const here = game.view().here;
     rawMangle(storage, '1', o => { o.formatVersion = SAVE_FORMAT_VERSION + 1; });
-    game.turn('restore');
+    await game.turn('restore');
     expect(game.view().here).toBe(here);
   });
 
-  it('version mismatch: no uncaught exception', () => {
+  it('version mismatch: no uncaught exception', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.formatVersion = SAVE_FORMAT_VERSION + 5; });
-    expect(() => game.turn('restore')).not.toThrow();
+    expect(async () => await game.turn('restore')).not.toThrow();
   });
 });
 
@@ -242,40 +242,40 @@ describe('V2 — formatVersion mismatch', () => {
 // ---------------------------------------------------------------------------
 
 describe('V2 — buildId mismatch (OQ-1 warn-allow)', () => {
-  it('different buildId on same formatVersion: restore succeeds', () => {
+  it('different buildId on same formatVersion: restore succeeds', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('look');
-    game.turn('save');
+    await game.turn('look');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.buildId = 'old-build-xyz'; });
 
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     // Should succeed — returns "Ok." + room description
     expect(r.output).toContain('Ok.');
   });
 
-  it('different buildId: move count is restored from the save', () => {
+  it('different buildId: move count is restored from the save', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('look');  // move 1
-    game.turn('save');
+    await game.turn('look');  // move 1
+    await game.turn('save');
     const savedMoves = game.view().moves;
 
-    game.turn('look');  // move 2
+    await game.turn('look');  // move 2
     rawMangle(storage, '1', o => { o.buildId = 'other-build'; });
 
-    game.turn('restore');
+    await game.turn('restore');
     // Should restore to savedMoves, not stay at move 2
     expect(game.view().moves).toBe(savedMoves);
   });
 
-  it('empty buildId string: still warn-allow on same formatVersion', () => {
+  it('empty buildId string: still warn-allow on same formatVersion', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.buildId = ''; });
 
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     expect(r.output).toContain('Ok.');
   });
 });
@@ -286,31 +286,31 @@ describe('V2 — buildId mismatch (OQ-1 warn-allow)', () => {
 // ---------------------------------------------------------------------------
 
 describe('V2 — foreign / hand-edited save (extra fields)', () => {
-  it('extra top-level field: in-voice damaged, never throws', () => {
+  it('extra top-level field: in-voice damaged, never throws', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o['__injected'] = 'evil-payload'; });
 
-    expect(() => {
-      const r = game.turn('restore');
+    expect(async () => {
+      const r = await game.turn('restore');
       // Must not be "Failed." — must be in-voice corruption message
       expect(r.output).not.toBe('Failed.');
       expect(r.output.toLowerCase()).toMatch(/damaged|corrupt/);
     }).not.toThrow();
   });
 
-  it('extra top-level field: state not mutated', () => {
+  it('extra top-level field: state not mutated', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('look');
-    game.turn('save');
+    await game.turn('look');
+    await game.turn('save');
     const savedMoves = game.view().moves;
-    game.turn('look');
+    await game.turn('look');
     const before = game.view().moves;
 
     rawMangle(storage, '1', o => { o['__evil'] = true; });
-    game.turn('restore');
+    await game.turn('restore');
     expect(game.view().moves).toBe(before);
     void savedMoves;
   });
@@ -334,115 +334,115 @@ describe('V2 — foreign / hand-edited save (extra fields)', () => {
 });
 
 describe('V2 — foreign / hand-edited save (bad field values)', () => {
-  it('moveCount is a negative number: in-voice damaged, never throws', () => {
+  it('moveCount is a negative number: in-voice damaged, never throws', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.moveCount = -999; });
 
-    expect(() => {
-      const r = game.turn('restore');
+    expect(async () => {
+      const r = await game.turn('restore');
       expect(r.output).not.toBe('Failed.');
       expect(r.output.toLowerCase()).toMatch(/damaged|corrupt/);
     }).not.toThrow();
   });
 
-  it('moveCount is a string: in-voice damaged, never throws', () => {
+  it('moveCount is a string: in-voice damaged, never throws', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.moveCount = '5 is my move count'; });
 
-    expect(() => {
-      const r = game.turn('restore');
+    expect(async () => {
+      const r = await game.turn('restore');
       expect(r.output).not.toBe('Failed.');
     }).not.toThrow();
   });
 
-  it('hereId is a number: in-voice damaged, never throws', () => {
+  it('hereId is a number: in-voice damaged, never throws', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.hereId = 12345; });
 
-    expect(() => {
-      const r = game.turn('restore');
+    expect(async () => {
+      const r = await game.turn('restore');
       expect(r.output).not.toBe('Failed.');
       expect(r.output.toLowerCase()).toMatch(/damaged|corrupt/);
     }).not.toThrow();
   });
 
-  it('scoring is null: in-voice damaged, never throws', () => {
+  it('scoring is null: in-voice damaged, never throws', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.scoring = null; });
 
-    expect(() => {
-      const r = game.turn('restore');
+    expect(async () => {
+      const r = await game.turn('restore');
       expect(r.output).not.toBe('Failed.');
     }).not.toThrow();
   });
 
-  it('rngMain is null: in-voice damaged, never throws', () => {
+  it('rngMain is null: in-voice damaged, never throws', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.rngMain = null; });
 
-    expect(() => {
-      const r = game.turn('restore');
+    expect(async () => {
+      const r = await game.turn('restore');
       expect(r.output).not.toBe('Failed.');
     }).not.toThrow();
   });
 
-  it('objects is not an array: in-voice damaged, never throws', () => {
+  it('objects is not an array: in-voice damaged, never throws', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.objects = 'not-an-array'; });
 
-    expect(() => {
-      const r = game.turn('restore');
+    expect(async () => {
+      const r = await game.turn('restore');
       expect(r.output).not.toBe('Failed.');
     }).not.toThrow();
   });
 
-  it('objects entry has a numeric id: in-voice damaged, never throws', () => {
+  it('objects entry has a numeric id: in-voice damaged, never throws', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => {
       (o.objects as unknown[]).push({ id: 99999, parent: null, siblingOrder: null, flags: [], props: [] });
     });
 
-    expect(() => {
-      const r = game.turn('restore');
+    expect(async () => {
+      const r = await game.turn('restore');
       expect(r.output).not.toBe('Failed.');
       expect(r.output.toLowerCase()).toMatch(/damaged|corrupt/);
     }).not.toThrow();
   });
 
-  it('parser is an array (wrong type): in-voice damaged, never throws', () => {
+  it('parser is an array (wrong type): in-voice damaged, never throws', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.parser = ['bad-type']; });
 
-    expect(() => {
-      const r = game.turn('restore');
+    expect(async () => {
+      const r = await game.turn('restore');
       expect(r.output).not.toBe('Failed.');
     }).not.toThrow();
   });
 
-  it('moduleGlobals missing: in-voice damaged, never throws', () => {
+  it('moduleGlobals missing: in-voice damaged, never throws', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { delete (o as Partial<typeof o>).moduleGlobals; });
 
-    expect(() => {
-      const r = game.turn('restore');
+    expect(async () => {
+      const r = await game.turn('restore');
       expect(r.output).not.toBe('Failed.');
     }).not.toThrow();
   });
@@ -621,7 +621,7 @@ describe('V2 — no throw guarantee (stress)', () => {
       const storage = new MapStorage();
       const game = makeGame(storage);
       rawSet(storage, '1', payload);
-      expect(() => game.turn('restore')).not.toThrow();
+      expect(async () => await game.turn('restore')).not.toThrow();
     });
   }
 });
@@ -639,20 +639,20 @@ describe('V2 — typed-but-malformed array entries (validator + no-throw)', () =
     expect(validateSaveState(minState({ flagStore: [12345, 'wat', null] as unknown as [] }))).not.toBe(VALIDATION_OK);
   });
 
-  it('flagStore with bad entries: game.turn restore does not throw', () => {
+  it('flagStore with bad entries: game.turn restore does not throw', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.flagStore = [12345, 'wat', null]; });
-    expect(() => game.turn('restore')).not.toThrow();
+    expect(async () => await game.turn('restore')).not.toThrow();
   });
 
-  it('flagStore with bad entries: restore returns in-voice corrupt message', () => {
+  it('flagStore with bad entries: restore returns in-voice corrupt message', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.flagStore = [12345, 'wat', null]; });
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     expect(r.output).not.toBe('Failed.');
     expect(r.output.toLowerCase()).toMatch(/damaged|corrupt/);
   });
@@ -686,12 +686,12 @@ describe('V2 — typed-but-malformed array entries (validator + no-throw)', () =
     expect(validateSaveState(minState({ clock: [{ id: 'I-FIGHT', turnsLeft: 'bad', enabled: true }] as unknown as [] }))).not.toBe(VALIDATION_OK);
   });
 
-  it('clock with bad entries: game.turn restore does not throw', () => {
+  it('clock with bad entries: game.turn restore does not throw', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.clock = [99, 'oops']; });
-    expect(() => game.turn('restore')).not.toThrow();
+    expect(async () => await game.turn('restore')).not.toThrow();
   });
 
   // visited — must be string[]
@@ -699,33 +699,33 @@ describe('V2 — typed-but-malformed array entries (validator + no-throw)', () =
     expect(validateSaveState(minState({ visited: [42, null] as unknown as string[] }))).not.toBe(VALIDATION_OK);
   });
 
-  it('visited with non-string entries: game.turn restore does not throw', () => {
+  it('visited with non-string entries: game.turn restore does not throw', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.visited = [42, null]; });
-    expect(() => game.turn('restore')).not.toThrow();
+    expect(async () => await game.turn('restore')).not.toThrow();
   });
 
   // Unknown string hereId — §5.1 clamp: must not throw, room stays unchanged
-  it('hereId with unknown string: game.turn restore does not throw', () => {
+  it('hereId with unknown string: game.turn restore does not throw', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('north');  // move away from start
-    game.turn('save');
+    await game.turn('north');  // move away from start
+    await game.turn('save');
     rawMangle(storage, '1', o => { o.hereId = 'NONEXISTENT-ROOM-XYZ'; });
-    expect(() => game.turn('restore')).not.toThrow();
+    expect(async () => await game.turn('restore')).not.toThrow();
   });
 
   // Unknown string object id — §5.1: skipped, never throws
-  it('objects entry with unknown string id: game.turn restore does not throw', () => {
+  it('objects entry with unknown string id: game.turn restore does not throw', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => {
       (o.objects as unknown[]).push({ id: 'TOTALLY-FAKE-OBJ', parent: null, siblingOrder: null, flags: [], props: [] });
     });
-    expect(() => game.turn('restore')).not.toThrow();
+    expect(async () => await game.turn('restore')).not.toThrow();
   });
 });
 
@@ -734,30 +734,30 @@ describe('V2 — typed-but-malformed array entries (validator + no-throw)', () =
 // ---------------------------------------------------------------------------
 
 describe('V2 — empty-slot vs corrupt distinction', () => {
-  it('slot never written → "Failed." (faithful no-save behavior)', () => {
+  it('slot never written → "Failed." (faithful no-save behavior)', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     expect(r.output).toBe('Failed.');
   });
 
-  it('slot written then corrupted → in-voice (not "Failed.")', () => {
+  it('slot written then corrupted → in-voice (not "Failed.")', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawSet(storage, '1', '{truncated');
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     expect(r.output).not.toBe('Failed.');
   });
 
-  it('slot removed after write → "Failed." (slot is now empty)', () => {
+  it('slot removed after write → "Failed." (slot is now empty)', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const game = createGame({ seed: 42, savePort: port });
     game.start();
-    game.turn('save');
+    await game.turn('save');
     port.remove('1');
-    const r = game.turn('restore');
+    const r = await game.turn('restore');
     expect(r.output).toBe('Failed.');
   });
 });
@@ -775,14 +775,14 @@ describe('V2 — objects entry deep validation (props/flags shape)', () => {
     expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
   });
 
-  it('objects entry with numeric prop item: game.turn restore does not throw', () => {
+  it('objects entry with numeric prop item: game.turn restore does not throw', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => {
       (o.objects as unknown[])[0] = { ...(o.objects as unknown[])[0] as object, props: [42] };
     });
-    expect(() => game.turn('restore')).not.toThrow();
+    expect(async () => await game.turn('restore')).not.toThrow();
   });
 
   it('objects entry with non-tuple prop ([k] only): validator rejects', () => {
@@ -818,14 +818,14 @@ describe('V2 — moduleGlobals sub-object validation', () => {
     expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
   });
 
-  it('moduleGlobals.thiefState = null: game.turn restore does not throw', () => {
+  it('moduleGlobals.thiefState = null: game.turn restore does not throw', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => {
       (o.moduleGlobals as Record<string, unknown>).thiefState = null;
     });
-    expect(() => game.turn('restore')).not.toThrow();
+    expect(async () => await game.turn('restore')).not.toThrow();
   });
 
   it('moduleGlobals.aboveGroundState = null: validator rejects (positive-control)', () => {
@@ -833,14 +833,14 @@ describe('V2 — moduleGlobals sub-object validation', () => {
     expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
   });
 
-  it('moduleGlobals.aboveGroundState = null: game.turn restore does not throw', () => {
+  it('moduleGlobals.aboveGroundState = null: game.turn restore does not throw', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => {
       (o.moduleGlobals as Record<string, unknown>).aboveGroundState = null;
     });
-    expect(() => game.turn('restore')).not.toThrow();
+    expect(async () => await game.turn('restore')).not.toThrow();
   });
 
   it('moduleGlobals.lightSourceState = null: validator rejects (positive-control)', () => {
@@ -848,13 +848,13 @@ describe('V2 — moduleGlobals sub-object validation', () => {
     expect(validateSaveState(bad)).not.toBe(VALIDATION_OK);
   });
 
-  it('moduleGlobals.lightSourceState = null: game.turn restore does not throw', () => {
+  it('moduleGlobals.lightSourceState = null: game.turn restore does not throw', async () => {
     const storage = new MapStorage();
     const game = makeGame(storage);
-    game.turn('save');
+    await game.turn('save');
     rawMangle(storage, '1', o => {
       (o.moduleGlobals as Record<string, unknown>).lightSourceState = null;
     });
-    expect(() => game.turn('restore')).not.toThrow();
+    expect(async () => await game.turn('restore')).not.toThrow();
   });
 });

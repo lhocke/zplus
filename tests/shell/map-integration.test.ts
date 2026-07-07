@@ -10,11 +10,14 @@ beforeEach(() => {
   vi.resetModules();
 });
 
-function submitCommand(app: HTMLElement, cmd: string): Promise<void> {
+async function submitCommand(app: HTMLElement, cmd: string): Promise<void> {
   const input = app.querySelector<HTMLInputElement>('input')!;
   input.value = cmd;
   input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-  return Promise.resolve();
+  // The terminal's onSubmit callback is now async (awaits session.submit) and is
+  // invoked via `void onSubmit(cmd)` from the keydown handler — flush the
+  // microtask queue so its work completes before the test asserts on it.
+  await new Promise((r) => setTimeout(r, 0));
 }
 
 describe('Map integration — direction wiring', () => {

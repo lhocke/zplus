@@ -79,30 +79,30 @@ function ensureLandExists(g: ReturnType<typeof newGameAt>): void {
 // ---------------------------------------------------------------------------
 
 describe('CC5 — SKELETON: ghost message on touch (1actions.zil:932)', () => {
-  it('take skeleton: ghost message mentions "curse"', () => {
+  it('take skeleton: ghost message mentions "curse"', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
-    const out = g.turn('take skeleton').output;
+    const out = await (await g.turn('take skeleton')).output;
     expect(out).toContain('ghost');
   });
 
-  it('take skeleton: message mentions valuables being banished', () => {
+  it('take skeleton: message mentions valuables being banished', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
-    const out = g.turn('take skeleton').output;
+    const out = await (await g.turn('take skeleton')).output;
     expect(out).toContain('Land of the Living Dead');
   });
 
-  it('take skeleton: action returns true (PERFORM chain halted)', () => {
+  it('take skeleton: action returns true (PERFORM chain halted)', async () => {
     // Verified indirectly: if the handler returns true the output will
     // not include the default "You can't take the skeleton." or similar
     // fallback — the ghost message text is the only output.
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
-    const out = g.turn('take skeleton').output;
+    const out = await (await g.turn('take skeleton')).output;
     expect(out).toContain('ghost');
     // No "default verb" fallback text
     expect(out).not.toContain("don't know how to");
@@ -114,7 +114,7 @@ describe('CC5 — SKELETON: ghost message on touch (1actions.zil:932)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CC5 — SKELETON: carried treasures move to LAND-OF-LIVING-DEAD (1actions.zil:939)', () => {
-  it('carried treasure (tvalue>0, !Invisible, !Sacred) moves to LAND-OF-LIVING-DEAD', () => {
+  it('carried treasure (tvalue>0, !Invisible, !Sacred) moves to LAND-OF-LIVING-DEAD', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
@@ -127,12 +127,12 @@ describe('CC5 — SKELETON: carried treasures move to LAND-OF-LIVING-DEAD (1acti
     expect(jade, 'JADE must exist in world').toBeDefined();
     jade!.moveTo(g.player);
 
-    g.turn('take skeleton');
+    await g.turn('take skeleton');
 
     expect(jade!.parent?.id, 'JADE must move to LAND-OF-LIVING-DEAD').toBe(LAND);
   });
 
-  it('carried treasure gets TOUCHBIT set when robbed', () => {
+  it('carried treasure gets TOUCHBIT set when robbed', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
@@ -142,12 +142,12 @@ describe('CC5 — SKELETON: carried treasures move to LAND-OF-LIVING-DEAD (1acti
     jade!.moveTo(g.player);
     jade!.clear(Flag.Touched);
 
-    g.turn('take skeleton');
+    await g.turn('take skeleton');
 
     expect(jade!.has(Flag.Touched), 'JADE must have Touched after rob').toBe(true);
   });
 
-  it('Sacred item in inventory is NOT moved (COFFIN has Sacred)', () => {
+  it('Sacred item in inventory is NOT moved (COFFIN has Sacred)', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
@@ -160,13 +160,13 @@ describe('CC5 — SKELETON: carried treasures move to LAND-OF-LIVING-DEAD (1acti
     const originalParent = coffin!.parent;
     coffin!.moveTo(g.player);
 
-    g.turn('take skeleton');
+    await g.turn('take skeleton');
 
     expect(coffin!.parent?.id, 'Sacred COFFIN must NOT move to LAND').not.toBe(LAND);
     coffin!.moveTo(originalParent);
   });
 
-  it('Invisible item in inventory is NOT moved', () => {
+  it('Invisible item in inventory is NOT moved', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
@@ -178,12 +178,12 @@ describe('CC5 — SKELETON: carried treasures move to LAND-OF-LIVING-DEAD (1acti
     g.world.register(hiddenGem);
     hiddenGem.moveTo(g.player);
 
-    g.turn('take skeleton');
+    await g.turn('take skeleton');
 
     expect(hiddenGem.parent?.id, 'Invisible item must NOT move to LAND').not.toBe(LAND);
   });
 
-  it('zero-tvalue item in inventory is NOT moved', () => {
+  it('zero-tvalue item in inventory is NOT moved', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
@@ -194,7 +194,7 @@ describe('CC5 — SKELETON: carried treasures move to LAND-OF-LIVING-DEAD (1acti
     // Lamp is already in player's inventory from setup; confirm it stays.
     const lampParentBefore = lamp!.parent?.id;
 
-    g.turn('take skeleton');
+    await g.turn('take skeleton');
 
     // Lamp (tvalue=0) should still be with the player, not in LAND.
     expect(lamp!.parent?.id, 'Lamp (tvalue=0) must NOT move to LAND').not.toBe(LAND);
@@ -208,7 +208,7 @@ describe('CC5 — SKELETON: carried treasures move to LAND-OF-LIVING-DEAD (1acti
 // ---------------------------------------------------------------------------
 
 describe('CC5 — SKELETON: room treasures move to LAND-OF-LIVING-DEAD (1actions.zil:938)', () => {
-  it('room treasure (tvalue>0, in MAZE-5) moves to LAND-OF-LIVING-DEAD', () => {
+  it('room treasure (tvalue>0, in MAZE-5) moves to LAND-OF-LIVING-DEAD', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
@@ -220,12 +220,12 @@ describe('CC5 — SKELETON: room treasures move to LAND-OF-LIVING-DEAD (1actions
     expect(room, 'MAZE-5 must exist').toBeDefined();
     bag!.moveTo(room!);
 
-    g.turn('take skeleton');
+    await g.turn('take skeleton');
 
     expect(bag!.parent?.id, 'BAG-OF-COINS must move to LAND-OF-LIVING-DEAD').toBe(LAND);
   });
 
-  it('zero-tvalue room item is NOT moved', () => {
+  it('zero-tvalue room item is NOT moved', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
@@ -238,7 +238,7 @@ describe('CC5 — SKELETON: room treasures move to LAND-OF-LIVING-DEAD (1actions
     expect(room, 'MAZE-5 must exist').toBeDefined();
     junk.moveTo(room!);
 
-    g.turn('take skeleton');
+    await g.turn('take skeleton');
 
     expect(junk.parent?.id, 'junk (tvalue=0) must NOT move to LAND').not.toBe(LAND);
   });
@@ -249,19 +249,19 @@ describe('CC5 — SKELETON: room treasures move to LAND-OF-LIVING-DEAD (1actions
 // ---------------------------------------------------------------------------
 
 describe('CC5 — SKELETON: multiple verbs trigger the curse (1actions.zil:932)', () => {
-  it('rub skeleton triggers ghost message', () => {
+  it('rub skeleton triggers ghost message', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
-    const out = g.turn('rub skeleton').output;
+    const out = await (await g.turn('rub skeleton')).output;
     expect(out).toContain('ghost');
   });
 
-  it('move skeleton triggers ghost message', () => {
+  it('move skeleton triggers ghost message', async () => {
     const g = gameAtMaze5();
     ensureBonesInRoom(g);
     ensureLandExists(g);
-    const out = g.turn('move skeleton').output;
+    const out = await (await g.turn('move skeleton')).output;
     expect(out).toContain('ghost');
   });
 });

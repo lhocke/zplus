@@ -81,21 +81,21 @@ describe('CB-LOUD — LOUD-ROOM-FCN M-LOOK: loud suffix (default state S0)', () 
 });
 
 describe('CB-LOUD — LOUD-ROOM-FCN M-LOOK: quiet suffix', () => {
-  it('LOUD-FLAG set: room is eerie in its quietness (via look)', () => {
+  it('LOUD-FLAG set: room is eerie in its quietness (via look)', async () => {
     // Quiet state — loudRoomDispatch does not intercept, look fires M-LOOK normally.
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     flags(g).set('LOUD-FLAG', true);
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('eerie in its quietness');
     expect(out).not.toContain('deafeningly loud');
   });
 
-  it('gates closed + low tide (S4): room is quiet (via look)', () => {
+  it('gates closed + low tide (S4): room is quiet (via look)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, true);
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('eerie in its quietness');
     expect(out).not.toContain('deafeningly loud');
   });
@@ -106,39 +106,39 @@ describe('CB-LOUD — LOUD-ROOM-FCN M-LOOK: quiet suffix', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-LOUD — LOUD-ROOM-FCN M-END: panic scramble to LOUD-RUNS set', () => {
-  it('when loud (gates open, !low-tide): scrambles player out of LOUD-ROOM', () => {
+  it('when loud (gates open, !low-tide): scrambles player out of LOUD-ROOM', async () => {
     // M-END fires after each turn; player ends up NOT in LOUD-ROOM
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, true, false);  // S2: gates open, not drained — loud
     // A wait will trigger M-END
-    g.turn('wait');
+    await g.turn('wait');
     expect(g.world.get('PLAYER')!.parent?.id).not.toBe('LOUD-ROOM');
   });
 
-  it('when loud: destination is one of LOUD-RUNS', () => {
+  it('when loud: destination is one of LOUD-RUNS', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, true, false);
-    g.turn('wait');
+    await g.turn('wait');
     const dest = g.world.get('PLAYER')!.parent?.id ?? '';
     expect(LOUD_RUNS.has(dest)).toBe(true);
   });
 
-  it('when gates closed (M-END condition false): no panic scramble, player stays put', () => {
+  it('when gates closed (M-END condition false): no panic scramble, player stays put', async () => {
     // M-END condition: GATES-OPEN && !LOW-TIDE. With gates closed, no scramble.
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);  // gates closed → M-END does not fire scramble
-    g.turn('wait');
+    await g.turn('wait');
     expect(g.world.get('PLAYER')!.parent?.id).toBe('LOUD-ROOM');
   });
 
-  it('when quiet (gates closed + low tide): no panic scramble', () => {
+  it('when quiet (gates closed + low tide): no panic scramble', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, true);
-    g.turn('wait');
+    await g.turn('wait');
     expect(g.world.get('PLAYER')!.parent?.id).toBe('LOUD-ROOM');
   });
 });
@@ -148,93 +148,93 @@ describe('CB-LOUD — LOUD-ROOM-FCN M-END: panic scramble to LOUD-RUNS set', () 
 // ---------------------------------------------------------------------------
 
 describe('CB-LOUD — loud-room input mode: whitelist gate (NM-D)', () => {
-  it('non-whitelist input echoes the last word (V-ECHO behavior, gverbs.zil:529–545)', () => {
+  it('non-whitelist input echoes the last word (V-ECHO behavior, gverbs.zil:529–545)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);  // S0: loud (default state)
     // "take bar" → last word is "bar" → "bar bar ..."
-    const out = g.turn('take bar').output;
+    const out = await (await g.turn('take bar')).output;
     expect(out).toMatch(/bar bar \.\.\./);
   });
 
-  it('W exit passes through (moves west to ROUND-ROOM)', () => {
+  it('W exit passes through (moves west to ROUND-ROOM)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    g.turn('west');
+    await g.turn('west');
     expect(g.world.get('PLAYER')!.parent?.id).toBe('ROUND-ROOM');
   });
 
-  it('E exit passes through (moves east to DAMP-CAVE)', () => {
+  it('E exit passes through (moves east to DAMP-CAVE)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    g.turn('east');
+    await g.turn('east');
     expect(g.world.get('PLAYER')!.parent?.id).toBe('DAMP-CAVE');
   });
 
-  it('U exit passes through (moves up to DEEP-CANYON)', () => {
+  it('U exit passes through (moves up to DEEP-CANYON)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    g.turn('up');
+    await g.turn('up');
     expect(g.world.get('PLAYER')!.parent?.id).toBe('DEEP-CANYON');
   });
 
-  it('ECHO in loud mode sets LOUD-FLAG', () => {
+  it('ECHO in loud mode sets LOUD-FLAG', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    g.turn('echo');
+    await g.turn('echo');
     expect(flags(g).get('LOUD-FLAG')).toBe(true);
   });
 
-  it('ECHO in loud mode prints "acoustics of the room change subtly"', () => {
+  it('ECHO in loud mode prints "acoustics of the room change subtly"', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('echo').output;
+    const out = await (await g.turn('echo')).output;
     expect(out).toContain('acoustics of the room change subtly');
   });
 
-  it('ECHO clears BAR.SACREDBIT (bar becomes takeable)', () => {
+  it('ECHO clears BAR.SACREDBIT (bar becomes takeable)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
     const bar = g.world.get('BAR')!;
     expect(bar.has(Flag.Sacred)).toBe(true);  // starts sacred
-    g.turn('echo');
+    await g.turn('echo');
     expect(bar.has(Flag.Sacred)).toBe(false); // cleared by ECHO
   });
 
-  it('after ECHO (LOUD-FLAG set), normal verbs work', () => {
+  it('after ECHO (LOUD-FLAG set), normal verbs work', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    g.turn('echo');
+    await g.turn('echo');
     // Now quiet — take bar should succeed (no echo gate)
-    const out = g.turn('take bar').output;
+    const out = await (await g.turn('take bar')).output;
     expect(out).not.toContain('echo');
   });
 
-  it('bar untakeable while loud (SACREDBIT blocks take)', () => {
+  it('bar untakeable while loud (SACREDBIT blocks take)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
     const bar = g.world.get('BAR')!;
     expect(bar.has(Flag.Sacred)).toBe(true);
     // In loud mode, take bar echoes; bar stays in room
-    g.turn('take bar');
+    await g.turn('take bar');
     expect(bar.parent?.id).toBe('LOUD-ROOM');
   });
 
-  it('mode exits when player leaves: non-whitelist input works after leaving', () => {
+  it('mode exits when player leaves: non-whitelist input works after leaving', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    g.turn('west');  // exit to ROUND-ROOM
+    await g.turn('west');  // exit to ROUND-ROOM
     // Now in ROUND-ROOM (not loud mode); examine should work normally
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).not.toContain('echo');
   });
 });
@@ -244,10 +244,10 @@ describe('CB-LOUD — loud-room input mode: whitelist gate (NM-D)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-LOUD — ECHO in quiet room: V-ECHO fallback', () => {
-  it('ECHO outside LOUD-ROOM: "echo echo ..." (V-ECHO fallback)', () => {
+  it('ECHO outside LOUD-ROOM: "echo echo ..." (V-ECHO fallback)', async () => {
     const g = newGameAt('LIVING-ROOM');
     giveLight(g);
-    const out = g.turn('echo').output;
+    const out = await (await g.turn('echo')).output;
     expect(out).toContain('echo');
   });
 });
@@ -259,29 +259,29 @@ describe('CB-LOUD — ECHO in quiet room: V-ECHO fallback', () => {
 describe('CB-LOUD — whitelist: only W/E/U pass; N/S/D echo (1actions.zil:1711–1716)', () => {
   // ZIL whitelist only passes W?W/W?WEST, W?E/W?EAST, W?U/W?UP.
   // N, S, D are NOT in the whitelist → fall to T → V-ECHO ("north north ...").
-  it('north in loud mode echoes, player stays in LOUD-ROOM', () => {
+  it('north in loud mode echoes, player stays in LOUD-ROOM', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('north').output;
+    const out = await (await g.turn('north')).output;
     expect(out).toContain('north north');
     expect(g.world.get('PLAYER')!.parent?.id).toBe('LOUD-ROOM');
   });
 
-  it('south in loud mode echoes, player stays in LOUD-ROOM', () => {
+  it('south in loud mode echoes, player stays in LOUD-ROOM', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('south').output;
+    const out = await (await g.turn('south')).output;
     expect(out).toContain('south south');
     expect(g.world.get('PLAYER')!.parent?.id).toBe('LOUD-ROOM');
   });
 
-  it('down in loud mode echoes, player stays in LOUD-ROOM', () => {
+  it('down in loud mode echoes, player stays in LOUD-ROOM', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('down').output;
+    const out = await (await g.turn('down')).output;
     expect(out).toContain('down down');
     expect(g.world.get('PLAYER')!.parent?.id).toBe('LOUD-ROOM');
   });
@@ -290,36 +290,36 @@ describe('CB-LOUD — whitelist: only W/E/U pass; N/S/D echo (1actions.zil:1711�
 describe('CB-LOUD — echo text: last-word-twice + "..." (gverbs.zil:526–548)', () => {
   // V-ECHO echoes the LAST lexed word twice + "...".
   // Only falls back to "echo echo ..." when P-LEXWORDS == 0 (empty input).
-  it('take bar → "bar bar ..." (last word is "bar")', () => {
+  it('take bar → "bar bar ..." (last word is "bar")', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('take bar').output;
+    const out = await (await g.turn('take bar')).output;
     expect(out).toMatch(/bar bar \.\.\./);
     expect(out).not.toMatch(/^echo echo/m);
   });
 
-  it('diagnose → "diagnose diagnose ..."', () => {
+  it('diagnose → "diagnose diagnose ..."', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('diagnose').output;
+    const out = await (await g.turn('diagnose')).output;
     expect(out).toMatch(/diagnose diagnose \.\.\./);
   });
 
-  it('xyzzy → "xyzzy xyzzy ..."', () => {
+  it('xyzzy → "xyzzy xyzzy ..."', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('xyzzy').output;
+    const out = await (await g.turn('xyzzy')).output;
     expect(out).toMatch(/xyzzy xyzzy \.\.\./);
   });
 
-  it('read the ancient leaflet → "leaflet leaflet ..." (no normal parser error)', () => {
+  it('read the ancient leaflet → "leaflet leaflet ..." (no normal parser error)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('read the ancient leaflet').output;
+    const out = await (await g.turn('read the ancient leaflet')).output;
     expect(out).toMatch(/leaflet leaflet \.\.\./);
     expect(out).not.toContain("can't see");
   });
@@ -328,29 +328,29 @@ describe('CB-LOUD — echo text: last-word-twice + "..." (gverbs.zil:526–548)'
 describe('CB-LOUD — unparseable input echoes; no parser errors escape (1actions.zil:1693–1728)', () => {
   // ZIL reads raw P-LEXV words; parser errors never surface inside the loud room.
   // "say xyzzy" → WRD=slot5="xyzzy", matches nothing → V-ECHO → "xyzzy xyzzy ..."
-  it('say xyzzy → echoes "xyzzy xyzzy ..." (no "I recognize" error)', () => {
+  it('say xyzzy → echoes "xyzzy xyzzy ..." (no "I recognize" error)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('say xyzzy').output;
+    const out = await (await g.turn('say xyzzy')).output;
     expect(out).toMatch(/xyzzy xyzzy \.\.\./);
     expect(out).not.toContain("recognize");
   });
 
-  it('press red button → echoes last word, no "can\'t see" error', () => {
+  it('press red button → echoes last word, no "can\'t see" error', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('press red button').output;
+    const out = await (await g.turn('press red button')).output;
     expect(out).toMatch(/button button \.\.\./);
     expect(out).not.toContain("can't see");
   });
 
-  it('flibber the wuggle → echoes "wuggle wuggle ...", no unknown-word error', () => {
+  it('flibber the wuggle → echoes "wuggle wuggle ...", no unknown-word error', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('flibber the wuggle').output;
+    const out = await (await g.turn('flibber the wuggle')).output;
     expect(out).toMatch(/wuggle wuggle \.\.\./);
     expect(out).not.toContain("don't know the word");
   });
@@ -359,20 +359,20 @@ describe('CB-LOUD — unparseable input echoes; no parser errors escape (1action
 describe('CB-LOUD — V-BUG whitelist branch (1actions.zil:1717–1718)', () => {
   // W?BUG is a named special case in the ZIL whitelist:
   //   (<EQUAL? .WRD ,W?BUG> <TELL "That's only your opinion." CR>)
-  it('bug → "That\'s only your opinion." (not an echo)', () => {
+  it('bug → "That\'s only your opinion." (not an echo)', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('bug').output;
+    const out = await (await g.turn('bug')).output;
     expect(out).toContain("That's only your opinion.");
     expect(out).not.toContain('echo');
   });
 
-  it('bug: player stays in LOUD-ROOM', () => {
+  it('bug: player stays in LOUD-ROOM', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    g.turn('bug');
+    await g.turn('bug');
     expect(g.world.get('PLAYER')!.parent?.id).toBe('LOUD-ROOM');
   });
 });
@@ -381,22 +381,22 @@ describe('CB-LOUD — ECHO solve: room re-description follows (1actions.zil:1719
   // ZIL <RETURN> at 1actions.zil:1725 exits the REPEAT loop; it does NOT
   // re-fire M-LOOK.  The player sees the normal already-TOUCHED room-entry
   // display: blank line + room name header + object listing only.
-  it('ECHO solve output includes acoustics message + room name header', () => {
+  it('ECHO solve output includes acoustics message + room name header', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('echo').output;
+    const out = await (await g.turn('echo')).output;
     // Message first, then blank line, then room name — no body, no suffix
     expect(out).toContain('acoustics of the room change subtly');
     expect(out).toContain('Loud Room');
     expect(out).toContain('large platinum bar');
   });
 
-  it('ECHO solve room description omits M-LOOK body and quiet suffix', () => {
+  it('ECHO solve room description omits M-LOOK body and quiet suffix', async () => {
     const g = newGameAt('LOUD-ROOM');
     giveLight(g);
     setFlags(g, false, false);
-    const out = g.turn('echo').output;
+    const out = await (await g.turn('echo')).output;
     expect(out).not.toContain('eerie in its quietness');
     expect(out).not.toContain('large room with a ceiling');
   });

@@ -32,38 +32,38 @@ function deadGame(roomId: string) {
 }
 
 describe('BD-DOME: M-ENTER RTRUE suppresses auto room-describe (1actions.zil:1041–1047)', () => {
-  it('dead player entering DOME-ROOM lands in TORCH-ROOM', () => {
+  it('dead player entering DOME-ROOM lands in TORCH-ROOM', async () => {
     const g = deadGame('ENGRAVINGS-CAVE');
-    g.turn('east');
+    await g.turn('east');
     expect(g.view().here).toBe('TORCH-ROOM');
   });
 
-  it('dead player entering DOME-ROOM: output contains wind message', () => {
+  it('dead player entering DOME-ROOM: output contains wind message', async () => {
     const g = deadGame('ENGRAVINGS-CAVE');
-    const out = g.turn('east').output;
+    const out = await (await g.turn('east')).output;
     expect(out).toContain('strong pull');
   });
 
-  it('dead player entering DOME-ROOM: DOME-ROOM description is suppressed (M-ENTER RTRUE)', () => {
+  it('dead player entering DOME-ROOM: DOME-ROOM description is suppressed (M-ENTER RTRUE)', async () => {
     // ZIL RTRUE from M-ENTER skips V-FIRST-LOOK — no "periphery of a large dome".
     const g = deadGame('ENGRAVINGS-CAVE');
-    const out = g.turn('east').output;
+    const out = await (await g.turn('east')).output;
     expect(out).not.toContain('periphery of a large dome');
   });
 
-  it('dead player entering DOME-ROOM: TORCH-ROOM not auto-described (no second GOTO)', () => {
+  it('dead player entering DOME-ROOM: TORCH-ROOM not auto-described (no second GOTO)', async () => {
     // ZIL does not fire a second GOTO after M-ENTER teleport — TORCH-ROOM stays undescribed.
     const g = deadGame('ENGRAVINGS-CAVE');
-    const out = g.turn('east').output;
+    const out = await (await g.turn('east')).output;
     expect(out).not.toContain('white marble pedestal');
   });
 
-  it('living player entering DOME-ROOM: room is described normally', () => {
+  it('living player entering DOME-ROOM: room is described normally', async () => {
     // Regression guard: living-player path must not be affected.
     const g = newGameAt('ENGRAVINGS-CAVE');
     g.start();
     giveLantern(g);
-    const out = g.turn('east').output;
+    const out = await (await g.turn('east')).output;
     expect(out).toContain('periphery of a large dome');
   });
 });

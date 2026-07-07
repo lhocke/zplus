@@ -57,11 +57,11 @@ function buildMailboxWorld(): Game {
 // ---------------------------------------------------------------------------
 
 describe('chained moves: open mailbox. score', () => {
-  it('SCORE line reads "in 1 move" (singular), view().moves === 1', () => {
+  it('SCORE line reads "in 1 move" (singular), view().moves === 1', async () => {
     const game = buildMailboxWorld();
     game.start();
 
-    const result = game.turn('open mailbox. score');
+    const result = await game.turn('open mailbox. score');
 
     expect(result.output).toContain('in 1 move.');
     expect(game.view().moves).toBe(1);
@@ -73,11 +73,11 @@ describe('chained moves: open mailbox. score', () => {
 // ---------------------------------------------------------------------------
 
 describe('chained moves: open mailbox. read leaflet', () => {
-  it('view().moves === 2 after two chained real commands', () => {
+  it('view().moves === 2 after two chained real commands', async () => {
     const game = buildMailboxWorld();
     game.start();
 
-    game.turn('open mailbox. read leaflet');
+    await game.turn('open mailbox. read leaflet');
 
     expect(game.view().moves).toBe(2);
   });
@@ -88,11 +88,11 @@ describe('chained moves: open mailbox. read leaflet', () => {
 // ---------------------------------------------------------------------------
 
 describe('chained moves: open mailbox. read leaflet. score', () => {
-  it('SCORE line reads "in 2 moves"', () => {
+  it('SCORE line reads "in 2 moves"', async () => {
     const game = buildMailboxWorld();
     game.start();
 
-    const result = game.turn('open mailbox. read leaflet. score');
+    const result = await game.turn('open mailbox. read leaflet. score');
 
     expect(result.output).toContain('in 2 moves.');
   });
@@ -103,11 +103,11 @@ describe('chained moves: open mailbox. read leaflet. score', () => {
 // ---------------------------------------------------------------------------
 
 describe('chained moves: standalone score (meta no-tick)', () => {
-  it('"score" alone reads "0 moves" and does not increment moves', () => {
+  it('"score" alone reads "0 moves" and does not increment moves', async () => {
     const game = createGame({ startRoom: 'WEST-OF-HOUSE' });
     game.start();
 
-    const result = game.turn('score');
+    const result = await game.turn('score');
 
     expect(result.output).toContain('in 0 moves.');
     expect(game.view().moves).toBe(0);
@@ -120,11 +120,11 @@ describe('chained moves: standalone score (meta no-tick)', () => {
 // ---------------------------------------------------------------------------
 
 describe('chained moves: score. open mailbox (meta first)', () => {
-  it('SCORE reads "0 moves"; view().moves === 1 after', () => {
+  it('SCORE reads "0 moves"; view().moves === 1 after', async () => {
     const game = buildMailboxWorld();
     game.start();
 
-    const result = game.turn('score. open mailbox');
+    const result = await game.turn('score. open mailbox');
 
     expect(result.output).toContain('in 0 moves.');
     expect(game.view().moves).toBe(1);
@@ -136,12 +136,12 @@ describe('chained moves: score. open mailbox (meta first)', () => {
 // ---------------------------------------------------------------------------
 
 describe('chained moves: separate turns cross-check', () => {
-  it('"open mailbox" then standalone "score" → "1 move"', () => {
+  it('"open mailbox" then standalone "score" → "1 move"', async () => {
     const game = buildMailboxWorld();
     game.start();
 
-    game.turn('open mailbox');
-    const result = game.turn('score');
+    await game.turn('open mailbox');
+    const result = await game.turn('score');
 
     expect(result.output).toContain('in 1 move.');
   });
@@ -152,12 +152,12 @@ describe('chained moves: separate turns cross-check', () => {
 // ---------------------------------------------------------------------------
 
 describe('chained moves: failed parse does not tick', () => {
-  it('"xyzzyblah" leaves view().moves unchanged', () => {
+  it('"xyzzyblah" leaves view().moves unchanged', async () => {
     const game = buildMailboxWorld();
     game.start();
 
     const before = game.view().moves;
-    game.turn('xyzzyblah');
+    await game.turn('xyzzyblah');
     expect(game.view().moves).toBe(before);
   });
 });
@@ -167,11 +167,11 @@ describe('chained moves: failed parse does not tick', () => {
 // ---------------------------------------------------------------------------
 
 describe('chained moves: partial chain with failed segment', () => {
-  it('"open mailbox. xyzzyblah" → moves === 1 (only valid segment ticks)', () => {
+  it('"open mailbox. xyzzyblah" → moves === 1 (only valid segment ticks)', async () => {
     const game = buildMailboxWorld();
     game.start();
 
-    game.turn('open mailbox. xyzzyblah');
+    await game.turn('open mailbox. xyzzyblah');
 
     expect(game.view().moves).toBe(1);
   });
@@ -182,7 +182,7 @@ describe('chained moves: partial chain with failed segment', () => {
 // ---------------------------------------------------------------------------
 
 describe('chained moves: clock advances by N for N real commands', () => {
-  it('2-command chain decrements lantern turnsLeft by 2, not 1', () => {
+  it('2-command chain decrements lantern turnsLeft by 2, not 1', async () => {
     // Build a game with a countdown clock entry to count advance() calls.
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A simple room.' });
     room.set(Flag.On);
@@ -224,7 +224,7 @@ describe('chained moves: clock advances by N for N real commands', () => {
     game.start();
 
     // Two real commands chained — clock must advance twice.
-    game.turn('open mailbox. read leaflet');
+    await game.turn('open mailbox. read leaflet');
 
     expect(advanceCount).toBe(2);
   });

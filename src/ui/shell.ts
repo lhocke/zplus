@@ -214,7 +214,7 @@ function buildDrawer(content: HTMLElement): { overlay: HTMLElement; toggle: HTML
 
 // ── Terminal ──────────────────────────────────────────────────────────────────
 
-function buildTerminal(onSubmit: (cmd: string) => void): {
+function buildTerminal(onSubmit: (cmd: string) => void | Promise<void>): {
   container: HTMLElement;
   appendOutput: (text: string) => void;
   appendCommand: (cmd: string) => void;
@@ -260,7 +260,7 @@ function buildTerminal(onSubmit: (cmd: string) => void): {
       if (cmd.trim()) {
         history.push(cmd);
       }
-      onSubmit(cmd);
+      void onSubmit(cmd);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       if (histIdx === -1) savedDraft = input.value;
@@ -1185,9 +1185,9 @@ function buildMapModal(
 // The picker lists SavePort.list() metadata and lets the player save to / restore
 // from a named slot.  Thin sugar over the verbs — calls the same session substrate.
 function buildSlotPickerModal(
-  getSlots: () => SaveSlotMeta[],
-  onSave: (slot: string) => void,
-  onRestore: (slot: string) => void,
+  getSlots: () => Promise<SaveSlotMeta[]>,
+  onSave: (slot: string) => void | Promise<void>,
+  onRestore: (slot: string) => void | Promise<void>,
 ): { open: () => void; close: () => void; element: HTMLElement } {
   const overlay = el('div', [
     'hidden fixed inset-0 z-50 overflow-y-auto',
@@ -1225,9 +1225,9 @@ function buildSlotPickerModal(
 
   const MANUAL_SLOTS = ['1', '2', '3'] as const;
 
-  function renderSlots() {
+  async function renderSlots() {
     slotList.innerHTML = '';
-    const occupied = new Map(getSlots().map(s => [s.slot, s]));
+    const occupied = new Map((await getSlots()).map(s => [s.slot, s]));
 
     for (const slot of MANUAL_SLOTS) {
       const meta = occupied.get(slot);
@@ -1257,7 +1257,7 @@ function buildSlotPickerModal(
       ].join(' '), { type: 'button' });
       saveBtn.textContent = 'Save';
       saveBtn.addEventListener('click', () => {
-        onSave(slot);
+        void onSave(slot);
         closeModal();
       });
 
@@ -1269,7 +1269,7 @@ function buildSlotPickerModal(
       if (!meta) restoreBtn.setAttribute('disabled', 'true');
       restoreBtn.addEventListener('click', () => {
         if (!meta) return;
-        onRestore(slot);
+        void onRestore(slot);
         closeModal();
       });
 
@@ -1299,7 +1299,7 @@ function buildSlotPickerModal(
 
   return {
     open() {
-      renderSlots();
+      void renderSlots();
       overlay.classList.remove('hidden');
     },
     close: closeModal,
@@ -1317,7 +1317,7 @@ function buildSlotPickerModal(
 // Replaying the identical command re-kills deterministically (same RNG position).
 // The affordance text must make this clear so the player knows to choose differently.
 function buildGameOverAffordance(
-  onRestore: () => void,
+  onRestore: () => void | Promise<void>,
   onRestart: () => void,
 ): HTMLElement {
   const wrap = el('div', [
@@ -1344,7 +1344,7 @@ function buildGameOverAffordance(
     'hover:bg-[var(--zork-accent)] hover:text-[var(--zork-bg)]',
   ].join(' '), { type: 'button' });
   restoreBtn.textContent = 'Restore last position';
-  restoreBtn.addEventListener('click', onRestore);
+  restoreBtn.addEventListener('click', () => { void onRestore(); });
 
   const restartBtn = el('button', [
     'px-3 py-1 text-xs rounded border border-[var(--zork-accent)]',
@@ -1461,9 +1461,9 @@ export function mountShell(app: HTMLElement): {
   // Slot picker — open/close driven by the "Saves" sidebar button.
   let currentGameOverAffordance: HTMLElement | null = null;
 
-  function doRestoreFromAutosave() {
+  async function doRestoreFromAutosave() {
     // Bypass game.turn() (which gates on gameOver) via the dedicated session method.
-    const output = session.restoreFromAutosave();
+    const output = await session.restoreFromAutosave();
     if (output) appendOutput(output);
     const snap = session.snapshot();
     updateStatus(snap);
@@ -1497,12 +1497,12 @@ export function mountShell(app: HTMLElement): {
 
   const slotPicker = buildSlotPickerModal(
     () => savePort.list(),
-    (slot) => {
-      const output = session.submit(`save ${slot}`);
+    async (slot) => {
+      const output = await session.submit(`save ${slot}`);
       if (output) appendOutput(output);
     },
-    (slot) => {
-      const output = session.submit(`restore ${slot}`);
+    async (slot) => {
+      const output = await session.submit(`restore ${slot}`);
       if (output) appendOutput(output);
       const snap = session.snapshot();
       updateStatus(snap);
@@ -1512,7 +1512,7 @@ export function mountShell(app: HTMLElement): {
     },
   );
 
-  const { container: terminal, appendOutput, appendCommand } = buildTerminal((cmd) => {
+  const { container: terminal, appendOutput, appendCommand } = buildTerminal(async (cmd) => {
     // Intercept 'map' before the engine sees it — no submit, no moves advance.
     if (cmd.trim().toLowerCase() === 'map') {
       void mapModal.open();
@@ -1522,7 +1522,7 @@ export function mountShell(app: HTMLElement): {
       appendCommand(cmd);
     }
     const prevRoom = mapState.currentRoom();
-    const output = session.submit(cmd);
+    const output = await session.submit(cmd);
     if (output) appendOutput(output);
     const snap = session.snapshot();
     updateStatus(snap);

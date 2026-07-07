@@ -58,23 +58,23 @@ function setupCave(overrideDig?: number) {
 // ---------------------------------------------------------------------------
 
 describe('CB-SAND — BDIGS progress messages (1actions.zil:2855)', () => {
-  it('dig #1 (BEACH-DIG 0): "digging a hole here"', () => {
+  it('dig #1 (BEACH-DIG 0): "digging a hole here"', async () => {
     const g = setupCave();
-    const out = g.turn('dig sand with shovel').output;
+    const out = await (await g.turn('dig sand with shovel')).output;
     expect(out).toContain('digging a hole here');
     expect(beachDig(g)).toBe(0);
   });
 
-  it('dig #2 (BEACH-DIG 1): "hole is getting deeper"', () => {
+  it('dig #2 (BEACH-DIG 1): "hole is getting deeper"', async () => {
     const g = setupCave(0);   // pre-set to 0; next dig → 1
-    const out = g.turn('dig sand with shovel').output;
+    const out = await (await g.turn('dig sand with shovel')).output;
     expect(out).toContain('getting deeper');
     expect(beachDig(g)).toBe(1);
   });
 
-  it('dig #3 (BEACH-DIG 2): "surrounded by a wall of sand"', () => {
+  it('dig #3 (BEACH-DIG 2): "surrounded by a wall of sand"', async () => {
     const g = setupCave(1);   // pre-set to 1; next dig → 2
-    const out = g.turn('dig sand with shovel').output;
+    const out = await (await g.turn('dig sand with shovel')).output;
     expect(out).toContain('wall of sand');
     expect(beachDig(g)).toBe(2);
   });
@@ -85,32 +85,32 @@ describe('CB-SAND — BDIGS progress messages (1actions.zil:2855)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-SAND — dig #4 reveals scarab (1actions.zil:2862)', () => {
-  it('BEACH-DIG reaches 3 on dig #4', () => {
+  it('BEACH-DIG reaches 3 on dig #4', async () => {
     const g = setupCave(2);   // pre-set to 2; next dig → 3
-    g.turn('dig sand with shovel');
+    await g.turn('dig sand with shovel');
     expect(beachDig(g)).toBe(3);
   });
 
-  it('scarab INVISIBLE cleared on dig #4', () => {
+  it('scarab INVISIBLE cleared on dig #4', async () => {
     const g = setupCave(2);
     expect(g.world.get('SCARAB')!.has(Flag.Invisible)).toBe(true);
-    g.turn('dig sand with shovel');
+    await g.turn('dig sand with shovel');
     expect(g.world.get('SCARAB')!.has(Flag.Invisible)).toBe(false);
   });
 
-  it('dig #4 prints scarab-reveal message', () => {
+  it('dig #4 prints scarab-reveal message', async () => {
     const g = setupCave(2);
-    const out = g.turn('dig sand with shovel').output;
+    const out = await (await g.turn('dig sand with shovel')).output;
     expect(out).toContain('scarab');
   });
 
-  it('dig #4 when scarab already visible does nothing extra (FSET? guard)', () => {
+  it('dig #4 when scarab already visible does nothing extra (FSET? guard)', async () => {
     // 1actions.zil:2863: <COND (<FSET? ,SCARAB ,INVISIBLE> ...)> — only if still invisible
     const g = setupCave(2);
     const scarab = g.world.get('SCARAB')!;
     scarab.clear(Flag.Invisible);  // already visible
     // Should not crash; no reveal message expected
-    const out = g.turn('dig sand with shovel').output;
+    const out = await (await g.turn('dig sand with shovel')).output;
     expect(out).not.toContain('You can see a scarab');
     expect(beachDig(g)).toBe(3);
   });
@@ -121,50 +121,50 @@ describe('CB-SAND — dig #4 reveals scarab (1actions.zil:2862)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-SAND — dig #5 fatal collapse (1actions.zil:2858)', () => {
-  it('dig #5 (BEACH-DIG > 3) outputs the smothering death message', () => {
+  it('dig #5 (BEACH-DIG > 3) outputs the smothering death message', async () => {
     const g = setupCave(3);   // pre-set to 3; next dig → 4 (> 3 → death)
-    const out = g.turn('dig sand with shovel').output;
+    const out = await (await g.turn('dig sand with shovel')).output;
     expect(out).toContain('smothering');
   });
 
   // JIGS-UP verification: the full death sequence must fire, not just the message.
   // Reference: dfrotz golden tests/golden/v2-death-shell.txt — JIGS-UP emits
   // '****  You have died  ****', applies -10 score, increments DEATHS, relocates player.
-  it('dig #5 emits the death banner (JIGS-UP, not bare fatal)', () => {
+  it('dig #5 emits the death banner (JIGS-UP, not bare fatal)', async () => {
     const g = setupCave(3);
-    const out = g.turn('dig sand with shovel').output;
+    const out = await (await g.turn('dig sand with shovel')).output;
     expect(out).toContain('You have died');
   });
 
-  it('dig #5 increments DEATHS counter (JIGS-UP machinery)', () => {
+  it('dig #5 increments DEATHS counter (JIGS-UP machinery)', async () => {
     const g = setupCave(3);
     const deathsBefore = (g as unknown as { deaths: number }).deaths;
-    g.turn('dig sand with shovel');
+    await g.turn('dig sand with shovel');
     const deathsAfter = (g as unknown as { deaths: number }).deaths;
     expect(deathsAfter).toBe(deathsBefore + 1);
   });
 
-  it('dig #5 applies -10 score penalty (SCORE-UPD in JIGS-UP)', () => {
+  it('dig #5 applies -10 score penalty (SCORE-UPD in JIGS-UP)', async () => {
     const g = setupCave(3);
     const scoreBefore = g.view().score;
-    g.turn('dig sand with shovel');
+    await g.turn('dig sand with shovel');
     expect(g.view().score).toBe(scoreBefore - 10);
   });
 
-  it('dig #5 relocates player out of SANDY-CAVE (resurrection)', () => {
+  it('dig #5 relocates player out of SANDY-CAVE (resurrection)', async () => {
     const g = setupCave(3);
-    g.turn('dig sand with shovel');
+    await g.turn('dig sand with shovel');
     // Player must have been moved by the resurrection path (FOREST-1 or Hades)
     expect(g.player.parent?.id).not.toBe('SANDY-CAVE');
   });
 
-  it('BEACH-DIG resets to -1 after fatal collapse', () => {
+  it('BEACH-DIG resets to -1 after fatal collapse', async () => {
     const g = setupCave(3);
-    g.turn('dig sand with shovel');
+    await g.turn('dig sand with shovel');
     expect(beachDig(g)).toBe(-1);
   });
 
-  it('scarab re-hidden when still in room at dig #5', () => {
+  it('scarab re-hidden when still in room at dig #5', async () => {
     // <AND <IN? ,SCARAB ,HERE> <FSET ,SCARAB ,INVISIBLE>> — :2860
     const g = setupCave(3);
     const scarab = g.world.get('SCARAB')!;
@@ -173,18 +173,18 @@ describe('CB-SAND — dig #5 fatal collapse (1actions.zil:2858)', () => {
     scarab.clear(Flag.Invisible);
     scarab.moveTo(cave);
 
-    g.turn('dig sand with shovel');
+    await g.turn('dig sand with shovel');
     expect(scarab.has(Flag.Invisible)).toBe(true);
   });
 
-  it('scarab NOT re-hidden when player is carrying it at dig #5', () => {
+  it('scarab NOT re-hidden when player is carrying it at dig #5', async () => {
     // <IN? ,SCARAB ,HERE> is false when player carries scarab — :2860
     const g = setupCave(3);
     const scarab = g.world.get('SCARAB')!;
     scarab.clear(Flag.Invisible);
     scarab.moveTo(g.player);   // player took it
 
-    g.turn('dig sand with shovel');
+    await g.turn('dig sand with shovel');
     // Scarab is not in HERE, so the re-hide guard must NOT trigger
     expect(scarab.has(Flag.Invisible)).toBe(false);
   });
@@ -195,13 +195,13 @@ describe('CB-SAND — dig #5 fatal collapse (1actions.zil:2858)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB-SAND — non-shovel does not trigger SAND-FUNCTION (1actions.zil:2856)', () => {
-  it('dig with hands falls through (no BDIGS message)', () => {
+  it('dig with hands falls through (no BDIGS message)', async () => {
     const g = setupCave();
     // Shovel not in inventory; bare "dig sand" → V-DIG fallback
     const shovel = g.world.get('SHOVEL')!;
     shovel.moveTo(g.world.get('SANDY-CAVE')!);   // leave shovel in room, not hand
 
-    const out = g.turn('dig sand').output;
+    const out = await (await g.turn('dig sand')).output;
     // V-DIG fallback for hands: "Digging with the pair of hands is slow and tedious."
     // or "There's no reason to be digging here." — neither is a BDIGS message
     expect(out).not.toContain('digging a hole here');

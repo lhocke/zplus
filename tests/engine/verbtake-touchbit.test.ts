@@ -76,35 +76,35 @@ describe('verbTake sets Flag.Touched (gverbs.zil:1950)', () => {
     expect(fix.lamp.has(Flag.Touched)).toBe(false);
   });
 
-  it('Flag.Touched is true after a successful take', () => {
+  it('Flag.Touched is true after a successful take', async () => {
     const fix = makeFixture();
-    executeVerb(ctx(fix));
+    await executeVerb(ctx(fix));
     expect(fix.lamp.has(Flag.Touched)).toBe(true);
   });
 });
 
 describe('verbTake clears Flag.NonDescript (gverbs.zil:1949)', () => {
-  it('Flag.NonDescript is cleared after a successful take', () => {
+  it('Flag.NonDescript is cleared after a successful take', async () => {
     const fix = makeFixture();
     // Pre-set NonDescript to confirm it gets cleared.
     fix.lamp.set(Flag.NonDescript);
-    executeVerb(ctx(fix));
+    await executeVerb(ctx(fix));
     expect(fix.lamp.has(Flag.NonDescript)).toBe(false);
   });
 
-  it('Flag.NonDescript stays false if it was already false', () => {
+  it('Flag.NonDescript stays false if it was already false', async () => {
     const fix = makeFixture();
-    executeVerb(ctx(fix));
+    await executeVerb(ctx(fix));
     expect(fix.lamp.has(Flag.NonDescript)).toBe(false);
   });
 });
 
 describe('post-take room render uses ldesc not fdesc (FDESC retirement)', () => {
-  it('after taking then returning the lamp, room renders ldesc', () => {
+  it('after taking then returning the lamp, room renders ldesc', async () => {
     const fix = makeFixture();
 
     // Take the lamp — sets Touched, clears NonDescript.
-    executeVerb(ctx(fix));
+    await executeVerb(ctx(fix));
     expect(fix.player.children.has(fix.lamp)).toBe(true);
 
     // Return it to the room (simulates randomizeObjects scatter).
@@ -121,7 +121,7 @@ describe('post-take room render uses ldesc not fdesc (FDESC retirement)', () => 
   });
 
   // Sword: dfrotz-verified — after take+drop, "There is a sword here." not fdesc.
-  it('after taking then returning the sword, room renders ldesc', () => {
+  it('after taking then returning the sword, room renders ldesc', async () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A test room.' });
     room.set(Flag.On);
     const sword = new Thing('SWORD', 'sword', {
@@ -133,7 +133,7 @@ describe('post-take room render uses ldesc not fdesc (FDESC retirement)', () => 
     const player = new Actor('PLAYER', 'adventurer', {});
     const world = World.fromObjects([room, player, sword]);
 
-    executeVerb({ verb: 'take', dobj: sword, player, here: room, world });
+    await executeVerb({ verb: 'take', dobj: sword, player, here: room, world });
     sword.moveTo(room);
 
     const lines: string[] = [];
@@ -144,7 +144,7 @@ describe('post-take room render uses ldesc not fdesc (FDESC retirement)', () => 
   });
 
   // Bottle: dfrotz-verified — after take+drop, "There is a glass bottle here." not fdesc.
-  it('after taking then returning the bottle, room renders ldesc', () => {
+  it('after taking then returning the bottle, room renders ldesc', async () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A test room.' });
     room.set(Flag.On);
     const bottle = new Thing('BOTTLE', 'glass bottle', {
@@ -156,7 +156,7 @@ describe('post-take room render uses ldesc not fdesc (FDESC retirement)', () => 
     const player = new Actor('PLAYER', 'adventurer', {});
     const world = World.fromObjects([room, player, bottle]);
 
-    executeVerb({ verb: 'take', dobj: bottle, player, here: room, world });
+    await executeVerb({ verb: 'take', dobj: bottle, player, here: room, world });
     bottle.moveTo(room);
 
     const lines: string[] = [];

@@ -4,6 +4,10 @@
  * localStorage is unavailable in Node/vitest — we inject a minimal Map-backed
  * stub.  The validator tests feed adversarial input directly to validateSaveState
  * so they exercise the rejection logic without needing a real game snapshot.
+ *
+ * Amendment A: SavePort is async end-to-end — write/read/readWithReason/list/
+ * remove all return Promises; the localStorage adapter wraps its sync ops in
+ * resolved promises (a synchronous throw becomes a rejection).
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -81,6 +85,22 @@ function minimalState(overrides: Partial<SaveState> = {}): SaveState {
 }
 
 // ---------------------------------------------------------------------------
+// 0. Async interface (Amendment A) — the unambiguous red against a sync adapter
+// ---------------------------------------------------------------------------
+
+describe('SavePort — async interface (Amendment A)', () => {
+  it('write/read/readWithReason/list/remove all return Promises', () => {
+    const storage = new MapStorage();
+    const port = new LocalStorageSavePort(storage);
+    expect(port.write('1', minimalState())).toBeInstanceOf(Promise);
+    expect(port.read('1')).toBeInstanceOf(Promise);
+    expect(port.readWithReason('1')).toBeInstanceOf(Promise);
+    expect(port.list()).toBeInstanceOf(Promise);
+    expect(port.remove('1')).toBeInstanceOf(Promise);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 1. write / read / list / remove round-trip
 // ---------------------------------------------------------------------------
 
@@ -93,24 +113,24 @@ describe('LocalStorageSavePort — basic write/read/list/remove', () => {
     port = new LocalStorageSavePort(storage);
   });
 
-  it('write then read returns the same state', () => {
+  it('write then read returns the same state', async () => {
     const state = minimalState();
-    port.write('1', state);
-    const back = port.read('1');
+    await port.write('1', state);
+    const back = await port.read('1');
     expect(back).toBeDefined();
     expect(back!.formatVersion).toBe(SAVE_FORMAT_VERSION);
     expect(back!.moveCount).toBe(5);
     expect(back!.buildId).toBe('test-build');
   });
 
-  it('read on empty slot returns undefined', () => {
-    expect(port.read('1')).toBeUndefined();
+  it('read on empty slot returns undefined', async () => {
+    expect(await port.read('1')).toBeUndefined();
   });
 
-  it('list returns one entry after one write', () => {
+  it('list returns one entry after one write', async () => {
     const state = minimalState({ moveCount: 7, hereId: 'FOREST-1' });
-    port.write('2', state);
-    const slots = port.list();
+    await port.write('2', state);
+    const slots = await port.list();
     expect(slots).toHaveLength(1);
     expect(slots[0].slot).toBe('2');
     expect(slots[0].moves).toBe(7);
@@ -118,35 +138,35 @@ describe('LocalStorageSavePort — basic write/read/list/remove', () => {
     expect(slots[0].buildId).toBe('test-build');
   });
 
-  it('list returns entries for all written slots', () => {
-    port.write('1', minimalState({ moveCount: 1 }));
-    port.write('2', minimalState({ moveCount: 2 }));
-    port.write('3', minimalState({ moveCount: 3 }));
-    const slots = port.list();
+  it('list returns entries for all written slots', async () => {
+    await port.write('1', minimalState({ moveCount: 1 }));
+    await port.write('2', minimalState({ moveCount: 2 }));
+    await port.write('3', minimalState({ moveCount: 3 }));
+    const slots = await port.list();
     expect(slots).toHaveLength(3);
     const moves = slots.map(s => s.moves).sort((a, b) => a - b);
     expect(moves).toEqual([1, 2, 3]);
   });
 
-  it('remove clears the slot so read returns undefined', () => {
-    port.write('1', minimalState());
-    port.remove('1');
-    expect(port.read('1')).toBeUndefined();
+  it('remove clears the slot so read returns undefined', async () => {
+    await port.write('1', minimalState());
+    await port.remove('1');
+    expect(await port.read('1')).toBeUndefined();
   });
 
-  it('remove is a no-op on an absent slot', () => {
-    expect(() => port.remove('99')).not.toThrow();
+  it('remove is a no-op on an absent slot', async () => {
+    await expect(port.remove('99')).resolves.not.toThrow();
   });
 
-  it('keys are namespaced zork-save-<slot>', () => {
-    port.write('1', minimalState());
+  it('keys are namespaced zork-save-<slot>', async () => {
+    await port.write('1', minimalState());
     expect(storage.getItem('zork-save-1')).not.toBeNull();
   });
 
-  it('overwriting a slot replaces the previous save', () => {
-    port.write('1', minimalState({ moveCount: 1 }));
-    port.write('1', minimalState({ moveCount: 99 }));
-    expect(port.read('1')!.moveCount).toBe(99);
+  it('overwriting a slot replaces the previous save', async () => {
+    await port.write('1', minimalState({ moveCount: 1 }));
+    await port.write('1', minimalState({ moveCount: 99 }));
+    expect((await port.read('1'))!.moveCount).toBe(99);
   });
 });
 
@@ -155,7 +175,7 @@ describe('LocalStorageSavePort — basic write/read/list/remove', () => {
 // ---------------------------------------------------------------------------
 
 describe('LocalStorageSavePort — quota failure', () => {
-  it('write throws when storage throws QuotaExceededError', () => {
+  it('write rejects when storage throws QuotaExceededError', async () => {
     const quota: Storage = {
       length: 0,
       key: () => null,
@@ -165,15 +185,15 @@ describe('LocalStorageSavePort — quota failure', () => {
       clear: () => {},
     };
     const port = new LocalStorageSavePort(quota);
-    // write() is expected to re-throw so the verb layer can surface Failed.
-    expect(() => port.write('1', minimalState())).toThrow();
+    // write() is expected to reject so the verb layer can surface Failed.
+    await expect(port.write('1', minimalState())).rejects.toThrow();
   });
 
-  it('read returns undefined on malformed JSON', () => {
+  it('read returns undefined on malformed JSON', async () => {
     const storage = new MapStorage();
     storage.setItem('zork-save-1', 'not-json{{{');
     const port = new LocalStorageSavePort(storage);
-    expect(port.read('1')).toBeUndefined();
+    expect(await port.read('1')).toBeUndefined();
   });
 });
 
@@ -332,20 +352,20 @@ describe('validateSaveState — rejects bad input without throwing', () => {
 // ---------------------------------------------------------------------------
 
 describe('LocalStorageSavePort — version guard on read', () => {
-  it('returns undefined for a foreign formatVersion', () => {
+  it('returns undefined for a foreign formatVersion', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     // Write a state with a future format version directly.
     const foreign = minimalState({ formatVersion: SAVE_FORMAT_VERSION + 99 });
     storage.setItem('zork-save-1', JSON.stringify(foreign));
-    expect(port.read('1')).toBeUndefined();
+    expect(await port.read('1')).toBeUndefined();
   });
 
-  it('read accepts same formatVersion', () => {
+  it('read accepts same formatVersion', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
-    port.write('1', minimalState());
-    expect(port.read('1')).toBeDefined();
+    await port.write('1', minimalState());
+    expect(await port.read('1')).toBeDefined();
   });
 });
 
@@ -354,14 +374,14 @@ describe('LocalStorageSavePort — version guard on read', () => {
 // ---------------------------------------------------------------------------
 
 describe('LocalStorageSavePort — buildId policy', () => {
-  it('read succeeds with a different buildId on same formatVersion (warn-allow)', () => {
+  it('read succeeds with a different buildId on same formatVersion (warn-allow)', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     // Simulate a save from an older build.
     const olderBuild = minimalState({ buildId: 'old-build-xyz' });
     storage.setItem('zork-save-1', JSON.stringify(olderBuild));
     // Should succeed — different buildId, same formatVersion = warn-allow.
-    const result = port.read('1');
+    const result = await port.read('1');
     expect(result).toBeDefined();
     expect(result!.buildId).toBe('old-build-xyz');
   });
@@ -372,12 +392,12 @@ describe('LocalStorageSavePort — buildId policy', () => {
 // ---------------------------------------------------------------------------
 
 describe('LocalStorageSavePort — list() metadata', () => {
-  it('lists savedAt and slot fields', () => {
+  it('lists savedAt and slot fields', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     const ts = '2026-06-01T12:00:00.000Z';
-    port.write('3', minimalState({ savedAt: ts, hereId: 'LIVING-ROOM', moveCount: 42 }));
-    const [meta] = port.list();
+    await port.write('3', minimalState({ savedAt: ts, hereId: 'LIVING-ROOM', moveCount: 42 }));
+    const [meta] = await port.list();
     expect(meta.slot).toBe('3');
     expect(meta.savedAt).toBe(ts);
     expect(meta.hereName).toBe('LIVING-ROOM');
@@ -385,18 +405,18 @@ describe('LocalStorageSavePort — list() metadata', () => {
     expect(meta.buildId).toBe('test-build');
   });
 
-  it('list returns empty array when no saves exist', () => {
+  it('list returns empty array when no saves exist', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
-    expect(port.list()).toEqual([]);
+    expect(await port.list()).toEqual([]);
   });
 
-  it('list ignores non-save keys in storage', () => {
+  it('list ignores non-save keys in storage', async () => {
     const storage = new MapStorage();
     const port = new LocalStorageSavePort(storage);
     storage.setItem('zork-theme', 'dark');
     storage.setItem('unrelated-key', '{}');
-    port.write('1', minimalState());
-    expect(port.list()).toHaveLength(1);
+    await port.write('1', minimalState());
+    expect(await port.list()).toHaveLength(1);
   });
 });

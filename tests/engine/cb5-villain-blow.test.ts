@@ -393,13 +393,13 @@ function makeTestItem(id: string, sizeVal: number): GameObject {
 const mockWorld = { get: () => undefined, all: () => [] } as unknown as World;
 
 describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () => {
-  it('take succeeds when item+player weight ≤ loadAllowed', () => {
+  it('take succeeds when item+player weight ≤ loadAllowed', async () => {
     const player = makeTestPlayer();
     const room = makeTestRoom();
     const item = makeTestItem('SMALL', 5);
     item.moveTo(room);
 
-    const r = executeVerb({
+    const r = await executeVerb({
       verb: 'take',
       dobj: item,
       player,
@@ -413,7 +413,7 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     expect(r.fatal).toBeFalsy();
   });
 
-  it('take blocked when item+player weight > loadAllowed', () => {
+  it('take blocked when item+player weight > loadAllowed', async () => {
     const player = makeTestPlayer();
     const held = makeTestItem('HEAVY', 90);
     held.moveTo(player);  // player carries SIZE=90
@@ -421,7 +421,7 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     const item = makeTestItem('ITEM', 20);  // total 90+20=110 > 100
     item.moveTo(room);
 
-    const r = executeVerb({
+    const r = await executeVerb({
       verb: 'take',
       dobj: item,
       player,
@@ -435,7 +435,7 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     expect(r.fatal).toBe(true);
   });
 
-  it('condition note appended when loadAllowed < loadMax (wounded)', () => {
+  it('condition note appended when loadAllowed < loadMax (wounded)', async () => {
     // gverbs.zil:1935: "especially in light of your condition."
     const player = makeTestPlayer();
     const held = makeTestItem('HEAVY', 90);
@@ -444,7 +444,7 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     const item = makeTestItem('ITEM', 20);
     item.moveTo(room);
 
-    const r = executeVerb({
+    const r = await executeVerb({
       verb: 'take',
       dobj: item,
       player,
@@ -457,7 +457,7 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     expect(r.output).toContain('especially in light of your condition');
   });
 
-  it('plain period appended when loadAllowed == loadMax (unwounded)', () => {
+  it('plain period appended when loadAllowed == loadMax (unwounded)', async () => {
     const player = makeTestPlayer();
     const held = makeTestItem('HEAVY', 90);
     held.moveTo(player);
@@ -465,7 +465,7 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     const item = makeTestItem('ITEM', 20);
     item.moveTo(room);
 
-    const r = executeVerb({
+    const r = await executeVerb({
       verb: 'take',
       dobj: item,
       player,
@@ -479,7 +479,7 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     expect(r.output).toContain('Your load is too heavy');
   });
 
-  it('take succeeds when exactly at loadAllowed', () => {
+  it('take succeeds when exactly at loadAllowed', async () => {
     const player = makeTestPlayer();
     const held = makeTestItem('HELD', 45);
     held.moveTo(player);  // player weight = 5 (player SIZE default) + 45 = 50
@@ -487,7 +487,7 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     const item = makeTestItem('NEW', 50);  // 50+50=100 ≤ 100 → allowed
     item.moveTo(room);
 
-    const r = executeVerb({
+    const r = await executeVerb({
       verb: 'take',
       dobj: item,
       player,
@@ -500,7 +500,7 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     expect(r.output).toBe('Taken.');
   });
 
-  it('item inside held container skips load check (grandparent==player, gverbs.zil:1931)', () => {
+  it('item inside held container skips load check (grandparent==player, gverbs.zil:1931)', async () => {
     // ZIL: <NOT <IN? <LOC ,PRSO> ,WINNER>> — grandparent check.
     // If parent(parent(item)) == player, the load gate does NOT fire.
     const player = makeTestPlayer();
@@ -516,7 +516,7 @@ describe('verbTake — LOAD-ALLOWED gate (spec B1, gverbs.zil:1932–1940)', () 
     // With loadAllowed=100, weight(player) includes sack+children=100, so
     // item(5)+player(100)=105 > 100.  But because grandparent==player, ZIL skips
     // the load gate and the take succeeds.
-    const r = executeVerb({
+    const r = await executeVerb({
       verb: 'take',
       dobj: item,
       player,

@@ -408,7 +408,7 @@ describe('Game.turn integration — gwimText in output', () => {
     game.start();
 
     // "look around" → V-LOOK with ROOMS_SENTINEL, no gwimText → output is room desc
-    const result = game.turn('look around');
+    const result = await game.turn('look around');
     // Should succeed (not throw) and produce some output
     expect(result.output.length).toBeGreaterThan(0);
     // Should NOT contain an error about unknown word or syntax
@@ -421,7 +421,7 @@ describe('Game.turn integration — gwimText in output', () => {
     const game = createGame({ startRoom: 'WEST-OF-HOUSE' });
     game.start();
 
-    const result = game.turn('look up');
+    const result = await game.turn('look up');
     // LOOK UP uses RMUNGBIT → ROOMS_SENTINEL → V-LOOK → should produce a room desc
     expect(result.output.length).toBeGreaterThan(0);
     expect(result.output).not.toContain("I don't know the word");

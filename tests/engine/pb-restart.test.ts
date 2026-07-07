@@ -22,7 +22,7 @@ import { nullSink } from '../../src/shell/sink.js';
 // ---------------------------------------------------------------------------
 
 describe('PB-RESTART verbRestart — text contracts', () => {
-  it('emits exactly "Restarting." when restart is wired', () => {
+  it('emits exactly "Restarting." when restart is wired', async () => {
     const restartFn = vi.fn();
     const ctx: VerbContext = {
       verb: 'restart',
@@ -32,12 +32,12 @@ describe('PB-RESTART verbRestart — text contracts', () => {
       world: {} as VerbContext['world'],
       restart: restartFn,
     };
-    const r = executeVerb(ctx, 'V-RESTART');
+    const r = await executeVerb(ctx, 'V-RESTART');
     expect(r.output).toBe('Restarting.');
     expect(restartFn).toHaveBeenCalledOnce();
   });
 
-  it('emits "Restarting." even when restart is absent (no-op path)', () => {
+  it('emits "Restarting." even when restart is absent (no-op path)', async () => {
     // When ctx.restart is absent the engine still prints Restarting.
     // (Shell-level no-confirm = shell never calls the verb at all.)
     const ctx: VerbContext = {
@@ -47,7 +47,7 @@ describe('PB-RESTART verbRestart — text contracts', () => {
       here: {} as VerbContext['here'],
       world: {} as VerbContext['world'],
     };
-    const r = executeVerb(ctx, 'V-RESTART');
+    const r = await executeVerb(ctx, 'V-RESTART');
     expect(r.output).toBe('Restarting.');
   });
 });
@@ -61,12 +61,12 @@ describe('PB-RESTART — V-RESTART is in META_ACTIONS', () => {
     expect(META_ACTIONS.has('V-RESTART')).toBe(true);
   });
 
-  it('RESTART is meta — move count does not advance', () => {
+  it('RESTART is meta — move count does not advance', async () => {
     const restartFn = vi.fn();
     const game = createGame({ seed: 42, restartFn });
     game.start();
     const before = game.view().moves;
-    game.turn('restart');
+    await game.turn('restart');
     // restartFn is a no-op stub — game state is unchanged except the fn was called
     const after = game.view().moves;
     expect(after).toBe(before);
@@ -78,19 +78,19 @@ describe('PB-RESTART — V-RESTART is in META_ACTIONS', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-RESTART — Game.turn restart output', () => {
-  it('turn("restart") returns "Restarting." when restartFn is wired', () => {
+  it('turn("restart") returns "Restarting." when restartFn is wired', async () => {
     const restartFn = vi.fn();
     const game = createGame({ seed: 42, restartFn });
     game.start();
-    const result = game.turn('restart');
+    const result = await game.turn('restart');
     expect(result.output).toBe('Restarting.');
     expect(restartFn).toHaveBeenCalledOnce();
   });
 
-  it('turn("restart") returns "Restarting." even with no restartFn', () => {
+  it('turn("restart") returns "Restarting." even with no restartFn', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const result = game.turn('restart');
+    const result = await game.turn('restart');
     expect(result.output).toBe('Restarting.');
   });
 });
@@ -100,15 +100,15 @@ describe('PB-RESTART — Game.turn restart output', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-RESTART — session re-bootstrap', () => {
-  it('restart() resets state to fresh game (score 0, moves 0, opening room)', () => {
+  it('restart() resets state to fresh game (score 0, moves 0, opening room)', async () => {
     const session = createSession({ sink: nullSink, seed: 42 });
     session.start();
 
     // Advance state — move around, accrue moves
-    session.submit('open mailbox');
-    session.submit('take leaflet');
-    session.submit('north');
-    session.submit('north');
+    await session.submit('open mailbox');
+    await session.submit('take leaflet');
+    await session.submit('north');
+    await session.submit('north');
 
     const before = session.snapshot();
     expect(before.moves).toBeGreaterThan(0);
@@ -121,49 +121,49 @@ describe('PB-RESTART — session re-bootstrap', () => {
     expect(after.score).toBe(0);
   });
 
-  it('restart() restores opening room', () => {
+  it('restart() restores opening room', async () => {
     const session = createSession({ sink: nullSink, seed: 42 });
     session.start();
     // Get fresh starting room
     const freshRoom = session.snapshot().here;
 
-    session.submit('north');
-    session.submit('north');
+    await session.submit('north');
+    await session.submit('north');
     expect(session.snapshot().here).not.toBe(freshRoom);
 
     session.restart();
     expect(session.snapshot().here).toBe(freshRoom);
   });
 
-  it('submit after restart works as a fresh game', () => {
+  it('submit after restart works as a fresh game', async () => {
     const session = createSession({ sink: nullSink, seed: 42 });
     const startOutput = session.start();
 
     // Advance
-    session.submit('north');
-    session.submit('north');
+    await session.submit('north');
+    await session.submit('north');
 
     // Restart
     session.restart();
 
     // The next start()-equivalent should see fresh state
     // (submit 'look' should produce opening room description)
-    const output = session.submit('look');
+    const output = await session.submit('look');
     expect(output).toBeTruthy();
     expect(session.snapshot().moves).toBe(1); // one move after restart
     void startOutput;
   });
 
-  it('submit("restart") via session produces "Restarting." and resets state', () => {
+  it('submit("restart") via session produces "Restarting." and resets state', async () => {
     const session = createSession({ sink: nullSink, seed: 42 });
     session.start();
 
-    session.submit('north');
-    session.submit('north');
+    await session.submit('north');
+    await session.submit('north');
     const movesBeforeRestart = session.snapshot().moves;
     expect(movesBeforeRestart).toBeGreaterThan(0);
 
-    const output = session.submit('restart');
+    const output = await session.submit('restart');
     expect(output).toBe('Restarting.');
 
     // State is reset after the restart command

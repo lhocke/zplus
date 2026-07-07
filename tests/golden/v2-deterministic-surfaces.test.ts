@@ -51,10 +51,10 @@ type Flags = { set(k: string, v: boolean): void };
 
 // runEngineFrom — like runEngine but supports startRoom + a post-start setup
 // callback.  Kept local so tools/oracle/engine-runner.ts stays untouched.
-function runEngineFrom(
+async function runEngineFrom(
   commands: readonly string[],
   opts: { startRoom?: string; seed?: number; setup?: (g: Game) => void } = {},
-): string {
+): Promise<string> {
   const game = createGame({ seed: opts.seed ?? 42, startRoom: opts.startRoom });
   const lines: string[] = [];
   lines.push(game.start());
@@ -62,7 +62,7 @@ function runEngineFrom(
   for (const cmd of commands) {
     lines.push('');
     lines.push(`> ${cmd}`);
-    const result = game.turn(cmd);
+    const result = await game.turn(cmd);
     if (result.output.length > 0) lines.push(result.output);
   }
   return lines.join('\n');
@@ -111,7 +111,7 @@ const VATK_COMMANDS = [
 ] as const;
 
 describe('V2 corpus 1 — V-ATTACK guards (gverbs.zil:176–193)', () => {
-  it('guard transcripts are byte-identical to committed golden', () => {
+  it('guard transcripts are byte-identical to committed golden', async () => {
     const setup = (g: Game) => {
       const w = (g as unknown as { world: World }).world;
       const player = w.get('PLAYER') as never;
@@ -125,8 +125,8 @@ describe('V2 corpus 1 — V-ATTACK guards (gverbs.zil:176–193)', () => {
       sword?.moveTo(player);
     };
 
-    const run1 = runEngineFrom(VATK_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
-    const run2 = runEngineFrom(VATK_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
+    const run1 = await runEngineFrom(VATK_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
+    const run2 = await runEngineFrom(VATK_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
     expect(run1).toBe(run2);
 
     saveOrCompare('v2-vatk-guards', run1);
@@ -148,7 +148,7 @@ const TROLL_FEND_COMMANDS = [
 ] as const;
 
 describe('V2 corpus 2 — troll fend-off (ifFlag TROLL-FLAG)', () => {
-  it('fend-off transcript is byte-identical to committed golden', () => {
+  it('fend-off transcript is byte-identical to committed golden', async () => {
     const setup = (g: Game) => {
       const w = (g as unknown as { world: World }).world;
       const player = w.get('PLAYER') as never;
@@ -158,8 +158,8 @@ describe('V2 corpus 2 — troll fend-off (ifFlag TROLL-FLAG)', () => {
       lamp?.set(Flag.Light);
     };
 
-    const run1 = runEngineFrom(TROLL_FEND_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
-    const run2 = runEngineFrom(TROLL_FEND_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
+    const run1 = await runEngineFrom(TROLL_FEND_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
+    const run2 = await runEngineFrom(TROLL_FEND_COMMANDS, { startRoom: 'TROLL-ROOM', seed: 42, setup });
     expect(run1).toBe(run2);
 
     saveOrCompare('v2-troll-fend', run1);
@@ -205,11 +205,11 @@ const DEATH_SHELL_COMMANDS = [
 ] as const;
 
 describe('V2 corpus 3 — death/resurrection shell (1actions.zil:4046–4099)', () => {
-  it('death shell transcript is byte-identical to committed golden', () => {
+  it('death shell transcript is byte-identical to committed golden', async () => {
     resetActionState();
-    const run1 = runEngine(DEATH_SHELL_COMMANDS, { seed: 42 });
+    const run1 = await runEngine(DEATH_SHELL_COMMANDS, { seed: 42 });
     resetActionState();
-    const run2 = runEngine(DEATH_SHELL_COMMANDS, { seed: 42 });
+    const run2 = await runEngine(DEATH_SHELL_COMMANDS, { seed: 42 });
     expect(run1).toBe(run2);
 
     saveOrCompare('v2-death-shell', run1);
@@ -234,13 +234,13 @@ const STONE_BARROW_COMMANDS = [
 ] as const;
 
 describe('V2 corpus 4 — STONE-BARROW endgame (1actions.zil:403–430)', () => {
-  it('STONE-BARROW transcript is byte-identical to committed golden', () => {
+  it('STONE-BARROW transcript is byte-identical to committed golden', async () => {
     const setup = (g: Game) => {
       (g as unknown as { flags: Flags }).flags.set('WON-FLAG', true);
     };
 
-    const run1 = runEngineFrom(STONE_BARROW_COMMANDS, { startRoom: 'WEST-OF-HOUSE', seed: 42, setup });
-    const run2 = runEngineFrom(STONE_BARROW_COMMANDS, { startRoom: 'WEST-OF-HOUSE', seed: 42, setup });
+    const run1 = await runEngineFrom(STONE_BARROW_COMMANDS, { startRoom: 'WEST-OF-HOUSE', seed: 42, setup });
+    const run2 = await runEngineFrom(STONE_BARROW_COMMANDS, { startRoom: 'WEST-OF-HOUSE', seed: 42, setup });
     expect(run1).toBe(run2);
 
     saveOrCompare('v2-stone-barrow', run1);

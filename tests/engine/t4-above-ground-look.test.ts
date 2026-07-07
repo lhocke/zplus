@@ -35,42 +35,42 @@ import { resetKitchenWindowFlag, resetRugMoved } from '../../src/actions/above-g
 describe('KITCHEN-WINDOW-F: look family — LOOK-INSIDE intercept, others fall through', () => {
   beforeEach(() => resetKitchenWindowFlag());
 
-  function makeWindowGame() {
+  async function makeWindowGame() {
     const g = newGameAt('EAST-OF-HOUSE');
     g.start();
-    g.turn('open window');   // sets kitchenWindowFlag, OPENBIT
+    await g.turn('open window');   // sets kitchenWindowFlag, OPENBIT
     return g;
   }
 
-  it('look in window — positive intercept: shows what is beyond (dfrotz)', () => {
-    const g = makeWindowGame();
-    const r = g.turn('look in window');
+  it('look in window — positive intercept: shows what is beyond (dfrotz)', async () => {
+    const g = await makeWindowGame();
+    const r = await g.turn('look in window');
     // From EAST-OF-HOUSE (BEHIND-HOUSE), the window looks into the kitchen.
     expect(r.output).toBe('You can see what appears to be a kitchen.');
   });
 
-  it('look in window from kitchen — positive intercept: shows forest', () => {
-    const g = makeWindowGame();
-    g.turn('enter window');  // enter window → kitchen
-    const r = g.turn('look in window');
+  it('look in window from kitchen — positive intercept: shows forest', async () => {
+    const g = await makeWindowGame();
+    await g.turn('enter window');  // enter window → kitchen
+    const r = await g.turn('look in window');
     expect(r.output).toBe('You can see a clear area leading towards a forest.');
   });
 
-  it('look behind window — falls through to V-LOOK-BEHIND (dfrotz)', () => {
-    const g = makeWindowGame();
-    const r = g.turn('look behind window');
+  it('look behind window — falls through to V-LOOK-BEHIND (dfrotz)', async () => {
+    const g = await makeWindowGame();
+    const r = await g.turn('look behind window');
     expect(r.output).toBe('There is nothing behind the kitchen window.');
   });
 
-  it('look under window — falls through to V-LOOK-UNDER (dfrotz)', () => {
-    const g = makeWindowGame();
-    const r = g.turn('look under window');
+  it('look under window — falls through to V-LOOK-UNDER (dfrotz)', async () => {
+    const g = await makeWindowGame();
+    const r = await g.turn('look under window');
     expect(r.output).toBe('There is nothing but dust there.');
   });
 
-  it('look on window — falls through to V-LOOK-ON (dfrotz)', () => {
-    const g = makeWindowGame();
-    const r = g.turn('look on window');
+  it('look on window — falls through to V-LOOK-ON (dfrotz)', async () => {
+    const g = await makeWindowGame();
+    const r = await g.turn('look on window');
     expect(r.output).toBe('Look on a kitchen window???');
   });
 });
@@ -91,41 +91,41 @@ describe('KITCHEN-WINDOW-F: look family — LOOK-INSIDE intercept, others fall t
 describe('TRAP-DOOR-FCN: look family — LOOK-UNDER intercept, others fall through', () => {
   beforeEach(() => resetRugMoved());
 
-  function makeTrapDoorGame() {
+  async function makeTrapDoorGame() {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');   // reveals trap door (rugMoved = true)
+    await g.turn('move rug');   // reveals trap door (rugMoved = true)
     return g;
   }
 
-  it('look under trap door — positive intercept: "It\'s closed." (dfrotz)', () => {
-    const g = makeTrapDoorGame();
-    const r = g.turn('look under trap door');
+  it('look under trap door — positive intercept: "It\'s closed." (dfrotz)', async () => {
+    const g = await makeTrapDoorGame();
+    const r = await g.turn('look under trap door');
     expect(r.output).toBe("It's closed.");
   });
 
-  it('look under trap door (open) — "You see a rickety staircase..." (dfrotz)', () => {
-    const g = makeTrapDoorGame();
-    g.turn('open trap door');
-    const r = g.turn('look under trap door');
+  it('look under trap door (open) — "You see a rickety staircase..." (dfrotz)', async () => {
+    const g = await makeTrapDoorGame();
+    await g.turn('open trap door');
+    const r = await g.turn('look under trap door');
     expect(r.output).toBe('You see a rickety staircase descending into darkness.');
   });
 
-  it('look in trap door — falls through to V-LOOK-INSIDE (dfrotz: "The trap door is closed.")', () => {
-    const g = makeTrapDoorGame();
-    const r = g.turn('look in trap door');
+  it('look in trap door — falls through to V-LOOK-INSIDE (dfrotz: "The trap door is closed.")', async () => {
+    const g = await makeTrapDoorGame();
+    const r = await g.turn('look in trap door');
     expect(r.output).toBe('The trap door is closed.');
   });
 
-  it('look behind trap door — falls through to V-LOOK-BEHIND (dfrotz)', () => {
-    const g = makeTrapDoorGame();
-    const r = g.turn('look behind trap door');
+  it('look behind trap door — falls through to V-LOOK-BEHIND (dfrotz)', async () => {
+    const g = await makeTrapDoorGame();
+    const r = await g.turn('look behind trap door');
     expect(r.output).toBe('There is nothing behind the trap door.');
   });
 
-  it('look on trap door — falls through to V-LOOK-ON (dfrotz)', () => {
-    const g = makeTrapDoorGame();
-    const r = g.turn('look on trap door');
+  it('look on trap door — falls through to V-LOOK-ON (dfrotz)', async () => {
+    const g = await makeTrapDoorGame();
+    const r = await g.turn('look on trap door');
     expect(r.output).toBe('Look on a trap door???');
   });
 });
@@ -149,39 +149,39 @@ describe('TRAP-DOOR-FCN: look family — LOOK-UNDER intercept, others fall throu
 describe('RUG-FCN: look family — LOOK-UNDER intercept (rug unmoved), others fall through', () => {
   beforeEach(() => resetRugMoved());
 
-  it('look under rug (unmoved) — positive intercept: trap-door reveal (dfrotz)', () => {
+  it('look under rug (unmoved) — positive intercept: trap-door reveal (dfrotz)', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('look under rug');
+    const r = await g.turn('look under rug');
     expect(r.output).toContain('Underneath the rug is a closed trap door.');
   });
 
-  it('look under rug (moved) — falls through to V-LOOK-UNDER "dust" response', () => {
+  it('look under rug (moved) — falls through to V-LOOK-UNDER "dust" response', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    g.turn('move rug');
-    const r = g.turn('look under rug');
+    await g.turn('move rug');
+    const r = await g.turn('look under rug');
     expect(r.output).toBe('There is nothing but dust there.');
   });
 
-  it('look in rug — falls through to V-LOOK-INSIDE (dfrotz)', () => {
+  it('look in rug — falls through to V-LOOK-INSIDE (dfrotz)', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('look in rug');
+    const r = await g.turn('look in rug');
     expect(r.output).toBe("You can't look inside a carpet.");
   });
 
-  it('look behind rug — falls through to V-LOOK-BEHIND (dfrotz)', () => {
+  it('look behind rug — falls through to V-LOOK-BEHIND (dfrotz)', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('look behind rug');
+    const r = await g.turn('look behind rug');
     expect(r.output).toBe('There is nothing behind the carpet.');
   });
 
-  it('look on rug — falls through to V-LOOK-ON (dfrotz)', () => {
+  it('look on rug — falls through to V-LOOK-ON (dfrotz)', async () => {
     const g = newGameAt('LIVING-ROOM');
     g.start();
-    const r = g.turn('look on rug');
+    const r = await g.turn('look on rug');
     expect(r.output).toBe('Look on a carpet???');
   });
 });
@@ -202,31 +202,31 @@ describe('RUG-FCN: look family — LOOK-UNDER intercept (rug unmoved), others fa
 // ---------------------------------------------------------------------------
 
 describe('LEAF-PILE: look family — LOOK-UNDER intercept (grate not revealed), others fall through', () => {
-  it('look under leaves — positive intercept: grating reveal (dfrotz)', () => {
+  it('look under leaves — positive intercept: grating reveal (dfrotz)', async () => {
     const g = newGameAt('GRATING-CLEARING');
     g.start();
-    const r = g.turn('look under leaves');
+    const r = await g.turn('look under leaves');
     expect(r.output).toContain('Underneath the pile of leaves is a grating.');
   });
 
-  it('look in leaves — falls through to V-LOOK-INSIDE (dfrotz)', () => {
+  it('look in leaves — falls through to V-LOOK-INSIDE (dfrotz)', async () => {
     const g = newGameAt('GRATING-CLEARING');
     g.start();
-    const r = g.turn('look in leaves');
+    const r = await g.turn('look in leaves');
     expect(r.output).toBe("You can't look inside a pile of leaves.");
   });
 
-  it('look behind leaves — falls through to V-LOOK-BEHIND (dfrotz)', () => {
+  it('look behind leaves — falls through to V-LOOK-BEHIND (dfrotz)', async () => {
     const g = newGameAt('GRATING-CLEARING');
     g.start();
-    const r = g.turn('look behind leaves');
+    const r = await g.turn('look behind leaves');
     expect(r.output).toBe('There is nothing behind the pile of leaves.');
   });
 
-  it('look on leaves — falls through to V-LOOK-ON (dfrotz)', () => {
+  it('look on leaves — falls through to V-LOOK-ON (dfrotz)', async () => {
     const g = newGameAt('GRATING-CLEARING');
     g.start();
-    const r = g.turn('look on leaves');
+    const r = await g.turn('look on leaves');
     expect(r.output).toBe('Look on a pile of leaves???');
   });
 });

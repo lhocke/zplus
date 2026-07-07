@@ -86,7 +86,7 @@ describe('verbGo ifFlag — ZIL global routing (no world object)', () => {
     return { world, roomA, player };
   }
 
-  it('blocks movement when global flag is false (not in store)', () => {
+  it('blocks movement when global flag is false (not in store)', async () => {
     const { world, roomA, player } = makeGlobalFlagFixture();
     const store = new FlagStore(); // WON-FLAG default false
 
@@ -98,12 +98,12 @@ describe('verbGo ifFlag — ZIL global routing (no world object)', () => {
       world,
       getGlobal: (n) => store.get(n),
     };
-    const result = executeVerb(ctx);
+    const result = await executeVerb(ctx);
     expect(result.moved).toBe(false);
     expect(result.output).toContain('secret path is not yet revealed');
   });
 
-  it('allows movement when global flag is true (set in store)', () => {
+  it('allows movement when global flag is true (set in store)', async () => {
     const { world, roomA, player } = makeGlobalFlagFixture();
     const store = new FlagStore();
     store.set('WON-FLAG');
@@ -116,12 +116,12 @@ describe('verbGo ifFlag — ZIL global routing (no world object)', () => {
       world,
       getGlobal: (n) => store.get(n),
     };
-    const result = executeVerb(ctx);
+    const result = await executeVerb(ctx);
     expect(result.moved).toBe(true);
     expect(player.parent?.id).toBe('ROOM-B');
   });
 
-  it('ctx without getGlobal falls back to false (global flag never open)', () => {
+  it('ctx without getGlobal falls back to false (global flag never open)', async () => {
     const { world, roomA, player } = makeGlobalFlagFixture(); // eslint-disable-line @typescript-eslint/no-unused-vars
     const ctx: VerbContext = {
       verb: 'walk',
@@ -131,7 +131,7 @@ describe('verbGo ifFlag — ZIL global routing (no world object)', () => {
       world,
       // no getGlobal
     };
-    const result = executeVerb(ctx);
+    const result = await executeVerb(ctx);
     expect(result.moved).toBe(false);
   });
 });
@@ -167,7 +167,7 @@ describe('verbGo ifFlag — object-backed gate (world object)', () => {
     return { world, roomA, player, gate };
   }
 
-  it('blocks movement when gate object does NOT have Flag.Open', () => {
+  it('blocks movement when gate object does NOT have Flag.Open', async () => {
     const { world, roomA, player } = makeObjectGateFixture(false);
     const ctx: VerbContext = {
       verb: 'walk',
@@ -176,12 +176,12 @@ describe('verbGo ifFlag — object-backed gate (world object)', () => {
       here: roomA,
       world,
     };
-    const result = executeVerb(ctx);
+    const result = await executeVerb(ctx);
     expect(result.moved).toBe(false);
     expect(result.output).toContain('gate is closed');
   });
 
-  it('allows movement when gate object has Flag.Open', () => {
+  it('allows movement when gate object has Flag.Open', async () => {
     const { world, roomA, player } = makeObjectGateFixture(true);
     const ctx: VerbContext = {
       verb: 'walk',
@@ -190,7 +190,7 @@ describe('verbGo ifFlag — object-backed gate (world object)', () => {
       here: roomA,
       world,
     };
-    const result = executeVerb(ctx);
+    const result = await executeVerb(ctx);
     expect(result.moved).toBe(true);
     expect(player.parent?.id).toBe('ROOM-B');
   });
@@ -201,7 +201,7 @@ describe('verbGo ifFlag — object-backed gate (world object)', () => {
 // ---------------------------------------------------------------------------
 
 describe('verbGo FALSE-FLAG — always impassable', () => {
-  it('FALSE-FLAG exit stays blocked even with getGlobal wired', () => {
+  it('FALSE-FLAG exit stays blocked even with getGlobal wired', async () => {
     const roomA = new Room('ROOM-A', 'Room A', {
       exits: [
         {
@@ -229,7 +229,7 @@ describe('verbGo FALSE-FLAG — always impassable', () => {
       world,
       getGlobal: (n) => store.get(n),
     };
-    const result = executeVerb(ctx);
+    const result = await executeVerb(ctx);
     expect(result.moved).toBe(false);
   });
 });
@@ -239,10 +239,10 @@ describe('verbGo FALSE-FLAG — always impassable', () => {
 // ---------------------------------------------------------------------------
 
 describe('WON-FLAG → westHouse secret-path integration', () => {
-  it('no secret path text before score hits 350', () => {
+  it('no secret path text before score hits 350', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).not.toContain('secret path');
   });
 

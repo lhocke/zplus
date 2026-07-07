@@ -34,7 +34,7 @@ function getBuildId(): string {
 
 export interface GameSession {
   start(): string;
-  submit(command: string): string;
+  submit(command: string): Promise<string>;
   snapshot(): GameView;
   /**
    * Re-bootstrap the game: reset module globals and create a fresh Game.
@@ -48,7 +48,7 @@ export interface GameSession {
    * room re-describe text on success, or an empty string when no autosave exists.
    * The caller owns any confirmation / user-facing message.
    */
-  restoreFromAutosave(): string;
+  restoreFromAutosave(): Promise<string>;
   close(): void;
 }
 
@@ -97,28 +97,28 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
 
   const wrappedPort: SavePort | undefined = opts.savePort
     ? {
-        write(slot, state) {
-          // write() may throw (quota/IO); let the exception propagate so the verb
-          // catches it and emits "Failed." — but record the outcome first.
+        async write(slot, state) {
+          // write() may reject (quota/IO); let the rejection propagate so the verb
+          // awaits, catches, and emits "Failed." — but record the outcome first.
           try {
-            opts.savePort!.write(slot, state);
+            await opts.savePort!.write(slot, state);
             lastSaveOk = true;
           } catch (err) {
             lastSaveOk = false;
-            throw err;   // re-throw so verbSave emits "Failed."
+            throw err;   // re-throw → rejection → verbSave emits "Failed."
           }
         },
-        read(slot) {
+        async read(slot) {
           return opts.savePort!.read(slot);
         },
-        readWithReason(slot) {
-          const r = opts.savePort!.readWithReason(slot);
+        async readWithReason(slot) {
+          const r = await opts.savePort!.readWithReason(slot);
           // r is SaveState on success, or a RestoreFailReason string on failure
           lastRestoreReason = typeof r === 'object' ? 'ok' : r;
           return r;
         },
         list() { return opts.savePort!.list(); },
-        remove(slot) { opts.savePort!.remove(slot); },
+        async remove(slot) { await opts.savePort!.remove(slot); },
       }
     : undefined;
 
@@ -151,17 +151,16 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
       return output;
     },
 
-    submit(command: string): string {
+    async submit(command: string): Promise<string> {
       if (closed) return '';
       // Empty/blank input: no-op per spec §9 ("Empty submit('') emits no TurnEvent").
       if (command.trim() === '') return '';
 
-      // Rolling pre-turn autosave (spec §6, OQ-2): snapshot BEFORE the turn runs so
-      // the player can recover the state at the START of any turn — including the one
-      // that killed them.  Skipped when already gameOver (engine ignores the turn anyway).
+      // Rolling pre-turn autosave (spec §6, OQ-2) — awaited so a failure is
+      // observed (and silently swallowed) HERE, not left floating.
       if (wrappedPort !== undefined && !game.view().gameOver) {
         try {
-          wrappedPort.write('autosave', game.snapshot());
+          await wrappedPort.write('autosave', game.snapshot());
         } catch {
           // Quota/IO failure silently skipped — autosave is best-effort (spec §6).
         }
@@ -190,7 +189,7 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
       lastRestoreReason = undefined;
 
       const isRestart = /^restart$/i.test(command.trim());
-      const { output } = game.turn(dispatchCommand, saveSlot !== undefined ? { saveSlot } : undefined);
+      const { output } = await game.turn(dispatchCommand, saveSlot !== undefined ? { saveSlot } : undefined);
       turnCount++;
       const ts = new Date().toISOString();
       const v = game.view();
@@ -254,10 +253,10 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
       doRestart();
     },
 
-    restoreFromAutosave(): string {
+    async restoreFromAutosave(): Promise<string> {
       if (!wrappedPort) return '';
       // Read the autosave directly; bypass game.turn() which gates on gameOver.
-      const r = wrappedPort.readWithReason('autosave');
+      const r = await wrappedPort.readWithReason('autosave');
       if (typeof r === 'string') return ''; // empty/corrupt/version — nothing to restore
       return game.restoreAndDescribe(r);
     },

@@ -33,6 +33,15 @@ function submitCommand(app: HTMLElement, cmd: string) {
   input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 }
 
+// The terminal's onSubmit callback (and the slot-picker / affordance click
+// handlers) are async now — `void`-dispatched from their event listeners.
+// Flush the microtask+macrotask queue so their work completes before the
+// test asserts on it (a bare `await Promise.resolve()` only drains one
+// microtask hop, which isn't enough for a chain with multiple awaits).
+function flush(): Promise<void> {
+  return new Promise((r) => setTimeout(r, 0));
+}
+
 // ---------------------------------------------------------------------------
 // 1. Slot picker modal is present and hidden by default
 // ---------------------------------------------------------------------------
@@ -115,12 +124,13 @@ describe('PB-UI — picker lists slot metadata', () => {
 
     // Save via verb
     submitCommand(app, 'save 1');
-    await Promise.resolve();
+    await flush();
 
     // Open picker
     const btns = Array.from(app.querySelectorAll('button'));
     const savesBtn = btns.find(b => /saves|save slots/i.test(b.textContent ?? '')) as HTMLButtonElement;
     savesBtn.click();
+    await flush();  // renderSlots() awaits savePort.list() now
 
     const modal = app.querySelector('[data-testid="slot-picker-modal"]') as HTMLElement;
     const text = modal.textContent ?? '';
@@ -149,7 +159,7 @@ describe('PB-UI — gameOver affordance', () => {
     mountShell(app);
 
     submitCommand(app, 'quit');
-    await Promise.resolve();
+    await flush();
 
     const affordance = app.querySelector('[data-testid="game-over-affordance"]');
     expect(affordance).not.toBeNull();
@@ -161,7 +171,7 @@ describe('PB-UI — gameOver affordance', () => {
     mountShell(app);
 
     submitCommand(app, 'quit');
-    await Promise.resolve();
+    await flush();
 
     const affordance = app.querySelector('[data-testid="game-over-affordance"]') as HTMLElement;
     expect(affordance).not.toBeNull();
@@ -177,7 +187,7 @@ describe('PB-UI — gameOver affordance', () => {
     mountShell(app);
 
     submitCommand(app, 'quit');
-    await Promise.resolve();
+    await flush();
 
     const affordance = app.querySelector('[data-testid="game-over-affordance"]') as HTMLElement;
     expect(affordance).not.toBeNull();
@@ -199,7 +209,7 @@ describe('PB-UI — RESTART confirm is shell-level (OQ-4)', () => {
     const { session } = mountShell(app);
 
     submitCommand(app, 'quit');
-    await Promise.resolve();
+    await flush();
     expect(session.snapshot().gameOver).toBe(true);
 
     // Confirm dialog should appear — stub window.confirm to return false (cancel)
@@ -211,6 +221,7 @@ describe('PB-UI — RESTART confirm is shell-level (OQ-4)', () => {
       b => /restart/i.test(b.textContent ?? ''),
     ) as HTMLButtonElement;
     restartBtn.click();
+    await flush();
 
     expect(confirmCalled).toBe(true);
     // Cancelled: game still gameOver
@@ -223,7 +234,7 @@ describe('PB-UI — RESTART confirm is shell-level (OQ-4)', () => {
     const { session } = mountShell(app);
 
     submitCommand(app, 'quit');
-    await Promise.resolve();
+    await flush();
     expect(session.snapshot().gameOver).toBe(true);
 
     vi.stubGlobal('confirm', () => true);
@@ -233,6 +244,7 @@ describe('PB-UI — RESTART confirm is shell-level (OQ-4)', () => {
       b => /restart/i.test(b.textContent ?? ''),
     ) as HTMLButtonElement;
     restartBtn.click();
+    await flush();
 
     // After restart: gameOver should be false
     expect(session.snapshot().gameOver).toBe(false);
@@ -254,12 +266,12 @@ describe('PB-UI — Restore from gameOver affordance', () => {
 
     // Do a few moves so the autosave slot has content
     submitCommand(app, 'look');
-    await Promise.resolve();
+    await flush();
     const movesBefore = session.snapshot().moves;
 
     // Trigger gameOver
     submitCommand(app, 'quit');
-    await Promise.resolve();
+    await flush();
     expect(session.snapshot().gameOver).toBe(true);
 
     const affordance = app.querySelector('[data-testid="game-over-affordance"]') as HTMLElement;
@@ -267,6 +279,7 @@ describe('PB-UI — Restore from gameOver affordance', () => {
       b => /restore/i.test(b.textContent ?? ''),
     ) as HTMLButtonElement;
     restoreBtn.click();
+    await flush();
 
     // After restore from autosave: game should no longer be gameOver
     expect(session.snapshot().gameOver).toBe(false);
@@ -281,7 +294,7 @@ describe('PB-UI — Restore from gameOver affordance', () => {
     mountShell(app);
 
     submitCommand(app, 'quit');
-    await Promise.resolve();
+    await flush();
 
     const affordance = app.querySelector('[data-testid="game-over-affordance"]') as HTMLElement;
     expect(affordance).not.toBeNull();
@@ -303,7 +316,7 @@ describe('PB-UI — Restore from gameOver affordance', () => {
     // which would restore to the same quit state — but we need to test the "slot truly absent"
     // path, so we clear localStorage after gameOver fires to simulate quota-emptied state).
     submitCommand(app, 'quit');
-    await Promise.resolve();
+    await flush();
     expect(session.snapshot().gameOver).toBe(true);
 
     // Clear autosave slot to simulate quota-eviction / missing autosave.
@@ -316,6 +329,7 @@ describe('PB-UI — Restore from gameOver affordance', () => {
       b => /restore/i.test(b.textContent ?? ''),
     ) as HTMLButtonElement;
     restoreBtn.click();
+    await flush();
 
     // Failed restore: game still gameOver and affordance still in the DOM.
     expect(session.snapshot().gameOver).toBe(true);

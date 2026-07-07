@@ -82,14 +82,14 @@ function buildMailboxWorld(): { game: Game } {
 // ---------------------------------------------------------------------------
 
 describe('C9 — interleaved drive: within-turn IT propagation', () => {
-  it('"open mailbox. read it" — "it" resolves to the mailbox within one turn', () => {
+  it('"open mailbox. read it" — "it" resolves to the mailbox within one turn', async () => {
     const { game } = buildMailboxWorld();
     game.start();
 
     // Open the mailbox first so "it" is accessible.
     // The interleaved drive must bind IT after segment 1 ("open mailbox")
     // executes, so segment 2 ("read it") can resolve "it" → mailbox.
-    const result = game.turn('open mailbox. read it');
+    const result = await game.turn('open mailbox. read it');
 
     // The turn must NOT fail on the "read it" part with an unbound-referent error.
     expect(result.output).not.toMatch(/I don't see what you're referring to/i);
@@ -98,17 +98,17 @@ describe('C9 — interleaved drive: within-turn IT propagation', () => {
     expect(result.output).toMatch(/open|mailbox/i);
   });
 
-  it('"take leaflet. examine it" — "it" resolves to the leaflet within one turn', () => {
+  it('"take leaflet. examine it" — "it" resolves to the leaflet within one turn', async () => {
     const { game } = buildMailboxWorld();
     game.start();
 
     // First open the mailbox so leaflet is accessible.
-    game.turn('open mailbox');
+    await game.turn('open mailbox');
 
     // Now chain: take leaflet (binds IT=leaflet), then examine it.
     // The interleaved drive must bind IT after "take leaflet" so "examine it"
     // resolves correctly.
-    const result = game.turn('take leaflet. examine it');
+    const result = await game.turn('take leaflet. examine it');
 
     // Must NOT fail with pronoun error.
     expect(result.output).not.toMatch(/I don't see what you're referring to/i);
@@ -123,7 +123,7 @@ describe('C9 — interleaved drive: within-turn IT propagation', () => {
 // ---------------------------------------------------------------------------
 
 describe('C9 — interleaved drive: orphan state across turns', () => {
-  it('orphan prompt → next turn answers it', () => {
+  it('orphan prompt → next turn answers it', async () => {
     // Build a world with TWO takeable items — GWIM can't auto-supply (2 candidates),
     // so the parser issues an orphan prompt for "take" with no object.
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A simple room.' });
@@ -156,11 +156,11 @@ describe('C9 — interleaved drive: orphan state across turns', () => {
 
     // "take" with no object and 2+ candidates → orphan prompt "What do you want to take?"
     // (GWIM fails when there are 0 or 2+ candidates matching the findBit)
-    const r1 = game.turn('take');
+    const r1 = await game.turn('take');
     expect(r1.output).toMatch(/What do you want to take\?/i);
 
     // Next turn: answer "lamp" → executes take lamp.
-    const r2 = game.turn('lamp');
+    const r2 = await game.turn('lamp');
     // Must NOT fail with a parsing error or pronoun error.
     expect(r2.output).not.toMatch(/I don't know the word/i);
     expect(r2.output).not.toMatch(/I don't see what you're referring to/i);
@@ -174,7 +174,7 @@ describe('C9 — interleaved drive: orphan state across turns', () => {
 // ---------------------------------------------------------------------------
 
 describe('C9 — interleaved drive: lazy continuation chaining', () => {
-  it('"look. look" executes two look commands in one turn', () => {
+  it('"look. look" executes two look commands in one turn', async () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A simple room.' });
     room.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
@@ -189,13 +189,13 @@ describe('C9 — interleaved drive: lazy continuation chaining', () => {
     game.start();
 
     // Two look commands chained — both should produce output.
-    const result = game.turn('look. look');
+    const result = await game.turn('look. look');
     // The output should contain at least the room name twice.
     const occurrences = (result.output.match(/Test Room/g) ?? []).length;
     expect(occurrences).toBeGreaterThanOrEqual(2);
   });
 
-  it('direction chaining "n. e." fires both moves in one turn', () => {
+  it('direction chaining "n. e." fires both moves in one turn', async () => {
     const roomA = new Room('ROOM-A', 'Room A', { ldesc: 'Room A.', exits: [{ dir: 'north', to: 'ROOM-B' }] });
     roomA.set(Flag.On);
     const roomB = new Room('ROOM-B', 'Room B', { ldesc: 'Room B.', exits: [{ dir: 'east', to: 'ROOM-C' }, { dir: 'south', to: 'ROOM-A' }] });
@@ -214,7 +214,7 @@ describe('C9 — interleaved drive: lazy continuation chaining', () => {
     game.start();
 
     // Move north then east in one turn.
-    const result = game.turn('n. e.');
+    const result = await game.turn('n. e.');
     // Player should be in Room C after both moves.
     expect(game.view().here).toBe('ROOM-C');
     // Output should contain both Room B and Room C descriptions.
@@ -228,7 +228,7 @@ describe('C9 — interleaved drive: lazy continuation chaining', () => {
 // ---------------------------------------------------------------------------
 
 describe('C9 — interleaved drive: move counter', () => {
-  it('a chained "look. look" counts as TWO moves (one per real command)', () => {
+  it('a chained "look. look" counts as TWO moves (one per real command)', async () => {
     const room = new Room('ROOM', 'Test Room', { ldesc: 'A simple room.' });
     room.set(Flag.On);
     const player = new Actor('PLAYER', 'yourself');
@@ -243,11 +243,11 @@ describe('C9 — interleaved drive: move counter', () => {
     game.start();
 
     expect(game.view().moves).toBe(0);
-    game.turn('look. look');
+    await game.turn('look. look');
     expect(game.view().moves).toBe(2);
   });
 
-  it('an orphan turn does NOT increment the move counter', () => {
+  it('an orphan turn does NOT increment the move counter', async () => {
     // Per ZIL semantics: when the parser issues an orphan prompt, no MOVES tick.
     // "MOVES/clock tick only on a parsed+executed command" (reconciliation §2).
     // Use two takeable items so GWIM can't auto-supply and orphan fires.
@@ -279,12 +279,12 @@ describe('C9 — interleaved drive: move counter', () => {
     expect(game.view().moves).toBe(0);
 
     // Orphan turn: "take" with 2 takeable items → orphan prompt.
-    game.turn('take');
+    await game.turn('take');
     // Orphan turns don't count as moves.
     expect(game.view().moves).toBe(0);
 
     // Answer turn: "lamp" → executes take lamp — this DOES count.
-    game.turn('lamp');
+    await game.turn('lamp');
     expect(game.view().moves).toBe(1);
   });
 });

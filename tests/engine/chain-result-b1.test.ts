@@ -156,13 +156,13 @@ function buildStepWorld(opts: StepWorldOpts = {}): StepWorld {
 // ---------------------------------------------------------------------------
 
 describe('B1 — runActionChain: 7-step order verification', () => {
-  it('visits steps in order 1→2→6→7 for a dobj-only command (no iobj, no contFcn)', () => {
+  it('visits steps in order 1→2→6→7 for a dobj-only command (no iobj, no contFcn)', async () => {
     // Without iobj or contFcn: steps 4 and 5 are skipped (guards not met).
     // Step 3 (PRE-action) fires only when preAction is registered — not yet for 'examine'.
     // Step 7 (default) fires when nothing above claims it.
     const { game, log } = buildStepWorld({ shortCircuitAt: undefined });
     game.start();
-    const result = game.turn('examine widget');
+    const result = await game.turn('examine widget');
     // Steps 1 (actor), 2 (room M-BEG), 6 (PRSO) should have fired.
     // Step 7 fires too but is the default verb — check it ran by checking output.
     expect(log).toContain('step1-actor');
@@ -175,10 +175,10 @@ describe('B1 — runActionChain: 7-step order verification', () => {
     expect(result.output.length).toBeGreaterThan(0);
   });
 
-  it('step 2 (room M-BEG) returning true suppresses step 6 (PRSO) and step 7 (default verb)', () => {
+  it('step 2 (room M-BEG) returning true suppresses step 6 (PRSO) and step 7 (default verb)', async () => {
     const { game, log } = buildStepWorld({ shortCircuitAt: 2 });
     game.start();
-    const result = game.turn('examine widget');
+    const result = await game.turn('examine widget');
 
     expect(log).toContain('step2-room-mbeg');
     expect(log).not.toContain('step6-prso');
@@ -187,10 +187,10 @@ describe('B1 — runActionChain: 7-step order verification', () => {
     expect(result.output).not.toContain("There's nothing special about");
   });
 
-  it('step 6 (PRSO) returning true suppresses step 7 (default verb)', () => {
+  it('step 6 (PRSO) returning true suppresses step 7 (default verb)', async () => {
     const { game, log } = buildStepWorld({ shortCircuitAt: 6 });
     game.start();
-    const result = game.turn('examine widget');
+    const result = await game.turn('examine widget');
 
     expect(log).toContain('step2-room-mbeg');
     expect(log).toContain('step6-prso');
@@ -198,10 +198,10 @@ describe('B1 — runActionChain: 7-step order verification', () => {
     expect(result.output).not.toContain("There's nothing special about");
   });
 
-  it('step 1 (actor/WINNER) returning true suppresses all later steps', () => {
+  it('step 1 (actor/WINNER) returning true suppresses all later steps', async () => {
     const { game, log } = buildStepWorld({ shortCircuitAt: 1 });
     game.start();
-    const result = game.turn('examine widget');
+    const result = await game.turn('examine widget');
 
     expect(log).toContain('step1-actor');
     expect(log).not.toContain('step2-room-mbeg');
@@ -210,10 +210,10 @@ describe('B1 — runActionChain: 7-step order verification', () => {
     expect(result.output).not.toContain("There's nothing special about");
   });
 
-  it('step 5 (CONTFCN on dobj.parent) is reached when dobj is inside a container', () => {
+  it('step 5 (CONTFCN on dobj.parent) is reached when dobj is inside a container', async () => {
     const { game, log } = buildStepWorld({ installContFcn: true, shortCircuitAt: undefined });
     game.start();
-    game.turn('examine widget');
+    await game.turn('examine widget');
     // Step 5 should have fired (widget is inside box which has a contFcn).
     expect(log).toContain('step5-contfcn');
     // Order: 2 before 5 before 6.
@@ -221,10 +221,10 @@ describe('B1 — runActionChain: 7-step order verification', () => {
     expect(log.indexOf('step5-contfcn')).toBeLessThan(log.indexOf('step6-prso'));
   });
 
-  it('step 5 (CONTFCN) returning true suppresses step 6 (PRSO) and step 7 (default verb)', () => {
+  it('step 5 (CONTFCN) returning true suppresses step 6 (PRSO) and step 7 (default verb)', async () => {
     const { game, log } = buildStepWorld({ installContFcn: true, shortCircuitAt: 5 });
     game.start();
-    const result = game.turn('examine widget');
+    const result = await game.turn('examine widget');
 
     expect(log).toContain('step5-contfcn');
     expect(log).not.toContain('step6-prso');
@@ -232,32 +232,32 @@ describe('B1 — runActionChain: 7-step order verification', () => {
     expect(result.output).not.toContain("There's nothing special about");
   });
 
-  it('step 7 (default verb) runs when no earlier step short-circuits', () => {
+  it('step 7 (default verb) runs when no earlier step short-circuits', async () => {
     // When no handler claims the command, executeVerb must run.
     // "examine widget" with no special handler → default examine output.
     const { game } = buildStepWorld({ shortCircuitAt: undefined });
     game.start();
-    const result = game.turn('examine widget');
+    const result = await game.turn('examine widget');
     // Default examine emits "There's nothing special about..." or similar.
     // We just verify something was output (step 7 ran and produced output).
     expect(result.output.length).toBeGreaterThan(0);
   });
 
-  it('step 5 is skipped for WALK verb (guard: verb≠walk)', () => {
+  it('step 5 is skipped for WALK verb (guard: verb≠walk)', async () => {
     // The CONTFCN guard requires verb !== 'walk'.
     const { game, log } = buildStepWorld({ installContFcn: true });
     game.start();
     // "walk" / "go" doesn't resolve widget as dobj in the parser, so this
     // is a semantic test: if we could somehow get WALK with a dobj, step 5
     // would be skipped. We verify the contFcn did NOT fire on a walk command.
-    game.turn('north'); // no dobj, no step 5
+    await game.turn('north'); // no dobj, no step 5
     // step5-contfcn should NOT appear for a walk.
     expect(log).not.toContain('step5-contfcn');
   });
 });
 
 describe('B1 — existing dispatch tests still pass (regression guard)', () => {
-  it('room M-BEG runs before PRSO (regression: existing dispatch ordering)', () => {
+  it('room M-BEG runs before PRSO (regression: existing dispatch ordering)', async () => {
     // Mirror the existing dispatch.test.ts "order" test.
     const log: string[] = [];
     const room = new Room('ROOM2', 'Room', { ldesc: 'Room.' });
@@ -278,7 +278,7 @@ describe('B1 — existing dispatch tests still pass (regression guard)', () => {
     const world = World.fromObjects([room, widget, player]);
     const game = new Game(world, { rng, clock: new Clock(), events: new SimpleEventEmitter() });
     game.start();
-    game.turn('take widget2');
+    await game.turn('take widget2');
     expect(log).toEqual(['room', 'prso']);
   });
 });

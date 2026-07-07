@@ -68,37 +68,37 @@ function makeCtx(
 // ---------------------------------------------------------------------------
 
 describe('BD2 — V-WALK no-exit in dark: grue branch (Path-B fence)', () => {
-  it('when prob fires: jigsUp is called (grue branch routes to jigsUp)', () => {
+  it('when prob fires: jigsUp is called (grue branch routes to jigsUp)', async () => {
     const fix = makeDarkFixture();
     let jigsUpCalled = false;
     const ctx = makeCtx(fix, /*probResult*/true, (msg) => {
       jigsUpCalled = true;
       expect(msg).toMatch(/grue/i);
     });
-    executeVerb(ctx, 'walk');
+    await executeVerb(ctx, 'walk');
     expect(jigsUpCalled).toBe(true);
   });
 
-  it('when prob fires: result is fatal (grue kill = RFATAL)', () => {
+  it('when prob fires: result is fatal (grue kill = RFATAL)', async () => {
     const fix = makeDarkFixture();
     const ctx = makeCtx(fix, /*probResult*/true, () => {});
-    const r = executeVerb(ctx, 'walk');
+    const r = await executeVerb(ctx, 'walk');
     expect(r.fatal).toBe(true);
   });
 
-  it('when prob fires: output does NOT contain the canned "can\'t go" string', () => {
+  it('when prob fires: output does NOT contain the canned "can\'t go" string', async () => {
     const fix = makeDarkFixture();
     const ctx = makeCtx(fix, /*probResult*/true, () => {});
-    const r = executeVerb(ctx, 'walk');
+    const r = await executeVerb(ctx, 'walk');
     expect(r.output).not.toMatch(/You can't go that way/i);
   });
 
   // Path-A: prob does NOT fire → canned message (regression guard).
-  it('when prob does not fire (safe roll): falls through to "can\'t go" message', () => {
+  it('when prob does not fire (safe roll): falls through to "can\'t go" message', async () => {
     const fix = makeDarkFixture();
     let jigsUpCalled = false;
     const ctx = makeCtx(fix, /*probResult*/false, () => { jigsUpCalled = true; });
-    const r = executeVerb(ctx, 'walk');
+    const r = await executeVerb(ctx, 'walk');
     expect(jigsUpCalled).toBe(false);
     expect(r.output).toContain("You can't go that way");
   });
@@ -109,7 +109,7 @@ describe('BD2 — V-WALK no-exit in dark: grue branch (Path-B fence)', () => {
 // ---------------------------------------------------------------------------
 
 describe('BD2 — grue gate: NONLANDBIT exemption', () => {
-  it('NonLand room: no grue even when dark + prob fires', () => {
+  it('NonLand room: no grue even when dark + prob fires', async () => {
     const darkWater = new Room('DARK-WATER', 'Dark Water', { ldesc: 'Dark water.' });
     darkWater.set(Flag.NonLand);   // water room — grue excluded
     const player = new Actor('PLAYER', 'yourself');
@@ -126,7 +126,7 @@ describe('BD2 — grue gate: NONLANDBIT exemption', () => {
       prob: () => true,
       jigsUp: () => { jigsUpCalled = true; },
     };
-    executeVerb(ctx, 'walk');
+    await executeVerb(ctx, 'walk');
     expect(jigsUpCalled).toBe(false);
   });
 });
@@ -136,7 +136,7 @@ describe('BD2 — grue gate: NONLANDBIT exemption', () => {
 // ---------------------------------------------------------------------------
 
 describe('BD2 — grue gate: lit room exemption', () => {
-  it('lit room: no grue even when prob fires', () => {
+  it('lit room: no grue even when prob fires', async () => {
     const litRoom = new Room('LIT-ROOM', 'Lit Room', { ldesc: 'Bright here.' });
     litRoom.set(Flag.On);   // always lit
     const player = new Actor('PLAYER', 'yourself');
@@ -153,7 +153,7 @@ describe('BD2 — grue gate: lit room exemption', () => {
       prob: () => true,
       jigsUp: () => { jigsUpCalled = true; },
     };
-    executeVerb(ctx, 'walk');
+    await executeVerb(ctx, 'walk');
     expect(jigsUpCalled).toBe(false);
   });
 });

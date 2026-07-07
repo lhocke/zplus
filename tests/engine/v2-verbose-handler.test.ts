@@ -14,18 +14,18 @@ import { describe, it, expect } from 'vitest';
 import { createGame } from '../../src/engine/bootstrap.js';
 
 describe('V-VERBOSE handler', () => {
-  it('returns "Maximum verbosity." (ZIL gverbs.zil:16)', () => {
+  it('returns "Maximum verbosity." (ZIL gverbs.zil:16)', async () => {
     const game = createGame({ seed: 42 });
     game.start();
-    const r = game.turn('verbose');
+    const r = await game.turn('verbose');
     expect(r.output).toBe('Maximum verbosity.');
   });
 
-  it('is a meta-verb — does not advance the move counter', () => {
+  it('is a meta-verb — does not advance the move counter', async () => {
     const game = createGame({ seed: 42 });
     game.start();
     const before = game.view().moves;
-    game.turn('verbose');
+    await game.turn('verbose');
     expect(game.view().moves).toBe(before);
   });
 });

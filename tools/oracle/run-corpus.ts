@@ -191,7 +191,7 @@ async function runFile(corpusPath: string): Promise<boolean> {
   try {
     // Use the same seed as dfrotz (from corpus header) so RNG-driven combat
     // and other per-turn randomness aligns between the two runs.
-    engineRaw = runEngine(commands, { seed });
+    engineRaw = await runEngine(commands, { seed });
   } catch (err) {
     console.error('engine runner failed:', err);
     return false;

@@ -55,30 +55,30 @@ function buildBlockedWorld() {
 // ---------------------------------------------------------------------------
 
 describe('CA1: blocked V-WALK ticks CLOCKER once', () => {
-  it('NEXIT (elseMessage) blocked move: view().moves increments by 1', () => {
+  it('NEXIT (elseMessage) blocked move: view().moves increments by 1', async () => {
     const g = buildBlockedWorld();
     g.start();
 
     const before = g.view().moves;
-    g.turn('south');
+    await g.turn('south');
     expect(g.view().moves).toBe(before + 1);
   });
 
-  it('no-exit direction: view().moves increments by 1', () => {
+  it('no-exit direction: view().moves increments by 1', async () => {
     const g = buildBlockedWorld();
     g.start();
 
     const before = g.view().moves;
-    g.turn('east'); // no exit defined in ROOM-A
+    await g.turn('east'); // no exit defined in ROOM-A
     expect(g.view().moves).toBe(before + 1);
   });
 
-  it('WEST-OF-HOUSE east blocked: view().moves increments by 1', () => {
+  it('WEST-OF-HOUSE east blocked: view().moves increments by 1', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
 
     const before = g.view().moves;
-    g.turn('east');
+    await g.turn('east');
     expect(g.view().moves).toBe(before + 1);
   });
 });
@@ -88,12 +88,12 @@ describe('CA1: blocked V-WALK ticks CLOCKER once', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA1: successful non-meta verb advances exactly 1 tick', () => {
-  it('north (UEXIT) from ROOM-A advances moves by 1', () => {
+  it('north (UEXIT) from ROOM-A advances moves by 1', async () => {
     const g = buildBlockedWorld();
     g.start();
 
     const before = g.view().moves;
-    g.turn('north');
+    await g.turn('north');
     expect(g.view().moves).toBe(before + 1);
   });
 });
@@ -103,12 +103,12 @@ describe('CA1: successful non-meta verb advances exactly 1 tick', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA1: parse failure does NOT tick', () => {
-  it('"xyzzyzz" leaves moves unchanged', () => {
+  it('"xyzzyzz" leaves moves unchanged', async () => {
     const g = buildBlockedWorld();
     g.start();
 
     const before = g.view().moves;
-    g.turn('xyzzyzz');
+    await g.turn('xyzzyzz');
     expect(g.view().moves).toBe(before);
   });
 });
@@ -118,21 +118,21 @@ describe('CA1: parse failure does NOT tick', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA1: meta verb does NOT tick', () => {
-  it('"score" leaves moves unchanged', () => {
+  it('"score" leaves moves unchanged', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
 
     const before = g.view().moves;
-    g.turn('score');
+    await g.turn('score');
     expect(g.view().moves).toBe(before);
   });
 
-  it('"verbose" leaves moves unchanged', () => {
+  it('"verbose" leaves moves unchanged', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
 
     const before = g.view().moves;
-    g.turn('verbose');
+    await g.turn('verbose');
     expect(g.view().moves).toBe(before);
   });
 });
@@ -142,7 +142,7 @@ describe('CA1: meta verb does NOT tick', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA1: loud-room intercepted command ticks exactly once', () => {
-  it('intercepted "look" in loud room advances moves by 1, not 2', () => {
+  it('intercepted "look" in loud room advances moves by 1, not 2', async () => {
     // Build a game positioned in LOUD-ROOM with the loud condition active.
     // LOUD-FLAG=false and GATES-OPEN=true makes the room loud.
     const g = newGameAt('LOUD-ROOM');
@@ -154,7 +154,7 @@ describe('CA1: loud-room intercepted command ticks exactly once', () => {
     flags.set('LOUD-FLAG', false);
 
     const before = g.view().moves;
-    g.turn('look'); // intercepted by loudRoomDispatch → echo
+    await g.turn('look'); // intercepted by loudRoomDispatch → echo
     expect(g.view().moves).toBe(before + 1);
   });
 });
@@ -164,7 +164,7 @@ describe('CA1: loud-room intercepted command ticks exactly once', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA1: ghost intercepted command ticks exactly once', () => {
-  it('TIMBER-ROOM west (ghost-blocked walk) advances moves by 1', () => {
+  it('TIMBER-ROOM west (ghost-blocked walk) advances moves by 1', async () => {
     const g = newGameAt('TIMBER-ROOM');
     g.start();
     // Force dead=true to activate ghost dispatch.
@@ -173,11 +173,11 @@ describe('CA1: ghost intercepted command ticks exactly once', () => {
 
     const before = g.view().moves;
     // TIMBER-ROOM west is intercepted by ghostDispatch (1actions.zil:3114–3117).
-    g.turn('west');
+    await g.turn('west');
     expect(g.view().moves).toBe(before + 1);
   });
 
-  it('"diagnose" in ghost mode (intercepted RFATAL) advances moves by 1', () => {
+  it('"diagnose" in ghost mode (intercepted RFATAL) advances moves by 1', async () => {
     // diagnose parses without needing an object, so it always produces a parse-ok result.
     const g = newGameAt('ENTRANCE-TO-HADES');
     g.start();
@@ -186,11 +186,11 @@ describe('CA1: ghost intercepted command ticks exactly once', () => {
 
     const before = g.view().moves;
     // V-DIAGNOSE is intercepted by ghostDispatch → "You are dead." → should tick.
-    g.turn('diagnose');
+    await g.turn('diagnose');
     expect(g.view().moves).toBe(before + 1);
   });
 
-  it('"wait" in ghost mode advances moves by exactly 1, not 3', () => {
+  it('"wait" in ghost mode advances moves by exactly 1, not 3', async () => {
     // ZIL DEAD-FUNCTION (1actions.zil:3128–3129) intercepts WAIT with a bare TELL
     // and returns from the Actor handler — it never invokes V-WAIT's 3-tick REPEAT
     // loop (gverbs.zil:1514).  dfrotz R119 seed 42: ghost wait → Moves +1.
@@ -201,7 +201,7 @@ describe('CA1: ghost intercepted command ticks exactly once', () => {
     (g as unknown as { alwaysLit: boolean }).alwaysLit = true;
 
     const before = g.view().moves;
-    g.turn('wait');
+    await g.turn('wait');
     expect(g.view().moves).toBe(before + 1);
   });
 });
@@ -211,14 +211,14 @@ describe('CA1: ghost intercepted command ticks exactly once', () => {
 // ---------------------------------------------------------------------------
 
 describe('CA1: blocked move skips M-END', () => {
-  it('blocked east from WEST-OF-HOUSE does not fire LIVING-ROOM-FCN side effects', () => {
+  it('blocked east from WEST-OF-HOUSE does not fire LIVING-ROOM-FCN side effects', async () => {
     // WEST-OF-HOUSE has no LIVING-ROOM-FCN, but we can verify no score change
     // occurs (M-END is where score-deposit side effects would fire).
     const g = newGameAt('WEST-OF-HOUSE');
     g.start();
 
     const scoreBefore = g.view().score;
-    g.turn('east'); // blocked
+    await g.turn('east'); // blocked
     // Score must not change (no M-END treasury check fired).
     expect(g.view().score).toBe(scoreBefore);
   });
@@ -234,7 +234,7 @@ describe('CA1: clock desyncs by 1 per blocked move (lamp warning timing)', () =>
    * Issue a blocked move + (N-1) real moves → warning should fire at move N.
    * Pre-fix: blocked move skips clock → warning fires at move N+1.
    */
-  it('lamp-style countdown fires at correct move after a blocked move', () => {
+  it('lamp-style countdown fires at correct move after a blocked move', async () => {
     const roomB = new Room('ROOM-B', 'Room B', { ldesc: 'Room B.' });
     roomB.set(Flag.On);
     const roomA = new Room('ROOM-A', 'Room A', {
@@ -284,8 +284,8 @@ describe('CA1: clock desyncs by 1 per blocked move (lamp warning timing)', () =>
     // We can't do a second successful move from ROOM-B easily. Use look as a real command.
     // Actually look advances time in the real game. For this minimal world let's just verify
     // that 1 blocked + 1 success = 2 ticks (not 1).
-    g.turn('south'); // blocked
-    g.turn('north'); // successful
+    await g.turn('south'); // blocked
+    await g.turn('north'); // successful
 
     expect(advanceCount).toBe(2); // both must have ticked
   });

@@ -140,7 +140,7 @@ describe('SD1-D: game.ts wiring (createGame integration)', () => {
     expect(map!.has(Flag.Invisible)).toBe(true);
   });
 
-  it('MAP becomes visible after score reaches 350 via recomputeTrophy (M-END path)', () => {
+  it('MAP becomes visible after score reaches 350 via recomputeTrophy (M-END path)', async () => {
     // Start in LIVING-ROOM; set MAP.TVALUE=350 so recomputeTrophy hits 350.
     // M-END fires on TAKE — 'take lamp' triggers LIVING-ROOM-FCN M-END.
     const game = createGame({ startRoom: 'LIVING-ROOM' });
@@ -154,23 +154,23 @@ describe('SD1-D: game.ts wiring (createGame integration)', () => {
 
     // 'take lamp' fires M-END on LIVING-ROOM-FCN which calls recomputeTrophy.
     // score = baseScore(0) + otvalFrob(TROPHY-CASE)(350) = 350 → WON-FLAG.
-    const out = game.turn('take lamp');
+    const out = await game.turn('take lamp');
     expect(out.output).toContain('Taken'); // lamp was taken
     expect(map!.has(Flag.Invisible)).toBe(false); // MAP reveal fired
   });
 
-  it('whisper appears in turn output when score hits 350', () => {
+  it('whisper appears in turn output when score hits 350', async () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     const map = game.world.get('MAP')!;
     map.props.set('TVALUE', 350);
 
-    const out = game.turn('take lamp');
+    const out = await game.turn('take lamp');
     expect(out.output).toContain(
       'An almost inaudible voice whispers in your ear, "Look to your treasures for the final secret."',
     );
   });
 
-  it('WEST-OF-HOUSE.Touched cleared when score hits 350', () => {
+  it('WEST-OF-HOUSE.Touched cleared when score hits 350', async () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     const woh = game.world.get('WEST-OF-HOUSE')!;
     // Artificially set Touched so we can observe it being cleared.
@@ -179,23 +179,23 @@ describe('SD1-D: game.ts wiring (createGame integration)', () => {
     const map = game.world.get('MAP')!;
     map.props.set('TVALUE', 350);
 
-    game.turn('take lamp');
+    await game.turn('take lamp');
     expect(woh.has(Flag.Touched)).toBe(false);
   });
 
-  it('whisper appears only once even if score re-hits 350', () => {
+  it('whisper appears only once even if score re-hits 350', async () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     const map = game.world.get('MAP')!;
     map.props.set('TVALUE', 350);
 
-    const first = game.turn('take lamp');
+    const first = await game.turn('take lamp');
     const whisperText = 'whispers in your ear';
     expect(first.output).toContain(whisperText);
 
     // Drop the lamp back and take again — recompute happens again but
     // wonFlag is already set so hook must not re-fire.
-    game.turn('drop lamp');
-    const second = game.turn('take lamp');
+    await game.turn('drop lamp');
+    const second = await game.turn('take lamp');
     expect(second.output).not.toContain(whisperText);
   });
 });
@@ -210,36 +210,36 @@ describe('SD1-D: game.ts wiring (createGame integration)', () => {
 describe('SD1-E: whisper emitted via room-entry first-visit VALUE path', () => {
   // KITCHEN has VALUE=10 in rooms.json; east of LIVING-ROOM.
   // Seed baseScore to 340, walk east to KITCHEN (first visit) → score=350 → WON-FLAG.
-  it('whisper via room VALUE — start in LIVING-ROOM, walk east to KITCHEN', () => {
+  it('whisper via room VALUE — start in LIVING-ROOM, walk east to KITCHEN', async () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     seedScore(game, 340);
 
-    const out = game.turn('east');
+    const out = await game.turn('east');
     expect(out.output).toContain(
       'An almost inaudible voice whispers in your ear, "Look to your treasures for the final secret."',
     );
   });
 
-  it('MAP revealed via room VALUE path', () => {
+  it('MAP revealed via room VALUE path', async () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     seedScore(game, 340);
     const map = game.world.get('MAP')!;
     expect(map.has(Flag.Invisible)).toBe(true);
 
-    game.turn('east'); // KITCHEN first visit, VALUE=10 → score=350
+    await game.turn('east'); // KITCHEN first visit, VALUE=10 → score=350
     expect(map.has(Flag.Invisible)).toBe(false);
   });
 
-  it('whisper appears only once on room-entry path', () => {
+  it('whisper appears only once on room-entry path', async () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     seedScore(game, 340);
 
-    const first = game.turn('east'); // KITCHEN — score hits 350
+    const first = await game.turn('east'); // KITCHEN — score hits 350
     expect(first.output).toContain('whispers in your ear');
 
     // Go back and re-enter — KITCHEN already visited, no VALUE re-award.
-    game.turn('west');
-    const second = game.turn('east');
+    await game.turn('west');
+    const second = await game.turn('east');
     expect(second.output).not.toContain('whispers in your ear');
   });
 });

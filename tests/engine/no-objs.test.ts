@@ -35,33 +35,33 @@ function equipLamp(g: Game): void {
 // ---------------------------------------------------------------------------
 
 describe('NO-OBJS LOWER-SHAFT — LIGHT-SHAFT award', () => {
-  it('awards +13 on first command when lit', () => {
+  it('awards +13 on first command when lit', async () => {
     const g = newGameAt('LOWER-SHAFT');
     equipLamp(g);
     g.start();
     const before = g.view().score;
-    g.turn('look');
+    await g.turn('look');
     expect(g.view().score).toBe(before + 13);
   });
 
-  it('does not award again on subsequent command', () => {
+  it('does not award again on subsequent command', async () => {
     const g = newGameAt('LOWER-SHAFT');
     equipLamp(g);
     g.start();
-    g.turn('look');
+    await g.turn('look');
     const after1 = g.view().score;
-    g.turn('look');
+    await g.turn('look');
     expect(g.view().score).toBe(after1);
   });
 
-  it('does not award in darkness (no light source)', () => {
+  it('does not award in darkness (no light source)', async () => {
     const g = newGameAt('LOWER-SHAFT');
     // no lamp equipped — room is dark
     g.start();
     const before = g.view().score;
     // In darkness any command still fires M-BEG but LIT is false → no award
     // (room is dark so look gives pitch-black, but M-BEG still runs)
-    g.turn('look');
+    await g.turn('look');
     expect(g.view().score).toBe(before);
   });
 });
@@ -77,15 +77,15 @@ const noGrueRng = { next: () => 0, prob: () => false };
 describe('NO-OBJS TIMBER-ROOM — EMPTY-HANDED gate', () => {
   // The tight passage requires truly empty hands — even the lamp (SIZE 15)
   // is too heavy. LOWER-SHAFT is dark (no Flag.On) without a light source.
-  it('empty-handed player can go west into LOWER-SHAFT', () => {
+  it('empty-handed player can go west into LOWER-SHAFT', async () => {
     const g = createGame({ startRoom: 'TIMBER-ROOM', rng: noGrueRng });
     g.start();
-    const r = g.turn('west');
+    const r = await g.turn('west');
     expect(r.output).toContain('dark place');
     expect(g.view().here).toBe('LOWER-SHAFT');
   });
 
-  it('player holding a heavy item (SIZE > 4) is blocked going west', () => {
+  it('player holding a heavy item (SIZE > 4) is blocked going west', async () => {
     const g = createGame({ startRoom: 'TIMBER-ROOM', rng: noGrueRng });
     const w = worldOf(g);
     const player = w.get('PLAYER')!;
@@ -93,7 +93,7 @@ describe('NO-OBJS TIMBER-ROOM — EMPTY-HANDED gate', () => {
     const keys = w.get('KEYS')!;
     keys.moveTo(player);
     g.start();
-    const r = g.turn('west');
+    const r = await g.turn('west');
     expect(r.output).toContain('You cannot fit through this passage with that load.');
     expect(g.view().here).toBe('TIMBER-ROOM');
   });
@@ -105,26 +105,26 @@ describe('NO-OBJS TIMBER-ROOM — EMPTY-HANDED gate', () => {
 
 describe('NO-OBJS weight threshold', () => {
   // SIZE-4 item: weight == 4, not > 4 → EMPTY-HANDED stays true.
-  it('SIZE-4 item (WATER) does not block (weight <= 4)', () => {
+  it('SIZE-4 item (WATER) does not block (weight <= 4)', async () => {
     const g = createGame({ startRoom: 'TIMBER-ROOM', rng: noGrueRng });
     const w = worldOf(g);
     const player = w.get('PLAYER')!;
     const water = w.get('WATER')!;
     water.moveTo(player);
     g.start();
-    const r = g.turn('west');
+    const r = await g.turn('west');
     expect(r.output).toContain('dark place');
     expect(g.view().here).toBe('LOWER-SHAFT');
   });
 
-  it('SIZE-5 item (TUBE) blocks (weight > 4)', () => {
+  it('SIZE-5 item (TUBE) blocks (weight > 4)', async () => {
     const g = createGame({ startRoom: 'TIMBER-ROOM', rng: noGrueRng });
     const w = worldOf(g);
     const player = w.get('PLAYER')!;
     const tube = w.get('TUBE')!;
     tube.moveTo(player);
     g.start();
-    const r = g.turn('west');
+    const r = await g.turn('west');
     expect(r.output).toContain('You cannot fit through this passage with that load.');
     expect(g.view().here).toBe('TIMBER-ROOM');
   });

@@ -88,22 +88,22 @@ describe('player not listed in room contents', () => {
     expect(output).not.toContain('yourself');
   });
 
-  it('turn(north) output does not list the player in room contents', () => {
+  it('turn(north) output does not list the player in room contents', async () => {
     const { game } = makeFixture();
     game.start();
-    const result = game.turn('north');
+    const result = await game.turn('north');
     expect(result.output).not.toContain('yourself');
   });
 
-  it('a held item (in player inventory) is not listed as a room item', () => {
+  it('a held item (in player inventory) is not listed as a room item', async () => {
     const { game } = makeFixture();
     game.start();
     // Take leaflet from mailbox, then open mailbox; leaflet should appear in
     // "open" result but NOT in a subsequent look.
-    game.turn('open mailbox');
-    game.turn('take leaflet');
+    await game.turn('open mailbox');
+    await game.turn('take leaflet');
     // Now look — leaflet is in inventory (player), not in the room.
-    const result = game.turn('look');
+    const result = await game.turn('look');
     // The room listing should not show the leaflet as a loose room object.
     // (It may appear in some contexts but not as "You can see: leaflet.")
     expect(result.output).not.toMatch(/You can see:.*leaflet/);
@@ -140,35 +140,35 @@ describe('Game.start()', () => {
 // ---------------------------------------------------------------------------
 
 describe('Game.turn()', () => {
-  it('open mailbox reveals leaflet and returns output', () => {
+  it('open mailbox reveals leaflet and returns output', async () => {
     const { game } = makeFixture();
     game.start();
-    const result = game.turn('open mailbox');
+    const result = await game.turn('open mailbox');
     expect(result.output.toLowerCase()).toContain('leaflet');
   });
 
-  it('increments the move counter each turn', () => {
+  it('increments the move counter each turn', async () => {
     const { game } = makeFixture();
     game.start();
-    game.turn('look');
+    await game.turn('look');
     expect(game.view().moves).toBe(1);
-    game.turn('look');
+    await game.turn('look');
     expect(game.view().moves).toBe(2);
   });
 
-  it('emits turn-complete with the updated move count', () => {
+  it('emits turn-complete with the updated move count', async () => {
     const { game, emitter } = makeFixture();
     game.start();
 
     const completions: number[] = [];
     emitter.on('turn-complete', e => completions.push(e.moves));
 
-    game.turn('look');
-    game.turn('look');
+    await game.turn('look');
+    await game.turn('look');
     expect(completions).toEqual([1, 2]);
   });
 
-  it('emits room-entered when moving to a new room', () => {
+  it('emits room-entered when moving to a new room', async () => {
     const { game, emitter } = makeFixture();
     game.start();
 
@@ -176,34 +176,34 @@ describe('Game.turn()', () => {
     emitter.on('room-entered', e => entered.push(e.room));
 
     // Start emits one for WEST-OF-HOUSE; move north emits another.
-    game.turn('north');
+    await game.turn('north');
     expect(entered).toContain('NORTH-OF-HOUSE');
   });
 
-  it('marks firstVisit true the first time a room is entered', () => {
+  it('marks firstVisit true the first time a room is entered', async () => {
     const { game, emitter } = makeFixture();
     game.start();
 
     const visits: Array<{ room: string; firstVisit: boolean }> = [];
     emitter.on('room-entered', e => visits.push({ room: e.room, firstVisit: e.firstVisit }));
 
-    game.turn('north');  // first visit to NORTH-OF-HOUSE
-    game.turn('south'); // back to WEST-OF-HOUSE — not first visit
-    game.turn('north');  // second visit to NORTH-OF-HOUSE
+    await game.turn('north');  // first visit to NORTH-OF-HOUSE
+    await game.turn('south'); // back to WEST-OF-HOUSE — not first visit
+    await game.turn('north');  // second visit to NORTH-OF-HOUSE
 
     const northVisits = visits.filter(v => v.room === 'NORTH-OF-HOUSE');
     expect(northVisits[0]?.firstVisit).toBe(true);
     expect(northVisits[1]?.firstVisit).toBe(false);
   });
 
-  it('moved is true when location changed, false otherwise', () => {
+  it('moved is true when location changed, false otherwise', async () => {
     const { game } = makeFixture();
     game.start();
 
-    const lookResult = game.turn('look');
+    const lookResult = await game.turn('look');
     expect(lookResult.moved).toBe(false);
 
-    const goResult = game.turn('north');
+    const goResult = await game.turn('north');
     expect(goResult.moved).toBe(true);
   });
 });

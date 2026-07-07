@@ -82,7 +82,7 @@ function makeCtx(
 // ---------------------------------------------------------------------------
 
 describe('BD6 — container-reveal: single item rebinds IT (ZIL PRINT-CONTENTS:1747)', () => {
-  it('opening a box with 1 item calls thisIsIt with that item', () => {
+  it('opening a box with 1 item calls thisIsIt with that item', async () => {
     const fix = makeOpenFixture();
     // Remove sword so only leaflet remains.
     fix.sword.moveTo(null as unknown as Room);
@@ -90,14 +90,14 @@ describe('BD6 — container-reveal: single item rebinds IT (ZIL PRINT-CONTENTS:1
     let bound: string | undefined;
     const ctx = makeCtx(fix, (obj) => { bound = obj.id; });
 
-    const r = executeVerb(ctx, 'open');
+    const r = await executeVerb(ctx, 'open');
     // Must produce the "Opening X reveals..." output.
     expect(r.output).toMatch(/Opening|reveals|Opened/i);
     // thisIsIt must have been called with the leaflet.
     expect(bound).toBe('LEAFLET');
   });
 
-  it('opening a box with 1 untouched+FDESC item: no thisIsIt (single-FDESC path skips PRINT-CONTENTS)', () => {
+  it('opening a box with 1 untouched+FDESC item: no thisIsIt (single-FDESC path skips PRINT-CONTENTS)', async () => {
     // ZIL V-OPEN single-FDESC branch does NOT call PRINT-CONTENTS / THIS-IS-IT.
     const fix = makeOpenFixture();
     fix.sword.moveTo(null as unknown as Room);
@@ -107,7 +107,7 @@ describe('BD6 — container-reveal: single item rebinds IT (ZIL PRINT-CONTENTS:1
     let bound: string | undefined;
     const ctx = makeCtx(fix, (obj) => { bound = obj.id; });
 
-    executeVerb(ctx, 'open');
+    await executeVerb(ctx, 'open');
     // Single-FDESC path ("The box opens.\n<fdesc>") — no PRINT-CONTENTS, no THIS-IS-IT.
     expect(bound).toBeUndefined();
   });
@@ -118,14 +118,14 @@ describe('BD6 — container-reveal: single item rebinds IT (ZIL PRINT-CONTENTS:1
 // ---------------------------------------------------------------------------
 
 describe('BD6 — container-reveal: multi-item reveal does NOT rebind IT', () => {
-  it('opening a box with 2 items: thisIsIt is NOT called', () => {
+  it('opening a box with 2 items: thisIsIt is NOT called', async () => {
     const fix = makeOpenFixture();
     // Both leaflet and sword are present.
 
     let bound: string | undefined;
     const ctx = makeCtx(fix, (obj) => { bound = obj.id; });
 
-    executeVerb(ctx, 'open');
+    await executeVerb(ctx, 'open');
     expect(bound).toBeUndefined();
   });
 });
@@ -151,6 +151,6 @@ describe('BD6 — CC11 non-regression: verbOpen does not touch itRef when thisIs
       // thisIsIt intentionally absent
     };
 
-    expect(() => executeVerb(ctx, 'open')).not.toThrow();
+    expect(async () => await executeVerb(ctx, 'open')).not.toThrow();
   });
 });

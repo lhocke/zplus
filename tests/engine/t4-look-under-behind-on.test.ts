@@ -66,24 +66,24 @@ function makeBagGame() {
 // ---------------------------------------------------------------------------
 
 describe('look under thief — V-LOOK-UNDER (integration)', () => {
-  it('emits "There is nothing but dust there." (verbatim dfrotz)', () => {
+  it('emits "There is nothing but dust there." (verbatim dfrotz)', async () => {
     const g = makeThiefGame();
-    const r = g.turn('look under thief');
+    const r = await g.turn('look under thief');
     expect(r.output).toBe('There is nothing but dust there.');
   });
 
-  it('does NOT re-describe the room', () => {
+  it('does NOT re-describe the room', async () => {
     const g = makeThiefGame();
-    const r = g.turn('look under thief');
+    const r = await g.turn('look under thief');
     // Room description would contain "Round Room" or the ldesc text.
     expect(r.output).not.toMatch(/Round Room|ROUND-ROOM/i);
   });
 });
 
 describe('look under bag — V-LOOK-UNDER (integration)', () => {
-  it('emits "There is nothing but dust there." (verbatim dfrotz)', () => {
+  it('emits "There is nothing but dust there." (verbatim dfrotz)', async () => {
     const g = makeBagGame();
-    const r = g.turn('look under bag');
+    const r = await g.turn('look under bag');
     expect(r.output).toBe('There is nothing but dust there.');
   });
 });
@@ -93,23 +93,23 @@ describe('look under bag — V-LOOK-UNDER (integration)', () => {
 // ---------------------------------------------------------------------------
 
 describe('look behind thief — V-LOOK-BEHIND (integration)', () => {
-  it('emits "There is nothing behind the thief." (verbatim dfrotz)', () => {
+  it('emits "There is nothing behind the thief." (verbatim dfrotz)', async () => {
     const g = makeThiefGame();
-    const r = g.turn('look behind thief');
+    const r = await g.turn('look behind thief');
     expect(r.output).toBe('There is nothing behind the thief.');
   });
 
-  it('does NOT re-describe the room', () => {
+  it('does NOT re-describe the room', async () => {
     const g = makeThiefGame();
-    const r = g.turn('look behind thief');
+    const r = await g.turn('look behind thief');
     expect(r.output).not.toMatch(/Round Room|ROUND-ROOM/i);
   });
 });
 
 describe('look behind bag — V-LOOK-BEHIND (integration)', () => {
-  it('emits the correct "nothing behind" message for bag desc', () => {
+  it('emits the correct "nothing behind" message for bag desc', async () => {
     const g = makeBagGame();
-    const r = g.turn('look behind bag');
+    const r = await g.turn('look behind bag');
     // The desc for LARGE-BAG — check it's the behind response pattern, not room.
     expect(r.output).toMatch(/There is nothing behind the .+\./);
   });
@@ -120,23 +120,23 @@ describe('look behind bag — V-LOOK-BEHIND (integration)', () => {
 // ---------------------------------------------------------------------------
 
 describe('look on thief — V-LOOK-ON (integration)', () => {
-  it('emits "Look on a thief???" (verbatim dfrotz — thief lacks SURFACEBIT)', () => {
+  it('emits "Look on a thief???" (verbatim dfrotz — thief lacks SURFACEBIT)', async () => {
     const g = makeThiefGame();
-    const r = g.turn('look on thief');
+    const r = await g.turn('look on thief');
     expect(r.output).toBe('Look on a thief???');
   });
 
-  it('does NOT re-describe the room', () => {
+  it('does NOT re-describe the room', async () => {
     const g = makeThiefGame();
-    const r = g.turn('look on thief');
+    const r = await g.turn('look on thief');
     expect(r.output).not.toMatch(/Round Room|ROUND-ROOM/i);
   });
 });
 
 describe('look on bag — V-LOOK-ON (integration)', () => {
-  it('emits the "Look on a ???" message for bag (no SURFACEBIT)', () => {
+  it('emits the "Look on a ???" message for bag (no SURFACEBIT)', async () => {
     const g = makeBagGame();
-    const r = g.turn('look on bag');
+    const r = await g.turn('look on bag');
     // LARGE-BAG has no SURFACEBIT, so this should be the not-a-surface response.
     expect(r.output).toMatch(/Look on a .+\?\?\?/);
   });

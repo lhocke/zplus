@@ -26,16 +26,16 @@ describe('DESCRIBE-OBJECT — "(outside the <vehicle>)" suffix (gverbs.zil:1722)
     return { g, buoy };
   }
 
-  it('touched room object in a vehicle → "(outside the magic boat)" (Pass 2)', () => {
+  it('touched room object in a vehicle → "(outside the magic boat)" (Pass 2)', async () => {
     const { g, buoy } = boatScene();
     buoy.set(Flag.Touched); // touched → DESCRIBE-OBJECT path → suffix
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('There is a red buoy here. (outside the magic boat)');
   });
 
-  it('untouched FDESC object → no suffix (Pass 1 prints the FDESC directly)', () => {
+  it('untouched FDESC object → no suffix (Pass 1 prints the FDESC directly)', async () => {
     const { g } = boatScene(); // buoy left untouched → still has its FDESC
-    const out = g.turn('look').output;
+    const out = await (await g.turn('look')).output;
     expect(out).toContain('(probably a warning)');
     expect(out).not.toContain('(outside the magic boat)');
   });

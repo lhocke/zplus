@@ -46,7 +46,7 @@ describe('CB0 — VerbContext has action populated', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB0 — ActionContext.action populated at every dispatch site', () => {
-  it('lantern handler sees ctx.action=V-THROW when lamp is thrown (not undefined)', () => {
+  it('lantern handler sees ctx.action=V-THROW when lamp is thrown (not undefined)', async () => {
     const g = newGameAt('TROLL-ROOM');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.player);
@@ -61,12 +61,12 @@ describe('CB0 — ActionContext.action populated at every dispatch site', () => 
     };
 
     // "throw lamp at troll" → V-THROW; lamp is dobj; lantern handler fires.
-    g.turn('throw lamp at troll');
+    await g.turn('throw lamp at troll');
     expect(capturedAction).toBeDefined();
     expect(capturedAction).toBe('V-THROW');
   });
 
-  it('lantern handler sees ctx.action=V-LAMP-ON on "turn on lamp"', () => {
+  it('lantern handler sees ctx.action=V-LAMP-ON on "turn on lamp"', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.player);
@@ -78,11 +78,11 @@ describe('CB0 — ActionContext.action populated at every dispatch site', () => 
       return original(ctx);
     };
 
-    g.turn('turn on lamp');
+    await g.turn('turn on lamp');
     expect(capturedAction).toBe('V-LAMP-ON');
   });
 
-  it('lantern handler sees ctx.action=V-LAMP-OFF on "turn off lamp"', () => {
+  it('lantern handler sees ctx.action=V-LAMP-OFF on "turn off lamp"', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.player);
@@ -96,11 +96,11 @@ describe('CB0 — ActionContext.action populated at every dispatch site', () => 
       return original(ctx);
     };
 
-    g.turn('turn off lamp');
+    await g.turn('turn off lamp');
     expect(capturedAction).toBe('V-LAMP-OFF');
   });
 
-  it('lantern handler sees ctx.action=V-EXAMINE on "examine lamp"', () => {
+  it('lantern handler sees ctx.action=V-EXAMINE on "examine lamp"', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.player);
@@ -112,7 +112,7 @@ describe('CB0 — ActionContext.action populated at every dispatch site', () => 
       return original(ctx);
     };
 
-    g.turn('examine lamp');
+    await g.turn('examine lamp');
     expect(capturedAction).toBe('V-EXAMINE');
   });
 });
@@ -123,126 +123,126 @@ describe('CB0 — ActionContext.action populated at every dispatch site', () => 
 // ---------------------------------------------------------------------------
 
 describe('CB0 — synonym coverage: TAKE family (get, grab, carry)', () => {
-  it('"get lamp" reaches V-TAKE (not unknown verb)', () => {
+  it('"get lamp" reaches V-TAKE (not unknown verb)', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.world.get('WEST-OF-HOUSE')!);
-    const out = g.turn('get lamp').output;
+    const out = await (await g.turn('get lamp')).output;
     expect(out).not.toMatch(/don't know how to/i);
     expect(out).toMatch(/taken/i);
   });
 
-  it('"grab lamp" reaches V-TAKE', () => {
+  it('"grab lamp" reaches V-TAKE', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.world.get('WEST-OF-HOUSE')!);
-    const out = g.turn('grab lamp').output;
+    const out = await (await g.turn('grab lamp')).output;
     expect(out).not.toMatch(/don't know how to/i);
     expect(out).toMatch(/taken/i);
   });
 });
 
 describe('CB0 — synonym coverage: EXAMINE family (describe)', () => {
-  it('"describe mailbox" reaches V-EXAMINE (not unknown verb)', () => {
+  it('"describe mailbox" reaches V-EXAMINE (not unknown verb)', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
-    const out = g.turn('describe mailbox').output;
+    const out = await (await g.turn('describe mailbox')).output;
     expect(out).not.toMatch(/don't know how to/i);
   });
 });
 
 describe('CB0 — synonym coverage: THROW family — synonym reaches lantern handler', () => {
-  it('"hurl lamp at troll" fires the lantern smash handler via V-THROW action', () => {
+  it('"hurl lamp at troll" fires the lantern smash handler via V-THROW action', async () => {
     const g = newGameAt('TROLL-ROOM');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.player);
     lamp.set(Flag.OnFire);
     lamp.set(Flag.Light);
     // hurl → canonical throw → V-THROW; lantern handler must fire via ctx.action.
-    const out = g.turn('hurl lamp at troll').output;
+    const out = await (await g.turn('hurl lamp at troll')).output;
     // The lantern handler V-THROW branch: "smashed into the floor"
     expect(out).toContain('smashed into the floor');
   });
 });
 
 describe('CB0 — synonym coverage: ATTACK family (kill, fight, hit, hurt)', () => {
-  it('"kill troll" routes V-ATTACK (not unknown)', () => {
+  it('"kill troll" routes V-ATTACK (not unknown)', async () => {
     const g = newGameAt('TROLL-ROOM');
     const sword = g.world.get('SWORD')!;
     sword.moveTo(g.player);
-    const out = g.turn('kill troll').output;
+    const out = await (await g.turn('kill troll')).output;
     expect(out).not.toMatch(/don't know how to/i);
   });
 
-  it('"fight troll" routes V-ATTACK', () => {
+  it('"fight troll" routes V-ATTACK', async () => {
     const g = newGameAt('TROLL-ROOM');
     const sword = g.world.get('SWORD')!;
     sword.moveTo(g.player);
-    const out = g.turn('fight troll').output;
+    const out = await (await g.turn('fight troll')).output;
     expect(out).not.toMatch(/don't know how to/i);
   });
 
-  it('"murder troll" routes V-ATTACK (MURDER synonym)', () => {
+  it('"murder troll" routes V-ATTACK (MURDER synonym)', async () => {
     const g = newGameAt('TROLL-ROOM');
     const sword = g.world.get('SWORD')!;
     sword.moveTo(g.player);
-    const out = g.turn('murder troll').output;
+    const out = await (await g.turn('murder troll')).output;
     expect(out).not.toMatch(/don't know how to/i);
   });
 });
 
 describe('CB0 — synonym coverage: OPEN family (destroy)', () => {
-  it('"break front door" reaches V-MUNG or V-OPEN (not unknown)', () => {
+  it('"break front door" reaches V-MUNG or V-OPEN (not unknown)', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
-    const out = g.turn('break door').output;
+    const out = await (await g.turn('break door')).output;
     expect(out).not.toMatch(/don't know how to/i);
   });
 });
 
 describe('CB0 — synonym coverage: LOOK family (stare, gaze, l)', () => {
-  it('"stare" reaches V-LOOK', () => {
+  it('"stare" reaches V-LOOK', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
-    const out = g.turn('stare').output;
+    const out = await (await g.turn('stare')).output;
     expect(out).not.toMatch(/don't know how to/i);
   });
 
-  it('"l" reaches V-LOOK', () => {
+  it('"l" reaches V-LOOK', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
-    const out = g.turn('l').output;
+    const out = await (await g.turn('l')).output;
     expect(out).not.toMatch(/don't know how to/i);
   });
 });
 
 describe('CB0 — synonym coverage: WAIT (z)', () => {
-  it('"z" reaches V-WAIT (Time passes...)', () => {
+  it('"z" reaches V-WAIT (Time passes...)', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
-    const out = g.turn('z').output;
+    const out = await (await g.turn('z')).output;
     expect(out).toContain('Time passes');
   });
 });
 
 describe('CB0 — synonym coverage: INVENTORY (i)', () => {
-  it('"i" reaches V-INVENTORY', () => {
+  it('"i" reaches V-INVENTORY', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
-    const out = g.turn('i').output;
+    const out = await (await g.turn('i')).output;
     expect(out).not.toMatch(/don't know how to/i);
   });
 });
 
 describe('CB0 — synonym coverage: MOVE family (push)', () => {
-  it('"push rug" reaches V-PUSH or V-MOVE (not unknown)', () => {
+  it('"push rug" reaches V-PUSH or V-MOVE (not unknown)', async () => {
     const g = newGameAt('LIVING-ROOM');
-    const out = g.turn('push rug').output;
+    const out = await (await g.turn('push rug')).output;
     expect(out).not.toMatch(/don't know how to/i);
   });
 });
 
 describe('CB0 — synonym coverage: BURN family (incinerate)', () => {
-  it('"incinerate door" (no iobj) is a parse, not unknown verb', () => {
+  it('"incinerate door" (no iobj) is a parse, not unknown verb', async () => {
     // "incinerate" → canonical "burn" → BURN with no iobj → PRE-BURN fires.
     // PRE-BURN says "You didn't say with what!" — still reaches V-BURN path,
     // not "I don't know how to".
     const g = newGameAt('WEST-OF-HOUSE');
-    const out = g.turn('incinerate door').output;
+    const out = await (await g.turn('incinerate door')).output;
     expect(out).not.toMatch(/don't know how to/i);
   });
 });
@@ -254,7 +254,7 @@ describe('CB0 — synonym coverage: BURN family (incinerate)', () => {
 // ---------------------------------------------------------------------------
 
 describe('CB0 — action-dispatch proof: light-sources.ts responds to SYNONYM inputs', () => {
-  it('"douse lamp" extinguishes (V-LAMP-OFF via EXTINGUISH synonym)', () => {
+  it('"douse lamp" extinguishes (V-LAMP-OFF via EXTINGUISH synonym)', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.player);
@@ -263,28 +263,28 @@ describe('CB0 — action-dispatch proof: light-sources.ts responds to SYNONYM in
     // "douse" → canonical extinguish → V-LAMP-OFF
     // After CB0: ctx.action === 'V-LAMP-OFF' catches it.
     // Before CB0: ctx.verb === 'extinguish' misses 'douse', returns false.
-    const out = g.turn('douse lamp').output;
+    const out = await (await g.turn('douse lamp')).output;
     expect(out).not.toMatch(/don't know how to/i);
     expect(out).toMatch(/now off/i);
   });
 
-  it('"douse candles" extinguishes candles (V-LAMP-OFF)', () => {
+  it('"douse candles" extinguishes candles (V-LAMP-OFF)', async () => {
     const g = newGameAt('EAST-OF-HOUSE');
     const candles = g.world.get('CANDLES')!;
     candles.moveTo(g.player);
     candles.set(Flag.OnFire);
     // "douse" → V-LAMP-OFF; candles handler must fire via ctx.action
-    const out = g.turn('douse candles').output;
+    const out = await (await g.turn('douse candles')).output;
     expect(out).not.toMatch(/don't know how to/i);
     expect(out).toMatch(/extinguish|flame|not lighted/i);
   });
 
-  it('"light lamp" turns on lamp (V-LAMP-ON via LIGHT verb)', () => {
+  it('"light lamp" turns on lamp (V-LAMP-ON via LIGHT verb)', async () => {
     const g = newGameAt('WEST-OF-HOUSE');
     const lamp = g.world.get('LAMP')!;
     lamp.moveTo(g.player);
     // "light" → V-LAMP-ON (separate syntax entry, not the burn path)
-    const out = g.turn('light lamp').output;
+    const out = await (await g.turn('light lamp')).output;
     expect(out).not.toMatch(/don't know how to/i);
     expect(out).toMatch(/now on|turned on/i);
   });

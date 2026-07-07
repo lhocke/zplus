@@ -309,40 +309,40 @@ describe('F5(b): Clock.advance() returns transcript lines and interrupted flag',
 // ---------------------------------------------------------------------------
 
 describe('F5(c): Meta-verb suppression (V-SCORE does not tick clock)', () => {
-  it('V-SCORE does not increment the move counter', () => {
+  it('V-SCORE does not increment the move counter', async () => {
     const game = createGame({ startRoom: 'WEST-OF-HOUSE' });
     game.start();
 
     // "score" should NOT increment moveCount
-    game.turn('score');
+    await game.turn('score');
     expect(game.view().moves).toBe(0);
 
     // After "look" (real action), moveCount increments
-    game.turn('look');
+    await game.turn('look');
     expect(game.view().moves).toBe(1);
 
     // "score" again should not increment
-    game.turn('score');
+    await game.turn('score');
     expect(game.view().moves).toBe(1);
   });
 
-  it('V-SCORE output shows correct move count (not incremented by score itself)', () => {
+  it('V-SCORE output shows correct move count (not incremented by score itself)', async () => {
     const game = createGame({ startRoom: 'WEST-OF-HOUSE' });
     game.start();
 
     // First score: 0 moves (score doesn't count itself)
-    const r1 = game.turn('score');
+    const r1 = await game.turn('score');
     expect(r1.output).toContain('in 0 moves.');
 
     // Do a real action
-    game.turn('look'); // moveCount → 1
+    await game.turn('look'); // moveCount → 1
 
     // Second score: 1 move (still not counting score turn)
-    const r2 = game.turn('score');
+    const r2 = await game.turn('score');
     expect(r2.output).toContain('in 1 move.');
   });
 
-  it('V-SCORE does not fire the clock (no advance on score turn)', () => {
+  it('V-SCORE does not fire the clock (no advance on score turn)', async () => {
     // Set up a game with a clock entry that counts advances
     // We use the bootstrap game and verify that the candle timer
     // does not advance on a "score" turn (by checking candle state after many score turns)
@@ -358,8 +358,8 @@ describe('F5(c): Meta-verb suppression (V-SCORE does not tick clock)', () => {
     // game: 5 score turns (meta — no clock tick)
     // lookGame: 5 look turns (real — 5 clock ticks)
     for (let i = 0; i < 5; i++) {
-      game.turn('score');
-      lookGame.turn('look');
+      await game.turn('score');
+      await lookGame.turn('look');
     }
 
     // The move counter shows the difference
@@ -367,12 +367,12 @@ describe('F5(c): Meta-verb suppression (V-SCORE does not tick clock)', () => {
     expect(lookGame.view().moves).toBe(5); // look turns do count
   });
 
-  it('a real action (V-LOOK) DOES increment moveCount', () => {
+  it('a real action (V-LOOK) DOES increment moveCount', async () => {
     const game = createGame({ startRoom: 'WEST-OF-HOUSE' });
     game.start();
 
     expect(game.view().moves).toBe(0);
-    game.turn('look');
+    await game.turn('look');
     expect(game.view().moves).toBe(1);
   });
 });
@@ -382,7 +382,7 @@ describe('F5(c): Meta-verb suppression (V-SCORE does not tick clock)', () => {
 // ---------------------------------------------------------------------------
 
 describe('F5(b+c) integration: clock interrupt text appears in turn output', () => {
-  it('interrupt text from clock appears in turn output (not lost)', () => {
+  it('interrupt text from clock appears in turn output (not lost)', async () => {
     // Build a game with a short-fused lamp interrupt (turnsLeft=2)
     // The interrupt fires on turn 2 and its text should appear in the output
     const emitter = new SimpleEventEmitter();
@@ -410,8 +410,8 @@ describe('F5(b+c) integration: clock interrupt text appears in turn output', () 
     const game = new Game(world, { rng: { next: () => 0, prob: (base) => base > 0 }, clock, events: emitter });
     game.start();
 
-    game.turn('look'); // turn 1: turnsLeft → 1, no fire
-    const result = game.turn('look'); // turn 2: turnsLeft → 0, fires
+    await game.turn('look'); // turn 1: turnsLeft → 1, no fire
+    const result = await game.turn('look'); // turn 2: turnsLeft → 0, fires
     expect(result.output).toContain('The fuse burns out!');
   });
 });

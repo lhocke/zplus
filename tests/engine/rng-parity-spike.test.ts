@@ -14,10 +14,10 @@ const SCENARIO = [
 // >=1000 seeds exercise the real LCG (the combat-RNG path); include one <1000.
 const SEEDS = [1000, 12345, 31337, 42];
 
-function engineRun(seed: number): string {
+async function engineRun(seed: number): Promise<string> {
   const game = createGame({ rng: new FrotzRng(seed) });
   let out = game.start();
-  for (const cmd of SCENARIO) out += '\n' + game.turn(cmd).output;
+  for (const cmd of SCENARIO) out += '\n' + await (await game.turn(cmd)).output;
   return out;
 }
 
@@ -38,11 +38,11 @@ function flattenTurns(turns: ReturnType<typeof normalizeDfrotz>): string {
 // docs/research/2026-06-07-rng-parity-spike-design.md (Spike outcome).
 describe.skip('RNG parity spike: grue outcome matches dfrotz seed-for-seed', () => {
   for (const seed of SEEDS) {
-    it(`seed ${seed}`, () => {
+    it(`seed ${seed}`, async () => {
       // dfrotz-runner already appends 'quit' + 'y' internally — pass SCENARIO only.
       const dfrotzRaw = runDfrotz(SCENARIO, { seed });
       const dfrotz = flattenTurns(normalizeDfrotz(dfrotzRaw));
-      const engine = flattenTurns(normalizeEngine(engineRun(seed)));
+      const engine = flattenTurns(normalizeEngine(await engineRun(seed)));
 
       const dfrotzGrue = /grue has eaten|eaten by a grue/i.test(dfrotz);
       const engineGrue = /grue has eaten|eaten by a grue/i.test(engine);

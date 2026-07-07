@@ -62,39 +62,39 @@ describe('BD3 — inventory PRINT-CONT format (DGC-4)', () => {
     expect(lines[1]).toMatch(/^# generated-by: dfrotz-r119 /);
   });
 
-  it('empty-handed stays as-is', () => {
+  it('empty-handed stays as-is', async () => {
     reset();
-    const out = runEngine(EMPTY_CMDS);
+    const out = await runEngine(EMPTY_CMDS);
     expect(out).toContain('You are empty-handed.');
   });
 
-  it('single item uses "A " article prefix', () => {
+  it('single item uses "A " article prefix', async () => {
     reset();
-    const out = runEngine(LEAFLET_CMDS);
+    const out = await runEngine(LEAFLET_CMDS);
     expect(out).toContain('You are carrying:');
     expect(out).toContain('  A leaflet');
     // old flat-list form must be gone
     expect(out).not.toContain('\n  leaflet\n');
   });
 
-  it('transparent container shows nested contents', () => {
+  it('transparent container shows nested contents', async () => {
     reset();
-    const out = runEngine(BOTTLE_CMDS);
+    const out = await runEngine(BOTTLE_CMDS);
     expect(out).toContain('You are carrying:');
     expect(out).toContain('  A glass bottle');
     expect(out).toContain('  The glass bottle contains:');
     expect(out).toContain('    A quantity of water');
   });
 
-  it('lit lamp shows "(providing light)"', () => {
+  it('lit lamp shows "(providing light)"', async () => {
     reset();
-    const out = runEngine(LAMP_LIT_CMDS);
+    const out = await runEngine(LAMP_LIT_CMDS);
     expect(out).toContain('  A brass lantern (providing light)');
   });
 
-  it('unlit lamp has no "(providing light)"', () => {
+  it('unlit lamp has no "(providing light)"', async () => {
     reset();
-    const out = runEngine(LAMP_OFF_CMDS);
+    const out = await runEngine(LAMP_OFF_CMDS);
     expect(out).toContain('  A brass lantern');
     expect(out).not.toContain('providing light');
   });

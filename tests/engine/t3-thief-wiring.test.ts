@@ -65,19 +65,19 @@ describe('THIEF VillainEntry wiring (ROUTING fix 1)', () => {
 });
 
 describe('THIEF verb-dispatch wiring (ROUTING fix 2)', () => {
-  it('examine thief (visible) → ROBBER-FUNCTION EXAMINE text, not generic ldesc', () => {
+  it('examine thief (visible) → ROBBER-FUNCTION EXAMINE text, not generic ldesc', async () => {
     const g = makeThiefGame();
-    const r = g.turn('examine thief');
+    const r = await g.turn('examine thief');
     // ROBBER-FUNCTION EXAMINE branch — 1actions.zil:2016–2021
     expect(r.output).toContain('beady eyes');
     // Must NOT fall through to the generic ldesc from objects.json
     expect(r.output).not.toContain('suspicious-looking individual');
   });
 
-  it('take thief (visible) → "what would you do with him?" (TAKE branch)', () => {
+  it('take thief (visible) → "what would you do with him?" (TAKE branch)', async () => {
     const g = makeThiefGame();
     // ROBBER-FUNCTION TAKE branch — 1actions.zil:2013–2015
-    const r = g.turn('take thief');
+    const r = await g.turn('take thief');
     expect(r.output).toContain('what would you do with him');
   });
 });

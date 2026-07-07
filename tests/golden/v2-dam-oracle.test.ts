@@ -41,10 +41,10 @@ const UPDATE = process.env['UPDATE_GOLDEN'] === '1';
 // Engine runner — mirrors engine-runner.ts but supports startRoom + setup.
 // ---------------------------------------------------------------------------
 
-function runEngineFrom(
+async function runEngineFrom(
   commands: readonly string[],
   opts: { startRoom: string; seed?: number; setup?: (g: Game) => void },
-): string {
+): Promise<string> {
   const game = createGame({ startRoom: opts.startRoom as never, seed: opts.seed ?? 42 });
   const lines: string[] = [];
   lines.push(game.start());
@@ -52,7 +52,7 @@ function runEngineFrom(
   for (const cmd of commands) {
     lines.push('');
     lines.push(`> ${cmd}`);
-    const r = game.turn(cmd);
+    const r = await game.turn(cmd);
     if (r.output.length > 0) lines.push(r.output);
   }
   return lines.join('\n');
@@ -124,8 +124,8 @@ const C_DAM_CMDS = [
 ] as const;
 
 describe('C-DAM — bolt open/close cycle, drain/fill, trunk reveal', () => {
-  it('transcript is byte-identical to committed golden', () => {
-    const run1 = runEngineFrom(C_DAM_CMDS, {
+  it('transcript is byte-identical to committed golden', async () => {
+    const run1 = await runEngineFrom(C_DAM_CMDS, {
       startRoom: 'MAINTENANCE-ROOM',
       seed: 42,
       setup(game) {
@@ -134,7 +134,7 @@ describe('C-DAM — bolt open/close cycle, drain/fill, trunk reveal', () => {
         game.world.get('WRENCH')!.moveTo(game.player);
       },
     });
-    const run2 = runEngineFrom(C_DAM_CMDS, {
+    const run2 = await runEngineFrom(C_DAM_CMDS, {
       startRoom: 'MAINTENANCE-ROOM',
       seed: 42,
       setup(game) {
@@ -185,8 +185,8 @@ const C_RIVER_CMDS = [
 ] as const;
 
 describe('C-RIVER — inflate, board, launch, drift, buoy hint', () => {
-  it('transcript is byte-identical to committed golden', () => {
-    const run1 = runEngineFrom(C_RIVER_CMDS, {
+  it('transcript is byte-identical to committed golden', async () => {
+    const run1 = await runEngineFrom(C_RIVER_CMDS, {
       startRoom: 'DAM-BASE',
       seed: 42,
       setup(game) {
@@ -195,7 +195,7 @@ describe('C-RIVER — inflate, board, launch, drift, buoy hint', () => {
         game.world.get('PUMP')!.moveTo(game.player);
       },
     });
-    const run2 = runEngineFrom(C_RIVER_CMDS, {
+    const run2 = await runEngineFrom(C_RIVER_CMDS, {
       startRoom: 'DAM-BASE',
       seed: 42,
       setup(game) {
@@ -234,8 +234,8 @@ const C_SAND_CMDS = [
 ] as const;
 
 describe('C-SAND — dig scarab, BDIGS progression, reveal on dig #4', () => {
-  it('transcript is byte-identical to committed golden', () => {
-    const run1 = runEngineFrom(C_SAND_CMDS, {
+  it('transcript is byte-identical to committed golden', async () => {
+    const run1 = await runEngineFrom(C_SAND_CMDS, {
       startRoom: 'SANDY-BEACH',
       seed: 42,
       setup(game) {
@@ -246,7 +246,7 @@ describe('C-SAND — dig scarab, BDIGS progression, reveal on dig #4', () => {
         game.world.get('SANDY-CAVE')!.set(Flag.On);
       },
     });
-    const run2 = runEngineFrom(C_SAND_CMDS, {
+    const run2 = await runEngineFrom(C_SAND_CMDS, {
       startRoom: 'SANDY-BEACH',
       seed: 42,
       setup(game) {
@@ -292,8 +292,8 @@ const C_RAINBOW_CMDS = [
 ] as const;
 
 describe('C-RAINBOW — sceptre wave, rainbow cross, pot-of-gold', () => {
-  it('transcript is byte-identical to committed golden', () => {
-    const run1 = runEngineFrom(C_RAINBOW_CMDS, {
+  it('transcript is byte-identical to committed golden', async () => {
+    const run1 = await runEngineFrom(C_RAINBOW_CMDS, {
       startRoom: 'ARAGAIN-FALLS',
       seed: 42,
       setup(game) {
@@ -302,7 +302,7 @@ describe('C-RAINBOW — sceptre wave, rainbow cross, pot-of-gold', () => {
         game.world.get('SCEPTRE')!.moveTo(game.player);
       },
     });
-    const run2 = runEngineFrom(C_RAINBOW_CMDS, {
+    const run2 = await runEngineFrom(C_RAINBOW_CMDS, {
       startRoom: 'ARAGAIN-FALLS',
       seed: 42,
       setup(game) {
@@ -342,8 +342,8 @@ const C_LEAK_CMDS = [
 ] as const;
 
 describe('C-LEAK — blue-button leak, DROWNINGS msgs, putty repair', () => {
-  it('transcript is byte-identical to committed golden', () => {
-    const run1 = runEngineFrom(C_LEAK_CMDS, {
+  it('transcript is byte-identical to committed golden', async () => {
+    const run1 = await runEngineFrom(C_LEAK_CMDS, {
       startRoom: 'MAINTENANCE-ROOM',
       seed: 42,
       setup(game) {
@@ -354,7 +354,7 @@ describe('C-LEAK — blue-button leak, DROWNINGS msgs, putty repair', () => {
         game.world.get('PUTTY')!.moveTo(game.player);
       },
     });
-    const run2 = runEngineFrom(C_LEAK_CMDS, {
+    const run2 = await runEngineFrom(C_LEAK_CMDS, {
       startRoom: 'MAINTENANCE-ROOM',
       seed: 42,
       setup(game) {
@@ -395,8 +395,8 @@ const C_PUNCTURE_CMDS = [
 ] as const;
 
 describe('C-PUNCTURE — board with sword punctures; putty repairs', () => {
-  it('transcript is byte-identical to committed golden', () => {
-    const run1 = runEngineFrom(C_PUNCTURE_CMDS, {
+  it('transcript is byte-identical to committed golden', async () => {
+    const run1 = await runEngineFrom(C_PUNCTURE_CMDS, {
       startRoom: 'DAM-BASE',
       seed: 42,
       setup(game) {
@@ -406,7 +406,7 @@ describe('C-PUNCTURE — board with sword punctures; putty repairs', () => {
         game.world.get('PUTTY')!.moveTo(game.player);
       },
     });
-    const run2 = runEngineFrom(C_PUNCTURE_CMDS, {
+    const run2 = await runEngineFrom(C_PUNCTURE_CMDS, {
       startRoom: 'DAM-BASE',
       seed: 42,
       setup(game) {

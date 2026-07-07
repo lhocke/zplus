@@ -67,9 +67,9 @@ function ctx(fix: Fix, overrides: Partial<VerbContext> & { verb: string }): Verb
 // ---------------------------------------------------------------------------
 
 describe('V-KICK', () => {
-  it('normal object → "Kicking the <obj>" + HO-HUM suffix — gverbs.zil:760', () => {
+  it('normal object → "Kicking the <obj>" + HO-HUM suffix — gverbs.zil:760', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'kick', action: 'V-KICK', dobj: fix.box, rng: { next: () => 0 } }),
       'V-KICK',
     );
@@ -79,10 +79,10 @@ describe('V-KICK', () => {
 
   // gverbs.zil:2025-2027: <AND <IN? ,PRSO ,GLOBAL-OBJECTS> <VERB? WAVE RAISE LOWER>>
   // KICK is excluded from VERB? gate → falls to HO-HUM branch, not "isn't here!"
-  it('global-objects item → HO-HUM (KICK not in VERB? WAVE RAISE LOWER) — gverbs.zil:2025-2029', () => {
+  it('global-objects item → HO-HUM (KICK not in VERB? WAVE RAISE LOWER) — gverbs.zil:2025-2029', async () => {
     const fix = makeFixture();
     expect(fix.wall.parent).toBeNull();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'kick', action: 'V-KICK', dobj: fix.wall, rng: { next: () => 0 } }),
       'V-KICK',
     );
@@ -97,9 +97,9 @@ describe('V-KICK', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-PUSH', () => {
-  it('normal object → "Pushing the <obj>" + HO-HUM suffix — gverbs.zil:1070', () => {
+  it('normal object → "Pushing the <obj>" + HO-HUM suffix — gverbs.zil:1070', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'push', action: 'V-PUSH', dobj: fix.box, rng: { next: () => 1 } }),
       'V-PUSH',
     );
@@ -107,10 +107,10 @@ describe('V-PUSH', () => {
     expect(r.output).toMatch(/ doesn't seem to work\.$| isn't notably helpful\.$| has no effect\.$/);
   });
 
-  it('global-objects item → HO-HUM (PUSH not in VERB? WAVE RAISE LOWER) — gverbs.zil:2025-2029', () => {
+  it('global-objects item → HO-HUM (PUSH not in VERB? WAVE RAISE LOWER) — gverbs.zil:2025-2029', async () => {
     const fix = makeFixture();
     expect(fix.wall.parent).toBeNull();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'push', action: 'V-PUSH', dobj: fix.wall, rng: { next: () => 1 } }),
       'V-PUSH',
     );
@@ -125,9 +125,9 @@ describe('V-PUSH', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-RUB', () => {
-  it('normal object → "Fiddling with the <obj>" + HO-HUM suffix — gverbs.zil:1165', () => {
+  it('normal object → "Fiddling with the <obj>" + HO-HUM suffix — gverbs.zil:1165', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'rub', action: 'V-RUB', dobj: fix.box, rng: { next: () => 2 } }),
       'V-RUB',
     );
@@ -135,10 +135,10 @@ describe('V-RUB', () => {
     expect(r.output).toMatch(/ doesn't seem to work\.$| isn't notably helpful\.$| has no effect\.$/);
   });
 
-  it('global-objects item → HO-HUM (RUB not in VERB? WAVE RAISE LOWER) — gverbs.zil:2025-2029', () => {
+  it('global-objects item → HO-HUM (RUB not in VERB? WAVE RAISE LOWER) — gverbs.zil:2025-2029', async () => {
     const fix = makeFixture();
     expect(fix.wall.parent).toBeNull();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'rub', action: 'V-RUB', dobj: fix.wall, rng: { next: () => 2 } }),
       'V-RUB',
     );
@@ -153,9 +153,9 @@ describe('V-RUB', () => {
 // ---------------------------------------------------------------------------
 
 describe('V-WAVE', () => {
-  it('normal object → "Waving the <obj>" + HO-HUM suffix — gverbs.zil:1594', () => {
+  it('normal object → "Waving the <obj>" + HO-HUM suffix — gverbs.zil:1594', async () => {
     const fix = makeFixture();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'wave', action: 'V-WAVE', dobj: fix.box, rng: { next: () => 0 } }),
       'V-WAVE',
     );
@@ -163,10 +163,10 @@ describe('V-WAVE', () => {
     expect(r.output).toMatch(/ doesn't seem to work\.$| isn't notably helpful\.$| has no effect\.$/);
   });
 
-  it('global-objects item → "The <obj> isn\'t here!" (WAVE in VERB? WAVE RAISE LOWER) — gverbs.zil:2025-2027', () => {
+  it('global-objects item → "The <obj> isn\'t here!" (WAVE in VERB? WAVE RAISE LOWER) — gverbs.zil:2025-2027', async () => {
     const fix = makeFixture();
     expect(fix.wall.parent).toBeNull();
-    const r = executeVerb(
+    const r = await executeVerb(
       ctx(fix, { verb: 'wave', action: 'V-WAVE', dobj: fix.wall }),
       'V-WAVE',
     );

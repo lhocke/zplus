@@ -30,7 +30,7 @@ function captureSink(): PlaytestSink & { events: PlaytestEvent[] } {
 //   - intro banner (start())
 //   - for each command: "\n> <cmd>\n" then output (if non-empty)
 // This is what the committed golden was generated from.
-function replayThroughFacade(): string {
+async function replayThroughFacade(): Promise<string> {
   const session = createSession({ sink: nullSink, seed: 42 });
   const lines: string[] = [];
 
@@ -39,7 +39,7 @@ function replayThroughFacade(): string {
   for (const cmd of COMMANDS) {
     lines.push('');
     lines.push(`> ${cmd}`);
-    const output = session.submit(cmd);
+    const output = await session.submit(cmd);
     if (output.length > 0) {
       lines.push(output);
     }
@@ -53,9 +53,9 @@ function replayThroughFacade(): string {
 // ---------------------------------------------------------------------------
 
 describe('seam test — golden through facade', () => {
-  it('replaying 218 commands via createSession produces byte-identical output to the committed golden', () => {
-    const run1 = replayThroughFacade();
-    const run2 = replayThroughFacade();
+  it('replaying 218 commands via createSession produces byte-identical output to the committed golden', async () => {
+    const run1 = await replayThroughFacade();
+    const run2 = await replayThroughFacade();
     // Determinism: two replays must be identical (createSession resets state on construction).
     expect(run1).toBe(run2);
 
@@ -73,7 +73,7 @@ describe('seam test — golden through facade', () => {
 });
 
 describe('seam test — snapshot contract', () => {
-  it('snapshot() exposes all seven GameView fields with correct types', () => {
+  it('snapshot() exposes all seven GameView fields with correct types', async () => {
     const session = createSession({ sink: nullSink });
     session.start();
     // Check initial snapshot.
@@ -89,7 +89,7 @@ describe('seam test — snapshot contract', () => {
     expect(typeof v0.inMaze).toBe('boolean');
 
     // Check after a turn.
-    session.submit('north');
+    await session.submit('north');
     const v1 = session.snapshot();
     expect(typeof v1.here).toBe('string');
     expect(typeof v1.hereName).toBe('string');
@@ -118,11 +118,11 @@ describe('seam test — snapshot contract', () => {
     expect(session.snapshot().maxScore).toBe(350);
   });
 
-  it('moves increments each submit', () => {
+  it('moves increments each submit', async () => {
     const session = createSession({ sink: nullSink });
     session.start();
     const m0 = session.snapshot().moves;
-    session.submit('look');
+    await session.submit('look');
     expect(session.snapshot().moves).toBe(m0 + 1);
   });
 });
@@ -135,11 +135,11 @@ describe('seam test — sink emission lifecycle', () => {
     expect(sink.events.filter(e => e.type === 'start')).toHaveLength(1);
   });
 
-  it('each submit() emits exactly one TurnEvent with correct fields', () => {
+  it('each submit() emits exactly one TurnEvent with correct fields', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    const output = session.submit('look');
+    const output = await session.submit('look');
     const snap = session.snapshot();
     const turns = sink.events.filter(e => e.type === 'turn');
     expect(turns).toHaveLength(1);
@@ -162,12 +162,12 @@ describe('seam test — sink emission lifecycle', () => {
     expect(sink.events.filter(e => e.type === 'end')).toHaveLength(1);
   });
 
-  it('full lifecycle: one SessionStart, N TurnEvents, one SessionEnd', () => {
+  it('full lifecycle: one SessionStart, N TurnEvents, one SessionEnd', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    session.submit('look');
-    session.submit('north');
+    await session.submit('look');
+    await session.submit('north');
     session.close();
 
     expect(sink.events.filter(e => e.type === 'start')).toHaveLength(1);
@@ -175,23 +175,23 @@ describe('seam test — sink emission lifecycle', () => {
     expect(sink.events.filter(e => e.type === 'end')).toHaveLength(1);
   });
 
-  it('SessionEnd.lastTurn equals the number of submit() calls', () => {
+  it('SessionEnd.lastTurn equals the number of submit() calls', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    session.submit('look');
-    session.submit('north');
-    session.submit('east');
+    await session.submit('look');
+    await session.submit('north');
+    await session.submit('east');
     session.close();
     const end = sink.events.find(e => e.type === 'end');
     expect(end).toMatchObject({ type: 'end', lastTurn: 3 });
   });
 
-  it('TurnEvent sessionId is consistent across the session', () => {
+  it('TurnEvent sessionId is consistent across the session', async () => {
     const sink = captureSink();
     const session = createSession({ sink });
     session.start();
-    session.submit('look');
+    await session.submit('look');
     session.close();
     const ids = new Set(sink.events.map(e => e.sessionId));
     expect(ids.size).toBe(1);

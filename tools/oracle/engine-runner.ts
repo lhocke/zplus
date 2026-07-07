@@ -34,10 +34,10 @@ export interface EngineRunOptions {
  * @param commands - array of command strings
  * @returns multi-line transcript string
  */
-export function runEngine(
+export async function runEngine(
   commands: readonly string[],
   opts: EngineRunOptions = {},
-): string {
+): Promise<string> {
   // Reset module-level ZIL globals so each corpus run starts clean — mirrors
   // the reset list in src/shell/session.ts (§2 C1).
   resetKitchenWindowFlag();
@@ -57,7 +57,7 @@ export function runEngine(
   for (const cmd of commands) {
     lines.push('');
     lines.push(`> ${cmd}`);
-    const result = game.turn(cmd);
+    const result = await game.turn(cmd);
     if (result.output.length > 0) {
       lines.push(result.output);
     }

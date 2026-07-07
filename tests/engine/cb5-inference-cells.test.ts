@@ -33,13 +33,13 @@ import { Flag } from '../../src/domain/flags.js';
 // ---------------------------------------------------------------------------
 
 describe('superbrief suppresses object paragraph (§1 bug fix)', () => {
-  it('pin 2 — superbrief first-visit: bare name, mailbox NOT listed', () => {
+  it('pin 2 — superbrief first-visit: bare name, mailbox NOT listed', async () => {
     // Start at SOUTH-OF-HOUSE, superbrief, then go west → WEST-OF-HOUSE (first visit).
     // Mailbox is a visible floor object at WEST-OF-HOUSE — must not appear.
     const g = createGame({ startRoom: 'SOUTH-OF-HOUSE' });
     g.start();
-    g.turn('superbrief');
-    const r = g.turn('west'); // → WEST-OF-HOUSE (first visit, untouched)
+    await g.turn('superbrief');
+    const r = await g.turn('west'); // → WEST-OF-HOUSE (first visit, untouched)
     // Room name present.
     expect(r.output).toContain('West of House');
     // Object paragraph must be absent (gverbs.zil:1632 NOT SUPER-BRIEF gate).
@@ -47,24 +47,24 @@ describe('superbrief suppresses object paragraph (§1 bug fix)', () => {
     expect(r.output).not.toContain('There is');
   });
 
-  it('pin 2 — superbrief touched-revisit: bare name, mailbox NOT listed', () => {
+  it('pin 2 — superbrief touched-revisit: bare name, mailbox NOT listed', async () => {
     // Start at WEST-OF-HOUSE (touches it), go south, superbrief, come back.
     const g = createGame({ startRoom: 'WEST-OF-HOUSE' });
     g.start(); // first visit → WoH is now Touched
-    g.turn('south'); // → SOUTH-OF-HOUSE
-    g.turn('superbrief');
-    const r = g.turn('west'); // → WEST-OF-HOUSE (touched revisit under superbrief)
+    await g.turn('south'); // → SOUTH-OF-HOUSE
+    await g.turn('superbrief');
+    const r = await g.turn('west'); // → WEST-OF-HOUSE (touched revisit under superbrief)
     expect(r.output).toContain('West of House');
     expect(r.output).not.toContain('mailbox');
     expect(r.output).not.toContain('There is');
   });
 
-  it('explicit LOOK under superbrief forces full desc with objects', () => {
+  it('explicit LOOK under superbrief forces full desc with objects', async () => {
     // gverbs.zil:1665: LOOK? overrides SUPER-BRIEF gate — full desc including objects.
     const g = createGame({ startRoom: 'WEST-OF-HOUSE' });
     g.start();
-    g.turn('superbrief');
-    const r = g.turn('look'); // explicit look → full including objects
+    await g.turn('superbrief');
+    const r = await g.turn('look'); // explicit look → full including objects
     expect(r.output).toContain('West of House');
     expect(r.output).toContain('mailbox');
   });
@@ -76,11 +76,11 @@ describe('superbrief suppresses object paragraph (§1 bug fix)', () => {
 // ---------------------------------------------------------------------------
 
 describe('pin 1 — touched brief revisit keeps object paragraph, drops ldesc', () => {
-  it('WEST-OF-HOUSE brief revisit: mailbox listed, ldesc absent', () => {
+  it('WEST-OF-HOUSE brief revisit: mailbox listed, ldesc absent', async () => {
     const g = createGame({ startRoom: 'WEST-OF-HOUSE' });
     g.start(); // first visit — WoH Touched
-    g.turn('south'); // → SOUTH-OF-HOUSE
-    const r = g.turn('west'); // revisit WoH in default brief mode
+    await g.turn('south'); // → SOUTH-OF-HOUSE
+    const r = await g.turn('west'); // revisit WoH in default brief mode
     // Brief mode: room name present.
     expect(r.output).toContain('West of House');
     // ldesc suppressed in brief mode ("open field west of a white house...").
@@ -156,7 +156,7 @@ describe('I-1 — maze room under SUPER-BRIEF', () => {
 // ---------------------------------------------------------------------------
 
 describe('I-3 — chimney arrival into KITCHEN (brief revisit)', () => {
-  it('chimney UP from STUDIO lands in KITCHEN with brief desc (name + objects, no ldesc)', () => {
+  it('chimney UP from STUDIO lands in KITCHEN with brief desc (name + objects, no ldesc)', async () => {
     // STUDIO → UP via UP-CHIMNEY-FUNCTION → KITCHEN.
     // Player needs lamp in hand and ≤2 items total (up-chimney contract).
     // Pre-touch KITCHEN so the arrival is a brief revisit (V?=false).
@@ -172,7 +172,7 @@ describe('I-3 — chimney arrival into KITCHEN (brief revisit)', () => {
 
     g.start();
 
-    const r = g.turn('up'); // → KITCHEN via UP-CHIMNEY-FUNCTION
+    const r = await g.turn('up'); // → KITCHEN via UP-CHIMNEY-FUNCTION
     // Brief revisit: room name present.
     expect(r.output).toContain('Kitchen');
     // Objects still described: sandwich bag fdesc on kitchen table.
@@ -204,21 +204,21 @@ describe('I-3 — chimney arrival into KITCHEN (brief revisit)', () => {
 // ---------------------------------------------------------------------------
 
 describe('I-4 — PRAY teleport: silent arrival (describe cell not wired for verbPray GOTO)', () => {
-  it('pray at SOUTH-TEMPLE: player arrives in FOREST-1, output is empty', () => {
+  it('pray at SOUTH-TEMPLE: player arrives in FOREST-1, output is empty', async () => {
     const g = newGameAt('SOUTH-TEMPLE');
     g.start();
-    const r = g.turn('pray');
+    const r = await g.turn('pray');
     // ZIL <GOTO ,FOREST-1>: no V-PRAY text; the arrival-describe cell is not
     // auto-fired by the verbPray GOTO path — output is empty.
     expect(r.output).toBe('');
     expect(g.view().here).toBe('FOREST-1');
   });
 
-  it('pray at SOUTH-TEMPLE: explicit LOOK after arrival describes FOREST-1', () => {
+  it('pray at SOUTH-TEMPLE: explicit LOOK after arrival describes FOREST-1', async () => {
     const g = newGameAt('SOUTH-TEMPLE');
     g.start();
-    g.turn('pray'); // teleports, silent
-    const r = g.turn('look'); // explicit look → describe FOREST-1
+    await g.turn('pray'); // teleports, silent
+    const r = await g.turn('look'); // explicit look → describe FOREST-1
     expect(r.output).toContain('Forest');
     expect(r.output).toContain('This is a forest, with trees in all directions');
   });

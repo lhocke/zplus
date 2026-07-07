@@ -66,38 +66,38 @@ describe('V-ODYSSEUS: wall-break path (CYCLOPS-ROOM, cyclops awake)', () => {
     internals(g).flags.set('CYCLOPS-FLAG', false);
   });
 
-  it('prints the wall-break message', () => {
-    const r = g.turn('odysseus');
+  it('prints the wall-break message', async () => {
+    const r = await g.turn('odysseus');
     expect(r.output).toContain('hearing the name of his father');
     expect(r.output).toContain('knocking down the wall');
   });
 
-  it('MAGIC-FLAG is set after the word', () => {
-    g.turn('odysseus');
+  it('MAGIC-FLAG is set after the word', async () => {
+    await g.turn('odysseus');
     expect(internals(g).flags.get('MAGIC-FLAG')).toBe(true);
   });
 
-  it('CYCLOPS-FLAG is set (cyclops now asleep / gone)', () => {
-    g.turn('odysseus');
+  it('CYCLOPS-FLAG is set (cyclops now asleep / gone)', async () => {
+    await g.turn('odysseus');
     expect(internals(g).flags.get('CYCLOPS-FLAG')).toBe(true);
   });
 
-  it('cyclops is removed from the world', () => {
-    g.turn('odysseus');
+  it('cyclops is removed from the world', async () => {
+    await g.turn('odysseus');
     const cyclops = internals(g).world.get('CYCLOPS');
     // After REMOVE-CAREFULLY: parent is null (removed from world)
     expect(cyclops?.parent).toBeNull();
   });
 
-  it('cyclops FIGHTBIT is cleared', () => {
+  it('cyclops FIGHTBIT is cleared', async () => {
     // Set FIGHTBIT first, then odysseus
     internals(g).world.get('CYCLOPS')?.set(Flag.Fight);
-    g.turn('odysseus');
+    await g.turn('odysseus');
     expect(internals(g).world.get('CYCLOPS')?.has(Flag.Fight)).toBe(false);
   });
 
-  it('"ulysses" synonym works identically (gsyntax.zil:335)', () => {
-    const r = g.turn('ulysses');
+  it('"ulysses" synonym works identically (gsyntax.zil:335)', async () => {
+    const r = await g.turn('ulysses');
     expect(r.output).toContain('hearing the name of his father');
     expect(internals(g).flags.get('MAGIC-FLAG')).toBe(true);
   });
@@ -106,24 +106,24 @@ describe('V-ODYSSEUS: wall-break path (CYCLOPS-ROOM, cyclops awake)', () => {
 describe('V-ODYSSEUS: sailor fallback', () => {
   beforeEach(() => setCyclowrath(0));
 
-  it('off-room → "Wasn\'t he a sailor?"', () => {
+  it('off-room → "Wasn\'t he a sailor?"', async () => {
     const g = createGame({ startRoom: 'WEST-OF-HOUSE' });
     g.start();
     litLamp(g);
-    const r = g.turn('odysseus');
+    const r = await g.turn('odysseus');
     expect(r.output).toContain("Wasn't he a sailor");
   });
 
-  it('in CYCLOPS-ROOM but cyclops already sleeping (CYCLOPS-FLAG=true) → sailor', () => {
+  it('in CYCLOPS-ROOM but cyclops already sleeping (CYCLOPS-FLAG=true) → sailor', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     litLamp(g);
     internals(g).flags.set('CYCLOPS-FLAG', true);
-    const r = g.turn('odysseus');
+    const r = await g.turn('odysseus');
     expect(r.output).toContain("Wasn't he a sailor");
   });
 
-  it('in CYCLOPS-ROOM but cyclops not present → sailor', () => {
+  it('in CYCLOPS-ROOM but cyclops not present → sailor', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     litLamp(g);
@@ -131,7 +131,7 @@ describe('V-ODYSSEUS: sailor fallback', () => {
     const { world } = internals(g);
     const maze15 = world.get('MAZE-15') as never;
     world.get('CYCLOPS')?.moveTo(maze15);
-    const r = g.turn('odysseus');
+    const r = await g.turn('odysseus');
     expect(r.output).toContain("Wasn't he a sailor");
   });
 });
@@ -143,38 +143,38 @@ describe('V-ODYSSEUS: sailor fallback', () => {
 describe('MAGIC-FLAG exit gates', () => {
   beforeEach(() => setCyclowrath(0));
 
-  it('MAGIC-FLAG opens CYCLOPS-ROOM east exit to STRANGE-PASSAGE', () => {
+  it('MAGIC-FLAG opens CYCLOPS-ROOM east exit to STRANGE-PASSAGE', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     litLamp(g);
-    g.turn('odysseus');
+    await g.turn('odysseus');
     // East is now open
-    const r = g.turn('east');
+    const r = await g.turn('east');
     // Should NOT see the "solid rock" block message
     expect(r.output).not.toContain('solid rock');
   });
 
-  it('without MAGIC-FLAG, CYCLOPS-ROOM east is blocked', () => {
+  it('without MAGIC-FLAG, CYCLOPS-ROOM east is blocked', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     litLamp(g);
-    const r = g.turn('east');
+    const r = await g.turn('east');
     expect(r.output).toContain('solid rock');
   });
 
-  it('MAGIC-FLAG opens LIVING-ROOM west exit to STRANGE-PASSAGE', () => {
+  it('MAGIC-FLAG opens LIVING-ROOM west exit to STRANGE-PASSAGE', async () => {
     const g = createGame({ startRoom: 'LIVING-ROOM' });
     g.start();
     litLamp(g);
     internals(g).flags.set('MAGIC-FLAG', true);
-    const r = g.turn('west');
+    const r = await g.turn('west');
     expect(r.output).not.toContain('nailed shut');
   });
 
-  it('without MAGIC-FLAG, LIVING-ROOM west is blocked', () => {
+  it('without MAGIC-FLAG, LIVING-ROOM west is blocked', async () => {
     const g = createGame({ startRoom: 'LIVING-ROOM' });
     g.start();
-    const r = g.turn('west');
+    const r = await g.turn('west');
     expect(r.output).toContain('nailed shut');
   });
 });
@@ -186,20 +186,20 @@ describe('MAGIC-FLAG exit gates', () => {
 describe('room re-descriptions after MAGIC-FLAG', () => {
   beforeEach(() => setCyclowrath(0));
 
-  it('CYCLOPS-ROOM look after odysseus → "cyclops-sized opening" (M-LOOK east-wall branch)', () => {
+  it('CYCLOPS-ROOM look after odysseus → "cyclops-sized opening" (M-LOOK east-wall branch)', async () => {
     const g = createGame({ startRoom: 'CYCLOPS-ROOM' });
     g.start();
     litLamp(g);
-    g.turn('odysseus');
-    const r = g.turn('look');
+    await g.turn('odysseus');
+    const r = await g.turn('look');
     expect(r.output).toContain('cyclops-sized opening');
   });
 
-  it('LIVING-ROOM look with MAGIC-FLAG → cyclops-shaped opening in door text', () => {
+  it('LIVING-ROOM look with MAGIC-FLAG → cyclops-shaped opening in door text', async () => {
     const g = createGame({ startRoom: 'LIVING-ROOM' });
     g.start();
     internals(g).flags.set('MAGIC-FLAG', true);
-    const r = g.turn('look');
+    const r = await g.turn('look');
     expect(r.output).toContain('cyclops-shaped opening');
   });
 });

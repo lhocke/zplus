@@ -147,10 +147,10 @@ function ctx(fix: Fix, opts: {
 // ---------------------------------------------------------------------------
 
 describe('D3 A1 — verbTake already-have', () => {
-  it('returns "You already have that!" when player already carries item', () => {
+  it('returns "You already have that!" when player already carries item', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, { verb: 'take', dobjId: 'LANTERN' }), 'V-TAKE');
+    const result = await executeVerb(ctx(fix, { verb: 'take', dobjId: 'LANTERN' }), 'V-TAKE');
     expect(result.output).toBe('You already have that!');
   });
 });
@@ -160,19 +160,19 @@ describe('D3 A1 — verbTake already-have', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A2 — verbTake non-takeable uses YUKS', () => {
-  it('returns a YUKS table entry for non-takeable objects', () => {
+  it('returns a YUKS table entry for non-takeable objects', async () => {
     const fix = makeFixture();
     // chest has no Takeable flag
-    const result = executeVerb(ctx(fix, { verb: 'take', dobjId: 'CHEST' }), 'V-TAKE');
+    const result = await executeVerb(ctx(fix, { verb: 'take', dobjId: 'CHEST' }), 'V-TAKE');
     expect(yuks.entries).toContain(result.output);
   });
 
-  it('never says "You can\'t take the X."', () => {
+  it('never says "You can\'t take the X."', async () => {
     const fix = makeFixture();
     // Run many times to ensure we never see the forbidden string
     for (let i = 0; i < 20; i++) {
       fix.rng = new Rng(i);
-      const result = executeVerb(ctx(fix, { verb: 'take', dobjId: 'CHEST' }), 'V-TAKE');
+      const result = await executeVerb(ctx(fix, { verb: 'take', dobjId: 'CHEST' }), 'V-TAKE');
       expect(result.output).not.toMatch(/You can't take/);
     }
   });
@@ -183,17 +183,17 @@ describe('D3 A2 — verbTake non-takeable uses YUKS', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A4 — verbOpen already-open', () => {
-  it('returns "It is already open." when container is open', () => {
+  it('returns "It is already open." when container is open', async () => {
     const fix = makeFixture();
     // mailbox starts open
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
     expect(result.output).toBe(vOpen.alreadyOpen);
     expect(result.output).toBe('It is already open.');
   });
 
-  it('does NOT say "The X is already open."', () => {
+  it('does NOT say "The X is already open."', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
     expect(result.output).not.toMatch(/The .* is already open/);
   });
 });
@@ -203,16 +203,16 @@ describe('D3 A4 — verbOpen already-open', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A5 — verbOpen non-openable', () => {
-  it('returns "You must tell me how to do that to a brass lantern." for non-openable', () => {
+  it('returns "You must tell me how to do that to a brass lantern." for non-openable', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'LANTERN' }), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'LANTERN' }), 'V-OPEN');
     expect(result.output).toBe(fmt(vOpen.notOpenable, 'brass lantern'));
     expect(result.output).toBe('You must tell me how to do that to a brass lantern.');
   });
 
-  it('does NOT say "You can\'t open the X."', () => {
+  it('does NOT say "You can\'t open the X."', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'LANTERN' }), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'LANTERN' }), 'V-OPEN');
     expect(result.output).not.toMatch(/You can't open/);
   });
 });
@@ -222,17 +222,17 @@ describe('D3 A5 — verbOpen non-openable', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A6 — verbOpen reveals contents', () => {
-  it('returns "Opening the small mailbox reveals a leaflet." after opening closed mailbox with leaflet', () => {
+  it('returns "Opening the small mailbox reveals a leaflet." after opening closed mailbox with leaflet', async () => {
     const fix = makeFixture();
     fix.mailbox.clear(Flag.Open); // close it first
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
     expect(result.output).toBe('Opening the small mailbox reveals a leaflet.');
   });
 
-  it('does NOT say "Opened. Inside you see: leaflet."', () => {
+  it('does NOT say "Opened. Inside you see: leaflet."', async () => {
     const fix = makeFixture();
     fix.mailbox.clear(Flag.Open);
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
     expect(result.output).not.toMatch(/Inside you see/);
   });
 });
@@ -242,20 +242,20 @@ describe('D3 A6 — verbOpen reveals contents', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A7 — verbOpen empty container → "Opened."', () => {
-  it('returns "Opened." when container has no contents', () => {
+  it('returns "Opened." when container has no contents', async () => {
     const fix = makeFixture();
     fix.mailbox.clear(Flag.Open);
     // Move leaflet out
     fix.leaflet.moveTo(fix.room);
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
     expect(result.output).toBe('Opened.');
   });
 
-  it('does NOT say "The X is now open."', () => {
+  it('does NOT say "The X is now open."', async () => {
     const fix = makeFixture();
     fix.mailbox.clear(Flag.Open);
     fix.leaflet.moveTo(fix.room);
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'MAILBOX' }), 'V-OPEN');
     expect(result.output).not.toMatch(/is now open/);
   });
 });
@@ -265,9 +265,9 @@ describe('D3 A7 — verbOpen empty container → "Opened."', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A7b — verbOpen door → "The X opens."', () => {
-  it('returns "The front door opens." for a door object', () => {
+  it('returns "The front door opens." for a door object', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'open', dobjId: 'DOOR' }), 'V-OPEN');
+    const result = await executeVerb(ctx(fix, { verb: 'open', dobjId: 'DOOR' }), 'V-OPEN');
     expect(result.output).toBe(fmt(vOpen.opens, 'front door'));
     expect(result.output).toBe('The front door opens.');
   });
@@ -278,18 +278,18 @@ describe('D3 A7b — verbOpen door → "The X opens."', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A8 — verbClose already-closed', () => {
-  it('returns "It is already closed." when container is closed', () => {
+  it('returns "It is already closed." when container is closed', async () => {
     const fix = makeFixture();
     fix.mailbox.clear(Flag.Open); // close it
-    const result = executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }), 'V-CLOSE');
+    const result = await executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }), 'V-CLOSE');
     expect(result.output).toBe(vClose.alreadyClosed);
     expect(result.output).toBe('It is already closed.');
   });
 
-  it('does NOT say "The X is already closed."', () => {
+  it('does NOT say "The X is already closed."', async () => {
     const fix = makeFixture();
     fix.mailbox.clear(Flag.Open);
-    const result = executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }), 'V-CLOSE');
+    const result = await executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }), 'V-CLOSE');
     expect(result.output).not.toMatch(/The .* is already closed/);
   });
 });
@@ -299,16 +299,16 @@ describe('D3 A8 — verbClose already-closed', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A9 — verbClose container success', () => {
-  it('returns "Closed." when closing an open container', () => {
+  it('returns "Closed." when closing an open container', async () => {
     const fix = makeFixture();
     // mailbox starts open
-    const result = executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }), 'V-CLOSE');
+    const result = await executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }), 'V-CLOSE');
     expect(result.output).toBe('Closed.');
   });
 
-  it('does NOT say "The X is now closed." for a container', () => {
+  it('does NOT say "The X is now closed." for a container', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }), 'V-CLOSE');
+    const result = await executeVerb(ctx(fix, { verb: 'close', dobjId: 'MAILBOX' }), 'V-CLOSE');
     expect(result.output).not.toMatch(/is now closed/);
   });
 });
@@ -318,10 +318,10 @@ describe('D3 A9 — verbClose container success', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A9b — verbClose door → "The X is now closed."', () => {
-  it('returns "The front door is now closed." when closing a door', () => {
+  it('returns "The front door is now closed." when closing a door', async () => {
     const fix = makeFixture();
     fix.door.set(Flag.Open); // open it first
-    const result = executeVerb(ctx(fix, { verb: 'close', dobjId: 'DOOR' }), 'V-CLOSE');
+    const result = await executeVerb(ctx(fix, { verb: 'close', dobjId: 'DOOR' }), 'V-CLOSE');
     expect(result.output).toBe(fmt(vClose.doorClosed, 'front door'));
     expect(result.output).toBe('The front door is now closed.');
   });
@@ -332,23 +332,23 @@ describe('D3 A9b — verbClose door → "The X is now closed."', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A10 — verbRead not-readable', () => {
-  it('returns "How does one read a brass lantern?" for non-readable', () => {
+  it('returns "How does one read a brass lantern?" for non-readable', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'read', dobjId: 'LANTERN' }), 'V-READ');
+    const result = await executeVerb(ctx(fix, { verb: 'read', dobjId: 'LANTERN' }), 'V-READ');
     expect(result.output).toBe(fmt(vRead.notReadable, 'brass lantern'));
     expect(result.output).toBe('How does one read a brass lantern?');
   });
 
-  it('does NOT say "There\'s nothing to read on the X."', () => {
+  it('does NOT say "There\'s nothing to read on the X."', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'read', dobjId: 'LANTERN' }), 'V-READ');
+    const result = await executeVerb(ctx(fix, { verb: 'read', dobjId: 'LANTERN' }), 'V-READ');
     expect(result.output).not.toMatch(/nothing to read/);
   });
 
-  it('still reads text prop for readable items', () => {
+  it('still reads text prop for readable items', async () => {
     const fix = makeFixture();
     fix.leaflet.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, { verb: 'read', dobjId: 'LEAFLET' }), 'V-READ');
+    const result = await executeVerb(ctx(fix, { verb: 'read', dobjId: 'LEAFLET' }), 'V-READ');
     expect(result.output).toContain('WELCOME TO ZORK');
   });
 });
@@ -358,7 +358,7 @@ describe('D3 A10 — verbRead not-readable', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A13 — verbExamine no-text/no-ldesc fallback', () => {
-  it('returns "There\'s nothing special about the X." when no ldesc/text', () => {
+  it('returns "There\'s nothing special about the X." when no ldesc/text', async () => {
     const fix = makeFixture();
     // Create a plain item with no ldesc
     const pebble = new Thing('PEBBLE', 'small pebble', {
@@ -369,14 +369,14 @@ describe('D3 A13 — verbExamine no-text/no-ldesc fallback', () => {
     pebble.moveTo(fix.room);
     fix.world.register(pebble);
 
-    const result = executeVerb(ctx(fix, { verb: 'examine', dobjId: 'PEBBLE' }), 'V-EXAMINE');
+    const result = await executeVerb(ctx(fix, { verb: 'examine', dobjId: 'PEBBLE' }), 'V-EXAMINE');
     expect(result.output).toBe(fmt(vExamine.nothingSpecial, 'small pebble'));
     expect(result.output).toBe("There's nothing special about the small pebble.");
   });
 
-  it('still returns ldesc when present', () => {
+  it('still returns ldesc when present', async () => {
     const fix = makeFixture();
-    const result = executeVerb(ctx(fix, { verb: 'examine', dobjId: 'LANTERN' }), 'V-EXAMINE');
+    const result = await executeVerb(ctx(fix, { verb: 'examine', dobjId: 'LANTERN' }), 'V-EXAMINE');
     expect(result.output).toBe('A brass lantern.');
   });
 });
@@ -386,19 +386,19 @@ describe('D3 A13 — verbExamine no-text/no-ldesc fallback', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A14 — verbPut not-held', () => {
-  it('returns "That\'s easy for you to say since you don\'t even have the X." when not held', () => {
+  it('returns "That\'s easy for you to say since you don\'t even have the X." when not held', async () => {
     const fix = makeFixture();
     // lantern is on the floor, not held
     fix.chest.set(Flag.Open);
-    const result = executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }), 'V-PUT');
+    const result = await executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }), 'V-PUT');
     expect(result.output).toBe(fmt(preGive.notHoldingIt, 'brass lantern'));
     expect(result.output).toBe("That's easy for you to say since you don't even have the brass lantern.");
   });
 
-  it('does NOT say "You\'re not carrying the X."', () => {
+  it('does NOT say "You\'re not carrying the X."', async () => {
     const fix = makeFixture();
     fix.chest.set(Flag.Open);
-    const result = executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }), 'V-PUT');
+    const result = await executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }), 'V-PUT');
     expect(result.output).not.toMatch(/You're not carrying/);
   });
 });
@@ -408,19 +408,19 @@ describe('D3 A14 — verbPut not-held', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A15 — verbPut non-container', () => {
-  it('returns "You can\'t do that." when iobj is not a container', () => {
+  it('returns "You can\'t do that." when iobj is not a container', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
     // leaflet is not a container
-    const result = executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'LEAFLET', prep: 'in' }), 'V-PUT');
+    const result = await executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'LEAFLET', prep: 'in' }), 'V-PUT');
     expect(result.output).toBe(vPut.cantDoThat);
     expect(result.output).toBe("You can't do that.");
   });
 
-  it('does NOT say "You can\'t put things in the X."', () => {
+  it('does NOT say "You can\'t put things in the X."', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'LEAFLET', prep: 'in' }), 'V-PUT');
+    const result = await executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'LEAFLET', prep: 'in' }), 'V-PUT');
     expect(result.output).not.toMatch(/can't put things/);
   });
 });
@@ -430,19 +430,19 @@ describe('D3 A15 — verbPut non-container', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 A16 — verbPut container-closed', () => {
-  it('returns "The wooden chest isn\'t open." when container is closed', () => {
+  it('returns "The wooden chest isn\'t open." when container is closed', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
     // chest is closed by default
-    const result = executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }), 'V-PUT');
+    const result = await executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }), 'V-PUT');
     expect(result.output).toBe(fmt(vPut.notOpen, 'wooden chest'));
     expect(result.output).toBe("The wooden chest isn't open.");
   });
 
-  it('does NOT say "The X is closed."', () => {
+  it('does NOT say "The X is closed."', async () => {
     const fix = makeFixture();
     fix.lantern.moveTo(fix.player);
-    const result = executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }), 'V-PUT');
+    const result = await executeVerb(ctx(fix, { verb: 'put', dobjId: 'LANTERN', iobjId: 'CHEST', prep: 'in' }), 'V-PUT');
     expect(result.output).not.toBe('The wooden chest is closed.');
   });
 });
@@ -452,11 +452,11 @@ describe('D3 A16 — verbPut container-closed', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 Lamp display name', () => {
-  it('lamp description uses desc ("brass lantern") not hardcoded "lamp"', () => {
+  it('lamp description uses desc ("brass lantern") not hardcoded "lamp"', async () => {
     const game = createGame({ startRoom: 'LIVING-ROOM' });
     // Take the lamp from its starting location (trophy case area), then turn on.
     // In LIVING-ROOM the lamp is there with fdesc; we just need to test the turn-on output.
-    const result = game.turn('turn on lamp');
+    const result = await game.turn('turn on lamp');
     // The output should say "The brass lantern is now on." not "The lamp is now on."
     expect(result.output).toContain('brass lantern');
     expect(result.output).not.toContain('The lamp is now on.');
@@ -469,15 +469,15 @@ describe('D3 Lamp display name', () => {
 // ---------------------------------------------------------------------------
 
 describe('D3 B10/B24/B40 — already-done uses DUMMY pick', () => {
-  it('kitchen window already-open returns a DUMMY table entry', () => {
+  it('kitchen window already-open returns a DUMMY table entry', async () => {
     const game = createGame({ startRoom: 'WEST-OF-HOUSE' });
     // First open the kitchen window (go to it)
-    game.turn('go north'); // north of house
-    game.turn('go east'); // behind house
+    await game.turn('go north'); // north of house
+    await game.turn('go east'); // behind house
     // Now open the kitchen window (it's "slightly ajar" on examine, meaning it starts closed)
     // Try opening it twice to get the "already open" path
-    game.turn('open window');  // opens it
-    const result = game.turn('open window');  // should give DUMMY
+    await game.turn('open window');  // opens it
+    const result = await game.turn('open window');  // should give DUMMY
     expect(dummy.entries).toContain(result.output);
     expect(result.output).not.toBe("It's already open.");
   });

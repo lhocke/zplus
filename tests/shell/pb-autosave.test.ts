@@ -57,42 +57,42 @@ const GRUE_DEATH_COMMANDS = [
 // ---------------------------------------------------------------------------
 
 describe('PB-AUTOSAVE — pre-turn autosave written on submit', () => {
-  it('autosave slot is populated after first submit', () => {
+  it('autosave slot is populated after first submit', async () => {
     const storage = new MapStorage();
     const port = makePort(storage);
     const session = createSession({ sink: nullSink, savePort: port, seed: 42 });
     session.start();
-    session.submit('look');
+    await session.submit('look');
     // 'autosave' slot should now exist
-    const saved = port.read('autosave');
+    const saved = await port.read('autosave');
     expect(saved).toBeDefined();
   });
 
-  it('autosave is overwritten each turn (rolling)', () => {
+  it('autosave is overwritten each turn (rolling)', async () => {
     const storage = new MapStorage();
     const port = makePort(storage);
     const session = createSession({ sink: nullSink, savePort: port, seed: 42 });
     session.start();
-    session.submit('look');
-    const after1 = port.read('autosave');
-    session.submit('north');
-    const after2 = port.read('autosave');
+    await session.submit('look');
+    const after1 = await port.read('autosave');
+    await session.submit('north');
+    const after2 = await port.read('autosave');
     // The move count must have advanced between the two autosaves
     expect(after1).toBeDefined();
     expect(after2).toBeDefined();
     expect(after1!.moveCount).toBeLessThan(after2!.moveCount);
   });
 
-  it('autosave captures state BEFORE the turn runs — moveCount is pre-turn', () => {
+  it('autosave captures state BEFORE the turn runs — moveCount is pre-turn', async () => {
     const storage = new MapStorage();
     const port = makePort(storage);
     const session = createSession({ sink: nullSink, savePort: port, seed: 42 });
     session.start();
     // Before any submit, no autosave yet
-    expect(port.read('autosave')).toBeUndefined();
+    expect(await port.read('autosave')).toBeUndefined();
     // After first submit the autosave reflects the state at the START of that turn
-    session.submit('look');
-    const snap1 = port.read('autosave');
+    await session.submit('look');
+    const snap1 = await port.read('autosave');
     // moveCount in the autosave should be 0 (the count BEFORE the first move)
     expect(snap1?.moveCount).toBe(0);
   });
@@ -101,7 +101,7 @@ describe('PB-AUTOSAVE — pre-turn autosave written on submit', () => {
     // Should not throw even without a port
     const session = createSession({ sink: nullSink, seed: 42 });
     session.start();
-    expect(() => session.submit('look')).not.toThrow();
+    expect(async () => await session.submit('look')).not.toThrow();
   });
 });
 
@@ -110,13 +110,13 @@ describe('PB-AUTOSAVE — pre-turn autosave written on submit', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-AUTOSAVE — autosave slot not accessible via verbs', () => {
-  it('"save autosave" returns in-voice slot message — V-SAVE verb is NOT invoked', () => {
+  it('"save autosave" returns in-voice slot message — V-SAVE verb is NOT invoked', async () => {
     const storage = new MapStorage();
     const port = makePort(storage);
     const session = createSession({ sink: nullSink, savePort: port, seed: 42 });
     session.start();
     // Attempt to save to the 'autosave' slot via verb — should be rejected
-    const result = session.submit('save autosave');
+    const result = await session.submit('save autosave');
     // The in-voice slot rejection must be returned (not "Ok.")
     expect(result).toMatch(/no save slot/i);
     // The rolling autosave IS written (it fires at the start of every submit),
@@ -125,13 +125,13 @@ describe('PB-AUTOSAVE — autosave slot not accessible via verbs', () => {
     expect(result).not.toBe('Ok.');
   });
 
-  it('"restore autosave" returns in-voice slot message, does not restore', () => {
+  it('"restore autosave" returns in-voice slot message, does not restore', async () => {
     const storage = new MapStorage();
     const port = makePort(storage);
     const session = createSession({ sink: nullSink, savePort: port, seed: 42 });
     session.start();
-    session.submit('look');
-    const result = session.submit('restore autosave');
+    await session.submit('look');
+    const result = await session.submit('restore autosave');
     expect(result).toMatch(/no save slot/i);
   });
 });
@@ -141,19 +141,19 @@ describe('PB-AUTOSAVE — autosave slot not accessible via verbs', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-AUTOSAVE — gameOver exposed on session snapshot', () => {
-  it('snapshot().gameOver is false during normal play', () => {
+  it('snapshot().gameOver is false during normal play', async () => {
     const session = createSession({ sink: nullSink, seed: 42 });
     session.start();
-    session.submit('look');
+    await session.submit('look');
     const snap = session.snapshot();
     expect(snap.gameOver).toBe(false);
   });
 
-  it('snapshot().gameOver is true after quit', () => {
+  it('snapshot().gameOver is true after quit', async () => {
     // quit fires doFinish() → gameOver=true (same path as death exhaustion / victory).
     const session = createSession({ sink: nullSink, seed: 42 });
     session.start();
-    session.submit('quit');
+    await session.submit('quit');
     const snap = session.snapshot();
     expect(snap.gameOver).toBe(true);
   });
@@ -164,20 +164,20 @@ describe('PB-AUTOSAVE — gameOver exposed on session snapshot', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-AUTOSAVE — no autosave write when gameOver', () => {
-  it('submit() after gameOver does not overwrite the autosave slot', () => {
+  it('submit() after gameOver does not overwrite the autosave slot', async () => {
     const storage = new MapStorage();
     const port = makePort(storage);
     const session = createSession({ sink: nullSink, savePort: port, seed: 42 });
     session.start();
 
     // Use quit to trigger gameOver reliably
-    session.submit('quit');
+    await session.submit('quit');
     expect(session.snapshot().gameOver).toBe(true);
-    const autosaveBeforeDeadSubmit = port.read('autosave');
+    const autosaveBeforeDeadSubmit = await port.read('autosave');
 
     // Submit after gameOver — engine returns '' and autosave must NOT be overwritten
-    session.submit('look');
-    const autosaveAfterDeadSubmit = port.read('autosave');
+    await session.submit('look');
+    const autosaveAfterDeadSubmit = await port.read('autosave');
 
     // The savedAt timestamp of the autosave must not have changed
     expect(autosaveAfterDeadSubmit?.savedAt).toBe(autosaveBeforeDeadSubmit?.savedAt);
@@ -189,7 +189,7 @@ describe('PB-AUTOSAVE — no autosave write when gameOver', () => {
 // ---------------------------------------------------------------------------
 
 describe('PB-AUTOSAVE — round-trip oracle over autosave slot', () => {
-  it('restore from autosave after death puts the player at the start of the fatal turn', () => {
+  it('restore from autosave after death puts the player at the start of the fatal turn', async () => {
     const storage = new MapStorage();
     const port = makePort(storage);
     // Session A: navigate to the point right before the fatal turn; record autosave state
@@ -199,61 +199,61 @@ describe('PB-AUTOSAVE — round-trip oracle over autosave slot', () => {
     // Run all setup commands EXCEPT the fatal one — this is the pre-death state
     const setupCommands = GRUE_DEATH_COMMANDS.slice(0, GRUE_DEATH_COMMANDS.length - 1);
     for (const cmd of setupCommands) {
-      sessionA.submit(cmd);
+      await sessionA.submit(cmd);
     }
     // The final command ('south') is the fatal one — autosave written at the start of this submit
-    sessionA.submit(GRUE_DEATH_COMMANDS[GRUE_DEATH_COMMANDS.length - 1]);
+    await sessionA.submit(GRUE_DEATH_COMMANDS[GRUE_DEATH_COMMANDS.length - 1]);
 
     // The autosave should now hold the state at the START of the fatal turn
-    const autosaveState = port.read('autosave');
+    const autosaveState = await port.read('autosave');
     expect(autosaveState).toBeDefined();
 
     // Session B: fresh game, restore from autosave
     const storage2 = new MapStorage();
     const port2 = makePort(storage2);
     // Copy the autosave from A into B so we can call restore
-    port2.write('autosave', autosaveState!);
+    await port2.write('autosave', autosaveState!);
 
     // We can only restore named manual slots via the verb; restore from autosave
     // is done by writing to a manual slot and restoring from it.
     // Write autosave into slot '1' for restore verb access
     const storage3 = new MapStorage();
     const port3 = makePort(storage3);
-    port3.write('1', autosaveState!);
+    await port3.write('1', autosaveState!);
 
     const sessionB = createSession({ sink: nullSink, savePort: port3, seed: 42 });
     sessionB.start();
-    sessionB.submit('restore');
+    await sessionB.submit('restore');
     // After restore, player should be at the location captured in the autosave
     const snapB = sessionB.snapshot();
     expect(snapB.moves).toBe(autosaveState!.moveCount);
   });
 
-  it('autosave round-trip: snapshot() after restore matches autosave moveCount', () => {
+  it('autosave round-trip: snapshot() after restore matches autosave moveCount', async () => {
     const storage = new MapStorage();
     const port = makePort(storage);
     const session = createSession({ sink: nullSink, savePort: port, seed: 42 });
     session.start();
 
     // 5 moves of normal play
-    session.submit('look');
-    session.submit('north');
-    session.submit('east');
-    session.submit('west');
-    session.submit('west');
+    await session.submit('look');
+    await session.submit('north');
+    await session.submit('east');
+    await session.submit('west');
+    await session.submit('west');
 
     // The autosave at this point has moveCount of the state BEFORE the 5th submit
-    const autosaveAfter5 = port.read('autosave');
+    const autosaveAfter5 = await port.read('autosave');
     expect(autosaveAfter5).toBeDefined();
 
     // Restore via slot '1' (copy autosave there)
     const storage2 = new MapStorage();
     const port2 = makePort(storage2);
-    port2.write('1', autosaveAfter5!);
+    await port2.write('1', autosaveAfter5!);
 
     const session2 = createSession({ sink: nullSink, savePort: port2, seed: 42 });
     session2.start();
-    session2.submit('restore');
+    await session2.submit('restore');
     const snap = session2.snapshot();
     expect(snap.moves).toBe(autosaveAfter5!.moveCount);
   });

@@ -16,25 +16,25 @@ function makeStubPort(): SavePort & { store: Map<string, SaveState> } {
   const store = new Map<string, SaveState>();
   return {
     store,
-    write(slot, state) { store.set(slot, state); },
-    read(slot) { return store.get(slot); },
-    readWithReason(slot) { return store.get(slot) ?? 'empty'; },
-    list() { return []; },
-    remove(slot) { store.delete(slot); },
+    async write(slot, state) { store.set(slot, state); },
+    async read(slot) { return store.get(slot); },
+    async readWithReason(slot) { return store.get(slot) ?? 'empty'; },
+    async list() { return []; },
+    async remove(slot) { store.delete(slot); },
   };
 }
 
 describe('PB-CTX VerbContext save/restore/restart callbacks', () => {
-  it('saveGame callback writes to the SavePort slot', () => {
+  it('saveGame callback writes to the SavePort slot', async () => {
     const port = makeStubPort();
     const restartFn = vi.fn();
     const game = createGame({ seed: 42, savePort: port, restartFn });
 
     // Advance a turn so state is non-trivial.
-    game.turn('look');
+    await game.turn('look');
 
     // The only way to exercise ctx.saveGame is to trigger V-SAVE.
-    const result = game.turn('save');
+    const result = await game.turn('save');
 
     // Verb body prints Ok. on success (spec §4.2).
     expect(result.output).toBe('Ok.');
@@ -42,44 +42,44 @@ describe('PB-CTX VerbContext save/restore/restart callbacks', () => {
     expect(port.store.size).toBeGreaterThan(0);
   });
 
-  it('restoreGame callback reads from the SavePort slot', () => {
+  it('restoreGame callback reads from the SavePort slot', async () => {
     const port = makeStubPort();
     const restartFn = vi.fn();
     const game = createGame({ seed: 42, savePort: port, restartFn });
 
     // Build a state, save it, advance, then restore.
-    game.turn('look');
-    game.turn('save');
-    game.turn('look'); // advance one more turn
+    await game.turn('look');
+    await game.turn('save');
+    await game.turn('look'); // advance one more turn
 
-    const result = game.turn('restore');
+    const result = await game.turn('restore');
 
     // Verb body prints Ok. on a successful restore (spec §4.3).
     expect(result.output).toContain('Ok.');
   });
 
-  it('restoreGame from empty slot prints Failed.', () => {
+  it('restoreGame from empty slot prints Failed.', async () => {
     const port = makeStubPort();
     const restartFn = vi.fn();
     const game = createGame({ seed: 42, savePort: port, restartFn });
 
     // No save written — slot is empty.
-    const result = game.turn('restore');
+    const result = await game.turn('restore');
 
     expect(result.output).toBe('Failed.');
   });
 
-  it('restart callback invokes the provided restartFn', () => {
+  it('restart callback invokes the provided restartFn', async () => {
     const port = makeStubPort();
     const restartFn = vi.fn();
     const game = createGame({ seed: 42, savePort: port, restartFn });
 
-    game.turn('restart');
+    await game.turn('restart');
 
     expect(restartFn).toHaveBeenCalledOnce();
   });
 
-  it('verb body never holds a Game or SavePort reference — callbacks are the only path', () => {
+  it('verb body never holds a Game or SavePort reference — callbacks are the only path', async () => {
     // Structural: if saveGame/restoreGame/restart are absent from VerbContext,
     // the verb bodies cannot compile (tsc catches it). This test is a runtime
     // sanity check that the context wiring is present: call save, confirm the
@@ -87,7 +87,7 @@ describe('PB-CTX VerbContext save/restore/restart callbacks', () => {
     const port = makeStubPort();
     const game = createGame({ seed: 42, savePort: port, restartFn: () => {} });
 
-    game.turn('save');
+    await game.turn('save');
     // If the callback were absent the port would be empty.
     expect(port.store.size).toBe(1);
   });

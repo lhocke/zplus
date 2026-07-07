@@ -32,31 +32,31 @@ function resetState(): void {
 }
 
 describe('BD7 — chimney arrival into already-visited Kitchen is brief', () => {
-  it('real-game-flow: Kitchen visited first via window, then reached again via chimney UP — arrival is brief', () => {
+  it('real-game-flow: Kitchen visited first via window, then reached again via chimney UP — arrival is brief', async () => {
     resetState();
     const g = createGame({ seed: 42 });
     g.start();
 
     // ── Visit Kitchen via open window (sets Flag.Touched on Kitchen) ──────
-    g.turn('north');       // west-of-house → north-of-house
-    g.turn('east');        // → behind house
-    g.turn('open window');
-    g.turn('west');        // → Kitchen (first visit; Flag.Touched set here)
+    await g.turn('north');       // west-of-house → north-of-house
+    await g.turn('east');        // → behind house
+    await g.turn('open window');
+    await g.turn('west');        // → Kitchen (first visit; Flag.Touched set here)
 
     // ── Go underground with lamp ──────────────────────────────────────────
-    g.turn('west');        // Kitchen → Living Room
-    g.turn('take lamp');
-    g.turn('move rug');
-    g.turn('open trap door');
-    g.turn('turn on lamp');
-    g.turn('down');        // → Cellar
-    g.turn('south');       // → East of Chasm
-    g.turn('east');        // → Gallery
-    g.turn('take painting');
-    g.turn('north');       // → Studio
+    await g.turn('west');        // Kitchen → Living Room
+    await g.turn('take lamp');
+    await g.turn('move rug');
+    await g.turn('open trap door');
+    await g.turn('turn on lamp');
+    await g.turn('down');        // → Cellar
+    await g.turn('south');       // → East of Chasm
+    await g.turn('east');        // → Gallery
+    await g.turn('take painting');
+    await g.turn('north');       // → Studio
 
     // ── Climb chimney UP → Kitchen (should be BRIEF revisit) ─────────────
-    const r = g.turn('up');
+    const r = await g.turn('up');
 
     // Room name always appears.
     expect(r.output).toContain('Kitchen');

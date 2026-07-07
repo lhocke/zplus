@@ -52,16 +52,16 @@ function makeMinimalCtx(verb: string): VerbContext {
 // ---------------------------------------------------------------------------
 
 describe('D4 easter eggs — unit (executeVerb action id dispatch)', () => {
-  it('V-ADVENT returns the verbatim xyzzy/plugh response', () => {
+  it('V-ADVENT returns the verbatim xyzzy/plugh response', async () => {
     const ctx = makeMinimalCtx('plugh');
-    const res = executeVerb(ctx, 'V-ADVENT');
+    const res = await executeVerb(ctx, 'V-ADVENT');
     expect(res.output).toBe(XYZZY_RESPONSE);
     expect(res.moved).toBe(false);
   });
 
-  it('V-FROBOZZ returns the verbatim frobozz response', () => {
+  it('V-FROBOZZ returns the verbatim frobozz response', async () => {
     const ctx = makeMinimalCtx('frobozz');
-    const res = executeVerb(ctx, 'V-FROBOZZ');
+    const res = await executeVerb(ctx, 'V-FROBOZZ');
     expect(res.output).toBe(FROBOZZ_RESPONSE);
     expect(res.moved).toBe(false);
   });
@@ -72,21 +72,21 @@ describe('D4 easter eggs — unit (executeVerb action id dispatch)', () => {
 // ---------------------------------------------------------------------------
 
 describe('D4 easter eggs — unit (executeVerb verb-word fallback)', () => {
-  it('verb "plugh" falls back to verbAdvent via HANDLERS', () => {
+  it('verb "plugh" falls back to verbAdvent via HANDLERS', async () => {
     const ctx = makeMinimalCtx('plugh');
-    const res = executeVerb(ctx);
+    const res = await executeVerb(ctx);
     expect(res.output).toBe(XYZZY_RESPONSE);
   });
 
-  it('verb "xyzzy" falls back to verbAdvent via HANDLERS', () => {
+  it('verb "xyzzy" falls back to verbAdvent via HANDLERS', async () => {
     const ctx = makeMinimalCtx('xyzzy');
-    const res = executeVerb(ctx);
+    const res = await executeVerb(ctx);
     expect(res.output).toBe(XYZZY_RESPONSE);
   });
 
-  it('verb "frobozz" falls back to verbFrobozz via HANDLERS', () => {
+  it('verb "frobozz" falls back to verbFrobozz via HANDLERS', async () => {
     const ctx = makeMinimalCtx('frobozz');
-    const res = executeVerb(ctx);
+    const res = await executeVerb(ctx);
     expect(res.output).toBe(FROBOZZ_RESPONSE);
   });
 });
@@ -98,53 +98,53 @@ describe('D4 easter eggs — unit (executeVerb verb-word fallback)', () => {
 // ---------------------------------------------------------------------------
 
 describe('D4 easter eggs — integration (game.turn)', () => {
-  it('typing "xyzzy" produces the verbatim A-hollow-voice response', () => {
+  it('typing "xyzzy" produces the verbatim A-hollow-voice response', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('xyzzy');
+    const r = await g.turn('xyzzy');
     expect(r.output).toContain(XYZZY_RESPONSE);
   });
 
-  it('typing "plugh" produces the verbatim A-hollow-voice response', () => {
+  it('typing "plugh" produces the verbatim A-hollow-voice response', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('plugh');
+    const r = await g.turn('plugh');
     expect(r.output).toContain(XYZZY_RESPONSE);
   });
 
-  it('typing "frobozz" produces the verbatim FROBOZZ-Corporation response', () => {
+  it('typing "frobozz" produces the verbatim FROBOZZ-Corporation response', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('frobozz');
+    const r = await g.turn('frobozz');
     expect(r.output).toContain(FROBOZZ_RESPONSE);
   });
 
-  it('xyzzy does NOT move the player (moved === false)', () => {
+  it('xyzzy does NOT move the player (moved === false)', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('xyzzy');
+    const r = await g.turn('xyzzy');
     expect(r.moved).toBe(false);
   });
 
-  it('frobozz does NOT move the player (moved === false)', () => {
+  it('frobozz does NOT move the player (moved === false)', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('frobozz');
+    const r = await g.turn('frobozz');
     expect(r.moved).toBe(false);
   });
 
-  it('xyzzy does NOT produce the generic bad-verb fallthrough message', () => {
+  it('xyzzy does NOT produce the generic bad-verb fallthrough message', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('xyzzy');
+    const r = await g.turn('xyzzy');
     expect(r.output).not.toContain("I don't know how to");
     expect(r.output).not.toContain("don't understand");
   });
 
-  it('frobozz does NOT produce the generic bad-verb fallthrough message', () => {
+  it('frobozz does NOT produce the generic bad-verb fallthrough message', async () => {
     const g = createGame();
     g.start();
-    const r = g.turn('frobozz');
+    const r = await g.turn('frobozz');
     expect(r.output).not.toContain("I don't know how to");
     expect(r.output).not.toContain("don't understand");
   });

@@ -126,7 +126,7 @@ function litUp(g: ReturnType<typeof createGame>): void {
 describe('V3 FlagStore flags survive restore', () => {
   beforeEach(() => { resetThiefState(); });
 
-  it('TROLL-FLAG=true: east exit through troll room works after restore', () => {
+  it('TROLL-FLAG=true: east exit through troll room works after restore', async () => {
     const g1 = createGame({ seed: 42, startRoom: 'TROLL-ROOM' });
     g1.start();
     litUp(g1);
@@ -141,13 +141,13 @@ describe('V3 FlagStore flags survive restore', () => {
 
     // Restored game must be in TROLL-ROOM with TROLL-FLAG still true.
     expect(g2.view().here).toBe('TROLL-ROOM');
-    const out = g2.turn('east');
+    const out = await g2.turn('east');
     expect(out.output).not.toContain('fends you off');
     // Moved to EW-PASSAGE (east of troll room).
     expect(g2.view().here).toBe('EW-PASSAGE');
   });
 
-  it('TROLL-FLAG=true: west exit through troll room works after restore', () => {
+  it('TROLL-FLAG=true: west exit through troll room works after restore', async () => {
     const g1 = createGame({ seed: 42, startRoom: 'TROLL-ROOM' });
     g1.start();
     litUp(g1);
@@ -158,12 +158,12 @@ describe('V3 FlagStore flags survive restore', () => {
     g2.start();
     g2.restore(snap);
 
-    const out = g2.turn('west');
+    const out = await g2.turn('west');
     expect(out.output).not.toContain('fends you off');
     expect(g2.view().here).toBe('MAZE-1');
   });
 
-  it('CYCLOPS-FLAG=true: up exit from cyclops room works after restore', () => {
+  it('CYCLOPS-FLAG=true: up exit from cyclops room works after restore', async () => {
     const g1 = createGame({ seed: 42, startRoom: 'CYCLOPS-ROOM' });
     g1.start();
     litUp(g1);
@@ -175,12 +175,12 @@ describe('V3 FlagStore flags survive restore', () => {
     g2.restore(snap);
 
     expect(g2.view().here).toBe('CYCLOPS-ROOM');
-    const out = g2.turn('up');
+    const out = await g2.turn('up');
     expect(out.output).not.toContain("cyclops doesn't look");
     expect(g2.view().here).toBe('TREASURE-ROOM');
   });
 
-  it('MAGIC-FLAG=true: east exit from cyclops room works after restore', () => {
+  it('MAGIC-FLAG=true: east exit from cyclops room works after restore', async () => {
     const g1 = createGame({ seed: 42, startRoom: 'CYCLOPS-ROOM' });
     g1.start();
     litUp(g1);
@@ -192,7 +192,7 @@ describe('V3 FlagStore flags survive restore', () => {
     g2.restore(snap);
 
     expect(g2.view().here).toBe('CYCLOPS-ROOM');
-    const out = g2.turn('east');
+    const out = await g2.turn('east');
     expect(out.output).not.toContain('solid rock');
     expect(g2.view().here).toBe('STRANGE-PASSAGE');
   });
@@ -205,7 +205,7 @@ describe('V3 FlagStore flags survive restore', () => {
 describe('V3 object Open-bit exits survive restore', () => {
   beforeEach(() => { resetThiefState(); });
 
-  it('GRATE open: up exit from grating room works after restore', () => {
+  it('GRATE open: up exit from grating room works after restore', async () => {
     const g1 = createGame({ seed: 42, startRoom: 'GRATING-ROOM' });
     g1.start();
 
@@ -228,7 +228,7 @@ describe('V3 object Open-bit exits survive restore', () => {
     // Grate must be open — up exit leads to GRATING-CLEARING.
     const grate = g2.world.get('GRATE')!;
     expect(grate.has(Flag.Open)).toBe(true);
-    const out = g2.turn('up');
+    const out = await g2.turn('up');
     expect(g2.view().here).toBe('GRATING-CLEARING');
     expect(out.output).not.toContain("can't");
   });
@@ -343,12 +343,12 @@ describe('V3 graph invariant holds on post-restore state', () => {
     }
   });
 
-  it('full reachable set from START remains invariant post-restore to START', () => {
+  it('full reachable set from START remains invariant post-restore to START', async () => {
     // Restoring to the starting room must leave the full reachable set intact.
     // This is the degenerate case: restore ≡ start.
     const g = createGame({ seed: 42 });
     g.start();
-    g.turn('look');
+    await g.turn('look');
     const snap = g.snapshot();
 
     const g2 = createGame({ seed: 42 });

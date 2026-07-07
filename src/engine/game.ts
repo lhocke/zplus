@@ -608,7 +608,7 @@ export class Game {
   }
 
   /** Execute one command line (may contain chained commands via "then" / "."). */
-  turn(input: string, opts?: { saveSlot?: string }): TurnResult {
+  async turn(input: string, opts?: { saveSlot?: string }): Promise<TurnResult> {
     if (this.gameOver) return { output: '', moved: false };
     this.fatalPending = false;
 
@@ -771,7 +771,7 @@ export class Game {
       } else {
         // No handler claimed the command — run step 7: default verb routine.
         // Dispatch on cmd.action (ZIL PRSA), not cmd.verb (verb word) — gmain.zil:283–284.
-        const verbResult = executeVerb({
+        const verbResult = await executeVerb({
           verb: cmd.verb,
           action: cmd.action,
           dobj,
@@ -804,11 +804,11 @@ export class Game {
           finish: () => this.doFinish((text) => handled.push(text)),
           thisIsIt: (obj) => { this.parser.setItRef(obj.id); },
           saveGame: this.savePort
-            ? (slot) => { this.savePort!.write(slot, this.snapshot()); }
+            ? async (slot) => { await this.savePort!.write(slot, this.snapshot()); }
             : undefined,
           restoreGame: this.savePort
-            ? (slot) => {
-                const r = this.savePort!.readWithReason(slot);
+            ? async (slot) => {
+                const r = await this.savePort!.readWithReason(slot);
                 if (r === 'empty')   return undefined;
                 if (r === 'version') return { inVoice: MSG_RESTORE_VERSION };
                 if (r === 'corrupt') return { inVoice: MSG_RESTORE_CORRUPT };
