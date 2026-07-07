@@ -7,5 +7,10 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.ts'],
     passWithNoTests: true,
+    // vm.SourceTextModule (used by the dev-serve parse guard) is behind a
+    // Node flag; forks is vitest's default pool. Vitest 4 removed
+    // `poolOptions` in favor of top-level pool options (pool rework), so
+    // execArgv is set directly here rather than under poolOptions.forks.
+    execArgv: ['--experimental-vm-modules', '--disable-warning=ExperimentalWarning'],
   },
 });
