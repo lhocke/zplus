@@ -566,7 +566,7 @@ of THIEF-VS-ADVENTURER's probability tree — "tests pass" alone does not retire
 
 ## 8. Build-Task DAG
 
-Authored to drive a later pod-wave (foundation → parallel units → integrate).
+Authored to drive a later staged build wave (foundation → parallel units → integrate).
 Each task: deps, files (verdict), done-criteria. Tasks that **touch the combat seam** are
 marked ⚙.
 

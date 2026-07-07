@@ -475,7 +475,7 @@ there is **no CORS** to configure and the browser never talks cross-domain.
 - Static Vite build: `vite build` → `dist/` is the Pages output directory.
 - **Deploy via `wrangler pages deploy dist` — NOT Git-connected Pages.**
   Rationale: this repo is private and full of must-not-leak ops material
-  (`.claude/`, `CLAUDE.md`, `docs/`, `.remember/`). Git-connected would grant
+  (local tooling and notes directories, `docs/`). Git-connected would grant
   Cloudflare read access to the repo and clone it into CF's build environment on
   every push. Wrangler uploads **only `dist/`** — Cloudflare never sees the repo
   — and lets us inspect the exact artifact before it ships. This is the same
@@ -955,7 +955,7 @@ integration/operational lenses), grouped by section. Approach tag per item:
   reject, no issue; rate-limit → `429`; response echoes nothing sensitive.
 - **U** `__BUILD_ID__` `declare const` typechecks; key-gen padding pure function.
 - **M/preflight** no source maps in `dist/`; deploy preflight asserts `dist/` is
-  build-output-only (no `.ts`/`.md`/`.claude/`).
+  build-output-only (no `.ts`/`.md`/hidden dirs).
 
 ### §6 Graceful troll-wall
 - **U** `attack troll` / `kill troll` / `attack troll with sword` (GWIM) → the

@@ -709,7 +709,7 @@ a walkthrough might not exercise.
 
 ## 9. Build-Task DAG
 
-Authored to drive a pod-wave (foundation → parallel units → integrate). Each task lists
+Authored to drive a staged build wave (foundation → parallel units → integrate). Each task lists
 deps, files, and done-criteria. No combat dependency anywhere.
 
 ### Wave 0 — Foundation (parallel)

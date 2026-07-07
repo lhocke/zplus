@@ -518,7 +518,7 @@ interface SavePort {
 interface SaveSlotMeta { slot: string; savedAt: string; buildId: string; hereName: string; moves: number; }
 ```
 
-> **Security / trust note (CLAUDE.md rule 15/16 posture):** `read()` deserializes
+> **Security / trust note:** `read()` deserializes
 > *attacker-controllable* input — `localStorage` is editable by the user and any script on the
 > origin. `restore()` must treat a parsed `SaveState` as **untrusted**: validate shape and
 > types, clamp/reject unknown object ids and out-of-range numbers, and **never** `eval` or
@@ -652,7 +652,7 @@ transcript carries the markers.
 
 ---
 
-## 9. Build-Task DAG (authored for a pod-wave)
+## 9. Build-Task DAG (authored for a staged build wave)
 
 `foundation (serialization surface) → verbs + persistence (parallel) → UI + telemetry →
 verification`. Each task: deps / files (verdict) / done-criteria. The serialization surface is
