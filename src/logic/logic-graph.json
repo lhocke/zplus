@@ -1,0 +1,1008 @@
+{
+  "logicVersion": 2,
+  "checksum": "53889f02c4f229a3",
+  "locations": [
+    {
+      "id": "ADVERTISEMENT",
+      "objectId": "ADVERTISEMENT",
+      "containerId": "MAILBOX",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "AXE",
+      "objectId": "AXE",
+      "containerId": "TROLL",
+      "region": "cellar-core",
+      "access": {
+        "region": "cellar-core",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "BAG-OF-COINS",
+      "objectId": "BAG-OF-COINS",
+      "containerId": "MAZE-5",
+      "region": "thief-maze",
+      "access": {
+        "region": "thief-maze",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "BAR",
+      "objectId": "BAR",
+      "containerId": "LOUD-ROOM",
+      "region": "cellar-core",
+      "access": {
+        "region": "cellar-core",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "BELL",
+      "objectId": "BELL",
+      "containerId": "NORTH-TEMPLE",
+      "region": "temple",
+      "access": {
+        "region": "temple",
+        "needs": [
+          "ROPE"
+        ]
+      }
+    },
+    {
+      "id": "BOOK",
+      "objectId": "BOOK",
+      "containerId": "ALTAR",
+      "region": "temple",
+      "access": {
+        "region": "temple",
+        "needs": [
+          "ROPE"
+        ]
+      }
+    },
+    {
+      "id": "BOTTLE",
+      "objectId": "BOTTLE",
+      "containerId": "KITCHEN-TABLE",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "BRACELET",
+      "objectId": "BRACELET",
+      "containerId": "GAS-ROOM",
+      "region": "mine",
+      "access": {
+        "region": "mine",
+        "needs": [
+          "GARLIC",
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "BUOY",
+      "objectId": "BUOY",
+      "containerId": "RIVER-4",
+      "region": "river",
+      "access": {
+        "region": "river",
+        "needs": [
+          "INFLATABLE-BOAT",
+          "PUMP",
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "BURNED-OUT-LANTERN",
+      "objectId": "BURNED-OUT-LANTERN",
+      "containerId": "MAZE-5",
+      "region": "thief-maze",
+      "access": {
+        "region": "thief-maze",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "CANARY",
+      "objectId": "CANARY",
+      "containerId": "EGG",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "CANDLES",
+      "objectId": "CANDLES",
+      "containerId": "SOUTH-TEMPLE",
+      "region": "temple",
+      "access": {
+        "region": "temple",
+        "needs": [
+          "ROPE"
+        ]
+      }
+    },
+    {
+      "id": "CHALICE",
+      "objectId": "CHALICE",
+      "containerId": "TREASURE-ROOM",
+      "region": "cyclops",
+      "access": {
+        "region": "cyclops",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "COAL",
+      "objectId": "COAL",
+      "containerId": "DEAD-END-5",
+      "region": "mine-maze",
+      "access": {
+        "region": "mine-maze",
+        "needs": [
+          "GARLIC",
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "COFFIN",
+      "objectId": "COFFIN",
+      "containerId": "EGYPT-ROOM",
+      "region": "temple",
+      "access": {
+        "region": "temple",
+        "needs": [
+          "LAMP",
+          "ROPE"
+        ]
+      }
+    },
+    {
+      "id": "EGG",
+      "objectId": "EGG",
+      "containerId": "NEST",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "EMERALD",
+      "objectId": "EMERALD",
+      "containerId": "BUOY",
+      "region": "river",
+      "access": {
+        "region": "river",
+        "needs": [
+          "INFLATABLE-BOAT",
+          "PUMP",
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "GARLIC",
+      "objectId": "GARLIC",
+      "containerId": "SANDWICH-BAG",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "GUIDE",
+      "objectId": "GUIDE",
+      "containerId": "DAM-LOBBY",
+      "region": "dam",
+      "access": {
+        "region": "dam"
+      }
+    },
+    {
+      "id": "INFLATABLE-BOAT",
+      "objectId": "INFLATABLE-BOAT",
+      "containerId": "DAM-BASE",
+      "region": "dam",
+      "access": {
+        "region": "dam"
+      }
+    },
+    {
+      "id": "JADE",
+      "objectId": "JADE",
+      "containerId": "BAT-ROOM",
+      "region": "mine",
+      "access": {
+        "region": "mine",
+        "needs": [
+          "GARLIC",
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "KEYS",
+      "objectId": "KEYS",
+      "containerId": "MAZE-5",
+      "region": "thief-maze",
+      "access": {
+        "region": "thief-maze",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "KNIFE",
+      "objectId": "KNIFE",
+      "containerId": "ATTIC-TABLE",
+      "region": "surface",
+      "access": {
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "LAMP",
+      "objectId": "LAMP",
+      "containerId": "LIVING-ROOM",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "LEAVES",
+      "objectId": "LEAVES",
+      "containerId": "GRATING-CLEARING",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "LUNCH",
+      "objectId": "LUNCH",
+      "containerId": "SANDWICH-BAG",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "MATCH",
+      "objectId": "MATCH",
+      "containerId": "DAM-LOBBY",
+      "region": "dam",
+      "access": {
+        "region": "dam"
+      }
+    },
+    {
+      "id": "NEST",
+      "objectId": "NEST",
+      "containerId": "UP-A-TREE",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "OWNERS-MANUAL",
+      "objectId": "OWNERS-MANUAL",
+      "containerId": "STUDIO",
+      "region": "cellar-core",
+      "access": {
+        "region": "cellar-core",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "PAINTING",
+      "objectId": "PAINTING",
+      "containerId": "GALLERY",
+      "region": "cellar-core",
+      "access": {
+        "region": "cellar-core"
+      }
+    },
+    {
+      "id": "POT-OF-GOLD",
+      "objectId": "POT-OF-GOLD",
+      "containerId": "END-OF-RAINBOW",
+      "region": "canyon",
+      "access": {
+        "region": "canyon",
+        "needs": [
+          "SCEPTRE"
+        ]
+      }
+    },
+    {
+      "id": "PUMP",
+      "objectId": "PUMP",
+      "containerId": "RESERVOIR-NORTH",
+      "region": "dam",
+      "access": {
+        "region": "dam",
+        "needs": [
+          "LAMP"
+        ],
+        "any": [
+          {
+            "needs": [
+              "WRENCH"
+            ],
+            "region": "cellar-core"
+          },
+          {
+            "region": "mirror"
+          }
+        ]
+      }
+    },
+    {
+      "id": "PUTTY",
+      "objectId": "PUTTY",
+      "containerId": "TUBE",
+      "region": "dam",
+      "access": {
+        "region": "dam",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "ROPE",
+      "objectId": "ROPE",
+      "containerId": "ATTIC",
+      "region": "surface",
+      "access": {
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "RUSTY-KNIFE",
+      "objectId": "RUSTY-KNIFE",
+      "containerId": "MAZE-5",
+      "region": "thief-maze",
+      "access": {
+        "region": "thief-maze",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "SANDWICH-BAG",
+      "objectId": "SANDWICH-BAG",
+      "containerId": "KITCHEN-TABLE",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "SCARAB",
+      "objectId": "SCARAB",
+      "containerId": "SANDY-CAVE",
+      "region": "river",
+      "access": {
+        "region": "river",
+        "needs": [
+          "SHOVEL",
+          "LAMP"
+        ],
+        "any": [
+          {
+            "needs": [
+              "INFLATABLE-BOAT",
+              "PUMP"
+            ]
+          },
+          {
+            "needs": [
+              "SCEPTRE"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SCEPTRE",
+      "objectId": "SCEPTRE",
+      "containerId": "COFFIN",
+      "region": "temple",
+      "access": {
+        "region": "temple",
+        "needs": [
+          "LAMP",
+          "ROPE"
+        ]
+      }
+    },
+    {
+      "id": "SCREWDRIVER",
+      "objectId": "SCREWDRIVER",
+      "containerId": "MAINTENANCE-ROOM",
+      "region": "dam",
+      "access": {
+        "region": "dam",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "SHOVEL",
+      "objectId": "SHOVEL",
+      "containerId": "SANDY-BEACH",
+      "region": "river",
+      "access": {
+        "region": "river",
+        "needs": [
+          "LAMP"
+        ],
+        "any": [
+          {
+            "needs": [
+              "INFLATABLE-BOAT",
+              "PUMP"
+            ]
+          },
+          {
+            "needs": [
+              "SCEPTRE"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "SKULL",
+      "objectId": "SKULL",
+      "containerId": "LAND-OF-LIVING-DEAD",
+      "region": "temple",
+      "access": {
+        "region": "temple",
+        "needs": [
+          "BELL",
+          "BOOK",
+          "CANDLES",
+          "MATCH"
+        ]
+      }
+    },
+    {
+      "id": "SWORD",
+      "objectId": "SWORD",
+      "containerId": "LIVING-ROOM",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "TIMBERS",
+      "objectId": "TIMBERS",
+      "containerId": "TIMBER-ROOM",
+      "region": "mine",
+      "access": {
+        "region": "mine",
+        "needs": [
+          "GARLIC",
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "TORCH",
+      "objectId": "TORCH",
+      "containerId": "PEDESTAL",
+      "region": "temple",
+      "access": {
+        "region": "temple",
+        "needs": [
+          "LAMP",
+          "ROPE"
+        ]
+      }
+    },
+    {
+      "id": "TRIDENT",
+      "objectId": "TRIDENT",
+      "containerId": "ATLANTIS-ROOM",
+      "region": "dam",
+      "access": {
+        "region": "dam",
+        "needs": [
+          "LAMP"
+        ],
+        "any": [
+          {
+            "needs": [
+              "WRENCH"
+            ],
+            "region": "cellar-core"
+          },
+          {
+            "region": "mirror"
+          }
+        ]
+      }
+    },
+    {
+      "id": "TRUNK",
+      "objectId": "TRUNK",
+      "containerId": "RESERVOIR",
+      "region": "dam",
+      "access": {
+        "needs": [
+          "WRENCH",
+          "LAMP"
+        ],
+        "region": "cellar-core"
+      }
+    },
+    {
+      "id": "TUBE",
+      "objectId": "TUBE",
+      "containerId": "MAINTENANCE-ROOM",
+      "region": "dam",
+      "access": {
+        "region": "dam",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "WATER",
+      "objectId": "WATER",
+      "containerId": "BOTTLE",
+      "region": "surface",
+      "access": {}
+    },
+    {
+      "id": "WRENCH",
+      "objectId": "WRENCH",
+      "containerId": "MAINTENANCE-ROOM",
+      "region": "dam",
+      "access": {
+        "region": "dam",
+        "needs": [
+          "LAMP"
+        ]
+      }
+    }
+  ],
+  "items": [
+    {
+      "id": "ADVERTISEMENT",
+      "class": "filler"
+    },
+    {
+      "id": "AXE",
+      "class": "filler"
+    },
+    {
+      "id": "BAG-OF-COINS",
+      "class": "treasure"
+    },
+    {
+      "id": "BAR",
+      "class": "treasure"
+    },
+    {
+      "id": "BAUBLE",
+      "class": "treasure"
+    },
+    {
+      "id": "BELL",
+      "class": "progression"
+    },
+    {
+      "id": "BOOK",
+      "class": "progression"
+    },
+    {
+      "id": "BOTTLE",
+      "class": "filler"
+    },
+    {
+      "id": "BRACELET",
+      "class": "treasure"
+    },
+    {
+      "id": "BUOY",
+      "class": "filler"
+    },
+    {
+      "id": "BURNED-OUT-LANTERN",
+      "class": "filler"
+    },
+    {
+      "id": "CANARY",
+      "class": "treasure"
+    },
+    {
+      "id": "CANDLES",
+      "class": "progression"
+    },
+    {
+      "id": "CHALICE",
+      "class": "treasure"
+    },
+    {
+      "id": "COAL",
+      "class": "filler"
+    },
+    {
+      "id": "COFFIN",
+      "class": "treasure"
+    },
+    {
+      "id": "DIAMOND",
+      "class": "treasure"
+    },
+    {
+      "id": "EGG",
+      "class": "treasure"
+    },
+    {
+      "id": "EMERALD",
+      "class": "treasure"
+    },
+    {
+      "id": "GARLIC",
+      "class": "progression"
+    },
+    {
+      "id": "GUIDE",
+      "class": "filler"
+    },
+    {
+      "id": "INFLATABLE-BOAT",
+      "class": "progression"
+    },
+    {
+      "id": "JADE",
+      "class": "treasure"
+    },
+    {
+      "id": "KEYS",
+      "class": "filler"
+    },
+    {
+      "id": "KNIFE",
+      "class": "filler"
+    },
+    {
+      "id": "LAMP",
+      "class": "progression"
+    },
+    {
+      "id": "LEAVES",
+      "class": "filler"
+    },
+    {
+      "id": "LUNCH",
+      "class": "filler"
+    },
+    {
+      "id": "MATCH",
+      "class": "progression"
+    },
+    {
+      "id": "NEST",
+      "class": "filler"
+    },
+    {
+      "id": "OWNERS-MANUAL",
+      "class": "filler"
+    },
+    {
+      "id": "PAINTING",
+      "class": "treasure"
+    },
+    {
+      "id": "POT-OF-GOLD",
+      "class": "treasure"
+    },
+    {
+      "id": "PUMP",
+      "class": "progression"
+    },
+    {
+      "id": "PUTTY",
+      "class": "filler"
+    },
+    {
+      "id": "ROPE",
+      "class": "progression"
+    },
+    {
+      "id": "RUSTY-KNIFE",
+      "class": "filler"
+    },
+    {
+      "id": "SANDWICH-BAG",
+      "class": "filler"
+    },
+    {
+      "id": "SCARAB",
+      "class": "treasure"
+    },
+    {
+      "id": "SCEPTRE",
+      "class": "treasure"
+    },
+    {
+      "id": "SCREWDRIVER",
+      "class": "filler"
+    },
+    {
+      "id": "SHOVEL",
+      "class": "progression"
+    },
+    {
+      "id": "SKULL",
+      "class": "treasure"
+    },
+    {
+      "id": "SWORD",
+      "class": "filler"
+    },
+    {
+      "id": "TIMBERS",
+      "class": "filler"
+    },
+    {
+      "id": "TORCH",
+      "class": "treasure"
+    },
+    {
+      "id": "TRIDENT",
+      "class": "treasure"
+    },
+    {
+      "id": "TRUNK",
+      "class": "treasure"
+    },
+    {
+      "id": "TUBE",
+      "class": "filler"
+    },
+    {
+      "id": "WATER",
+      "class": "filler"
+    },
+    {
+      "id": "WRENCH",
+      "class": "progression"
+    }
+  ],
+  "regions": [
+    {
+      "id": "canyon",
+      "rooms": [
+        "ARAGAIN-FALLS",
+        "CANYON-BOTTOM",
+        "CANYON-VIEW",
+        "CLIFF-MIDDLE",
+        "END-OF-RAINBOW",
+        "ON-RAINBOW"
+      ],
+      "access": {
+        "region": "surface"
+      }
+    },
+    {
+      "id": "cellar-core",
+      "rooms": [
+        "CELLAR",
+        "CHASM-ROOM",
+        "DAMP-CAVE",
+        "DEEP-CANYON",
+        "EAST-OF-CHASM",
+        "ENGRAVINGS-CAVE",
+        "EW-PASSAGE",
+        "GALLERY",
+        "LOUD-ROOM",
+        "NS-PASSAGE",
+        "ROUND-ROOM",
+        "STUDIO",
+        "TROLL-ROOM"
+      ],
+      "access": {
+        "region": "surface"
+      }
+    },
+    {
+      "id": "cyclops",
+      "rooms": [
+        "CYCLOPS-ROOM",
+        "GRATING-ROOM",
+        "STRANGE-PASSAGE",
+        "TREASURE-ROOM"
+      ],
+      "access": {
+        "region": "thief-maze"
+      }
+    },
+    {
+      "id": "dam",
+      "rooms": [
+        "ATLANTIS-ROOM",
+        "DAM-BASE",
+        "DAM-LOBBY",
+        "DAM-ROOM",
+        "IN-STREAM",
+        "MAINTENANCE-ROOM",
+        "RESERVOIR",
+        "RESERVOIR-NORTH",
+        "RESERVOIR-SOUTH",
+        "STREAM-VIEW"
+      ],
+      "access": {
+        "region": "cellar-core"
+      }
+    },
+    {
+      "id": "mine",
+      "rooms": [
+        "BAT-ROOM",
+        "GAS-ROOM",
+        "LADDER-BOTTOM",
+        "LADDER-TOP",
+        "LOWER-SHAFT",
+        "MACHINE-ROOM",
+        "MINE-ENTRANCE",
+        "SHAFT-ROOM",
+        "SLIDE-ROOM",
+        "SMELLY-ROOM",
+        "SQUEEKY-ROOM",
+        "TIMBER-ROOM"
+      ],
+      "access": {
+        "region": "mirror"
+      }
+    },
+    {
+      "id": "mine-maze",
+      "rooms": [
+        "DEAD-END-5",
+        "MINE-1",
+        "MINE-2",
+        "MINE-3",
+        "MINE-4"
+      ],
+      "access": {
+        "region": "mine",
+        "needs": [
+          "GARLIC",
+          "LAMP"
+        ]
+      }
+    },
+    {
+      "id": "mirror",
+      "rooms": [
+        "COLD-PASSAGE",
+        "MIRROR-ROOM-1",
+        "MIRROR-ROOM-2",
+        "NARROW-PASSAGE",
+        "SMALL-CAVE",
+        "TINY-CAVE",
+        "TWISTING-PASSAGE",
+        "WINDING-PASSAGE"
+      ],
+      "access": {
+        "region": "cellar-core"
+      }
+    },
+    {
+      "id": "river",
+      "rooms": [
+        "RIVER-1",
+        "RIVER-2",
+        "RIVER-3",
+        "RIVER-4",
+        "RIVER-5",
+        "SANDY-BEACH",
+        "SANDY-CAVE",
+        "SHORE",
+        "WHITE-CLIFFS-NORTH",
+        "WHITE-CLIFFS-SOUTH"
+      ],
+      "access": {
+        "region": "cellar-core"
+      }
+    },
+    {
+      "id": "surface",
+      "rooms": [
+        "ATTIC",
+        "CLEARING",
+        "EAST-OF-HOUSE",
+        "FOREST-1",
+        "FOREST-2",
+        "FOREST-3",
+        "GRATING-CLEARING",
+        "KITCHEN",
+        "LIVING-ROOM",
+        "MOUNTAINS",
+        "NORTH-OF-HOUSE",
+        "PATH",
+        "SOUTH-OF-HOUSE",
+        "STONE-BARROW",
+        "UP-A-TREE",
+        "WEST-OF-HOUSE"
+      ],
+      "access": {}
+    },
+    {
+      "id": "temple",
+      "rooms": [
+        "DOME-ROOM",
+        "EGYPT-ROOM",
+        "ENTRANCE-TO-HADES",
+        "LAND-OF-LIVING-DEAD",
+        "NORTH-TEMPLE",
+        "SOUTH-TEMPLE",
+        "TORCH-ROOM"
+      ],
+      "access": {
+        "any": [
+          {
+            "region": "mirror"
+          },
+          {
+            "all": [
+              {
+                "region": "cellar-core"
+              },
+              {
+                "needs": [
+                  "ROPE"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "thief-maze",
+      "rooms": [
+        "DEAD-END-1",
+        "DEAD-END-2",
+        "DEAD-END-3",
+        "DEAD-END-4",
+        "MAZE-1",
+        "MAZE-10",
+        "MAZE-11",
+        "MAZE-12",
+        "MAZE-13",
+        "MAZE-14",
+        "MAZE-15",
+        "MAZE-2",
+        "MAZE-3",
+        "MAZE-4",
+        "MAZE-5",
+        "MAZE-6",
+        "MAZE-7",
+        "MAZE-8",
+        "MAZE-9"
+      ],
+      "access": {
+        "region": "cellar-core"
+      }
+    }
+  ]
+}
