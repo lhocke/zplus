@@ -35,7 +35,9 @@ export async function createTauriFsOps(): Promise<FsOps> {
 
   return {
     exists: (path) => exists(path, { baseDir }),
-    mkdir: (path) => mkdir(path, { baseDir }),
+    // recursive is load-bearing: Tauri never auto-creates the app-data dir,
+    // so on a fresh install even `saves` has no parent until this call.
+    mkdir: (path) => mkdir(path, { baseDir, recursive: true }),
     readDir: (path) => readDir(path, { baseDir }),
     readTextFile: (path) => readTextFile(path, { baseDir }),
     writeTextFile: (path, contents) => writeTextFile(path, contents, { baseDir }),
