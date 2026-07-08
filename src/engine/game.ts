@@ -76,6 +76,8 @@ export interface GameView {
   readonly inMaze: boolean;
   /** True once doFinish() fires (victory or resurrections exhausted). Shell uses this to surface the RESTART/RESTORE affordance (spec §7.1). */
   readonly gameOver: boolean;
+  readonly randomizerSeedString?: string;
+  readonly randomizerElapsedMs?: number;
 }
 
 /**
@@ -1095,6 +1097,10 @@ export class Game {
       moves: this.moveCount,
       inMaze: this.here.has(Flag.Maze),
       gameOver: this.gameOver,
+      ...(this.randomizerSeedString !== undefined ? {
+        randomizerSeedString: this.randomizerSeedString,
+        randomizerElapsedMs: this.getRandomizerElapsedMs(),
+      } : {}),
     };
   }
 

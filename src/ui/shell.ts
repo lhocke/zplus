@@ -29,6 +29,26 @@ import { isThemeName, DEFAULT_THEME, type ThemeName } from './themes.js';
 import { shapeFeedbackPayload, collectBrowserInfo } from './feedback.js';
 import { checkForUpdate, isDismissed, dismiss } from '../shell/update-check.js';
 import { ALLOWED_CATEGORIES } from '../../functions/lib/sanitize.js';
+import graphData from '../logic/logic-graph.json' with { type: 'json' };
+import type { LogicGraph } from '../logic/logic-graph-types.js';
+import { fillWithRetry } from '../logic/fill.js';
+import { encodeSeedString, decodeSeedString } from '../logic/seed-string.js';
+
+const RANDOMIZER_GRAPH = graphData as LogicGraph;
+
+/** Translates a fill() result (locationId -> itemId) into the engine seam's
+ *  shape (objectId -> new containerId) using the graph's own location
+ *  metadata — locationId and objectId are 1:1 by construction (Task 1). */
+export function toEnginePlacementMap(graph: LogicGraph, placements: Record<string, string>): Record<string, string> {
+  const containerByLocationId = new Map(graph.locations.map(l => [l.id, l.containerId]));
+  const out: Record<string, string> = {};
+  for (const [locationId, itemId] of Object.entries(placements)) {
+    const containerId = containerByLocationId.get(locationId);
+    if (containerId === undefined) continue; // defensive — graph validation (Task 1) should prevent this
+    out[itemId] = containerId;
+  }
+  return out;
+}
 
 // Turnstile global — injected by the CF script after lazy load.
 declare const turnstile: {
@@ -1399,6 +1419,67 @@ function buildGameOverAffordance(
   return wrap;
 }
 
+function buildRandomizerControls(
+  onStart: (seedString: string) => void | Promise<void>,
+): { element: HTMLElement } {
+  const container = el('div', 'flex flex-col gap-1 mt-2');
+  container.setAttribute('data-testid', 'randomizer-controls');
+
+  const label = el('div', 'text-xs text-[var(--zork-accent)] uppercase tracking-wider');
+  label.textContent = 'New Randomized Run';
+
+  const seedInput = el('input', 'text-xs font-mono bg-transparent border border-[var(--zork-accent)] px-1 py-0.5 w-full') as HTMLInputElement;
+  seedInput.setAttribute('data-testid', 'randomizer-seed-input');
+  seedInput.setAttribute('placeholder', 'paste a seed string, or leave blank');
+
+  const btnRow = el('div', 'flex gap-2');
+  const rollBtn = el('button', 'text-xs text-[var(--zork-accent)] underline');
+  rollBtn.textContent = 'Roll';
+  rollBtn.setAttribute('data-testid', 'randomizer-roll-btn');
+  rollBtn.addEventListener('click', () => {
+    const seed = Math.floor(Math.random() * 0x7fffffff);
+    seedInput.value = encodeSeedString(seed, RANDOMIZER_GRAPH.logicVersion);
+  });
+
+  const copyBtn = el('button', 'text-xs text-[var(--zork-accent)] underline');
+  copyBtn.textContent = 'Copy';
+  copyBtn.setAttribute('data-testid', 'randomizer-copy-btn');
+  copyBtn.addEventListener('click', () => { void navigator.clipboard?.writeText(seedInput.value); });
+
+  const startBtn = el('button', 'text-xs text-[var(--zork-accent)] underline');
+  startBtn.textContent = 'Start';
+  startBtn.setAttribute('data-testid', 'randomizer-start-btn');
+  const errorLine = el('p', 'text-[10px] text-red-400 hidden');
+  errorLine.setAttribute('data-testid', 'randomizer-error');
+
+  startBtn.addEventListener('click', () => {
+    let seedString = seedInput.value.trim();
+    if (seedString === '') {
+      const seed = Math.floor(Math.random() * 0x7fffffff);
+      seedString = encodeSeedString(seed, RANDOMIZER_GRAPH.logicVersion);
+    }
+    const decoded = decodeSeedString(seedString, RANDOMIZER_GRAPH.logicVersion);
+    if (!decoded.ok) {
+      errorLine.textContent = decoded.reason === 'logic-version-mismatch'
+        ? 'That seed was rolled on a different version of the story and cannot be used here.'
+        : 'That doesn\'t look like a valid seed string.';
+      errorLine.classList.remove('hidden');
+      return;
+    }
+    errorLine.classList.add('hidden');
+    void onStart(seedString);
+  });
+
+  btnRow.appendChild(rollBtn);
+  btnRow.appendChild(copyBtn);
+  btnRow.appendChild(startBtn);
+  container.appendChild(label);
+  container.appendChild(seedInput);
+  container.appendChild(btnRow);
+  container.appendChild(errorLine);
+  return { element: container };
+}
+
 function buildUpdateNotice(latestVersion: string, releaseUrl: string, onDismiss: () => void): HTMLElement {
   const wrap = el('div', [
     'text-xs border border-[var(--zork-accent)] rounded p-2 mt-2 flex flex-col gap-1',
@@ -1495,11 +1576,22 @@ export function mountShell(app: HTMLElement): {
   // Updates the mobile bar plus every sidebar/drawer copy in one pass.
   function updateStatus(snap: GameView) {
     statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
-    const line = `${snap.hereName} · ${snap.score}/${snap.maxScore} · moves: ${snap.moves}`;
+    let line = `${snap.hereName} · ${snap.score}/${snap.maxScore} · moves: ${snap.moves}`;
+    if (snap.randomizerSeedString !== undefined) {
+      const totalSeconds = Math.floor((snap.randomizerElapsedMs ?? 0) / 1000);
+      const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const ss = String(totalSeconds % 60).padStart(2, '0');
+      line += ` · seed: ${snap.randomizerSeedString} · ${mm}:${ss}`;
+    }
     for (const node of document.querySelectorAll<HTMLElement>('[data-status-line]')) {
       node.textContent = line;
     }
   }
+
+  // 1s ticker — updates only the timer segment while a randomized run is
+  // active; a cheap no-op read otherwise. Never cleared: mountShell has no
+  // teardown hook today (it's a page-lifetime singleton).
+  setInterval(() => { updateStatus(session.snapshot()); }, 1000);
 
   const map = buildMap(mapState);
 
@@ -1567,6 +1659,21 @@ export function mountShell(app: HTMLElement): {
       currentGameOverAffordance.remove();
       currentGameOverAffordance = null;
     }
+  }
+
+  function startRandomizedRun(seedString: string): void {
+    const decoded = decodeSeedString(seedString, RANDOMIZER_GRAPH.logicVersion);
+    if (!decoded.ok) return;
+    const fillResult = fillWithRetry(RANDOMIZER_GRAPH, decoded.payload.seed);
+    const placementMap = toEnginePlacementMap(RANDOMIZER_GRAPH, fillResult.placements);
+    const banner = session.startRandomized(seedString, placementMap);
+    appendOutput(banner);
+    const snap = session.snapshot();
+    updateStatus(snap);
+    mapState.update(snap, null);
+    void map.refresh();
+    pathsPanel.refresh();
+    if (currentGameOverAffordance) { currentGameOverAffordance.remove(); currentGameOverAffordance = null; }
   }
 
   async function doExportSlot(slot: string) {
@@ -1708,6 +1815,9 @@ export function mountShell(app: HTMLElement): {
   savesBtn.textContent = 'Saves';
   savesBtn.addEventListener('click', () => slotPicker.open());
 
+  // Randomizer new-run controls — desktop-only, gated exactly like export/import.
+  const randomizerControls = isTauri() ? buildRandomizerControls(startRandomizedRun) : undefined;
+
   // Credits button.
   const creditsBtn = el('button', 'text-xs text-[var(--zork-accent)] underline text-left', { 'data-open-credits': '' });
   creditsBtn.textContent = 'About & Credits';
@@ -1763,6 +1873,7 @@ export function mountShell(app: HTMLElement): {
   sidebar.appendChild(mapLabel);
   sidebar.appendChild(pathsPanel.element);
   sidebar.appendChild(savesBtn);
+  if (randomizerControls) sidebar.appendChild(randomizerControls.element);
   sidebar.appendChild(creditsBtn);
   sidebar.appendChild(feedbackBtn);
   sidebar.appendChild(notice);
