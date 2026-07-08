@@ -53,11 +53,13 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install Linux WebKitGTK dependency (ubuntu only)
+      - name: Install Linux bundler dependencies (ubuntu only)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev
+          # libfuse2: linuxdeploy is itself an AppImage and needs FUSE2 to run;
+          # ubuntu-24.04 runners do not ship it.
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libfuse2
 
       - name: Install npm dependencies
         run: npm ci
@@ -66,14 +68,30 @@ jobs:
         run: npx tauri build
         env:
           VITE_BUILD_ID: ${{ github.sha }}
+          # Fallback for the AppImage toolchain where FUSE is unavailable:
+          # self-extract instead of mounting. No effect on macOS/Windows.
+          APPIMAGE_EXTRACT_AND_RUN: '1'
 
       - name: Verify macOS ad-hoc signature (macOS only, sanity check)
         if: matrix.os == 'macos-latest'
+        # The dmg bundler cleans the standalone .app after embedding it, so
+        # mount the dmg and verify the app inside — that's the artifact users
+        # actually receive.
         run: |
-          APP_PATH=$(find src-tauri/target/release/bundle/macos -maxdepth 1 -name '*.app' | head -n1)
+          DMG_PATH=$(find src-tauri/target/release/bundle/dmg -maxdepth 1 -name '*.dmg' | head -n1)
+          test -n "$DMG_PATH"
+          MOUNT_DIR=$(mktemp -d)
+          hdiutil attach "$DMG_PATH" -nobrowse -readonly -mountpoint "$MOUNT_DIR"
+          APP_PATH=$(find "$MOUNT_DIR" -maxdepth 1 -name '*.app' | head -n1)
+          test -n "$APP_PATH"
           codesign --verify --deep --strict "$APP_PATH"
+          hdiutil detach "$MOUNT_DIR"
 
       - name: Upload release assets
+        # bash explicitly: the Windows default shell is pwsh, which neither
+        # expands the glob nor treats the YAML line continuation as bash does
+        # (first run tried to upload a file literally named "\").
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
