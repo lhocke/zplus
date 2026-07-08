@@ -33,6 +33,10 @@ describe('mountShell — adapter selection at boot', () => {
     vi.doMock('@tauri-apps/api/core', () => ({ isTauri: () => true }));
     let opsCreated = false;
     vi.doMock('../../src/shell/tauri-fs-ops.js', () => ({
+      // This mock replaces createTauriFsOps WHOLESALE, so nothing here can
+      // catch a regression inside it (baseDir/recursive options — the
+      // fresh-install save bug). tests/shell/tauri-fs-ops.test.ts pins those
+      // against the real plugin module; the two tests are a required pair.
       createTauriFsOps: async () => {
         opsCreated = true;
         // In-memory FsOps fake — enough for the boot path and one save.
