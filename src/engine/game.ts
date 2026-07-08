@@ -78,6 +78,10 @@ export interface GameView {
   readonly gameOver: boolean;
   readonly randomizerSeedString?: string;
   readonly randomizerElapsedMs?: number;
+  /** Object-parent map scoped ONLY to shuffled randomizer location objectIds
+   *  (never the full object tree) — feeds the tracker panel's checked-state
+   *  computation without exposing unrelated engine internals to the UI layer. */
+  readonly randomizerObjectParents?: Record<string, string | null>;
 }
 
 /**
@@ -1100,6 +1104,9 @@ export class Game {
       ...(this.randomizerSeedString !== undefined ? {
         randomizerSeedString: this.randomizerSeedString,
         randomizerElapsedMs: this.getRandomizerElapsedMs(),
+        randomizerObjectParents: Object.fromEntries(
+          this.randomizerPlacements.map(([objectId]) => [objectId, this.world.get(objectId)?.parent?.id ?? null]),
+        ),
       } : {}),
     };
   }

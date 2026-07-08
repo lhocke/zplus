@@ -33,6 +33,7 @@ import graphData from '../logic/logic-graph.json' with { type: 'json' };
 import type { LogicGraph } from '../logic/logic-graph-types.js';
 import { fillWithRetry } from '../logic/fill.js';
 import { encodeSeedString, decodeSeedString } from '../logic/seed-string.js';
+import { buildTrackerPanel } from './tracker-panel.js';
 
 const RANDOMIZER_GRAPH = graphData as LogicGraph;
 
@@ -83,7 +84,7 @@ function loadTurnstile(): Promise<void> {
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-function el<K extends keyof HTMLElementTagNameMap>(
+export function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   cls: string,
   attrs?: Record<string, string>,
@@ -1573,7 +1574,15 @@ export function mountShell(app: HTMLElement): {
   // ── Build components ────────────────────────────────────────────────────
   const statusBar = buildStatusBar();
 
+  // Tracker panel — desktop-only, gated exactly like export/import and the
+  // randomizer new-run controls. Hidden by update() itself outside a
+  // randomized run (Task 10).
+  const trackerPanel = isTauri() ? buildTrackerPanel(RANDOMIZER_GRAPH) : undefined;
+
   // Updates the mobile bar plus every sidebar/drawer copy in one pass.
+  // Also refreshes the tracker panel — folded in here (rather than duplicated
+  // at each updateStatus(snap) call site) so every place that already updates
+  // status also keeps the tracker in sync automatically.
   function updateStatus(snap: GameView) {
     statusBar.update(snap.hereName, snap.score, snap.maxScore, snap.moves);
     let line = `${snap.hereName} · ${snap.score}/${snap.maxScore} · moves: ${snap.moves}`;
@@ -1586,6 +1595,7 @@ export function mountShell(app: HTMLElement): {
     for (const node of document.querySelectorAll<HTMLElement>('[data-status-line]')) {
       node.textContent = line;
     }
+    trackerPanel?.update(snap, new Map(Object.entries(snap.randomizerObjectParents ?? {})));
   }
 
   // 1s ticker — updates only the timer segment while a randomized run is
@@ -1817,6 +1827,7 @@ export function mountShell(app: HTMLElement): {
 
   // Randomizer new-run controls — desktop-only, gated exactly like export/import.
   const randomizerControls = isTauri() ? buildRandomizerControls(startRandomizedRun) : undefined;
+  if (trackerPanel) sidebar.appendChild(trackerPanel.element);
 
   // Credits button.
   const creditsBtn = el('button', 'text-xs text-[var(--zork-accent)] underline text-left', { 'data-open-credits': '' });
