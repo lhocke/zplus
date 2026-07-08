@@ -41,6 +41,11 @@ export function createGame(opts: {
   combatRng?: CombatRng;
   savePort?: SavePort;
   restartFn?: () => void;
+  /** Randomizer seam (Spec 2): objectId -> new initial parent (room or
+   *  container object id), applied immediately after world construction,
+   *  before anything else reads room contents. Absent/undefined = the
+   *  exact vanilla path (zero behavioral delta — mode isolation). */
+  placementMap?: Record<ObjectId, ObjectId>;
 } = {}): Game {
   const startRoomId = opts.startRoom ?? DEFAULT_START_ROOM;
   const seed = opts.seed ?? DEFAULT_SEED;
@@ -50,6 +55,21 @@ export function createGame(opts: {
     ...(objectsData as unknown[]),
   ];
   const world = World.fromData(allData);
+
+  // Randomizer placement seam (Spec 2) — applied before any other bootstrap
+  // step touches room contents. No-op when placementMap is absent, which
+  // is the ONLY path vanilla play (and every existing test) exercises.
+  if (opts.placementMap !== undefined) {
+    for (const [objectId, newParentId] of Object.entries(opts.placementMap)) {
+      const obj = world.get(objectId);
+      const parent = world.get(newParentId);
+      if (obj === undefined || parent === undefined) {
+        console.warn(`createGame: placementMap entry skipped (unknown id) — ${objectId} -> ${newParentId}`);
+        continue;
+      }
+      obj.moveTo(parent);
+    }
+  }
 
   // Bind ZIL ACTION-routine names to translated handlers from the registry.
   for (const obj of world.all()) {
