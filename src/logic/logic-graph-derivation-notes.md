@@ -134,6 +134,21 @@ if `src/data/objects.json` / `src/data/rooms.json` change.
 
 ## Item classification
 
-- **treasure (19, fixed by TVALUE > 0 excluding SWORD, per Task 1.0):** `SKULL, SCEPTRE, CHALICE, TRIDENT, COFFIN, DIAMOND, JADE, BAG-OF-COINS, EMERALD, PAINTING, BAR, POT-OF-GOLD, BRACELET, SCARAB, TORCH, TRUNK, EGG, BAUBLE, CANARY`. Treasure classification takes priority over the mechanical progression check below — `SCEPTRE` is cited in `POT-OF-GOLD`/`SCARAB`/`SHOVEL`'s `needs` but stays `class: "treasure"` (it's one of the fixed 19), not reclassified.
-- **progression (11, non-treasure items cited in some location's `needs`, mechanically verified against the graph):** `BELL, BOOK, CANDLES, GARLIC, INFLATABLE-BOAT, LAMP, MATCH, PUMP, ROPE, SHOVEL, WRENCH`.
-- **filler (21, everything else):** `ADVERTISEMENT, AXE, BOTTLE, BUOY, BURNED-OUT-LANTERN, COAL, GUIDE, KEYS, KNIFE, LEAVES, LUNCH, NEST, OWNERS-MANUAL, PUTTY, RUSTY-KNIFE, SANDWICH-BAG, SCREWDRIVER, SWORD, TIMBERS, TUBE, WATER`. `KEYS` is called out as a progression *example* in the design doc's prose, but the design doc itself says that list is illustrative and subject to revision during derivation ("Exact classification is derived during implementation... and verified against walkthrough dependencies"). It doesn't end up cited in any location's `needs` in this graph: `KEYS` unlocks the `GRATE` (`1actions.zil:851-865`), which gates no location in this 49-entry pool. `MATCH` was also called out as an example but, unlike `KEYS`, its citation gap is real — see the `SKULL` entry above; it is `progression` here.
+**2026-07-08 repair (Task 1R):** the original derivation used a single
+`class: "progression" | "treasure" | "filler"` enum. That enum cannot express
+a treasure that also gates access — `SCEPTRE` is cited in `POT-OF-GOLD`'s and
+`SCARAB`'s `needs`, so assumed fill must be able to pre-own it, but leaving
+it `class: "treasure"` (as the original derivation did, on the theory that
+treasure classification "takes priority") made some seeds unsolvable: if
+`SCEPTRE` itself gets placed behind the very access it's supposed to grant,
+the fill has no way to reach `POT-OF-GOLD`/`SCARAB`. The schema is now two
+orthogonal facets — `class: "progression" | "filler"` (fill-eligibility: does
+this item gate anything) and `isTreasure: boolean` (goal-set membership,
+independent of `class`). Every item cited in any access rule's `needs` MUST
+be `class: "progression"`, mechanically enforced by the
+logic-graph-validation suite's classification-invariant test — the
+`SCEPTRE`-class regression is thereby impossible to reintroduce silently.
+
+- **isTreasure (19, fixed by TVALUE > 0 excluding SWORD, per Task 1.0):** `SKULL, SCEPTRE, CHALICE, TRIDENT, COFFIN, DIAMOND, JADE, BAG-OF-COINS, EMERALD, PAINTING, BAR, POT-OF-GOLD, BRACELET, SCARAB, TORCH, TRUNK, EGG, BAUBLE, CANARY`. All 19 default to `class: "filler"` for fill purposes EXCEPT `SCEPTRE`, which is `class: "progression"` because it's rule-cited (see above) — it is simultaneously `isTreasure: true` and `class: "progression"`.
+- **progression (12, items cited in some location's or region's `needs`, mechanically verified against the graph and mechanically enforced by the classification-invariant test):** `BELL, BOOK, CANDLES, GARLIC, INFLATABLE-BOAT, LAMP, MATCH, PUMP, ROPE, SCEPTRE, SHOVEL, WRENCH`. `SCEPTRE` is also `isTreasure: true`; the other 11 are `isTreasure: false`.
+- **filler (39, everything else, including the 18 non-gating treasures):** `ADVERTISEMENT, AXE, BAG-OF-COINS, BAR, BAUBLE, BOTTLE, BRACELET, BUOY, BURNED-OUT-LANTERN, CANARY, CHALICE, COAL, COFFIN, DIAMOND, EGG, EMERALD, GUIDE, JADE, KEYS, KNIFE, LEAVES, LUNCH, NEST, OWNERS-MANUAL, PAINTING, POT-OF-GOLD, PUTTY, RUSTY-KNIFE, SANDWICH-BAG, SCARAB, SCREWDRIVER, SKULL, SWORD, TIMBERS, TORCH, TRIDENT, TRUNK, TUBE, WATER`. Of these, `BAG-OF-COINS, BAR, BAUBLE, BRACELET, CANARY, CHALICE, COFFIN, DIAMOND, EGG, EMERALD, JADE, PAINTING, POT-OF-GOLD, SCARAB, SKULL, TORCH, TRIDENT, TRUNK` are `isTreasure: true`; the rest are `isTreasure: false`. `KEYS` is called out as a progression *example* in the design doc's prose, but the design doc itself says that list is illustrative and subject to revision during derivation ("Exact classification is derived during implementation... and verified against walkthrough dependencies"). It doesn't end up cited in any location's `needs` in this graph: `KEYS` unlocks the `GRATE` (`1actions.zil:851-865`), which gates no location in this 49-entry pool. `MATCH` was also called out as an example but, unlike `KEYS`, its citation gap is real — see the `SKULL` entry above; it is `progression` here.

@@ -105,6 +105,27 @@ describe('logic-graph.json validation', () => {
     for (const region of graph.regions) validateRule(region.access, `region ${region.id}.access`);
   });
 
+  it('every item cited in any access rule (needs) is class: "progression"', () => {
+    // The classification invariant (2026-07-08 amendment): assumed fill pre-
+    // owns every access-granting item, so anything cited in a `needs` clause
+    // — location or region rules — MUST be progression-classed, regardless
+    // of its `isTreasure` value. This is what makes the SCEPTRE-gates-
+    // POT-OF-GOLD regression class mechanically impossible: a rule-cited
+    // treasure left as filler-only would make some seeds unsolvable, exactly
+    // as discovered when this graph shipped with a single treasure/filler/
+    // progression enum.
+    const itemClass = new Map(graph.items.map(i => [i.id, i.class]));
+    const cited = new Set<string>();
+    for (const loc of graph.locations) collectNeeds(loc.access).forEach(id => cited.add(id));
+    for (const region of graph.regions) collectNeeds(region.access).forEach(id => cited.add(id));
+    for (const id of cited) {
+      expect(
+        itemClass.get(id),
+        `item "${id}" is cited in an access rule but is class "${itemClass.get(id)}", not "progression"`,
+      ).toBe('progression');
+    }
+  });
+
   it('checksum matches the canonicalized graph content (bump discipline)', () => {
     const computed = createHash('sha256').update(canonicalize()).digest('hex').slice(0, 16);
     expect(

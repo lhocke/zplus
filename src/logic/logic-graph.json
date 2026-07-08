@@ -1,6 +1,6 @@
 {
-  "logicVersion": 2,
-  "checksum": "53889f02c4f229a3",
+  "logicVersion": 3,
+  "checksum": "b48236a58efe8b7e",
   "locations": [
     {
       "id": "ADVERTISEMENT",
@@ -584,207 +584,258 @@
   "items": [
     {
       "id": "ADVERTISEMENT",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "AXE",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "BAG-OF-COINS",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "BAR",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "BAUBLE",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "BELL",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     },
     {
       "id": "BOOK",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     },
     {
       "id": "BOTTLE",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "BRACELET",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "BUOY",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "BURNED-OUT-LANTERN",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "CANARY",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "CANDLES",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     },
     {
       "id": "CHALICE",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "COAL",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "COFFIN",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "DIAMOND",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "EGG",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "EMERALD",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "GARLIC",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     },
     {
       "id": "GUIDE",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "INFLATABLE-BOAT",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     },
     {
       "id": "JADE",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "KEYS",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "KNIFE",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "LAMP",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     },
     {
       "id": "LEAVES",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "LUNCH",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "MATCH",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     },
     {
       "id": "NEST",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "OWNERS-MANUAL",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "PAINTING",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "POT-OF-GOLD",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "PUMP",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     },
     {
       "id": "PUTTY",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "ROPE",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     },
     {
       "id": "RUSTY-KNIFE",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "SANDWICH-BAG",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "SCARAB",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "SCEPTRE",
-      "class": "treasure"
+      "class": "progression",
+      "isTreasure": true
     },
     {
       "id": "SCREWDRIVER",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "SHOVEL",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     },
     {
       "id": "SKULL",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "SWORD",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "TIMBERS",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "TORCH",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "TRIDENT",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "TRUNK",
-      "class": "treasure"
+      "class": "filler",
+      "isTreasure": true
     },
     {
       "id": "TUBE",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "WATER",
-      "class": "filler"
+      "class": "filler",
+      "isTreasure": false
     },
     {
       "id": "WRENCH",
-      "class": "progression"
+      "class": "progression",
+      "isTreasure": false
     }
   ],
   "regions": [

@@ -12,8 +12,8 @@ const TINY_GRAPH: LogicGraph = {
     { id: 'chained', rooms: ['C'], access: { region: 'locked' } },
   ],
   items: [
-    { id: 'key', class: 'progression' },
-    { id: 'treasure1', class: 'treasure' },
+    { id: 'key', class: 'progression', isTreasure: false },
+    { id: 'treasure1', class: 'filler', isTreasure: true },
   ],
   locations: [
     { id: 'loc-a', objectId: 'key', containerId: 'A', region: 'start', access: {} },

@@ -15,12 +15,36 @@ export interface AccessRule {
   all?: AccessRule[]; // every sub-rule must hold
 }
 
-export type LogicItemClass = 'progression' | 'treasure' | 'filler';
+/**
+ * Fill-eligibility facet — orthogonal to `LogicItem.isTreasure` below.
+ * `progression` items are the ones the assumed-fill algorithm (and the
+ * reachability evaluator) must treat as access-granting; `filler` items
+ * never gate anything. A treasure that also gates access (SCEPTRE gates
+ * POT-OF-GOLD) is `class: "progression"` AND `isTreasure: true` — the two
+ * facets are independent, so this single enum can no longer express
+ * "treasure" as its own bucket (an earlier revision tried that and produced
+ * unsolvable seeds whenever a gating treasure was placed after the location
+ * it gates). Every item id cited in any access rule's `needs` MUST be
+ * `class: "progression"` — mechanically enforced by the
+ * logic-graph-validation suite's classification-invariant test.
+ */
+export type LogicItemClass = 'progression' | 'filler';
 
 export interface LogicItem {
   /** Same string as the object's id in src/data/objects.json. */
   id: string;
+  /** See `LogicItemClass` above. */
   class: LogicItemClass;
+  /**
+   * Goal-set facet: true for the 19 items that make up the vanilla win
+   * condition (complete treasure set -> trophy case -> endgame). Independent
+   * of `class` — most treasures are `filler` for fill purposes, but a
+   * rule-cited treasure like SCEPTRE is `progression` and still
+   * `isTreasure: true`. Downstream goal/tracker code must compute the
+   * treasure set as `items.filter(i => i.isTreasure)`, never by `class` and
+   * never as a hardcoded count.
+   */
+  isTreasure: boolean;
 }
 
 export interface LogicLocation {
