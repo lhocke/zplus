@@ -71,6 +71,7 @@ const KNOWN_TOP_LEVEL_KEYS = new Set([
   'lastVerb', 'lastAction', 'lastDobjId', 'lastIobjId', 'lastPrep',
   'rngMain', 'rngCombat',
   'clock', 'scoring', 'flagStore', 'objects', 'parser', 'moduleGlobals',
+  'randomizer',
 ]);
 
 /**
@@ -167,6 +168,24 @@ export function validateSaveState(v: unknown): ValidationResult {
   if (!isObj(mg.thiefState))        return 'moduleGlobals.thiefState not an object';
   if (!isObj(mg.aboveGroundState))  return 'moduleGlobals.aboveGroundState not an object';
   if (!isObj(mg.lightSourceState))  return 'moduleGlobals.lightSourceState not an object';
+
+  // randomizer — OPTIONAL. Absent = vanilla save (format-2's back-compat
+  // signal for non-randomizer runs, not a separate flag).
+  if (v.randomizer !== undefined) {
+    if (!isObj(v.randomizer)) return 'randomizer not an object';
+    const rz = v.randomizer;
+    if (typeof rz.seedString !== 'string') return 'randomizer.seedString not a string';
+    if (!Array.isArray(rz.placements)) return 'randomizer.placements not an array';
+    for (const p of rz.placements as unknown[]) {
+      if (!Array.isArray(p) || p.length < 2 || typeof p[0] !== 'string' || typeof p[1] !== 'string') {
+        return 'randomizer.placements entry invalid';
+      }
+    }
+    if (typeof rz.timerMs !== 'number' || rz.timerMs < 0) return 'randomizer.timerMs invalid';
+    if (rz.firstCommandAt !== null && typeof rz.firstCommandAt !== 'string') {
+      return 'randomizer.firstCommandAt invalid';
+    }
+  }
 
   // objects entries — full shape check.  applyObjectDelta destructures flags
   // (for-of into Set.add), props (for-of [k,v] into Map.set), and text fields.

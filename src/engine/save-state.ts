@@ -15,8 +15,26 @@ import type { ClockSnapshot } from './clock.js';
 import type { GameObject } from '../domain/game-object.js';
 import type { ModuleGlobals } from './module-globals.js';
 
-// Bump whenever a breaking schema change lands that makes old saves unreadable.
-export const SAVE_FORMAT_VERSION = 1;
+// Bumped 1 -> 2 for the randomizer save block (Spec 2). Per phase-4 §5.3,
+// this is a BREAKING bump — old (format-1) saves refuse to restore rather
+// than silently missing the new block. Vanilla saves made AFTER this bump
+// simply omit `randomizer` (optional field); the absence IS the "not a
+// randomizer run" signal, not a separate flag.
+export const SAVE_FORMAT_VERSION = 2;
+
+export interface RandomizerSaveBlock {
+  seedString: string;
+  /** objectId -> current parent id, the SAME shape createGame's
+   *  placementMap consumes — restore re-applies it identically to how a
+   *  fresh randomized new-game would have applied it, then the normal
+   *  object-delta restore (Pass 1-3, unchanged) takes over from there. */
+  placements: [string, string][];
+  timerMs: number;
+  /** ISO 8601 timestamp of the first submitted command, or null if the
+   *  player has saved before their first command (timer not yet started —
+   *  Task 8). */
+  firstCommandAt: string | null;
+}
 
 // SS6 supplies the concrete type; re-export so consumers importing SaveState get it too.
 export type { ModuleGlobals } from './module-globals.js';
@@ -92,6 +110,7 @@ export interface SaveState {
   objects: ObjectDelta[];  // per-object delta — SS1 core
   parser: { itRef?: ObjectId };  // [SS5]
   moduleGlobals: ModuleGlobals;  // [SS6]
+  randomizer?: RandomizerSaveBlock;
 }
 
 // ---------------------------------------------------------------------------

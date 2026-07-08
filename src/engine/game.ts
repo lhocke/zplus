@@ -187,6 +187,25 @@ export class Game {
 
   private readonly visited = new Set<ObjectId>();
 
+  // Randomizer run state (Spec 2) — undefined for a vanilla game. Set once,
+  // at construction, by the caller that built this Game with a placementMap
+  // (Task 9's new-run UI); never mutated by engine logic itself except
+  // timerMs/firstCommandAt (Task 8).
+  private randomizerSeedString: string | undefined;
+  private randomizerPlacements: [string, string][] = [];
+  private randomizerTimerMs = 0;
+  private randomizerFirstCommandAt: string | null = null;
+
+  /** Called once by the caller after a randomized createGame() — records the
+   *  seed string and the resolved placement list for save/tracker use. Not
+   *  part of the constructor because bootstrap.ts (Task 6) stays engine-
+   *  generic and never imports src/logic/; the CALLER (Task 9) resolves the
+   *  seed string and passes it here as plain data. */
+  setRandomizerRun(seedString: string, placements: [string, string][]): void {
+    this.randomizerSeedString = seedString;
+    this.randomizerPlacements = placements;
+  }
+
   // Persistence port + restart handler — threaded from the session layer (§4.6).
   // Optional: absent in test contexts that don't need save/restore/restart wiring.
   private readonly savePort: SavePort | undefined;
@@ -2416,6 +2435,14 @@ export class Game {
       objects:       this.world.all().map(captureObjectDelta),
       parser:        this.parser.snapshotState(),  // SS5
       moduleGlobals: captureModuleGlobals(),        // SS6
+      ...(this.randomizerSeedString !== undefined ? {
+        randomizer: {
+          seedString: this.randomizerSeedString,
+          placements: this.randomizerPlacements,
+          timerMs: this.randomizerTimerMs,
+          firstCommandAt: this.randomizerFirstCommandAt,
+        },
+      } : {}),
     };
   }
 
@@ -2443,6 +2470,12 @@ export class Game {
     this.scoring.restoreState(state.scoring);  // SS3
     this.clock.restore(state.clock);
     applyModuleGlobals(state.moduleGlobals);  // SS6
+    if (state.randomizer !== undefined) {
+      this.randomizerSeedString = state.randomizer.seedString;
+      this.randomizerPlacements = state.randomizer.placements;
+      this.randomizerTimerMs = state.randomizer.timerMs;
+      this.randomizerFirstCommandAt = state.randomizer.firstCommandAt;
+    }
 
     // 3. Object tree — three passes (mirrors World.fromData's build-then-link).
 
