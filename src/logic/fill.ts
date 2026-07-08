@@ -50,25 +50,34 @@ export function fill(graph: LogicGraph, seed: number): FillResult {
 
   const placements: Record<string, string> = {};
   const spheres: string[] = [];
-  const placedItems = new Set<string>();
   const emptyLocations = new Set(allLocationIds);
 
   let remaining = [...progression];
   while (remaining.length > 0) {
     const item = remaining.pop()!;
-    // Assumed ownership: every progression item except locations still
-    // empty for OTHER not-yet-placed items is irrelevant here — the
-    // standard trick is simpler than tracking exclusions: assume the
-    // player owns every progression item (placed AND still-to-place)
-    // except none need excluding, because we're choosing a LOCATION for
-    // `item`, not checking whether `item` itself is required to reach
-    // that location (self-reference is structurally impossible: an
-    // item's own location never lists itself in its own access rule by
-    // construction — Task 1's derivation only cites items from OTHER
-    // rooms). Owning "everything else not yet placed" is the actual
-    // assumed-fill relaxation.
-    const assumedOwned = new Set([...placedItems, ...remaining, item]);
-    const { reachableLocations } = computeReachable(graph, { ownedItems: assumedOwned, flags: new Set() });
+    // AMENDMENT 2 (repair task 3R) — canonical assumed-fill ownership for
+    // this placement step: assume every progression item NOT yet placed
+    // except `item` itself (`remaining`, already popped, excludes it) —
+    // never gate an item's own placement on itself. Already-placed items
+    // are NOT folded in unconditionally: a placed item counts as owned
+    // only once its own placed location is actually reachable under the
+    // current owned set, discovered via a fixpoint sweep below. Blanket
+    // "every placed item is owned" (the original bug) hides a genuine
+    // circular placement — item A's spot needs B, item B's spot needs A —
+    // behind an assumption that always resolves true.
+    const assumedOwned = new Set(remaining);
+    let sweepChanged = true;
+    let reachableLocations = new Set<string>();
+    while (sweepChanged) {
+      sweepChanged = false;
+      ({ reachableLocations } = computeReachable(graph, { ownedItems: assumedOwned, flags: new Set() }));
+      for (const [locId, placedItemId] of Object.entries(placements)) {
+        if (!assumedOwned.has(placedItemId) && reachableLocations.has(locId)) {
+          assumedOwned.add(placedItemId);
+          sweepChanged = true;
+        }
+      }
+    }
     const candidates = [...reachableLocations].filter(id => emptyLocations.has(id));
     if (candidates.length === 0) {
       throw new FillError(`no reachable empty location for progression item "${item}" (seed ${seed})`);
@@ -76,7 +85,6 @@ export function fill(graph: LogicGraph, seed: number): FillResult {
     const chosen = candidates[rng.nextInt(candidates.length)];
     placements[chosen] = item;
     emptyLocations.delete(chosen);
-    placedItems.add(item);
     spheres.push(item);
   }
 

@@ -20,6 +20,33 @@ const TINY_GRAPH: LogicGraph = {
   ],
 };
 
+// A second start-region location gives the single progression item a real
+// (non-forced) choice of candidate location, so seed-dependent variance can
+// be observed. TINY_GRAPH alone cannot demonstrate variance post-repair:
+// `key` has exactly one legal candidate (loc-a) on every seed, because the
+// only other location (loc-b) sits behind a rule that needs `key` itself —
+// which is exactly the self-gating AMENDMENT 2 forbids. That determinism is
+// the correct, *intended* behavior (see the regression test below), not a
+// gap; it just means TINY_GRAPH is the wrong fixture for a variance check.
+const WIDER_GRAPH: LogicGraph = {
+  logicVersion: 1,
+  checksum: 'test',
+  regions: [
+    { id: 'start', rooms: ['A', 'C'], access: {} },
+    { id: 'locked', rooms: ['B'], access: { needs: ['key'] } },
+  ],
+  items: [
+    { id: 'key', class: 'progression', isTreasure: false },
+    { id: 'treasure1', class: 'filler', isTreasure: true },
+    { id: 'trinket', class: 'filler', isTreasure: false },
+  ],
+  locations: [
+    { id: 'loc-a', objectId: 'key', containerId: 'A', region: 'start', access: {} },
+    { id: 'loc-b', objectId: 'treasure1', containerId: 'B', region: 'locked', access: {} },
+    { id: 'loc-c', objectId: 'trinket', containerId: 'C', region: 'start', access: {} },
+  ],
+};
+
 describe('fill', () => {
   it('places every item into exactly one location', () => {
     const result = fill(TINY_GRAPH, 42);
@@ -34,8 +61,20 @@ describe('fill', () => {
     expect(a.spheres).toEqual(b.spheres);
   });
 
+  it('never places a progression item behind a rule that (directly or via its own region) requires itself (AMENDMENT 2 repair task 3R)', () => {
+    // Regression test for the fixed bug: loc-b sits in the 'locked' region,
+    // which needs `key` — the only progression item. A fill that (like the
+    // pre-repair code) assumes an item owns itself while choosing its own
+    // location would sometimes place `key` at loc-b. The canonical fill
+    // must never do this: `key` can only ever land at loc-a.
+    for (let seed = 0; seed < 50; seed++) {
+      const result = fill(TINY_GRAPH, seed);
+      expect(result.placements['loc-a'], `seed ${seed}`).toBe('key');
+    }
+  });
+
   it('different seeds usually produce different placements (not a hard guarantee, sanity only)', () => {
-    const results = new Set(Array.from({ length: 20 }, (_, i) => JSON.stringify(fill(TINY_GRAPH, i).placements)));
+    const results = new Set(Array.from({ length: 20 }, (_, i) => JSON.stringify(fill(WIDER_GRAPH, i).placements)));
     expect(results.size).toBeGreaterThan(1);
   });
 
