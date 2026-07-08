@@ -196,6 +196,11 @@ export class Game {
   private randomizerTimerMs = 0;
   private randomizerFirstCommandAt: string | null = null;
 
+  // In-memory only — NEVER serialized. Epoch ms marking when the current
+  // live segment started ticking; null when not yet ticking (before the
+  // first command of a fresh run) or for a vanilla game.
+  private randomizerLiveSegmentStartAt: number | null = null;
+
   /** Called once by the caller after a randomized createGame() — records the
    *  seed string and the resolved placement list for save/tracker use. Not
    *  part of the constructor because bootstrap.ts (Task 6) stays engine-
@@ -348,6 +353,13 @@ export class Game {
     const movePart = moves === 1 ? '1 move.' : `${moves} moves.`;
     const scoreText = `Your score is ${score} (total of 350 points), in ${movePart}\nThis gives you the rank of ${rank}.`;
     tell?.(scoreText);
+    if (this.randomizerSeedString !== undefined) {
+      this.checkpointRandomizerTimer();
+      const totalSeconds = Math.floor(this.randomizerTimerMs / 1000);
+      const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const ss = String(totalSeconds % 60).padStart(2, '0');
+      tell?.(`Final time: ${mm}:${ss}.`);
+    }
     tell?.('ZORK: The Great Underground Empire.');
     this.gameOver = true;
   }
@@ -628,6 +640,12 @@ export class Game {
 
   /** Execute one command line (may contain chained commands via "then" / "."). */
   async turn(input: string, opts?: { saveSlot?: string }): Promise<TurnResult> {
+    if (this.randomizerSeedString !== undefined && this.randomizerLiveSegmentStartAt === null) {
+      this.randomizerLiveSegmentStartAt = Date.now();
+      if (this.randomizerFirstCommandAt === null) {
+        this.randomizerFirstCommandAt = new Date().toISOString();
+      }
+    }
     if (this.gameOver) return { output: '', moved: false };
     this.fatalPending = false;
 
@@ -2384,7 +2402,28 @@ export class Game {
    * Fields owned by sibling tasks are stubs marked // SS1-SEAM:<task>; tests
    * must NOT assert on those fields until the owning task lands.
    */
+  /** Folds the live segment into the persisted accumulator and resets the
+   *  live-segment base to now. Called at the top of snapshot() so the
+   *  persisted timerMs is always caught up as of save time. */
+  private checkpointRandomizerTimer(): void {
+    if (this.randomizerLiveSegmentStartAt === null) return;
+    this.randomizerTimerMs += Date.now() - this.randomizerLiveSegmentStartAt;
+    this.randomizerLiveSegmentStartAt = Date.now();
+  }
+
+  /** Live elapsed ms for the current randomizer run — 0 for a vanilla game
+   *  or before the first command has been submitted. Safe to poll every
+   *  UI tick (Task 9); does not mutate state. */
+  getRandomizerElapsedMs(): number {
+    if (this.randomizerSeedString === undefined) return 0;
+    const live = this.randomizerLiveSegmentStartAt !== null
+      ? Date.now() - this.randomizerLiveSegmentStartAt
+      : 0;
+    return this.randomizerTimerMs + live;
+  }
+
   snapshot(): SaveState {
+    this.checkpointRandomizerTimer();
     // Injected at Vite build time; falls back to 'dev' in Node/test.
     let buildId = 'dev';
     try {
@@ -2475,6 +2514,9 @@ export class Game {
       this.randomizerPlacements = state.randomizer.placements;
       this.randomizerTimerMs = state.randomizer.timerMs;
       this.randomizerFirstCommandAt = state.randomizer.firstCommandAt;
+      // Resume ticking immediately if the run had already started; the live
+      // segment always resets to "now" so a save/restore gap is never counted.
+      this.randomizerLiveSegmentStartAt = state.randomizer.firstCommandAt !== null ? Date.now() : null;
     }
 
     // 3. Object tree — three passes (mirrors World.fromData's build-then-link).
