@@ -66,6 +66,21 @@ export const DOCUMENTED_EXCLUSIONS: Record<string, string> = {
     'relocation per the design doc\'s "faithful, untouched" thief decision.',
   MAP: 'starts Invisible; only revealed by wonFlagHook (src/engine/game.ts) after WON-FLAG ' +
     'fires — unreachable until the game is already won, not a meaningful mid-game check.',
+  // AMENDMENT 3 (vessel pinning, repair task 3R2): these six items are also
+  // containers of other checks (SCEPTRE inside COFFIN, WATER inside BOTTLE,
+  // etc.) — static access rules cannot see where the shuffle put the vessel,
+  // producing unbreakable cycles (e.g. bell inside the coffin, coffin behind
+  // a bell-locked door). Fix: pin the vessel (items[].pinned: true, kept at
+  // its vanilla position, never entering a fill pool), shuffle its contents.
+  // The vessel's own pickup slot is occupied by definition and is no longer
+  // a check; its interior locations remain checks with their existing
+  // (now-correct-again) static access rules.
+  COFFIN: 'container vessel, pinned (AMENDMENT 3) — its interior (SCEPTRE) remains a check.',
+  'SANDWICH-BAG': 'container vessel, pinned (AMENDMENT 3) — its interior (GARLIC, LUNCH) remains a check.',
+  BOTTLE: 'container vessel, pinned (AMENDMENT 3) — its interior (WATER) remains a check.',
+  BUOY: 'container vessel, pinned (AMENDMENT 3) — its interior (EMERALD) remains a check.',
+  EGG: 'container vessel, pinned (AMENDMENT 3) — its interior (CANARY) remains a check.',
+  TUBE: 'container vessel, pinned (AMENDMENT 3) — its interior (PUTTY) remains a check.',
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {

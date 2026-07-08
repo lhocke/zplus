@@ -45,6 +45,20 @@ export interface LogicItem {
    * never as a hardcoded count.
    */
   isTreasure: boolean;
+  /**
+   * AMENDMENT 3 (vessel pinning): true for the six items that are also
+   * containers of other checks (COFFIN, SANDWICH-BAG, BOTTLE, BUOY, EGG,
+   * TUBE). A pinned item is never shuffled — it never enters a fill pool and
+   * the engine placement seam never moves it, so it keeps its vanilla
+   * position. This is what keeps a nested location's static `access` rule
+   * (e.g. SCEPTRE's, containerId "COFFIN") true: the container it names is
+   * guaranteed to still be exactly where the rule assumes. Absent/false for
+   * every other item. The logic-graph-validation suite enforces the
+   * converse: every location `containerId` that names an item id must name
+   * a `pinned: true` item — the "vessel behind its own contents" cycle class
+   * is thereby structurally impossible.
+   */
+  pinned?: boolean;
 }
 
 export interface LogicLocation {

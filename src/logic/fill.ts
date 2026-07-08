@@ -31,10 +31,16 @@ export function fill(graph: LogicGraph, seed: number): FillResult {
   // entries in items[] with no corresponding location — they keep their
   // vanilla creation mechanics (coal machine, canary) and exist solely for
   // goal/tracker accounting (`items.filter(i => i.isTreasure)`), never as
-  // placement targets. The count check below asserts placeable.length ===
-  // locations.length (49 === 49 against the real graph).
+  // placement targets. AMENDMENT 3 (repair task 3R2): the six pinned vessel
+  // items (COFFIN, SANDWICH-BAG, BOTTLE, BUOY, EGG, TUBE) never enter the
+  // fill pool either — their own location entries were removed from the
+  // graph (a pinned vessel's spot is occupied by definition), so they drop
+  // out of `locationObjectIds` naturally; the explicit `!i.pinned` filter
+  // below restates that invariant directly rather than relying only on the
+  // graph shape. The count check asserts placeable.length ===
+  // locations.length (43 === 43 against the real graph).
   const locationObjectIds = new Set(graph.locations.map(l => l.objectId));
-  const shuffleEligible = graph.items.filter(i => locationObjectIds.has(i.id));
+  const shuffleEligible = graph.items.filter(i => locationObjectIds.has(i.id) && !i.pinned);
 
   const progression = shuffle(shuffleEligible.filter(i => i.class === 'progression').map(i => i.id), rng);
   const nonProgression = shuffle(

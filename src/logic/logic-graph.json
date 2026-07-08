@@ -1,6 +1,6 @@
 {
-  "logicVersion": 3,
-  "checksum": "b48236a58efe8b7e",
+  "logicVersion": 4,
+  "checksum": "fb1239ea2e17a83e",
   "locations": [
     {
       "id": "ADVERTISEMENT",
@@ -70,13 +70,6 @@
       }
     },
     {
-      "id": "BOTTLE",
-      "objectId": "BOTTLE",
-      "containerId": "KITCHEN-TABLE",
-      "region": "surface",
-      "access": {}
-    },
-    {
       "id": "BRACELET",
       "objectId": "BRACELET",
       "containerId": "GAS-ROOM",
@@ -85,20 +78,6 @@
         "region": "mine",
         "needs": [
           "GARLIC",
-          "LAMP"
-        ]
-      }
-    },
-    {
-      "id": "BUOY",
-      "objectId": "BUOY",
-      "containerId": "RIVER-4",
-      "region": "river",
-      "access": {
-        "region": "river",
-        "needs": [
-          "INFLATABLE-BOAT",
-          "PUMP",
           "LAMP"
         ]
       }
@@ -158,26 +137,6 @@
           "LAMP"
         ]
       }
-    },
-    {
-      "id": "COFFIN",
-      "objectId": "COFFIN",
-      "containerId": "EGYPT-ROOM",
-      "region": "temple",
-      "access": {
-        "region": "temple",
-        "needs": [
-          "LAMP",
-          "ROPE"
-        ]
-      }
-    },
-    {
-      "id": "EGG",
-      "objectId": "EGG",
-      "containerId": "NEST",
-      "region": "surface",
-      "access": {}
     },
     {
       "id": "EMERALD",
@@ -383,13 +342,6 @@
       }
     },
     {
-      "id": "SANDWICH-BAG",
-      "objectId": "SANDWICH-BAG",
-      "containerId": "KITCHEN-TABLE",
-      "region": "surface",
-      "access": {}
-    },
-    {
       "id": "SCARAB",
       "objectId": "SCARAB",
       "containerId": "SANDY-CAVE",
@@ -550,18 +502,6 @@
       }
     },
     {
-      "id": "TUBE",
-      "objectId": "TUBE",
-      "containerId": "MAINTENANCE-ROOM",
-      "region": "dam",
-      "access": {
-        "region": "dam",
-        "needs": [
-          "LAMP"
-        ]
-      }
-    },
-    {
       "id": "WATER",
       "objectId": "WATER",
       "containerId": "BOTTLE",
@@ -620,7 +560,8 @@
     {
       "id": "BOTTLE",
       "class": "filler",
-      "isTreasure": false
+      "isTreasure": false,
+      "pinned": true
     },
     {
       "id": "BRACELET",
@@ -630,7 +571,8 @@
     {
       "id": "BUOY",
       "class": "filler",
-      "isTreasure": false
+      "isTreasure": false,
+      "pinned": true
     },
     {
       "id": "BURNED-OUT-LANTERN",
@@ -660,7 +602,8 @@
     {
       "id": "COFFIN",
       "class": "filler",
-      "isTreasure": true
+      "isTreasure": true,
+      "pinned": true
     },
     {
       "id": "DIAMOND",
@@ -670,7 +613,8 @@
     {
       "id": "EGG",
       "class": "filler",
-      "isTreasure": true
+      "isTreasure": true,
+      "pinned": true
     },
     {
       "id": "EMERALD",
@@ -770,7 +714,8 @@
     {
       "id": "SANDWICH-BAG",
       "class": "filler",
-      "isTreasure": false
+      "isTreasure": false,
+      "pinned": true
     },
     {
       "id": "SCARAB",
@@ -825,7 +770,8 @@
     {
       "id": "TUBE",
       "class": "filler",
-      "isTreasure": false
+      "isTreasure": false,
+      "pinned": true
     },
     {
       "id": "WATER",

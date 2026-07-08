@@ -126,6 +126,27 @@ describe('logic-graph.json validation', () => {
     }
   });
 
+  it('every location containerId that refers to an item id refers to a pinned item (AMENDMENT 3 repair task 3R2)', () => {
+    // Vessel-pinning invariant: a location whose containerId names another
+    // shuffle-eligible item (rather than a room) is nested inside that
+    // item's physical position. If that item were itself shuffled, the
+    // nested location's static access rule would silently describe the
+    // WRONG requirement (the vessel's vanilla position, not wherever fill()
+    // actually put it) — the exact "bell inside the coffin, coffin behind a
+    // bell-locked door" cycle class AMENDMENT 3 exists to make structurally
+    // impossible. Pinning the container (never shuffled, vanilla position
+    // kept) is what keeps the nested location's rule true.
+    const itemById = new Map(graph.items.map(i => [i.id, i]));
+    for (const loc of graph.locations) {
+      const containerItem = itemById.get(loc.containerId);
+      if (containerItem === undefined) continue; // containerId is a room, not an item — fine
+      expect(
+        containerItem.pinned,
+        `location ${loc.id}: containerId "${loc.containerId}" is a shuffle-eligible item but is not pinned:true`,
+      ).toBe(true);
+    }
+  });
+
   it('checksum matches the canonicalized graph content (bump discipline)', () => {
     const computed = createHash('sha256').update(canonicalize()).digest('hex').slice(0, 16);
     expect(
