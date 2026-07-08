@@ -55,17 +55,29 @@ jobs:
 
       - name: Install Linux bundler dependencies (ubuntu only)
         if: matrix.os == 'ubuntu-latest'
+        # The full prerequisite set from Tauri's own Linux pipeline docs — a
+        # hand-picked subset broke the AppImage stage twice (libfuse2 for
+        # linuxdeploy-as-AppImage, then its patchelf/librsvg/file host deps).
         run: |
           sudo apt-get update
-          # libfuse2: linuxdeploy is itself an AppImage and needs FUSE2 to run;
-          # ubuntu-24.04 runners do not ship it.
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libfuse2
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libfuse2
 
       - name: Install npm dependencies
         run: npm ci
 
       - name: Build Tauri bundle
-        run: npx tauri build
+        # --verbose: the bundler otherwise swallows its tools' stderr —
+        # "failed to run linuxdeploy" with no detail cost two blind tag cycles.
+        run: npx tauri build --verbose
         env:
           VITE_BUILD_ID: ${{ github.sha }}
           # Fallback for the AppImage toolchain where FUSE is unavailable:
