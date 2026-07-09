@@ -59,6 +59,17 @@ export function fill(graph: LogicGraph, seed: number): FillResult {
   const placements: Record<string, string> = {};
   const spheres: string[] = [];
   const emptyLocations = new Set(allLocationIds);
+  // AMENDMENT 5 (destructible-interior exclusion, repair task 3R4): a
+  // location whose container can destroy its own contents on a plausible
+  // "clumsy open" attempt (EGG's force-open at minimum — see
+  // logic-graph-types.ts) is `excludeProgression: true`. A progression item
+  // placed there could become permanently unrecoverable through ordinary
+  // play, which the static reachability evaluator has no way to model as
+  // "safe via the thief route" — so it never enters a progression item's
+  // candidate set, even when otherwise reachable-and-empty.
+  const excludeProgressionLocations = new Set(
+    graph.locations.filter(l => l.excludeProgression).map(l => l.id),
+  );
 
   let remaining = [...progression];
   while (remaining.length > 0) {
@@ -86,7 +97,9 @@ export function fill(graph: LogicGraph, seed: number): FillResult {
         }
       }
     }
-    const candidates = [...reachableLocations].filter(id => emptyLocations.has(id));
+    const candidates = [...reachableLocations].filter(
+      id => emptyLocations.has(id) && !excludeProgressionLocations.has(id),
+    );
     if (candidates.length === 0) {
       throw new FillError(`no reachable empty location for progression item "${item}" (seed ${seed})`);
     }

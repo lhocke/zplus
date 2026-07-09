@@ -81,6 +81,36 @@ export interface LogicLocation {
   region: string;
   /** Requirement to reach and take this location's item. */
   access: AccessRule;
+  /**
+   * AMENDMENT 5 (destructible-interior exclusion, repair task 3R4): true for
+   * a location whose container can destroy its own contents on a plausible
+   * "clumsy open" attempt (EGG's force-open — a weapon/tool used to pry it
+   * open, or MUNG/THROW/CLIMB-ON — moves EGG to nowhere and never relocates
+   * a still-inside CANARY; src/actions/above-ground.ts `badEgg()`, mirroring
+   * zil/1actions.zil:2919-2966). A progression item placed here could become
+   * permanently unrecoverable through ordinary play, which the static
+   * reachability evaluator has no way to model as "safe via the thief
+   * route" — so fill() must never place a `class: "progression"` item at an
+   * `excludeProgression: true` location (treasures/filler only; this is
+   * Archipelago's EXCLUDED-location semantics, applied narrowly). Absent/
+   * false everywhere else.
+   *
+   * The other five pinned vessels were re-audited (repair task 3R4-fix)
+   * against the same "clumsy open destroys contents" pattern:
+   *   - BOTTLE also matches: V-THROW and V-MUNG (src/actions/bottle-water.ts
+   *     bottleFunction, mirroring zil/1actions.zil:1491-1499) unconditionally
+   *     moveTo(null) the bottle, and only the literal WATER object is rescued
+   *     -- any other item filling the WATER slot is orphaned. WATER is now
+   *     excludeProgression: true.
+   *   - SANDWICH-BAG also matches, and is worse: it is Flag.Flammable, and
+   *     the generic V-BURN handler (src/engine/verbs/index.ts verbBurn)
+   *     destroys any Flammable object on burn with zero rescue of contents
+   *     (and kills the player if they were holding it). GARLIC and LUNCH are
+   *     now excludeProgression: true.
+   *   - COFFIN, BUOY, and TUBE have no matching action-routine behavior --
+   *     no destructive path was found for these three.
+   */
+  excludeProgression?: boolean;
 }
 
 export interface LogicRegion {

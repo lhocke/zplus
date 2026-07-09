@@ -1,6 +1,6 @@
 {
-  "logicVersion": 5,
-  "checksum": "c1b2b512d7c86231",
+  "logicVersion": 7,
+  "checksum": "4f01111a55fa18e2",
   "locations": [
     {
       "id": "ADVERTISEMENT",
@@ -87,7 +87,8 @@
       "objectId": "CANARY",
       "containerId": "EGG",
       "region": "surface",
-      "access": {}
+      "access": {},
+      "excludeProgression": true
     },
     {
       "id": "CANDLES",
@@ -110,6 +111,23 @@
         "region": "cyclops",
         "needs": [
           "LAMP"
+        ],
+        "any": [
+          {
+            "needs": [
+              "SWORD"
+            ]
+          },
+          {
+            "needs": [
+              "KNIFE"
+            ]
+          },
+          {
+            "needs": [
+              "RUSTY-KNIFE"
+            ]
+          }
         ]
       }
     },
@@ -145,7 +163,8 @@
       "objectId": "GARLIC",
       "containerId": "SANDWICH-BAG",
       "region": "surface",
-      "access": {}
+      "access": {},
+      "excludeProgression": true
     },
     {
       "id": "GUIDE",
@@ -220,7 +239,8 @@
       "objectId": "LUNCH",
       "containerId": "SANDWICH-BAG",
       "region": "surface",
-      "access": {}
+      "access": {},
+      "excludeProgression": true
     },
     {
       "id": "MATCH",
@@ -494,7 +514,8 @@
       "objectId": "WATER",
       "containerId": "BOTTLE",
       "region": "surface",
-      "access": {}
+      "access": {},
+      "excludeProgression": true
     },
     {
       "id": "WRENCH",
@@ -637,7 +658,7 @@
     },
     {
       "id": "KNIFE",
-      "class": "filler",
+      "class": "progression",
       "isTreasure": false
     },
     {
@@ -697,7 +718,7 @@
     },
     {
       "id": "RUSTY-KNIFE",
-      "class": "filler",
+      "class": "progression",
       "isTreasure": false
     },
     {
@@ -733,7 +754,7 @@
     },
     {
       "id": "SWORD",
-      "class": "filler",
+      "class": "progression",
       "isTreasure": false
     },
     {
@@ -806,7 +827,24 @@
         "TROLL-ROOM"
       ],
       "access": {
-        "region": "surface"
+        "region": "surface",
+        "any": [
+          {
+            "needs": [
+              "SWORD"
+            ]
+          },
+          {
+            "needs": [
+              "KNIFE"
+            ]
+          },
+          {
+            "needs": [
+              "RUSTY-KNIFE"
+            ]
+          }
+        ]
       }
     },
     {

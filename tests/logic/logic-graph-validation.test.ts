@@ -7,6 +7,7 @@ import roomsData from '../../src/data/rooms.json' with { type: 'json' };
 import { ROOM_BY_ID, type RegionKey } from '../../src/ui/map-layout.js';
 import { computeLocationPool, DOCUMENTED_EXCLUSIONS } from '../../tools/logic/derive-location-pool.js';
 import { GOLDEN_COMMANDS } from '../../tools/oracle/golden-commands.js';
+import { computeReachable } from '../../src/logic/reachability.js';
 
 const graph = graphData as LogicGraph;
 const objectIds = new Set((objectsData as { id: string }[]).map(o => o.id));
@@ -163,6 +164,80 @@ describe('logic-graph.json validation', () => {
       graph.locations.some(l => l.id === 'AXE'),
       'troll-inventory (AXE) location must not be in the pool',
     ).toBe(false);
+  });
+
+  const WEAPON_IDS = ['SWORD', 'KNIFE', 'RUSTY-KNIFE'];
+  function requiresAnyWeapon(rule: AccessRuleLike): boolean {
+    return (rule.any ?? []).some(
+      sub => (sub.needs?.length ?? 0) === 1 && WEAPON_IDS.includes(sub.needs![0]),
+    );
+  }
+
+  it('troll gate: cellar-core region access requires a weapon (AMENDMENT 5 repair task 3R4)', () => {
+    // cellar-core's access rule previously omitted the troll's weapon
+    // requirement entirely (bare-handed kills are luck; logic never
+    // requires luck). Structural check (the rule cites one of the three
+    // obtainable Weapon-flagged items) plus a functional check (the region
+    // is actually unreachable without one, even though the surface region
+    // it gates from is trivially reachable).
+    const region = graph.regions.find(r => r.id === 'cellar-core');
+    expect(region, 'cellar-core region missing').toBeDefined();
+    expect(
+      requiresAnyWeapon(region!.access as AccessRuleLike),
+      'cellar-core region access must require one of SWORD/KNIFE/RUSTY-KNIFE',
+    ).toBe(true);
+    const unarmed = computeReachable(graph, { ownedItems: new Set(), flags: new Set() });
+    expect(unarmed.reachableRegions.has('surface'), 'surface should be trivially reachable').toBe(true);
+    expect(unarmed.reachableRegions.has('cellar-core'), 'cellar-core must NOT be reachable unarmed').toBe(false);
+    const armed = computeReachable(graph, { ownedItems: new Set(['SWORD']), flags: new Set() });
+    expect(armed.reachableRegions.has('cellar-core'), 'cellar-core must be reachable owning SWORD').toBe(true);
+  });
+
+  it('thief gate: CHALICE access requires a weapon (kill-and-loot route, AMENDMENT 5 repair task 3R4)', () => {
+    // CHALICE sits in TREASURE-ROOM, guarded by the thief (CHALICE-FCN,
+    // zil/1actions.zil:2123-2136: "You'd be stabbed in the back first" while
+    // the thief is alive and fighting) — taking it, like recovering any
+    // item the thief is holding, requires defeating him first.
+    const chalice = graph.locations.find(l => l.id === 'CHALICE');
+    expect(chalice, 'CHALICE location missing').toBeDefined();
+    expect(
+      requiresAnyWeapon(chalice!.access as AccessRuleLike),
+      'CHALICE access must require one of SWORD/KNIFE/RUSTY-KNIFE',
+    ).toBe(true);
+  });
+
+  it('cyclops stays word-passable: no weapon requirement at the region level (AMENDMENT 5 repair task 3R4)', () => {
+    // The cyclops can be scared off by the magic word (ODYSSEUS/ULYSSES,
+    // zil/1actions.zil CYCLOPS-FCN) with zero combat — the design's audit
+    // confirms the graph must NOT gain a weapon rule here (that would
+    // over-constrain fill for no faithfulness reason).
+    const region = graph.regions.find(r => r.id === 'cyclops');
+    expect(region, 'cyclops region missing').toBeDefined();
+    expect(
+      requiresAnyWeapon(region!.access as AccessRuleLike),
+      'cyclops region access must stay weapon-free (word path bypasses combat)',
+    ).toBe(false);
+  });
+
+  it('CANARY (egg interior) is excludeProgression: true (AMENDMENT 5 repair task 3R4)', () => {
+    // EGG-OBJECT's force-open path (src/actions/above-ground.ts badEgg(),
+    // zil/1actions.zil:2919-2966) can permanently destroy the egg's
+    // contents — a progression item placed here would be unrecoverable
+    // through ordinary reachability play, so fill() must never place one.
+    const canary = graph.locations.find(l => l.id === 'CANARY');
+    expect(canary, 'CANARY location missing').toBeDefined();
+    expect(
+      canary!.excludeProgression,
+      'CANARY (EGG interior) must be excludeProgression:true',
+    ).toBe(true);
+  });
+
+  it('excludeProgression is only set true where present, and only on real location ids', () => {
+    for (const loc of graph.locations) {
+      if (loc.excludeProgression !== undefined) {
+        expect(loc.excludeProgression, `location ${loc.id}: excludeProgression must be true or absent`).toBe(true);
+      }
+    }
   });
 
   it('checksum matches the canonicalized graph content (bump discipline)', () => {

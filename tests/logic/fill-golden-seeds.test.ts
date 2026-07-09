@@ -88,6 +88,34 @@ describe('progressive empty-inventory solver (AMENDMENT 2 repair task 3R)', () =
   });
 });
 
+// AMENDMENT 5 (repair task 3R4): excludeProgression locations (EGG's
+// interior, CANARY, at minimum) must never receive a progression-class
+// item — the static reachability evaluator has no way to model "safe via
+// the thief route," so a progression item stranded there would make the
+// seed look solvable to computeReachable() while being unrecoverable in
+// ordinary play. Checked across every property seed plus the golden seeds.
+describe('excludeProgression fencing (AMENDMENT 5 repair task 3R4)', () => {
+  it('no excludeProgression location ever receives a progression-class item', () => {
+    const excludeProgressionLocationIds = graph.locations
+      .filter(l => l.excludeProgression)
+      .map(l => l.id);
+    expect(excludeProgressionLocationIds.length, 'expected at least one excludeProgression location (e.g. CANARY)').toBeGreaterThan(0);
+    const itemClassById = new Map(graph.items.map(i => [i.id, i.class]));
+    const allSeeds = [...new Set([...SAMPLE_SEEDS, ...GOLDEN_SEEDS])];
+    for (const seed of allSeeds) {
+      const result = fill(graph, seed);
+      for (const locId of excludeProgressionLocationIds) {
+        const itemId = result.placements[locId];
+        expect(itemId, `seed ${seed}: excludeProgression location ${locId} has no placement`).toBeDefined();
+        expect(
+          itemClassById.get(itemId),
+          `seed ${seed}: excludeProgression location ${locId} received progression item ${itemId}`,
+        ).not.toBe('progression');
+      }
+    }
+  });
+});
+
 // Golden-seed pins: committed exact placements for a small, fixed seed set.
 // If this test ever fails without an intentional graph change, the fill
 // algorithm or the graph silently changed behavior — that's the point.
