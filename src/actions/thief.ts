@@ -219,14 +219,36 @@ export function dropJunk(ctx: ThiefCtx, rmId: string): void {
 // Returns true if anything was deposited.
 // ---------------------------------------------------------------------------
 
-export function depositBooty(ctx: ThiefCtx, rmId: string): boolean {
+// Minimal shape depositBooty needs to move thief-held items — deliberately
+// narrower than ThiefCtx so a non-demon caller (the F_DEAD combat handler in
+// robber-fcn.ts, wired via game.ts's buildRobberFcnCtx) can reuse this same
+// canonical helper without satisfying ThiefCtx's full surface (rng, tell,
+// fightStrength, etc. — none of which DEPOSIT-BOOTY ever touches).
+export interface BootyCtx {
+  getObj(id: string): ThiefObjHandle | undefined;
+  childrenOf(containerId: string): string[];
+}
+
+// AMENDMENT 4 (2026-07-08, repair task 3R3) — mode-gated thief safety.
+// Vanilla DEPOSIT-BOOTY (1actions.zil:1897-1909) only ever recovers
+// TVALUE>0 items on the thief's death; TVALUE==0 items he is carrying are
+// gone for good — oracle-verified faithful. In a SEEDED run that is
+// unacceptable: a randomizer-placed progression/filler item is frequently
+// TVALUE==0, and the thief can steal ANY item, so a vanilla-shaped loss
+// would make some seeds permanently unsolvable. `seeded` (default false)
+// disables the TVALUE filter ONLY for seeded runs — vanilla play (seeded
+// omitted/false) is byte-for-byte unchanged. STILETTO/LARGE-BAG (the
+// thief's own tools, never a shuffle-eligible check) stay excluded in BOTH
+// modes — this is the FIRST intentional in-mode behavior delta beyond
+// placement itself (see tests/engine/placement-seam.test.ts header).
+export function depositBooty(ctx: BootyCtx, rmId: string, seeded = false): boolean {
   let deposited = false;
 
   for (const childId of ctx.childrenOf('THIEF')) {
     if (childId === 'STILETTO' || childId === 'LARGE-BAG') continue;
     const child = ctx.getObj(childId);
     if (child === undefined) continue;
-    if (child.tvalue <= 0) continue;
+    if (!seeded && child.tvalue <= 0) continue;
 
     child.moveTo(rmId);
     deposited = true;

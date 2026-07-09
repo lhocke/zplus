@@ -37,8 +37,10 @@ export function fill(graph: LogicGraph, seed: number): FillResult {
   // graph (a pinned vessel's spot is occupied by definition), so they drop
   // out of `locationObjectIds` naturally; the explicit `!i.pinned` filter
   // below restates that invariant directly rather than relying only on the
-  // graph shape. The count check asserts placeable.length ===
-  // locations.length (43 === 43 against the real graph).
+  // graph shape. AMENDMENT 4 (repair task 3R3): AXE is pinned too (the
+  // troll-inventory slot leaves the pool the same way) — same mechanism,
+  // no code change needed here. The count check asserts placeable.length
+  // === locations.length (42 === 42 against the real graph).
   const locationObjectIds = new Set(graph.locations.map(l => l.objectId));
   const shuffleEligible = graph.items.filter(i => locationObjectIds.has(i.id) && !i.pinned);
 

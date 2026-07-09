@@ -1,6 +1,6 @@
 {
-  "logicVersion": 4,
-  "checksum": "fb1239ea2e17a83e",
+  "logicVersion": 5,
+  "checksum": "c1b2b512d7c86231",
   "locations": [
     {
       "id": "ADVERTISEMENT",
@@ -8,18 +8,6 @@
       "containerId": "MAILBOX",
       "region": "surface",
       "access": {}
-    },
-    {
-      "id": "AXE",
-      "objectId": "AXE",
-      "containerId": "TROLL",
-      "region": "cellar-core",
-      "access": {
-        "region": "cellar-core",
-        "needs": [
-          "LAMP"
-        ]
-      }
     },
     {
       "id": "BAG-OF-COINS",
@@ -530,7 +518,8 @@
     {
       "id": "AXE",
       "class": "filler",
-      "isTreasure": false
+      "isTreasure": false,
+      "pinned": true
     },
     {
       "id": "BAG-OF-COINS",

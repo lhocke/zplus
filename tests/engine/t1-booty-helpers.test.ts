@@ -556,6 +556,62 @@ describe('TS-D: depositBooty()', () => {
     expect(result).toBe(false);
     expect(knife.parentId).toBe('THIEF');
   });
+
+  // ---------------------------------------------------------------------
+  // AMENDMENT 4 (repair task 3R3) — mode-gated thief safety.
+  //
+  // Oracle verdict: the engine is FAITHFUL on thief junk-loss (vanilla
+  // DEPOSIT-BOOTY only ever recovers TVALUE>0 items on the thief's death;
+  // TVALUE==0 items he is carrying are gone for good). In a SEEDED run that
+  // is unacceptable — a randomizer-placed progression/filler item is
+  // frequently TVALUE==0, and the thief can pick up ANY item via rob()/
+  // stealJunk(), so a vanilla-shaped loss would make some seeds
+  // permanently unsolvable. The fix is mode-gated, not a vanilla behavior
+  // change: `seeded` (new 3rd param, default false) disables the TVALUE
+  // filter only; STILETTO/LARGE-BAG (the thief's own tools, never a
+  // shuffle-eligible check) stay excluded in BOTH modes.
+  // ---------------------------------------------------------------------
+
+  it('vanilla mode (seeded param omitted, defaults false): still filters TVALUE==0 items — the seeded escape hatch is opt-in only', () => {
+    const knife = makeItem('KNIFE', 'THIEF', { tvalue: 0 });
+    const thief = makeItem('THIEF', 'HERE', { children: [knife] });
+    const dest = makeItem('TREASURE-ROOM', null);
+    const { ctx } = makeCtx({ items: [knife, thief, dest] });
+
+    // No 3rd arg at all — the default must match today's vanilla behavior.
+    const result = depositBooty(ctx, 'TREASURE-ROOM');
+    expect(result).toBe(false);
+    expect(knife.parentId).toBe('THIEF');
+
+    // Explicit `false` (as vanilla callers will pass) — same result.
+    const result2 = depositBooty(ctx, 'TREASURE-ROOM', false);
+    expect(result2).toBe(false);
+    expect(knife.parentId).toBe('THIEF');
+  });
+
+  it('randomizer mode (seeded=true): returns the ENTIRE bag, including a TVALUE-0 progression-shaped item — thief death in a seeded run never permanently destroys a check item', () => {
+    const skeletonKey = makeItem('SKELETON-KEY', 'THIEF', { tvalue: 0 });
+    const thief = makeItem('THIEF', 'HERE', { children: [skeletonKey] });
+    const dest = makeItem('TREASURE-ROOM', null);
+    const { ctx } = makeCtx({ items: [skeletonKey, thief, dest] });
+
+    const result = depositBooty(ctx, 'TREASURE-ROOM', true);
+    expect(result).toBe(true);
+    expect(skeletonKey.parentId).toBe('TREASURE-ROOM');
+  });
+
+  it('randomizer mode (seeded=true): STILETTO/LARGE-BAG are still excluded — they are the thief\'s own tools, never a shuffled check', () => {
+    const stiletto = makeItem('STILETTO', 'THIEF', { tvalue: 0 });
+    const bag = makeItem('LARGE-BAG', 'THIEF', { tvalue: 0 });
+    const thief = makeItem('THIEF', 'HERE', { children: [stiletto, bag] });
+    const dest = makeItem('TREASURE-ROOM', null);
+    const { ctx } = makeCtx({ items: [stiletto, bag, thief, dest] });
+
+    const result = depositBooty(ctx, 'TREASURE-ROOM', true);
+    expect(result).toBe(false);
+    expect(stiletto.parentId).toBe('THIEF');
+    expect(bag.parentId).toBe('THIEF');
+  });
 });
 
 // ---------------------------------------------------------------------------

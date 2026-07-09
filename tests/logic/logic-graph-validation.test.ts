@@ -147,6 +147,24 @@ describe('logic-graph.json validation', () => {
     }
   });
 
+  it('troll-inventory slot is excluded and AXE is pinned (AMENDMENT 4 repair task 3R3)', () => {
+    // Death-handler destruction invariant: F_DEAD on TROLL (troll-fcn.ts,
+    // 1actions.zil:665-670) only ever rescues AXE — it drops the axe to the
+    // room if the troll is holding it, and nothing else. If fill() ever
+    // placed a DIFFERENT item in the troll's inventory slot, that item would
+    // be stranded when the troll dies (no code path drops it), the same
+    // permanent-destruction class AMENDMENT 4 closes for the thief. Fix:
+    // exclude the troll-inventory location from the pool and pin AXE at its
+    // vanilla spot, exactly like the six AMENDMENT 3 vessels — generalize
+    // this pattern only if another death-handler-owned slot turns up.
+    const axeItem = graph.items.find(i => i.id === 'AXE');
+    expect(axeItem?.pinned, 'AXE must be pinned:true').toBe(true);
+    expect(
+      graph.locations.some(l => l.id === 'AXE'),
+      'troll-inventory (AXE) location must not be in the pool',
+    ).toBe(false);
+  });
+
   it('checksum matches the canonicalized graph content (bump discipline)', () => {
     const computed = createHash('sha256').update(canonicalize()).digest('hex').slice(0, 16);
     expect(

@@ -81,6 +81,15 @@ export const DOCUMENTED_EXCLUSIONS: Record<string, string> = {
   BUOY: 'container vessel, pinned (AMENDMENT 3) — its interior (EMERALD) remains a check.',
   EGG: 'container vessel, pinned (AMENDMENT 3) — its interior (CANARY) remains a check.',
   TUBE: 'container vessel, pinned (AMENDMENT 3) — its interior (PUTTY) remains a check.',
+  // AMENDMENT 4 (troll slot, repair task 3R3): F_DEAD on TROLL (troll-fcn.ts,
+  // 1actions.zil:665-670) only ever rescues AXE — drops it to the room if
+  // the troll was holding it, nothing else. A different item shuffled into
+  // the troll's inventory slot would be stranded/destroyed on the troll's
+  // death, the same permanent-destruction class AMENDMENT 4 closes for the
+  // thief. Fix: pin AXE at its vanilla slot (items[].pinned: true), same
+  // treatment as the six AMENDMENT 3 vessels.
+  AXE: 'troll-inventory slot, pinned (AMENDMENT 4) — the axe-only death handler ' +
+    'destroys anything else placed there.',
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {

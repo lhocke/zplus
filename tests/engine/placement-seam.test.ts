@@ -1,6 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from '../../src/engine/bootstrap.js';
 
+// MODE-ISOLATION CARVE-OUT (AMENDMENT 4, repair task 3R3): this suite's
+// invariant is "randomizer mode changes WHERE things start, never anything's
+// BEHAVIOR." depositBooty (src/actions/thief.ts, wired into the thief's F_DEAD
+// combat handler via src/engine/game.ts's buildRobberFcnCtx) is the FIRST and
+// (as of this task) ONLY intentional exception: in a seeded run it returns
+// the thief's entire bag on death, lifting the vanilla TVALUE filter, because
+// oracle verification proved the vanilla filter (which permanently discards
+// TVALUE==0 items) faithful but unsafe for a run where any item can be a
+// required check. Vanilla play (no placementMap / no randomizerSeedString) is
+// unaffected — see tests/engine/t1-booty-helpers.test.ts's "TS-D:
+// depositBooty()" describe block for the vanilla-vs-seeded pin. Any FUTURE
+// in-mode behavior delta beyond placement itself should get the same
+// explicit carve-out note here, not slip in silently.
 describe('placement seam', () => {
   it('with no placementMap, LAMP starts in LIVING-ROOM exactly as vanilla (mode isolation)', () => {
     const game = createGame({ seed: 42 });

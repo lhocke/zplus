@@ -37,7 +37,7 @@ import type { HeroBlowCallbacks } from './combat.js';
 import type { VillainEntry } from '../domain/villain-entry.js';
 import { makeTrollFcn } from '../actions/troll-fcn.js';
 import { makeRobberFcn, type RobberFcnCtx, type VerbDispatch } from '../actions/robber-fcn.js';
-import { thiefEngrossed, setThiefEngrossed, setEggSolve, cyclowrath, setCyclowrath } from '../actions/thief-state.js';
+import { thiefEngrossed, setThiefEngrossed, cyclowrath, setCyclowrath } from '../actions/thief-state.js';
 import { iCyclops, type ICyclopsCtx } from '../actions/cyclops.js';
 import { iThief, type IThiefCtx } from '../actions/i-thief.js';
 import {
@@ -1403,29 +1403,32 @@ export class Game {
   // hereId and tell are injected per-call so the same builder is reused for
   // both the VillainEntry (F-code path) and the THIEF object handler (verb path).
   private buildRobberFcnCtx(hereId: string, tell: (s: string) => void): RobberFcnCtx {
+    const getObj = (id: string) => {
+      const obj = this.world.get(id);
+      if (obj === undefined) return undefined;
+      return {
+        get id()       { return obj.id; },
+        get parentId() { return obj.parent?.id ?? null; },
+        get tvalue()   { return (obj.props.get('TVALUE') ?? 0) as number; },
+        get desc()     { return obj.desc; },
+        hasFlag:  (f: Flag) => obj.has(f),
+        setFlag:  (f: Flag) => obj.set(f),
+        clearFlag:(f: Flag) => obj.clear(f),
+        moveTo: (destId: string) => {
+          if (destId === '__void__') { obj.moveTo(null); return; }
+          const dest = this.world.get(destId);
+          if (dest !== undefined) obj.moveTo(dest);
+        },
+        setLdesc: (s: string) => { (obj as { ldesc?: string }).ldesc = s; },
+      };
+    };
+    const childrenOf = (containerId: string) =>
+      this.world.contents(containerId).map(o => o.id);
+
     return {
       hereId,
-      getObj: (id: string) => {
-        const obj = this.world.get(id);
-        if (obj === undefined) return undefined;
-        return {
-          get id()       { return obj.id; },
-          get parentId() { return obj.parent?.id ?? null; },
-          get tvalue()   { return (obj.props.get('TVALUE') ?? 0) as number; },
-          get desc()     { return obj.desc; },
-          hasFlag:  (f: Flag) => obj.has(f),
-          setFlag:  (f: Flag) => obj.set(f),
-          clearFlag:(f: Flag) => obj.clear(f),
-          moveTo: (destId: string) => {
-            if (destId === '__void__') { obj.moveTo(null); return; }
-            const dest = this.world.get(destId);
-            if (dest !== undefined) obj.moveTo(dest);
-          },
-          setLdesc: (s: string) => { (obj as { ldesc?: string }).ldesc = s; },
-        };
-      },
-      childrenOf: (containerId: string) =>
-        this.world.contents(containerId).map(o => o.id),
+      getObj,
+      childrenOf,
       getThiefPStrength: () => {
         const t = this.world.get('THIEF');
         return (t as unknown as { pStrength: number })?.pStrength ?? 0;
@@ -1452,23 +1455,16 @@ export class Game {
         }
       },
       depositBooty: (rmId: string): boolean => {
-        // DEPOSIT-BOOTY: move TVALUE>0 thief children (excl. STILETTO/LARGE-BAG) to rm.
-        // 1actions.zil:1897–1909
-        const rm = this.world.get(rmId);
-        if (rm === undefined) return false;
-        let deposited = false;
-        for (const child of this.world.contents('THIEF')) {
-          if (child.id === 'STILETTO' || child.id === 'LARGE-BAG') continue;
-          const tv = (child.props.get('TVALUE') ?? 0) as number;
-          if (tv <= 0) continue;
-          child.moveTo(rm);
-          deposited = true;
-          if (child.id === 'EGG') {
-            setEggSolve(true);
-            child.set(Flag.Open);
-          }
-        }
-        return deposited;
+        // DEPOSIT-BOOTY: move thief children (excl. STILETTO/LARGE-BAG) to rm.
+        // 1actions.zil:1897–1909. AMENDMENT 4 (repair task 3R3): in a seeded
+        // run (this.randomizerSeedString set), the TVALUE filter is lifted —
+        // see thief.ts's depositBooty doc comment for the faithfulness/
+        // mode-isolation rationale. Delegates to the same canonical helper
+        // the I-THIEF demon's silent settle-in-TREASURE-ROOM branch uses, so
+        // there is exactly one DEPOSIT-BOOTY implementation, not two.
+        if (this.world.get(rmId) === undefined) return false;
+        const seeded = this.randomizerSeedString !== undefined;
+        return thiefDepositBooty({ getObj, childrenOf }, rmId, seeded);
       },
       moveAll: (fromId: string, toId: string) => {
         // MOVE-ALL: FCLEAR INVISIBLE + MOVE every child of from to to.
