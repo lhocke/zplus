@@ -22,7 +22,21 @@ function shuffle<T>(arr: T[], rng: Rng): T[] {
   return out;
 }
 
-export function fill(graph: LogicGraph, seed: number): FillResult {
+/**
+ * Single-attempt assumed fill for one exact seed — no retry, no
+ * decorrelation. This is the algorithm AMENDMENT 2/3/4/5 harden; it is
+ * exported for the unit-level tests in tests/logic/fill.test.ts that probe
+ * the raw algorithm's semantics directly on small synthetic graphs.
+ *
+ * AMENDMENT 6 (repair task 3R5): this is NOT the public contract any more.
+ * `fillOnce` can legitimately throw `FillError` for a small fraction of raw
+ * seeds against the real graph (e.g. seed 36: the weapon gate added in
+ * AMENDMENT 5 consumes/traps every obtainable Weapon-flagged item before
+ * KNIFE can be placed) — `fillWithRetry` below is what recovers
+ * deterministically, and it is the only entry point the UI, the spoiler CLI,
+ * and the property-test suite may call.
+ */
+export function fillOnce(graph: LogicGraph, seed: number): FillResult {
   const rng = new Rng(seed);
 
   // fill() operates over PLACEABLE items only — items whose id appears as
@@ -122,14 +136,30 @@ export function fill(graph: LogicGraph, seed: number): FillResult {
   return { placements, spheres };
 }
 
-/** Bounded retry wrapper — Task 1's Step 4 note: should never actually retry
- *  against the real graph, but protects against a future graph edit that
- *  introduces a momentary unreachable-item edge case. */
+/**
+ * AMENDMENT 6 (repair task 3R5): decorrelated per-attempt seed derivation.
+ * Attempt 0 reduces to the raw seed exactly (mixing with attempt=0 is a
+ * no-op under XOR) — so every existing golden pinned at attempt 0 is
+ * unaffected. Attempt i>0 mixes in a golden-ratio constant (the standard
+ * Fibonacci-hashing multiplier) rather than the previous `seed + i`: `+1`
+ * makes a retrying seed re-derive (and therefore shadow) its neighbor
+ * seed's entire world, which breaks same-string-same-world for whichever
+ * seed got shadowed. The XOR-hash mix decorrelates attempt i>0 from any
+ * other seed's attempt 0 in the sample.
+ */
+function attemptSeed(seed: number, attempt: number): number {
+  return (seed ^ (0x9e3779b9 * attempt)) >>> 0;
+}
+
+/** Bounded retry wrapper — the sole public fill entry point (AMENDMENT 6).
+ *  UI, spoiler CLI, and the property-test suite all call this, never
+ *  `fillOnce` directly, because a small fraction of raw seeds against the
+ *  real graph genuinely need a retry (see `fillOnce`'s doc comment). */
 export function fillWithRetry(graph: LogicGraph, seed: number, maxAttempts = 20): FillResult {
   let lastErr: unknown;
   for (let i = 0; i < maxAttempts; i++) {
     try {
-      return fill(graph, seed + i);
+      return fillOnce(graph, attemptSeed(seed, i));
     } catch (err) {
       if (!(err instanceof FillError)) throw err;
       lastErr = err;

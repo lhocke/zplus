@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fill, FillError } from '../../src/logic/fill.js';
+import { fillOnce, FillError } from '../../src/logic/fill.js';
 import { computeReachable } from '../../src/logic/reachability.js';
 import type { LogicGraph } from '../../src/logic/logic-graph-types.js';
 
@@ -49,14 +49,14 @@ const WIDER_GRAPH: LogicGraph = {
 
 describe('fill', () => {
   it('places every item into exactly one location', () => {
-    const result = fill(TINY_GRAPH, 42);
+    const result = fillOnce(TINY_GRAPH, 42);
     expect(Object.keys(result.placements).sort()).toEqual(['loc-a', 'loc-b']);
     expect(new Set(Object.values(result.placements))).toEqual(new Set(['key', 'treasure1']));
   });
 
   it('is deterministic: same seed twice produces identical placements', () => {
-    const a = fill(TINY_GRAPH, 1234);
-    const b = fill(TINY_GRAPH, 1234);
+    const a = fillOnce(TINY_GRAPH, 1234);
+    const b = fillOnce(TINY_GRAPH, 1234);
     expect(a.placements).toEqual(b.placements);
     expect(a.spheres).toEqual(b.spheres);
   });
@@ -68,25 +68,25 @@ describe('fill', () => {
     // location would sometimes place `key` at loc-b. The canonical fill
     // must never do this: `key` can only ever land at loc-a.
     for (let seed = 0; seed < 50; seed++) {
-      const result = fill(TINY_GRAPH, seed);
+      const result = fillOnce(TINY_GRAPH, seed);
       expect(result.placements['loc-a'], `seed ${seed}`).toBe('key');
     }
   });
 
   it('different seeds usually produce different placements (not a hard guarantee, sanity only)', () => {
-    const results = new Set(Array.from({ length: 20 }, (_, i) => JSON.stringify(fill(WIDER_GRAPH, i).placements)));
+    const results = new Set(Array.from({ length: 20 }, (_, i) => JSON.stringify(fillOnce(WIDER_GRAPH, i).placements)));
     expect(results.size).toBeGreaterThan(1);
   });
 
   it('the resulting placement is solvable: reachability with owned progression items reaches every location', () => {
-    const result = fill(TINY_GRAPH, 7);
+    const result = fillOnce(TINY_GRAPH, 7);
     const owned = new Set(Object.entries(result.placements).filter(([, item]) => item === 'key').map(() => 'key'));
     const r = computeReachable(TINY_GRAPH, { ownedItems: owned, flags: new Set() });
     expect(r.reachableLocations.size).toBe(TINY_GRAPH.locations.length);
   });
 
   it('throws FillError when item count does not match location count', () => {
-    // A location whose objectId has no matching items[] entry — fill()
+    // A location whose objectId has no matching items[] entry — fillOnce()
     // counts only placeable items (those with a corresponding location, per
     // the AMENDMENTS rule 4 "PLACEABLE items only" filter), so the mismatch
     // has to come from an extra unfillable location, not a location-less item.
@@ -97,6 +97,6 @@ describe('fill', () => {
         { id: 'loc-c', objectId: 'ghost-item', containerId: 'B', region: 'locked', access: {} },
       ],
     };
-    expect(() => fill(broken, 1)).toThrow(FillError);
+    expect(() => fillOnce(broken, 1)).toThrow(FillError);
   });
 });
