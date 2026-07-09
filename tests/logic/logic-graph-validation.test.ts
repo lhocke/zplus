@@ -173,6 +173,13 @@ describe('logic-graph.json validation', () => {
     );
   }
 
+  function requiresLampAnywhere(rule: AccessRuleLike): boolean {
+    if ((rule.needs ?? []).includes('LAMP')) return true;
+    if ((rule.any ?? []).some(requiresLampAnywhere)) return true;
+    if ((rule.all ?? []).some(requiresLampAnywhere)) return true;
+    return false;
+  }
+
   it('troll gate: cellar-core region access requires a weapon (AMENDMENT 5 repair task 3R4)', () => {
     // cellar-core's access rule previously omitted the troll's weapon
     // requirement entirely (bare-handed kills are luck; logic never
@@ -189,8 +196,92 @@ describe('logic-graph.json validation', () => {
     const unarmed = computeReachable(graph, { ownedItems: new Set(), flags: new Set() });
     expect(unarmed.reachableRegions.has('surface'), 'surface should be trivially reachable').toBe(true);
     expect(unarmed.reachableRegions.has('cellar-core'), 'cellar-core must NOT be reachable unarmed').toBe(false);
-    const armed = computeReachable(graph, { ownedItems: new Set(['SWORD']), flags: new Set() });
-    expect(armed.reachableRegions.has('cellar-core'), 'cellar-core must be reachable owning SWORD').toBe(true);
+    // A weapon alone is NOT enough post-AMENDMENT-7 (see the light-gate test
+    // below): every non-Gallery cellar-core room is dark, so LAMP is also
+    // required to actually traverse in.
+    const weaponOnly = computeReachable(graph, { ownedItems: new Set(['SWORD']), flags: new Set() });
+    expect(
+      weaponOnly.reachableRegions.has('cellar-core'),
+      'cellar-core must NOT be reachable on a weapon alone, with no light (AMENDMENT 7)',
+    ).toBe(false);
+    const armed = computeReachable(graph, { ownedItems: new Set(['SWORD', 'LAMP']), flags: new Set() });
+    expect(armed.reachableRegions.has('cellar-core'), 'cellar-core must be reachable owning SWORD + LAMP').toBe(true);
+  });
+
+  it('light gate: cellar-core region access requires LAMP, and every region gated behind it inherits the requirement (AMENDMENT 7 repair task 3R6)', () => {
+    // Every non-Gallery cellar-core room is dark (src/data/rooms.json — no
+    // "On" flag): CELLAR, TROLL-ROOM, ROUND-ROOM, EW-PASSAGE, LOUD-ROOM,
+    // NS-PASSAGE, DEEP-CANYON, CHASM-ROOM, EAST-OF-CHASM, DAMP-CAVE, STUDIO,
+    // ENGRAVINGS-CAVE. The region-level access rules never modeled a light
+    // requirement at all (only a handful of specific ITEM locations did:
+    // mine/mine-maze's needs:[GARLIC,LAMP], temple/river/attic-table's
+    // needs:[LAMP]) — so the assumed-fill solver could place LAMP itself (or
+    // MATCH/CANDLES) behind a dark, weapon-only-gated region, producing a
+    // genuine circular deadlock the solver cannot see (AccessRule has no
+    // darkness/grue concept). Fix: cellar-core's access rule gains
+    // needs:["LAMP"] alongside its existing weapon `any`. Every other
+    // underground region already depends on cellar-core transitively
+    // (dam, mirror, river, thief-maze all cite {"region":"cellar-core"};
+    // mine cites {"region":"mirror"}; cyclops cites {"region":"thief-maze"};
+    // mine-maze cites {"region":"mine", needs:[GARLIC,LAMP]}; temple cites
+    // mirror or cellar-core+ROPE) — so this single fix closes the gap for
+    // the entire dark underground without a per-region patch. canyon stays
+    // untouched: every canyon room carries the "On" flag (it's an outdoor,
+    // lit region), so it never needed a light gate.
+    const region = graph.regions.find(r => r.id === 'cellar-core');
+    expect(region!.access.needs, 'cellar-core region access must require LAMP').toContain('LAMP');
+
+    const DARK_DEPENDENT_REGIONS = ['dam', 'mirror', 'river', 'thief-maze', 'mine', 'cyclops', 'mine-maze', 'temple'];
+    const swordNoLamp = computeReachable(graph, { ownedItems: new Set(['SWORD']), flags: new Set() });
+    for (const id of DARK_DEPENDENT_REGIONS) {
+      expect(
+        swordNoLamp.reachableRegions.has(id),
+        `region "${id}" must NOT be reachable on a weapon alone with no light (transitively gated behind cellar-core's LAMP requirement)`,
+      ).toBe(false);
+    }
+    const swordAndLamp = computeReachable(graph, { ownedItems: new Set(['SWORD', 'LAMP', 'GARLIC', 'ROPE']), flags: new Set() });
+    for (const id of DARK_DEPENDENT_REGIONS) {
+      expect(
+        swordAndLamp.reachableRegions.has(id),
+        `region "${id}" must be reachable once SWORD/LAMP/GARLIC/ROPE are all owned`,
+      ).toBe(true);
+    }
+    // canyon is unaffected: fully lit, no light gate expected or wanted.
+    expect(
+      requiresLampAnywhere(graph.regions.find(r => r.id === 'canyon')!.access as AccessRuleLike),
+      'canyon region access must stay light-free (every canyon room is lit)',
+    ).toBe(false);
+  });
+
+  it('light bootstrap: at least one light source is placeable on a path that never itself requires LAMP (AMENDMENT 7 repair task 3R6)', () => {
+    // The circular-deadlock class this amendment closes: LAMP/MATCH/CANDLES
+    // could all land behind locations whose access rule (directly or via
+    // region) needs LAMP, leaving no way to ever obtain light in the first
+    // place. Structural guard: every location a light-source item could
+    // occupy must NOT need LAMP itself (directly, or via its region's access
+    // chain being unreachable without LAMP) — i.e. computing reachability
+    // with every OTHER progression item owned (never LAMP) must reach at
+    // least one empty-eligible location outside the LAMP-gated set.
+    const LIGHT_SOURCE_IDS = ['LAMP', 'MATCH', 'CANDLES'];
+    const progressionIds = graph.items.filter(i => i.class === 'progression').map(i => i.id);
+    const ownedExceptLamp = new Set(progressionIds.filter(id => id !== 'LAMP'));
+    const reach = computeReachable(graph, { ownedItems: ownedExceptLamp, flags: new Set() });
+    const bootstrapCandidateLocations = graph.locations.filter(
+      loc => reach.reachableLocations.has(loc.id) && !(loc.access.needs ?? []).includes('LAMP'),
+    );
+    expect(
+      bootstrapCandidateLocations.length,
+      'at least one location reachable without LAMP must exist, or no light source could ever be bootstrapped',
+    ).toBeGreaterThan(0);
+    // Sanity: every LIGHT_SOURCE_IDS entry is itself a placeable (has a
+    // matching location) progression item, so the bootstrap guarantee above
+    // actually applies to them.
+    const locationObjectIds = new Set(graph.locations.map(l => l.objectId));
+    for (const id of LIGHT_SOURCE_IDS) {
+      const item = graph.items.find(i => i.id === id);
+      expect(item?.class, `${id} must be class "progression"`).toBe('progression');
+      expect(locationObjectIds.has(id), `${id} must have a matching placeable location`).toBe(true);
+    }
   });
 
   it('thief gate: CHALICE access requires a weapon (kill-and-loot route, AMENDMENT 5 repair task 3R4)', () => {

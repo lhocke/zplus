@@ -13,7 +13,14 @@ const GOLDEN_SEEDS = [1, 2, 3];
 // seed 36 / 470). Retry derivation changed (decorrelated hash mix instead of
 // `seed + i`), but WHICH raw seeds fail attempt 0 did not — that only
 // depends on `fillOnce` itself, which AMENDMENT 6 leaves untouched.
-const RETRY_NEEDING_SEEDS = [36, 470];
+// AMENDMENT 7 (repair task 3R6, light gate): re-derived after cellar-core's
+// access rule gained needs:["LAMP"] — the set of raw seeds that deadlock in
+// `fillOnce` is a property of the graph's rules, and adding a rule changes
+// it. Seed 36 no longer deadlocks at attempt 0 under the new rule (the
+// light gate happens to route it to a placement the old weapon-only gate
+// didn't); seed 470 still does. Re-verified directly against fillOnce over
+// the full 500-seed sample, not assumed.
+const RETRY_NEEDING_SEEDS = [470];
 
 // AMENDMENT 6 (repair task 3R5): the property suite below re-targets the
 // PUBLIC CONTRACT — `fillWithRetry` — everywhere, not raw `fillOnce`. The

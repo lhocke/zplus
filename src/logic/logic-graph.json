@@ -1,6 +1,6 @@
 {
-  "logicVersion": 7,
-  "checksum": "4f01111a55fa18e2",
+  "logicVersion": 8,
+  "checksum": "5e922b0abf8ca19c",
   "locations": [
     {
       "id": "ADVERTISEMENT",
@@ -828,6 +828,9 @@
       ],
       "access": {
         "region": "surface",
+        "needs": [
+          "LAMP"
+        ],
         "any": [
           {
             "needs": [
