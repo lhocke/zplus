@@ -355,6 +355,51 @@ describe('logic-graph.json validation', () => {
     }
   });
 
+  it('earlyLight zone matches its derivation from the access rules (AMENDMENT 9 repair 3R7)', () => {
+    // Randomization breaks vanilla's light economy: the torch arrives early
+    // in vanilla and the 385-turn lamp is only a bridge, so TORCH is
+    // placement-constrained to a shallow "earlyLight" zone (Archipelago
+    // early_items precedent — a pure fill constraint, no engine change).
+    // The zone is DERIVED, not eyeballed: a location is earlyLight exactly
+    // when its access chain requires none of the five deep mechanisms,
+    // each expressed as the graph citations that embody it —
+    //   river chain    -> needs INFLATABLE-BOAT / PUMP
+    //   dam drain      -> needs WRENCH
+    //   Hades ritual   -> needs BELL / BOOK / CANDLES / MATCH
+    //   coal machine   -> gates nothing placeable (DIAMOND is location-less)
+    //   cyclops passage-> the cyclops region (word-gated, no item need)
+    // Mechanically: own every progression item EXCEPT the mechanism items,
+    // run the reachability fixpoint, and drop mechanism regions. The
+    // graph's earlyLight flags must equal that computed set exactly, so the
+    // zone can never silently drift from the rules that define it.
+    const MECHANISM_ITEMS = new Set(['INFLATABLE-BOAT', 'PUMP', 'WRENCH', 'BELL', 'BOOK', 'CANDLES', 'MATCH']);
+    const MECHANISM_REGIONS = new Set(['cyclops']);
+    const owned = new Set(
+      graph.items.filter(i => i.class === 'progression' && !MECHANISM_ITEMS.has(i.id)).map(i => i.id),
+    );
+    const { reachableLocations } = computeReachable(graph, { ownedItems: owned, flags: new Set() });
+    const derived = new Set(
+      graph.locations
+        .filter(l => reachableLocations.has(l.id) && !MECHANISM_REGIONS.has(l.region))
+        .map(l => l.id),
+    );
+    const flagged = new Set(graph.locations.filter(l => l.earlyLight).map(l => l.id));
+    expect(flagged, 'earlyLight flags must equal the mechanism-free derivation exactly').toEqual(derived);
+    expect(flagged.size, 'earlyLight zone must be non-empty').toBeGreaterThan(0);
+    // earlyLight is a flag, never explicitly false (same shape discipline as
+    // excludeProgression).
+    for (const loc of graph.locations) {
+      if (loc.earlyLight !== undefined) {
+        expect(loc.earlyLight, `location ${loc.id}: earlyLight must be true or absent`).toBe(true);
+      }
+    }
+    // TORCH is the constrained item: explicitly progression (placement
+    // policy, not rule citation) and still a treasure.
+    const torch = graph.items.find(i => i.id === 'TORCH');
+    expect(torch?.class, 'TORCH must be class "progression" (early-placement policy)').toBe('progression');
+    expect(torch?.isTreasure, 'TORCH stays a treasure').toBe(true);
+  });
+
   it('checksum matches the canonicalized graph content (bump discipline)', () => {
     const computed = createHash('sha256').update(canonicalize()).digest('hex').slice(0, 16);
     expect(
@@ -369,11 +414,18 @@ describe('logic-graph.json validation', () => {
     // tokens (parenthetical or literal object names already used as
     // GOLDEN_COMMANDS/oracle corpus fixtures) and confirm each progression
     // item is referenced by at least one location's `needs`.
+    // AMENDMENT 9 (repair 3R7): TORCH is progression by PLACEMENT POLICY —
+    // the fill places it first, restricted to the earlyLight zone — not
+    // because any rule cites it (light gates are modeled on LAMP). It is the
+    // one legitimate uncited progression item; anything else uncited is
+    // still a classification bug.
+    const POLICY_PROGRESSION_IDS = new Set(['TORCH']);
     const progressionIds = graph.items.filter(i => i.class === 'progression').map(i => i.id);
     const allNeeds = new Set(
       graph.locations.flatMap(l => collectNeeds(l.access)),
     );
     for (const id of progressionIds) {
+      if (POLICY_PROGRESSION_IDS.has(id)) continue;
       expect(allNeeds.has(id), `progression item "${id}" is never referenced by any location's needs — either it doesn't gate anything (reclassify as filler) or a rule is missing it`).toBe(true);
     }
     // Sanity: GOLDEN_COMMANDS must not be empty (guards against an accidental empty import).

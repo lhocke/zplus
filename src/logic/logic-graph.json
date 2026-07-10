@@ -1,13 +1,14 @@
 {
-  "logicVersion": 9,
-  "checksum": "07171403e641f13a",
+  "logicVersion": 10,
+  "checksum": "dbacb1e8b5c834a2",
   "locations": [
     {
       "id": "ADVERTISEMENT",
       "objectId": "ADVERTISEMENT",
       "containerId": "MAILBOX",
       "region": "surface",
-      "access": {}
+      "access": {},
+      "earlyLight": true
     },
     {
       "id": "BAG-OF-COINS",
@@ -19,7 +20,8 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "BAR",
@@ -31,7 +33,8 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "BELL",
@@ -43,7 +46,8 @@
         "needs": [
           "ROPE"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "BOOK",
@@ -55,7 +59,8 @@
         "needs": [
           "ROPE"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "BRACELET",
@@ -68,7 +73,8 @@
           "GARLIC",
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "BURNED-OUT-LANTERN",
@@ -80,7 +86,8 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "CANARY",
@@ -88,7 +95,8 @@
       "containerId": "EGG",
       "region": "surface",
       "access": {},
-      "excludeProgression": true
+      "excludeProgression": true,
+      "earlyLight": true
     },
     {
       "id": "CANDLES",
@@ -100,7 +108,8 @@
         "needs": [
           "ROPE"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "CHALICE",
@@ -137,7 +146,8 @@
           "GARLIC",
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "EMERALD",
@@ -159,7 +169,8 @@
       "containerId": "SANDWICH-BAG",
       "region": "surface",
       "access": {},
-      "excludeProgression": true
+      "excludeProgression": true,
+      "earlyLight": true
     },
     {
       "id": "GUIDE",
@@ -168,7 +179,8 @@
       "region": "dam",
       "access": {
         "region": "dam"
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "INFLATABLE-BOAT",
@@ -177,7 +189,8 @@
       "region": "dam",
       "access": {
         "region": "dam"
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "JADE",
@@ -190,7 +203,8 @@
           "GARLIC",
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "KEYS",
@@ -202,7 +216,8 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "KNIFE",
@@ -213,21 +228,24 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "LAMP",
       "objectId": "LAMP",
       "containerId": "LIVING-ROOM",
       "region": "surface",
-      "access": {}
+      "access": {},
+      "earlyLight": true
     },
     {
       "id": "LEAVES",
       "objectId": "LEAVES",
       "containerId": "GRATING-CLEARING",
       "region": "surface",
-      "access": {}
+      "access": {},
+      "earlyLight": true
     },
     {
       "id": "LUNCH",
@@ -235,7 +253,8 @@
       "containerId": "SANDWICH-BAG",
       "region": "surface",
       "access": {},
-      "excludeProgression": true
+      "excludeProgression": true,
+      "earlyLight": true
     },
     {
       "id": "MATCH",
@@ -244,14 +263,16 @@
       "region": "dam",
       "access": {
         "region": "dam"
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "NEST",
       "objectId": "NEST",
       "containerId": "UP-A-TREE",
       "region": "surface",
-      "access": {}
+      "access": {},
+      "earlyLight": true
     },
     {
       "id": "OWNERS-MANUAL",
@@ -263,7 +284,8 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "PAINTING",
@@ -272,7 +294,8 @@
       "region": "cellar-core",
       "access": {
         "region": "cellar-core"
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "POT-OF-GOLD",
@@ -284,7 +307,8 @@
         "needs": [
           "SCEPTRE"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "PUMP",
@@ -307,7 +331,8 @@
             "region": "mirror"
           }
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "PUTTY",
@@ -319,7 +344,8 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "ROPE",
@@ -330,7 +356,8 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "RUSTY-KNIFE",
@@ -342,7 +369,8 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "SCARAB",
@@ -368,7 +396,8 @@
             ]
           }
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "SCEPTRE",
@@ -381,7 +410,8 @@
           "LAMP",
           "ROPE"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "SCREWDRIVER",
@@ -393,7 +423,8 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "SHOVEL",
@@ -418,7 +449,8 @@
             ]
           }
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "SKULL",
@@ -440,7 +472,8 @@
       "objectId": "SWORD",
       "containerId": "LIVING-ROOM",
       "region": "surface",
-      "access": {}
+      "access": {},
+      "earlyLight": true
     },
     {
       "id": "TIMBERS",
@@ -453,7 +486,8 @@
           "GARLIC",
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "TORCH",
@@ -466,7 +500,8 @@
           "LAMP",
           "ROPE"
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "TRIDENT",
@@ -489,7 +524,8 @@
             "region": "mirror"
           }
         ]
-      }
+      },
+      "earlyLight": true
     },
     {
       "id": "TRUNK",
@@ -510,7 +546,8 @@
       "containerId": "BOTTLE",
       "region": "surface",
       "access": {},
-      "excludeProgression": true
+      "excludeProgression": true,
+      "earlyLight": true
     },
     {
       "id": "WRENCH",
@@ -522,7 +559,8 @@
         "needs": [
           "LAMP"
         ]
-      }
+      },
+      "earlyLight": true
     }
   ],
   "items": [
@@ -759,7 +797,7 @@
     },
     {
       "id": "TORCH",
-      "class": "filler",
+      "class": "progression",
       "isTreasure": true
     },
     {

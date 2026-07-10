@@ -20,14 +20,15 @@ const GOLDEN_SEEDS = [1, 2, 3];
 // light gate happens to route it to a placement the old weapon-only gate
 // didn't); seed 470 still does. Re-verified directly against fillOnce over
 // the full 500-seed sample, not assumed.
-// AMENDMENT 9 (repair 3R7, rusty-knife gate removal): re-derived again after
-// RUSTY-KNIFE left the troll/thief weapon gates and demoted to filler — the
-// progression pool shrank by one and every shuffle order shifted with it.
-// Seed 470 still deadlocks at attempt 0 (SCEPTRE finds no reachable empty
-// location); seed 379 now does too. Fraction 2/500 = 0.4%, under the 2%
-// ceiling. Re-verified directly against fillOnce over the full 500-seed
-// sample, not assumed.
-const RETRY_NEEDING_SEEDS = [379, 470];
+// AMENDMENT 9 (repair 3R7): re-derived twice more, once per graph change.
+// After RUSTY-KNIFE left the weapon gates (logicVersion 9) the set was
+// [379, 470]; after TORCH joined the progression pool with the early-light
+// placement constraint (logicVersion 10) it is [356] — seed 356 corners
+// LAMP with no reachable empty location at attempt 0, and 379/470 both
+// resolve cleanly under the new shuffle order. Fraction 1/500 = 0.2%,
+// under the 2% ceiling. Re-verified directly against fillOnce over the
+// full 500-seed sample, not assumed.
+const RETRY_NEEDING_SEEDS = [356];
 
 // AMENDMENT 6 (repair task 3R5): the property suite below re-targets the
 // PUBLIC CONTRACT — `fillWithRetry` — everywhere, not raw `fillOnce`. The
@@ -177,6 +178,31 @@ describe('excludeProgression fencing (AMENDMENT 5 repair task 3R4)', () => {
           `seed ${seed}: excludeProgression location ${locId} received progression item ${itemId}`,
         ).not.toBe('progression');
       }
+    }
+  });
+});
+
+// AMENDMENT 9 (repair 3R7): TORCH is placement-constrained to the earlyLight
+// zone (Archipelago early_items precedent) — the fill places it first,
+// restricted to earlyLight-flagged locations, restoring vanilla's light
+// design (permanent light early; the 385-turn lamp as a bridge) without
+// touching engine mechanics or fuel rates. Checked across every property
+// seed and the golden seeds, against the PUBLIC contract.
+describe('early-light TORCH constraint (AMENDMENT 9 repair 3R7)', () => {
+  it('every seed places TORCH in an earlyLight location', () => {
+    const earlyLightLocationIds = new Set(
+      graph.locations.filter(l => l.earlyLight).map(l => l.id),
+    );
+    expect(earlyLightLocationIds.size, 'expected a non-empty earlyLight zone').toBeGreaterThan(0);
+    const allSeeds = [...new Set([...SAMPLE_SEEDS, ...GOLDEN_SEEDS])];
+    for (const seed of allSeeds) {
+      const result = fillWithRetry(graph, seed);
+      const torchLocation = Object.entries(result.placements).find(([, item]) => item === 'TORCH')?.[0];
+      expect(torchLocation, `seed ${seed}: TORCH must be placed somewhere`).toBeDefined();
+      expect(
+        earlyLightLocationIds.has(torchLocation!),
+        `seed ${seed}: TORCH landed at ${torchLocation}, which is not earlyLight`,
+      ).toBe(true);
     }
   });
 });

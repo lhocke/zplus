@@ -85,6 +85,32 @@ describe('fill', () => {
     expect(r.reachableLocations.size).toBe(TINY_GRAPH.locations.length);
   });
 
+  it('places an early item (TORCH) only at earlyLight locations, and first (AMENDMENT 9 repair 3R7)', () => {
+    // Two open start locations, only one flagged earlyLight: TORCH must land
+    // on the flagged one on every seed, even though both are trivially
+    // reachable — the constraint is the flag, not reachability.
+    const earlyGraph: LogicGraph = {
+      logicVersion: 1,
+      checksum: 'test',
+      regions: [{ id: 'start', rooms: ['A', 'B', 'C'], access: {} }],
+      items: [
+        { id: 'TORCH', class: 'progression', isTreasure: true },
+        { id: 'trinket', class: 'filler', isTreasure: false },
+        { id: 'bauble2', class: 'filler', isTreasure: false },
+      ],
+      locations: [
+        { id: 'loc-a', objectId: 'TORCH', containerId: 'A', region: 'start', access: {}, earlyLight: true },
+        { id: 'loc-b', objectId: 'trinket', containerId: 'B', region: 'start', access: {} },
+        { id: 'loc-c', objectId: 'bauble2', containerId: 'C', region: 'start', access: {} },
+      ],
+    };
+    for (let seed = 0; seed < 50; seed++) {
+      const result = fillOnce(earlyGraph, seed);
+      expect(result.placements['loc-a'], `seed ${seed}`).toBe('TORCH');
+      expect(result.spheres[0], `seed ${seed}: TORCH must be placed first`).toBe('TORCH');
+    }
+  });
+
   it('throws FillError when item count does not match location count', () => {
     // A location whose objectId has no matching items[] entry — fillOnce()
     // counts only placeable items (those with a corresponding location, per

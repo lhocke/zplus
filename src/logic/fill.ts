@@ -5,6 +5,18 @@ import type { LogicGraph } from './logic-graph-types.js';
 
 export class FillError extends Error {}
 
+/**
+ * AMENDMENT 9 (repair 3R7): items the fill must place FIRST, restricted to
+ * `earlyLight: true` locations (Archipelago's early_items precedent).
+ * Vanilla's light design hands the player permanent light (the torch) early
+ * and treats the 385-turn lamp as a bridge; a torch hidden behind the deep
+ * mechanisms breaks that economy, and the 197-seed survey showed fuel
+ * dominating failures. A pure placement constraint — engine mechanics and
+ * fuel rates are untouched (fuel stays unmodeled in logic per the
+ * Amendment 8 boundary).
+ */
+export const EARLY_ITEMS = ['TORCH'];
+
 export interface FillResult {
   /** locationId -> itemId placed there. */
   placements: Record<string, string>;
@@ -84,8 +96,22 @@ export function fillOnce(graph: LogicGraph, seed: number): FillResult {
   const excludeProgressionLocations = new Set(
     graph.locations.filter(l => l.excludeProgression).map(l => l.id),
   );
+  // AMENDMENT 9 (repair 3R7): early items are pulled to the FRONT of the
+  // placement order (remaining is consumed by pop(), so they go at the end
+  // of the array) and their candidate set is intersected with the
+  // earlyLight zone. Ordering them first keeps the constraint cheap to
+  // satisfy — the zone is still almost entirely empty — and keeps the
+  // whole thing deterministic: the shuffle order is untouched, only the
+  // early items' relative position moves.
+  const earlyLightLocations = new Set(
+    graph.locations.filter(l => l.earlyLight).map(l => l.id),
+  );
+  const earlyItems = new Set(EARLY_ITEMS);
 
-  let remaining = [...progression];
+  let remaining = [
+    ...progression.filter(id => !earlyItems.has(id)),
+    ...progression.filter(id => earlyItems.has(id)),
+  ];
   while (remaining.length > 0) {
     const item = remaining.pop()!;
     // AMENDMENT 2 (repair task 3R) — canonical assumed-fill ownership for
@@ -112,7 +138,10 @@ export function fillOnce(graph: LogicGraph, seed: number): FillResult {
       }
     }
     const candidates = [...reachableLocations].filter(
-      id => emptyLocations.has(id) && !excludeProgressionLocations.has(id),
+      id =>
+        emptyLocations.has(id) &&
+        !excludeProgressionLocations.has(id) &&
+        (!earlyItems.has(item) || earlyLightLocations.has(id)),
     );
     if (candidates.length === 0) {
       throw new FillError(`no reachable empty location for progression item "${item}" (seed ${seed})`);

@@ -111,6 +111,21 @@ export interface LogicLocation {
    *     no destructive path was found for these three.
    */
   excludeProgression?: boolean;
+  /**
+   * AMENDMENT 9 (early-light zone, repair 3R7): true for the shallow zone —
+   * locations whose access chain requires none of the five deep mechanisms
+   * (river chain, dam drain, Hades ritual, coal machine, cyclops passage).
+   * Randomization broke vanilla's light economy: the torch arrives early in
+   * vanilla and the 385-turn lamp is only a bridge, so the fill places TORCH
+   * first, restricted to earlyLight locations (Archipelago early_items
+   * precedent — a pure placement constraint, zero engine/fuel changes; fuel
+   * itself stays unmodeled per the Amendment 8 boundary). The zone is
+   * DERIVED from the access rules, never eyeballed — the logic-graph
+   * validation suite recomputes it (own every progression item except the
+   * mechanism-embodying ones, run the reachability fixpoint, drop mechanism
+   * regions) and fails on any drift. Absent/false everywhere else.
+   */
+  earlyLight?: boolean;
 }
 
 export interface LogicRegion {
