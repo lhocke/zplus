@@ -17,6 +17,46 @@ objects, puzzles, and parser behavior rather than approximate them.
 - A faithful parser built from the original grammar and vocabulary tables
 - Desktop app checks for new releases and points you at the download page
 
+## Randomizer (Z+ desktop only)
+
+Z+'s desktop build includes a full item randomizer: every progression item,
+treasure, and piece of filler is reshuffled onto a logic graph derived from
+the original puzzle dependencies, then placed with an assumed-fill algorithm
+that guarantees the run is completable — no seed can lock you out of the
+trophy case. The goal stays vanilla: recover the complete treasure set,
+deposit it, and win the endgame.
+
+Start one from the "New randomized run" panel next to the save slots (Z+
+only — the web demo stays vanilla). Leave the seed field blank and hit
+**Roll** for a fresh run, or paste in a seed string someone sent you and hit
+**Start** — same string, same machine-independent placements, so two players
+can race the identical layout head-to-head. Seed strings look like
+`ZR1.<a run of base64 characters>` and encode both the seed and the logic
+version they were rolled against; a string from an incompatible version is
+refused with a clear message instead of silently producing a different
+layout. Your current seed string stays visible in the status bar for the
+whole run so you can always copy it back out.
+
+A few things are deliberately different from vanilla in randomizer mode,
+documented here so they don't read as bugs: the brass lantern is now your
+main light source in every run (the torch is placement-constrained to
+somewhere reachable early, since it can otherwise hide behind the very gates
+it's needed to open), and seeded runs double the lamp's fuel budget to give
+blind exploration room to breathe — burning out is still a real way to lose,
+so budget your turns. The thief remains fully faithful — he'll still steal
+from you and hide in his hoard — with two narrow exceptions scoped to
+seeded runs only: he can't touch your torch, and if you kill him he drops
+everything he's ever taken, so nothing a shuffled run needs is ever
+permanently lost to him.
+
+The tracker panel (desktop, shown only during a randomized run) gives you a
+spoiler-free per-region checked/remaining count, a strip of progression
+items you're currently holding, and a live read of turns of lamp light
+left — it never tells you where anything you haven't found yet actually is.
+A run's timer starts on your first typed command (reading the opening text
+is free), keeps ticking through save/restore, and announces your final time
+on completion.
+
 ## Install
 
 Download the build for your OS from the
