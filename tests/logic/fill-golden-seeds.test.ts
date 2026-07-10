@@ -20,7 +20,14 @@ const GOLDEN_SEEDS = [1, 2, 3];
 // light gate happens to route it to a placement the old weapon-only gate
 // didn't); seed 470 still does. Re-verified directly against fillOnce over
 // the full 500-seed sample, not assumed.
-const RETRY_NEEDING_SEEDS = [470];
+// AMENDMENT 9 (repair 3R7, rusty-knife gate removal): re-derived again after
+// RUSTY-KNIFE left the troll/thief weapon gates and demoted to filler — the
+// progression pool shrank by one and every shuffle order shifted with it.
+// Seed 470 still deadlocks at attempt 0 (SCEPTRE finds no reachable empty
+// location); seed 379 now does too. Fraction 2/500 = 0.4%, under the 2%
+// ceiling. Re-verified directly against fillOnce over the full 500-seed
+// sample, not assumed.
+const RETRY_NEEDING_SEEDS = [379, 470];
 
 // AMENDMENT 6 (repair task 3R5): the property suite below re-targets the
 // PUBLIC CONTRACT — `fillWithRetry` — everywhere, not raw `fillOnce`. The

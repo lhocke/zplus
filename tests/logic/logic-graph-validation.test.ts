@@ -166,7 +166,13 @@ describe('logic-graph.json validation', () => {
     ).toBe(false);
   });
 
-  const WEAPON_IDS = ['SWORD', 'KNIFE', 'RUSTY-KNIFE'];
+  // AMENDMENT 9 (repair 3R7): RUSTY-KNIFE is out of this set. It is an
+  // unconditional-death weapon (rustyKnifeFcn -> jigsUp the moment it is
+  // wielded in anger, faithful to the ZIL) — a seed whose solvability rests
+  // on it hands the player a guaranteed death, and the survey showed 21% of
+  // seeds did exactly that. Logic never requires luck, and it never requires
+  // suicide either.
+  const WEAPON_IDS = ['SWORD', 'KNIFE'];
   function requiresAnyWeapon(rule: AccessRuleLike): boolean {
     return (rule.any ?? []).some(
       sub => (sub.needs?.length ?? 0) === 1 && WEAPON_IDS.includes(sub.needs![0]),
@@ -295,6 +301,24 @@ describe('logic-graph.json validation', () => {
       requiresAnyWeapon(chalice!.access as AccessRuleLike),
       'CHALICE access must require one of SWORD/KNIFE/RUSTY-KNIFE',
     ).toBe(true);
+  });
+
+  it('RUSTY-KNIFE is cited by no access rule anywhere and is class "filler" (AMENDMENT 9 repair 3R7)', () => {
+    // Wielding the rusty knife in combat is unconditional death
+    // (rustyKnifeFcn -> jigsUp, zil/1actions.zil — engine verified faithful),
+    // so no combat gate may count it as a satisfying weapon: cellar-core's
+    // troll gate and CHALICE's thief gate both dropped it. With no rule left
+    // citing it, the classification invariant demotes it to filler (it gates
+    // nothing).
+    const citedAnywhere = new Set<string>();
+    for (const loc of graph.locations) collectNeeds(loc.access).forEach(id => citedAnywhere.add(id));
+    for (const region of graph.regions) collectNeeds(region.access).forEach(id => citedAnywhere.add(id));
+    expect(
+      citedAnywhere.has('RUSTY-KNIFE'),
+      'RUSTY-KNIFE must not be cited by any access rule (unconditional-death weapon)',
+    ).toBe(false);
+    const rustyKnife = graph.items.find(i => i.id === 'RUSTY-KNIFE');
+    expect(rustyKnife?.class, 'RUSTY-KNIFE gates nothing, so it must be filler').toBe('filler');
   });
 
   it('cyclops stays word-passable: no weapon requirement at the region level (AMENDMENT 5 repair task 3R4)', () => {

@@ -1,6 +1,6 @@
 {
-  "logicVersion": 8,
-  "checksum": "5e922b0abf8ca19c",
+  "logicVersion": 9,
+  "checksum": "07171403e641f13a",
   "locations": [
     {
       "id": "ADVERTISEMENT",
@@ -121,11 +121,6 @@
           {
             "needs": [
               "KNIFE"
-            ]
-          },
-          {
-            "needs": [
-              "RUSTY-KNIFE"
             ]
           }
         ]
@@ -718,7 +713,7 @@
     },
     {
       "id": "RUSTY-KNIFE",
-      "class": "progression",
+      "class": "filler",
       "isTreasure": false
     },
     {
@@ -840,11 +835,6 @@
           {
             "needs": [
               "KNIFE"
-            ]
-          },
-          {
-            "needs": [
-              "RUSTY-KNIFE"
             ]
           }
         ]
