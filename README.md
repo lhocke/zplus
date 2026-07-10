@@ -82,13 +82,49 @@ ordinary files via the Saves panel.
 
 ```sh
 npm ci
-npm run dev      # local dev server
+npm run dev      # local dev server (web)
 npm test         # run the test suite
-npm run build    # type-check and build for production
+npm run build    # type-check and build the web bundle
 ```
 
-The test suite runs roughly 3,900 tests anchored against the original game's
-behavior, including walkthroughs and puzzle-by-puzzle checks.
+The test suite runs roughly 4,000 tests anchored against the original game's
+behavior, including walkthroughs, puzzle-by-puzzle checks, and seeded
+randomizer playthroughs.
+
+## Building the desktop app from source
+
+Prerequisites:
+
+- Node 22+
+- A Rust toolchain (any recent stable — [rustup](https://rustup.rs) or your
+  package manager)
+- Linux only, the WebKitGTK and bundler system packages:
+
+  ```sh
+  sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential file \
+    libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
+    patchelf libfuse2
+  ```
+
+  (Package names above are for Debian/Ubuntu; see the
+  [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for other
+  distros.)
+
+Then:
+
+```sh
+npm ci
+npm run tauri:build
+```
+
+Bundles land under `src-tauri/target/release/bundle/` — `macos/` and `dmg/`
+on macOS, `msi/` on Windows, `appimage/` and `deb/` on Linux. Each platform
+builds its own installer; there is no cross-compiling. The binary is unsigned
+(see [Install](#install) for the first-launch steps), and a locally built app
+carries no quarantine flag, so it opens directly on the machine that built it.
+
+For a debug build with devtools, use `npx tauri build --debug`, or
+`npx tauri dev` to run the desktop shell against the live dev server.
 
 ## License
 
