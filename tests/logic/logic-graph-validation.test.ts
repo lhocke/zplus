@@ -197,7 +197,7 @@ describe('logic-graph.json validation', () => {
     expect(region, 'cellar-core region missing').toBeDefined();
     expect(
       requiresAnyWeapon(region!.access as AccessRuleLike),
-      'cellar-core region access must require one of SWORD/KNIFE/RUSTY-KNIFE',
+      'cellar-core region access must require one of SWORD/KNIFE',
     ).toBe(true);
     const unarmed = computeReachable(graph, { ownedItems: new Set(), flags: new Set() });
     expect(unarmed.reachableRegions.has('surface'), 'surface should be trivially reachable').toBe(true);
@@ -299,7 +299,7 @@ describe('logic-graph.json validation', () => {
     expect(chalice, 'CHALICE location missing').toBeDefined();
     expect(
       requiresAnyWeapon(chalice!.access as AccessRuleLike),
-      'CHALICE access must require one of SWORD/KNIFE/RUSTY-KNIFE',
+      'CHALICE access must require one of SWORD/KNIFE',
     ).toBe(true);
   });
 

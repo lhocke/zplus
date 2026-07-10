@@ -20,13 +20,18 @@ if `src/data/objects.json` / `src/data/rooms.json` change.
   the *safe* light source — see below). This is what makes `LAMP`
   `class: "progression"`, matching the design doc's explicit listing of lamp
   as a progression item.
-  - **Deliberately NOT modeled:** grue-death risk from lingering in the dark
-    while merely *walking through* a dark room toward a lit destination.
-    `computeReachable`'s region-level topology is left ungated by light —
-    only the specific location's item-pickup is gated. This mirrors the
-    project's existing choice not to gate `TROLL-ROOM`'s passage on weapon
-    possession (troll combat is winnable unarmed, just riskier) — neither
-    mechanic is modeled as a hard block because neither is deterministic.
+  - **Region-level light (Amendment 7, repair 3R6 — supersedes the original
+    "topology left ungated by light" stance):** the original derivation gated
+    only item-pickup on light and left `computeReachable`'s region topology
+    light-free. That let the fill place `LAMP`/`MATCH`/`CANDLES` in a
+    mutually circular deadlock behind the dark underground (reproduced live
+    on golden seed 1), because every non-`GALLERY` `cellar-core` room is
+    dark. `cellar-core.access` now carries `needs: ["LAMP"]`, and every
+    other underground region inherits it transitively (they all cite
+    cellar-core directly or through mirror/thief-maze). `canyon` stays
+    light-free — every canyon room is `"On"`. Grue-death risk from
+    *lingering* in the dark is still not modeled; the region gate models
+    the deterministic cannot-traverse-blind block, nothing probabilistic.
   - **Alternate light sources not modeled as `any` branches.** `TORCH` and
     `CANDLES` are also `Light`-flagged (`src/data/objects.json`), but both
     are only obtainable *after* already passing through lamp-gated dark
@@ -36,14 +41,29 @@ if `src/data/objects.json` / `src/data/rooms.json` change.
     this graph is the single-item `needs: ["lamp"]`, not an `any` of
     alternatives — simpler and avoids overclaiming an independently-usable
     early alternate route that doesn't actually exist.
-- **Combat and other RNG-driven mechanics are not modeled as item gates.**
-  `TROLL-FLAG` (troll defeated) and `CYCLOPS-FLAG`/`MAGIC-FLAG` (cyclops
-  routed) are both achievable through item-free means (troll: any combat
-  outcome eventually clears him, `1actions.zil:640-680`; cyclops: the
-  `ODYSSEUS`/`ULYSSES` magic word, `gverbs.zil:945-961`, is free and
-  strictly better than the water-drinking alternative) — so neither
-  contributes a `needs` entry, matching the design doc's own worked example
-  for `GATE-FLAG` (achievable for free, omitted).
+- **Combat gates (Amendment 5, repair 3R4 — supersedes the original
+  "combat is not modeled" stance for the troll and the thief).** The
+  original derivation treated `TROLL-FLAG` as free because *some* combat
+  outcome eventually clears the troll even unarmed — but bare-handed kills
+  are luck, and logic never requires luck. The shipped graph gates combat
+  passages on an obtainable weapon:
+  - `cellar-core.access` carries
+    `"any": [{"needs":["SWORD"]}, {"needs":["KNIFE"]}]` — the troll gate.
+  - `CHALICE`'s location rule carries the same weapon `any` — taking it
+    means defeating the thief first (`CHALICE-FCN`,
+    `zil/1actions.zil:2123-2136`), and the kill-and-loot recovery route
+    needs a weapon for the same reason.
+  - `RUSTY-KNIFE` originally satisfied both gates but was removed by
+    Amendment 9 (repair 3R7): wielding it in anger is unconditional death
+    (`rustyKnifeFcn` → `jigsUp`, faithful to the ZIL), so a seed whose
+    solvability rests on it hands the player a guaranteed death — logic
+    never requires suicide either. It demoted back to `filler`.
+  - The cyclops stays word-passable and weapon-free: the
+    `ODYSSEUS`/`ULYSSES` magic word (`gverbs.zil:945-961`) is free and
+    strictly better than the water-drinking alternative, so the `cyclops`
+    region contributes no weapon `needs` — this half of the original
+    stance still holds, matching the design doc's worked example for
+    `GATE-FLAG` (achievable for free, omitted).
 - **Temporary carry-state constraints are not modeled.** `TIMBER-ROOM` /
   `LOWER-SHAFT`'s `EMPTY-HANDED` exit gate (`rooms.json` TIMBER-ROOM west
   exit) and the inflatable boat's puncture-on-boarding-with-a-sharp-object
@@ -59,7 +79,7 @@ if `src/data/objects.json` / `src/data/rooms.json` change.
 | Region | Access | Citation |
 |---|---|---|
 | `surface` | `{}` | Start region. |
-| `cellar-core` | `{"region":"surface"}` | `LIVING-ROOM` down → `CELLAR` via the trap door (`rooms.json` LIVING-ROOM `down` exit, `per: TRAP-DOOR-EXIT`). Moving the rug and opening the trap door are free actions (`1actions.zil:504-598` `TRAP-DOOR-FCN`/`TRAP-DOOR-EXIT`) — no item required. |
+| `cellar-core` | `{"region":"surface","needs":["LAMP"],"any":[{"needs":["SWORD"]},{"needs":["KNIFE"]}]}` | `LIVING-ROOM` down → `CELLAR` via the trap door (`rooms.json` LIVING-ROOM `down` exit, `per: TRAP-DOOR-EXIT`). Moving the rug and opening the trap door are free actions (`1actions.zil:504-598` `TRAP-DOOR-FCN`/`TRAP-DOOR-EXIT`). `LAMP`: every non-`GALLERY` room in the region is dark (Amendment 7 light gate — see "Region-level light" above). Weapon `any`: the troll bars passage until defeated, and logic never requires an unarmed-luck kill (Amendment 5 combat gate — see "Combat gates" above; `RUSTY-KNIFE` removed from the `any` by Amendment 9). |
 | `dam` | `{"region":"cellar-core"}` | `DEEP-CANYON` east → `DAM-ROOM` (`rooms.json` DEEP-CANYON `east` exit, no gate). |
 | `mine` | `{"region":"mirror"}` | `COLD-PASSAGE` west → `SLIDE-ROOM` (`rooms.json` COLD-PASSAGE `west` exit, no gate; `ROOM_SEAMS` 'SLIDE-ROOM east → COLD-PASSAGE'). |
 | `river` | `{"region":"cellar-core"}` | `DAMP-CAVE` east → `WHITE-CLIFFS-NORTH` (`rooms.json` DAMP-CAVE `east` exit, no gate). |
@@ -67,10 +87,22 @@ if `src/data/objects.json` / `src/data/rooms.json` change.
 | `temple` | `{"any":[{"region":"mirror"},{"all":[{"region":"cellar-core"},{"needs":["rope"]}]}]}` | Two independent routes. (a) `TINY-CAVE` (mirror region) down → `ENTRANCE-TO-HADES` (`rooms.json` TINY-CAVE `down` exit, no gate) — free, but this route is a dead end reaching only `ENTRANCE-TO-HADES`/`LAND-OF-LIVING-DEAD`, not the rest of the temple complex. (b) `ENGRAVINGS-CAVE` (cellar-core) east → `DOME-ROOM` (free) then down → `TORCH-ROOM`, which requires `DOME-FLAG` (`rooms.json` DOME-ROOM `down` exit `ifFlag=DOME-FLAG`) — set only by `TIE ROPE TO RAILING` while in Dome Room (`1actions.zil:3030-3049` `ROPE-FUNCTION`). |
 | `canyon` | `{"region":"surface"}` | `CLEARING` east → `CANYON-VIEW` (`rooms.json` CLEARING `east` exit, no gate). |
 | `cyclops` | `{"region":"thief-maze"}` | `CYCLOPS-ROOM` reached via `MAZE-15` (`ROOM_SEAMS` 'CYCLOPS-ROOM nw → MAZE-15', traversed in reverse); the only mapped-region entry into Cyclops Room. |
-| `thief-maze` | `{"region":"cellar-core"}` | `TROLL-ROOM` west → `MAZE-1`, requires `TROLL-FLAG` (`rooms.json` TROLL-ROOM `west` exit `ifFlag=TROLL-FLAG`) — omitted as a `needs` entry because it's free (see "Combat" above). |
+| `thief-maze` | `{"region":"cellar-core"}` | `TROLL-ROOM` west → `MAZE-1`, requires `TROLL-FLAG` (`rooms.json` TROLL-ROOM `west` exit `ifFlag=TROLL-FLAG`). No additional `needs` here: the troll's weapon requirement already lives on `cellar-core`'s own access rule (Amendment 5 — see "Combat gates" above), and `TROLL-FLAG` is achievable with that same weapon, so restating it would be redundant, not wrong. |
 | `mine-maze` | `{"region":"mine","needs":["garlic","lamp"]}` | `GAS-ROOM` east → `MINE-1` (`rooms.json` GAS-ROOM `east` exit, no gate) — but reaching Gas Room requires passing `BAT-ROOM` (needs `garlic`, see JADE below) and Gas Room itself is lethal with an open flame (needs `lamp` specifically, see BRACELET below). |
 
 ## Locations
+
+Entries below are the original per-slot derivation. The shipped pool is 42
+locations, not the original 49: the six vessel items' own slots (`BOTTLE`,
+`BUOY`, `COFFIN`, `EGG`, `SANDWICH-BAG`, `TUBE`) left the pool when the
+vessels were pinned to their vanilla spots (Amendment 3, repair 3R2 — a
+pinned vessel's slot is occupied by definition and is no longer a check;
+their INTERIOR locations remain checks with the rules derived here), and
+the troll-inventory `AXE` slot was retired (Amendment 4 — see the AXE entry
+below). Where a listed rule has since changed, the entry says so inline
+(`CHALICE`); the vessels named alongside surviving locations (e.g.
+`BOTTLE`/`SANDWICH-BAG` in the KITCHEN entry) document the vanilla
+containment that the pinning preserves, not current pool membership.
 
 **LAMP** (`LIVING-ROOM`, surface) — `{}`. Design doc worked example, verbatim. `LIVING-ROOM` is `"On"` (`rooms.json`).
 
@@ -90,7 +122,7 @@ if `src/data/objects.json` / `src/data/rooms.json` change.
 
 **SWORD** (`LIVING-ROOM`, surface) — `{}`. `"On"`.
 
-**AXE** (`TROLL-ROOM`, cellar-core) — `{"region":"cellar-core","needs":["lamp"]}`. Not `"On"`. `TROLL-FLAG` (needed to leave east/west) is free — see region table.
+**AXE** (`TROLL-ROOM`, cellar-core) — **retired from the pool** (Amendment 4, repair 3R3). The troll's F_DEAD handler (`1actions.zil:665-670`) only ever rescues the AXE on the troll's death — any *other* item filled into the troll-inventory slot would be destroyed with him. The slot left the location pool and `AXE` is `pinned: true` at its vanilla spot, like the six Amendment 3 vessels; the validation suite enforces both.
 
 **BAR** (`LOUD-ROOM`, cellar-core) — `{"region":"cellar-core","needs":["lamp"]}`. Not `"On"`. `LOUD-FLAG` (needed to take the bar without the room's restricted-input mode) is set for free by typing `ECHO` while trapped in the loud room's special input loop (`1actions.zil:1719-1725`) — no item.
 
@@ -126,7 +158,7 @@ if `src/data/objects.json` / `src/data/rooms.json` change.
 
 **POT-OF-GOLD** (`END-OF-RAINBOW`, canyon) — `{"region":"canyon","needs":["sceptre"]}`. `END-OF-RAINBOW` is `"On"` and reached freely via `CANYON-BOTTOM`, but `POT-OF-GOLD` itself is `Invisible` until `sceptre` is waved there (`1actions.zil:2592-2619` `SCEPTRE-FUNCTION`, `<FCLEAR ,POT-OF-GOLD ,INVISIBLE>`).
 
-**CHALICE** (`TREASURE-ROOM`, cyclops) — `{"region":"cyclops","needs":["lamp"]}`. Not `"On"`. `CYCLOPS-FLAG` (needed for `CYCLOPS-ROOM` up → `TREASURE-ROOM`, `rooms.json`) is free via the `ODYSSEUS`/`ULYSSES` magic word (`gverbs.zil:945-961` `V-ODYSSEUS`, `gsyntax.zil:334-335`) — strictly better than the item-requiring water-drinking alternative (`1actions.zil:1543-1568`), so omitted as a `needs` entry.
+**CHALICE** (`TREASURE-ROOM`, cyclops) — `{"region":"cyclops","needs":["LAMP"],"any":[{"needs":["SWORD"]},{"needs":["KNIFE"]}]}`. Not `"On"`. `CYCLOPS-FLAG` (needed for `CYCLOPS-ROOM` up → `TREASURE-ROOM`, `rooms.json`) is free via the `ODYSSEUS`/`ULYSSES` magic word (`gverbs.zil:945-961` `V-ODYSSEUS`, `gsyntax.zil:334-335`) — strictly better than the item-requiring water-drinking alternative (`1actions.zil:1543-1568`), so no cyclops-related `needs` entry. The weapon `any` (Amendment 5, repair 3R4) is the thief's, not the cyclops': `TREASURE-ROOM` is his lair and `CHALICE-FCN` (`zil/1actions.zil:2123-2136`) blocks the take while he lives — "You'd be stabbed in the back first" — so taking it means defeating him. `RUSTY-KNIFE` was removed from the `any` by Amendment 9 (unconditional-death weapon — see "Combat gates" above).
 
 **BAG-OF-COINS, BURNED-OUT-LANTERN, KEYS, RUSTY-KNIFE** (`MAZE-5`, thief-maze) — `{"region":"thief-maze","needs":["lamp"]}`. All maze rooms are dark. No item beyond light needed to navigate the (topologically fixed, once known) maze to `MAZE-5`.
 
@@ -149,6 +181,28 @@ be `class: "progression"`, mechanically enforced by the
 logic-graph-validation suite's classification-invariant test — the
 `SCEPTRE`-class regression is thereby impossible to reintroduce silently.
 
-- **isTreasure (19, fixed by TVALUE > 0 excluding SWORD, per Task 1.0):** `SKULL, SCEPTRE, CHALICE, TRIDENT, COFFIN, DIAMOND, JADE, BAG-OF-COINS, EMERALD, PAINTING, BAR, POT-OF-GOLD, BRACELET, SCARAB, TORCH, TRUNK, EGG, BAUBLE, CANARY`. All 19 default to `class: "filler"` for fill purposes EXCEPT `SCEPTRE`, which is `class: "progression"` because it's rule-cited (see above) — it is simultaneously `isTreasure: true` and `class: "progression"`.
-- **progression (12, items cited in some location's or region's `needs`, mechanically verified against the graph and mechanically enforced by the classification-invariant test):** `BELL, BOOK, CANDLES, GARLIC, INFLATABLE-BOAT, LAMP, MATCH, PUMP, ROPE, SCEPTRE, SHOVEL, WRENCH`. `SCEPTRE` is also `isTreasure: true`; the other 11 are `isTreasure: false`.
-- **filler (39, everything else, including the 18 non-gating treasures):** `ADVERTISEMENT, AXE, BAG-OF-COINS, BAR, BAUBLE, BOTTLE, BRACELET, BUOY, BURNED-OUT-LANTERN, CANARY, CHALICE, COAL, COFFIN, DIAMOND, EGG, EMERALD, GUIDE, JADE, KEYS, KNIFE, LEAVES, LUNCH, NEST, OWNERS-MANUAL, PAINTING, POT-OF-GOLD, PUTTY, RUSTY-KNIFE, SANDWICH-BAG, SCARAB, SCREWDRIVER, SKULL, SWORD, TIMBERS, TORCH, TRIDENT, TRUNK, TUBE, WATER`. Of these, `BAG-OF-COINS, BAR, BAUBLE, BRACELET, CANARY, CHALICE, COFFIN, DIAMOND, EGG, EMERALD, JADE, PAINTING, POT-OF-GOLD, SCARAB, SKULL, TORCH, TRIDENT, TRUNK` are `isTreasure: true`; the rest are `isTreasure: false`. `KEYS` is called out as a progression *example* in the design doc's prose, but the design doc itself says that list is illustrative and subject to revision during derivation ("Exact classification is derived during implementation... and verified against walkthrough dependencies"). It doesn't end up cited in any location's `needs` in this graph: `KEYS` unlocks the `GRATE` (`1actions.zil:851-865`), which gates no location in this 49-entry pool. `MATCH` was also called out as an example but, unlike `KEYS`, its citation gap is real — see the `SKULL` entry above; it is `progression` here.
+**Classification churn since Task 1R** (each delta owned by a named
+amendment; the lists below are the shipped `logicVersion` 10 state,
+re-derived from `logic-graph.json` itself):
+
+- **Amendment 5 (repair 3R4):** `SWORD` and `KNIFE` promoted to
+  `progression` — the new combat gates (cellar-core troll `any`, CHALICE's
+  thief `any`) cite them, and the classification invariant auto-promotes
+  anything rule-cited. `RUSTY-KNIFE` was promoted alongside them at the
+  time.
+- **Amendment 9 (repair 3R7):** `RUSTY-KNIFE` demoted back to `filler` —
+  it left every combat gate (wielding it in anger is unconditional death,
+  `rustyKnifeFcn` → `jigsUp`, faithful to ZIL), and with no rule citing it
+  the invariant demands filler. `TORCH` promoted to `progression` **by
+  placement policy, not by citation**: the fill places it first, restricted
+  to the `earlyLight: true` zone (38 of 42 locations, derived from the
+  access rules — see the validation suite's earlyLight test), restoring
+  vanilla's permanent-light-early design. It is the one legitimately
+  uncited progression item; the walkthrough-corpus cross-check test carries
+  it as an explicit documented exception (`POLICY_PROGRESSION_IDS`).
+
+Shipped lists (51 `items[]` entries; 42 pool locations):
+
+- **isTreasure (19, fixed by TVALUE > 0 excluding SWORD, per Task 1.0):** `BAG-OF-COINS, BAR, BAUBLE, BRACELET, CANARY, CHALICE, COFFIN, DIAMOND, EGG, EMERALD, JADE, PAINTING, POT-OF-GOLD, SCARAB, SCEPTRE, SKULL, TORCH, TRIDENT, TRUNK`. Seventeen are `class: "filler"`; `SCEPTRE` (rule-cited) and `TORCH` (placement policy) are simultaneously `isTreasure: true` and `class: "progression"`.
+- **progression (15):** `BELL, BOOK, CANDLES, GARLIC, INFLATABLE-BOAT, KNIFE, LAMP, MATCH, PUMP, ROPE, SCEPTRE, SHOVEL, SWORD, TORCH, WRENCH`. All but `TORCH` are cited in some location's or region's `needs` (mechanically enforced by the classification-invariant test); `TORCH` is the documented placement-policy exception above. `SCEPTRE` and `TORCH` are also `isTreasure: true`; the other 13 are `isTreasure: false`.
+- **filler (36, everything else, including the 17 non-gating treasures):** `ADVERTISEMENT, AXE, BAG-OF-COINS, BAR, BAUBLE, BOTTLE, BRACELET, BUOY, BURNED-OUT-LANTERN, CANARY, CHALICE, COAL, COFFIN, DIAMOND, EGG, EMERALD, GUIDE, JADE, KEYS, LEAVES, LUNCH, NEST, OWNERS-MANUAL, PAINTING, POT-OF-GOLD, PUTTY, RUSTY-KNIFE, SANDWICH-BAG, SCARAB, SCREWDRIVER, SKULL, TIMBERS, TRIDENT, TRUNK, TUBE, WATER`. Of these, `BAG-OF-COINS, BAR, BAUBLE, BRACELET, CANARY, CHALICE, COFFIN, DIAMOND, EGG, EMERALD, JADE, PAINTING, POT-OF-GOLD, SCARAB, SKULL, TRIDENT, TRUNK` are `isTreasure: true`; the rest are `isTreasure: false`. (`AXE, BOTTLE, BUOY, COFFIN, EGG, SANDWICH-BAG, TUBE` are additionally `pinned: true` — never shuffled; Amendments 3 and 4.) `KEYS` is called out as a progression *example* in the design doc's prose, but the design doc itself says that list is illustrative and subject to revision during derivation ("Exact classification is derived during implementation... and verified against walkthrough dependencies"). It doesn't end up cited in any location's `needs` in this graph: `KEYS` unlocks the `GRATE` (`1actions.zil:851-865`), which gates no location in this pool. `MATCH` was also called out as an example but, unlike `KEYS`, its citation gap is real — see the `SKULL` entry above; it is `progression` here.
