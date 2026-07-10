@@ -112,12 +112,22 @@ export function rob(
 // so the LUCKY denom is 100, not 80.  Faithful steal P = 60/100 = 0.60.
 //
 // Returns false when no eligible item found (or the room is empty).
+//
+// AMENDMENT 10 (repair 3R8) — sacred torch, seeded runs only. Unlike ROB
+// and STEAL-JUNK, ZIL ROB-MAZE never checks SACREDBIT (faithfully mirrored
+// here), so the Sacred flag the placement seam sets on TORCH cannot protect
+// a torch dropped in a maze room on this path. `seeded` (default false)
+// gates the torch out explicitly — the amendment's instruction for any rob
+// path the flag doesn't cover. Vanilla play (seeded omitted/false) is
+// byte-for-byte unchanged; every other item stays the thief's fair game in
+// both modes. See tests/engine/placement-seam.test.ts's carve-out list.
 // ---------------------------------------------------------------------------
 
-export function robMaze(ctx: ThiefCtx, rmId: string): boolean {
+export function robMaze(ctx: ThiefCtx, rmId: string, seeded = false): boolean {
   for (const childId of ctx.childrenOf(rmId)) {
     const child = ctx.getObj(childId);
     if (child === undefined) continue;
+    if (seeded && childId === 'TORCH') continue;
     if (!child.hasFlag(Flag.Takeable)) continue;
     if (child.hasFlag(Flag.Invisible)) continue;
 

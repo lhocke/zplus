@@ -1,19 +1,32 @@
 import { describe, it, expect } from 'vitest';
 import { createGame } from '../../src/engine/bootstrap.js';
+import { Flag } from '../../src/domain/flags.js';
 
-// MODE-ISOLATION CARVE-OUT (AMENDMENT 4, repair task 3R3): this suite's
-// invariant is "randomizer mode changes WHERE things start, never anything's
-// BEHAVIOR." depositBooty (src/actions/thief.ts, wired into the thief's F_DEAD
-// combat handler via src/engine/game.ts's buildRobberFcnCtx) is the FIRST and
-// (as of this task) ONLY intentional exception: in a seeded run it returns
-// the thief's entire bag on death, lifting the vanilla TVALUE filter, because
-// oracle verification proved the vanilla filter (which permanently discards
-// TVALUE==0 items) faithful but unsafe for a run where any item can be a
-// required check. Vanilla play (no placementMap / no randomizerSeedString) is
-// unaffected — see tests/engine/t1-booty-helpers.test.ts's "TS-D:
-// depositBooty()" describe block for the vanilla-vs-seeded pin. Any FUTURE
+// MODE-ISOLATION CARVE-OUTS: this suite's invariant is "randomizer mode
+// changes WHERE things start, never anything's BEHAVIOR." Two intentional
+// exceptions exist, both seeded-only; vanilla play (no placementMap / no
+// randomizerSeedString) is byte-for-byte unaffected by either. Any FUTURE
 // in-mode behavior delta beyond placement itself should get the same
 // explicit carve-out note here, not slip in silently.
+//
+// 1. depositBooty (AMENDMENT 4, repair task 3R3): src/actions/thief.ts,
+//    wired into the thief's F_DEAD combat handler via src/engine/game.ts's
+//    buildRobberFcnCtx. In a seeded run it returns the thief's entire bag on
+//    death, lifting the vanilla TVALUE filter, because oracle verification
+//    proved the vanilla filter (which permanently discards TVALUE==0 items)
+//    faithful but unsafe for a run where any item can be a required check.
+//    Vanilla-vs-seeded pin: tests/engine/t1-booty-helpers.test.ts, "TS-D:
+//    depositBooty()".
+//
+// 2. Sacred torch (AMENDMENT 10, repair 3R8): the placement seam
+//    (src/engine/bootstrap.ts) sets SACREDBIT on TORCH in seeded runs, so
+//    the thief's SACREDBIT-respecting rob/stealJunk paths skip it, and the
+//    one path with no SACREDBIT check in the ZIL (ROB-MAZE) is gated
+//    explicitly on (seeded && TORCH) in src/actions/thief.ts's robMaze.
+//    Rationale: losing the torch is the one theft that cascades into true
+//    unwinnability (light loss, all sources exhausted); everything else
+//    stays the thief's fair game. Vanilla-vs-seeded pins:
+//    tests/engine/t1-booty-helpers.test.ts, "AMENDMENT 10 (repair 3R8)".
 describe('placement seam', () => {
   it('with no placementMap, LAMP starts in LIVING-ROOM exactly as vanilla (mode isolation)', () => {
     const game = createGame({ seed: 42 });
@@ -42,6 +55,21 @@ describe('placement seam', () => {
     await game.turn('open window');
     const { output } = await game.turn('west');   // -> KITCHEN
     expect(output).toContain('brass lantern');
+  });
+
+  it('a seeded run sets Sacred on the TORCH at the seam, whatever the map contains (AMENDMENT 10 repair 3R8)', () => {
+    // The trigger is placementMap PRESENCE (the seeded-run marker), not a
+    // TORCH entry in the map — every real seed shuffles the torch, but the
+    // protection must not depend on that.
+    const game = createGame({ seed: 42, placementMap: { LAMP: 'KITCHEN' } });
+    const world = (game as unknown as { world: { get(id: string): { has(f: Flag): boolean } | undefined } }).world;
+    expect(world.get('TORCH')?.has(Flag.Sacred)).toBe(true);
+  });
+
+  it('a vanilla game leaves the TORCH un-Sacred — robbable exactly as before (AMENDMENT 10 repair 3R8)', () => {
+    const game = createGame({ seed: 42 });
+    const world = (game as unknown as { world: { get(id: string): { has(f: Flag): boolean } | undefined } }).world;
+    expect(world.get('TORCH')?.has(Flag.Sacred)).toBe(false);
   });
 
   it('an unknown objectId in placementMap is skipped, not thrown', () => {

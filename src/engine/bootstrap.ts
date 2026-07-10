@@ -69,6 +69,17 @@ export function createGame(opts: {
       }
       obj.moveTo(parent);
     }
+
+    // AMENDMENT 10 (repair 3R8) — sacred torch, seeded runs only. Losing
+    // the torch to the thief is the one theft that cascades into true
+    // unwinnability (light loss with every source exhausted), so seeded
+    // runs mark it SACREDBIT and the thief's robbery skips it: ROB
+    // (1actions.zil:3982) and STEAL-JUNK (:3961) both check the flag; the
+    // one path that doesn't (ROB-MAZE, :1917-1933) carries an explicit
+    // seeded gate in src/actions/thief.ts's robMaze. Vanilla play never
+    // reaches this branch, so the vanilla torch stays exactly as robbable
+    // as the ZIL made it. Everything else stays the thief's fair game.
+    world.get('TORCH')?.set(Flag.Sacred);
   }
 
   // Bind ZIL ACTION-routine names to translated handlers from the registry.

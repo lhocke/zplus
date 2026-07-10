@@ -1967,7 +1967,10 @@ export class Game {
           hackTreasures: () => { thiefHackTreasures(thCtx, 'THIEF', 'TREASURE-ROOM'); },
           depositBooty:  (rmId) => thiefDepositBooty(thCtx, rmId),
           rob:           (whatId, whereId, prob) => thiefRob(thCtx, whatId, whereId, prob),
-          robMaze:       (rmId) => thiefRobMaze(thCtx, rmId),
+          // AMENDMENT 10 (repair 3R8): ROB-MAZE is the one rob path with no
+          // SACREDBIT check in the ZIL, so the sacred-torch treatment gates
+          // it explicitly on the seeded-run marker (thief.ts robMaze).
+          robMaze:       (rmId) => thiefRobMaze(thCtx, rmId, this.randomizerSeedString !== undefined),
           stealJunk:     (rmId) => thiefStealJunk(thCtx, rmId),
           dropJunk:      (rmId) => { thiefDropJunk(thCtx, rmId); },
           recoverStiletto: () => { thiefRecoverStiletto(thCtx, 'THIEF'); },
