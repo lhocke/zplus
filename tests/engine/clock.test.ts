@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Clock, LanternInterrupt, CandleInterrupt, type ClockEntry } from '../../src/engine/clock';
+import { Clock, LanternInterrupt, CandleInterrupt, lampTurnsRemaining, type ClockEntry } from '../../src/engine/clock';
 import { SimpleEventEmitter } from '../../src/engine/events';
 import type { EngineEvent } from '../../src/engine/events';
 
@@ -186,6 +186,48 @@ describe('LanternInterrupt: fuel stages', () => {
 
     expect(fuelEvents).toHaveLength(1);
     expect(fuelEvents[0]!.remaining).toBe(185);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// lampTurnsRemaining — live fuel readout for the tracker panel. Derives the
+// turns of light left from the I-LANTERN entry's snapshot (countdown to the
+// next stage + the ticks of every stage still ahead), so it agrees with the
+// `remaining` values the fuel events emit at each warning, at every moment
+// BETWEEN warnings too. A missing entry means the burnout sentinel fired and
+// removed it: 0 turns.
+// ---------------------------------------------------------------------------
+
+describe('lampTurnsRemaining: live fuel readout', () => {
+  it('reads the full 385-turn budget fresh, tracks between stages, and hits 0 at burnout', () => {
+    const emitter = new SimpleEventEmitter();
+    const clock = new Clock();
+    new LanternInterrupt(clock, emitter);
+
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(385);
+
+    for (let i = 0; i < 150; i++) clock.advance(); // mid-first-stage
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(235);
+
+    for (let i = 0; i < 50; i++) clock.advance(); // turn 200 — first warning fired
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(185);
+
+    for (let i = 0; i < 170; i++) clock.advance(); // turn 370 — "nearly out"
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(15);
+
+    for (let i = 0; i < 15; i++) clock.advance(); // turn 385 — burnout, entry removed
+    expect(clock.getEntry('I-LANTERN')).toBeUndefined();
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(0);
+  });
+
+  it('a frozen (disabled) lantern keeps its readout — fuel does not drain unlit', () => {
+    const emitter = new SimpleEventEmitter();
+    const clock = new Clock();
+    const lantern = new LanternInterrupt(clock, emitter);
+    for (let i = 0; i < 100; i++) clock.advance();
+    lantern.disable();
+    for (let i = 0; i < 50; i++) clock.advance();
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(285);
   });
 });
 

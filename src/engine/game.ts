@@ -15,7 +15,7 @@ const MSG_RESTORE_VERSION = 'This saved game is from an incompatible version of 
 const MSG_RESTORE_CORRUPT = 'That saved game appears to be damaged.';
 import { captureModuleGlobals, applyModuleGlobals } from './module-globals.js';
 import { Rng as ConcreteRng } from './rng.js';
-import { Clock } from './clock.js';
+import { Clock, lampTurnsRemaining } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
 import { tokenize } from './parser/tokenizer.js';
@@ -82,6 +82,12 @@ export interface GameView {
    *  (never the full object tree) — feeds the tracker panel's checked-state
    *  computation without exposing unrelated engine internals to the UI layer. */
   readonly randomizerObjectParents?: Record<string, string | null>;
+  /** Turns of lamp light remaining (I-LANTERN clock state, read via
+   *  lampTurnsRemaining in clock.ts) — feeds the tracker panel's fuel row.
+   *  Pure information: fuel mechanics are untouched and fuel stays unmodeled
+   *  in logic; only surfaced during a randomized run (the tracker is the
+   *  only consumer). 0 means burned out. */
+  readonly randomizerLampTurnsLeft?: number;
 }
 
 /**
@@ -1107,6 +1113,7 @@ export class Game {
         randomizerObjectParents: Object.fromEntries(
           this.randomizerPlacements.map(([objectId]) => [objectId, this.world.get(objectId)?.parent?.id ?? null]),
         ),
+        randomizerLampTurnsLeft: lampTurnsRemaining(this.clock.getEntry('I-LANTERN')),
       } : {}),
     };
   }

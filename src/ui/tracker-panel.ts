@@ -70,9 +70,16 @@ export function buildTrackerPanel(graph: LogicGraph): {
   const title = el('div', 'text-xs text-[var(--zork-accent)] uppercase tracking-wider');
   title.textContent = 'Tracker';
   const rowsEl = el('div', 'flex flex-col gap-0.5 font-mono');
+  // Lamp-fuel row slot (AMENDMENT 9, repair 3R7): turns of light remaining,
+  // read from the engine's I-LANTERN clock state via the GameView snapshot.
+  // Pure information — fuel stays unmodeled in logic and burnout stays a
+  // real lose condition; this just lets the player budget the bridge the
+  // lamp is. Rendered only when the snapshot carries lamp state.
+  const fuelSlotEl = el('div', 'font-mono');
   const progressionEl = el('div', 'flex flex-wrap gap-1 mt-1');
   container.appendChild(title);
   container.appendChild(rowsEl);
+  container.appendChild(fuelSlotEl);
   container.appendChild(progressionEl);
 
   function update(view: GameView, parentByObjectId: ReadonlyMap<string, string | null>): void {
@@ -86,6 +93,15 @@ export function buildTrackerPanel(graph: LogicGraph): {
       const rowEl = el('div', '');
       rowEl.textContent = `${row.label}: ${row.checked}/${row.total}`;
       rowsEl.appendChild(rowEl);
+    }
+    fuelSlotEl.innerHTML = '';
+    if (view.randomizerLampTurnsLeft !== undefined) {
+      const fuelRow = el('div', '');
+      fuelRow.setAttribute('data-testid', 'tracker-lamp-fuel');
+      fuelRow.textContent = view.randomizerLampTurnsLeft > 0
+        ? `Brass lantern: ${view.randomizerLampTurnsLeft} turns of light`
+        : 'Brass lantern: burned out';
+      fuelSlotEl.appendChild(fuelRow);
     }
     progressionEl.innerHTML = '';
     for (const itemId of computeObtainedProgression(graph, parentByObjectId)) {

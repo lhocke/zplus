@@ -158,11 +158,16 @@ export class Clock {
     return { lines, interrupted };
   }
 
-  /** Read-only state for a single entry by id (undefined if not registered). */
+  /** Read-only state for a single entry by id (undefined if not registered).
+   *  Includes the entry's aux data (e.g. FuelInterrupt.tableIndex) so
+   *  read-only consumers like lampTurnsRemaining() below can interpret a
+   *  stage-table entry without reaching into its private state. */
   getEntry(id: string): Readonly<ClockSnapshot> | undefined {
     const e = this.entries.get(id);
     if (!e) return undefined;
-    return { id: e.id, turnsLeft: e.turnsLeft, enabled: e.enabled };
+    const snap: ClockSnapshot = { id: e.id, turnsLeft: e.turnsLeft, enabled: e.enabled };
+    if (e.snapshotAux) snap.aux = e.snapshotAux();
+    return snap;
   }
 
   /** Snapshot for SaveState serialisation. */
@@ -299,6 +304,24 @@ const LAMP_TABLE: ReadonlyArray<FuelStage> = [
 
 // Initial countdown before the first warning (from GO() in 1dungeon.zil).
 const LAMP_INITIAL_TICKS = 200;
+
+/**
+ * Turns of lamp light remaining, from the I-LANTERN entry's read-only
+ * snapshot (Clock.getEntry('I-LANTERN')). The entry's turnsLeft counts down
+ * to the NEXT stage fire, and its aux.tableIndex points at that stage row —
+ * whose own ticks were already folded into turnsLeft when the previous stage
+ * re-queued — so the live remainder is turnsLeft plus the ticks of every row
+ * from tableIndex on. Agrees exactly with the `remaining` values the
+ * lantern-fuel events emit at each warning, at every turn between warnings
+ * too. A missing entry means the burnout sentinel fired and self-removed:
+ * 0 turns. Feeds the tracker panel's fuel row — pure information, no fuel
+ * mechanics live here.
+ */
+export function lampTurnsRemaining(entry: Readonly<ClockSnapshot> | undefined): number {
+  if (entry === undefined) return 0;
+  const tableIndex = entry.aux?.['tableIndex'] ?? 0;
+  return entry.turnsLeft + LAMP_TABLE.slice(tableIndex).reduce((acc, s) => acc + s.ticks, 0);
+}
 
 // LanternInterrupt — faithful TypeScript translation of I-LANTERN from
 // 1actions.zil:4026.
