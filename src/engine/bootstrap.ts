@@ -121,7 +121,13 @@ export function createGame(opts: {
 
   // I-LANTERN: registered at startup (GO() in 1dungeon.zil), starts disabled.
   // enableClock/disableClock in light-sources.ts gates fuel drain while the lamp burns.
-  const lanternInterrupt = new LanternInterrupt(clock, events);
+  // AMENDMENT 11 (repair 3R9): seeded runs (placementMap present — the same
+  // seeded-run marker as the other mode carve-outs) double every lamp stage
+  // budget (385 total turns -> 770). Vanilla's budget assumes known routes;
+  // blind randomized exploration is structurally thirstier. Vanilla passes
+  // scale 1 — its dfrotz-anchored schedule is byte-identical. Candles are
+  // deliberately NOT scaled.
+  const lanternInterrupt = new LanternInterrupt(clock, events, undefined, opts.placementMap !== undefined ? 2 : 1);
   lanternInterrupt.disable();
 
   // On burnout, mark LAMP as burned out — mirrors LIGHT-INT in 1actions.zil:2328.
