@@ -60,7 +60,7 @@ on completion.
 ## Install
 
 Download the build for your OS from the
-[releases page](https://github.com/lhocke/zork-workflow/releases) — `.dmg`
+[releases page](https://github.com/lhocke/zplus/releases) — `.dmg`
 (macOS), `.msi` (Windows), `.AppImage` or `.deb` (Linux).
 
 Z+ is unsigned, so your OS will warn on first launch — expected for an

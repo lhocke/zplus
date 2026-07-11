@@ -3,7 +3,7 @@
 **Status:** DRAFT 2026-06-09 — for morning sign-off. Implementation-ready, NOT locked.
 **Date:** 2026-06-09
 **Owner:** Dylan
-**Repo:** lhocke/zork-workflow (private)
+**Repo:** lhocke/zplus (private)
 **Depends on:** `specs/phase-2-combat.md` (RATIFIED — the combat engine, VillainEntry
 record, DO-FIGHT, THIEF-MELEE/CYCLOPS-MELEE tables, the THIEF-ENGROSSED strength cap,
 I-FIGHT demon, jigsUp/death.ts are all LANDED dependencies). This spec wires

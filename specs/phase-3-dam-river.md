@@ -3,7 +3,7 @@
 **Status:** DRAFT 2026-06-09 for morning sign-off. Implementation-ready, NOT locked.
 **Date:** 2026-06-09
 **Owner:** Dylan
-**Repo:** lhocke/zork-workflow (private)
+**Repo:** lhocke/zplus (private)
 
 > Phase 3b builds the Flood Control Dam #3 water-level machine and the Frigid River /
 > magic-boat subsystem behind it. The dam controls a reservoir whose water level

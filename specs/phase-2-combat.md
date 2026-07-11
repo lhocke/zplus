@@ -3,7 +3,7 @@
 **Status:** RATIFIED 2026-06-09. Implementation-ready, locked.
 **Date:** 2026-06-08; ratified 2026-06-09
 **Owner:** Dylan
-**Repo:** lhocke/zork-workflow (private)
+**Repo:** lhocke/zplus (private)
 
 > Phase 2 of the phased-playtest release. Builds the faithful Zork I combat engine
 > and the full death / scoring-reconcile / endgame layer behind it, then wires the

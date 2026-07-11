@@ -3,7 +3,7 @@
 **Status:** PIPELINE COMPLETE (review round 1 + test strategy applied) — pending owner sign-off on convergence; ready for implementation planning
 **Date:** 2026-06-07
 **Owner:** Dylan
-**Repo:** lhocke/zork-workflow (private)
+**Repo:** lhocke/zplus (private)
 
 > Phase 1 of the phased-playtest release. Ships a deployable browser build that
 > drives the real `Game` engine through a tested boundary, logs every turn to
@@ -737,7 +737,7 @@ gameplay-only (§4).
 Issues are created in a **dedicated, separate, *private* feedback repo** —
 **`lhocke/zork-feedback`** (created 2026-06-07; confirmed PRIVATE, issues
 enabled) — not the code repo, not a public repo:
-- **Not the code repo (`zork-workflow`):** keeps tester-generated content out of
+- **Not the code repo (`zplus`):** keeps tester-generated content out of
   the sensitive code repo, and scopes the GitHub token to a repo that holds
   **nothing sensitive** — so a token leak from the Worker can't touch code,
   history, or ops material. Smallest blast radius.

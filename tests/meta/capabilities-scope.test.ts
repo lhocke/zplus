@@ -41,7 +41,7 @@ describe('src-tauri/capabilities/default.json — scoped tight', () => {
     const { permissions } = loadCaps();
     const scope = findScope(permissions, 'opener:allow-open-url');
     expect(scope).toBeDefined();
-    expect(scope!.allow).toEqual([{ url: 'https://github.com/lhocke/zork-workflow/releases/*' }]);
+    expect(scope!.allow).toEqual([{ url: 'https://github.com/lhocke/zplus/releases/*' }]);
   });
 
   it('grants the saves write permission alongside the scope, never an unscoped catch-all', () => {

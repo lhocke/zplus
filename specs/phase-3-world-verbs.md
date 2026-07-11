@@ -7,7 +7,7 @@
 > §2-A or grep at 230c07a before editing — never trust a stale inline number.
 **Date:** 2026-06-09 (amended 2026-06-12)
 **Owner:** Dylan
-**Repo:** lhocke/zork-workflow (private)
+**Repo:** lhocke/zplus (private)
 
 > Phase 3c — the **wide-shallow sweep**. Where Phase 2 drove one deep logic wall
 > (combat/death/endgame), Phase 3 closes the breadth gap: the ~122 grammar actions that

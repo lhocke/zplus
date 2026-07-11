@@ -6,7 +6,7 @@
  * notice is best-effort and must never surface as a player-visible error.
  */
 
-const REPO = 'lhocke/zork-workflow';
+const REPO = 'lhocke/zplus';
 const RELEASES_API = `https://api.github.com/repos/${REPO}/releases/latest`;
 const THROTTLE_KEY = 'zork-update-check-last';
 const DISMISS_KEY_PREFIX = 'zork-update-dismissed-';

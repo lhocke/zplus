@@ -3,7 +3,7 @@
 **Status:** FINALIZED 2026-06-13 — Amendment B folded; owner decisions: RNG=concrete-Rng+loud-fail, clock=aux-data. Ready for the post-world-verbs-merge build wave (re-measure the global/flag inventory first — §3.4).
 **Date:** 2026-06-12
 **Owner:** Dylan
-**Repo:** lhocke/zork-workflow (private)
+**Repo:** lhocke/zplus (private)
 **Measured at:** `main 3d5c7f9` (HEAD on the spec branch; one commit ahead of the
 `cb69d57` phase-3-dam-river merge). Every `file:line` below is pinned to this checkout —
 re-grep before editing if HEAD has moved.
