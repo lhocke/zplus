@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Clock, LanternInterrupt, CandleInterrupt, type ClockEntry } from '../../src/engine/clock';
+import { Clock, LanternInterrupt, CandleInterrupt, lampTurnsRemaining, type ClockEntry } from '../../src/engine/clock';
 import { SimpleEventEmitter } from '../../src/engine/events';
 import type { EngineEvent } from '../../src/engine/events';
 
@@ -186,6 +186,144 @@ describe('LanternInterrupt: fuel stages', () => {
 
     expect(fuelEvents).toHaveLength(1);
     expect(fuelEvents[0]!.remaining).toBe(185);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AMENDMENT 11 (repair 3R9) — seeded lamp budget ×2. Vanilla's 385-turn lamp
+// assumes known routes; blind randomized exploration is structurally
+// thirstier, so seeded runs construct the lantern with budgetScale=2: every
+// stage budget doubles (400/600/740 warnings, burnout at 770) and the
+// emitted `remaining` values double with them. The scale rides in the
+// entry's snapshot aux, so a save from a seeded run restores the doubled
+// schedule into ANY game instance — including an in-place RESTORE into a
+// vanilla-constructed clock, whose baked table would otherwise silently
+// revert the budgets. Vanilla (scale omitted) is pinned unchanged by the
+// dfrotz-anchored stage tests above. Candles are NOT scaled.
+// ---------------------------------------------------------------------------
+
+describe('LanternInterrupt: seeded budget scale (AMENDMENT 11 repair 3R9)', () => {
+  function makeScaledSetup() {
+    const emitter = new SimpleEventEmitter();
+    const fuelEvents: Array<Extract<EngineEvent, { type: 'lantern-fuel' }>> = [];
+    emitter.on('lantern-fuel', (e) => fuelEvents.push(e));
+    const clock = new Clock();
+    const lantern = new LanternInterrupt(clock, emitter, undefined, 2);
+    return { clock, emitter, fuelEvents, lantern };
+  }
+
+  it('warns at doubled turn counts (400 / 600 / 740) and goes dark at 770', () => {
+    const { clock, fuelEvents } = makeScaledSetup();
+
+    for (let i = 0; i < 399; i++) clock.advance();
+    expect(fuelEvents).toHaveLength(0); // nothing before turn 400
+
+    clock.advance(); // turn 400
+    expect(fuelEvents[0]!.message).toBe('The lamp appears a bit dimmer.');
+    expect(fuelEvents[0]!.remaining).toBe(370); // (100+70+15) * 2
+
+    for (let i = 0; i < 200; i++) clock.advance(); // turn 600
+    expect(fuelEvents[1]!.message).toBe('The lamp is definitely dimmer now.');
+    expect(fuelEvents[1]!.remaining).toBe(170); // (70+15) * 2
+
+    for (let i = 0; i < 140; i++) clock.advance(); // turn 740
+    expect(fuelEvents[2]!.message).toBe('The lamp is nearly out.');
+    expect(fuelEvents[2]!.remaining).toBe(30); // 15 * 2
+    expect(fuelEvents.some((e) => e.dark)).toBe(false);
+
+    for (let i = 0; i < 30; i++) clock.advance(); // turn 770
+    const burnout = fuelEvents.find((e) => e.dark);
+    expect(burnout?.dark).toBe(true);
+    expect(burnout?.remaining).toBe(0);
+  });
+
+  it('lampTurnsRemaining reads the doubled budget without modification', () => {
+    const { clock } = makeScaledSetup();
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(770);
+    for (let i = 0; i < 400; i++) clock.advance(); // first warning fired
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(370);
+  });
+
+  it('a mid-run seeded schedule survives restore into a freshly constructed vanilla-table clock', () => {
+    // The in-place RESTORE path: the session restores a save into whatever
+    // Game it currently holds, so a seeded save can land in a clock whose
+    // LanternInterrupt was constructed with the default (vanilla) scale.
+    // The doubled schedule must come back from the snapshot itself.
+    const { clock: seededClock } = makeScaledSetup();
+    for (let i = 0; i < 200; i++) seededClock.advance(); // mid-first-stage
+    const snaps = seededClock.snapshot();
+
+    const emitter = new SimpleEventEmitter();
+    const restoredEvents: Array<Extract<EngineEvent, { type: 'lantern-fuel' }>> = [];
+    emitter.on('lantern-fuel', (e) => restoredEvents.push(e));
+    const freshClock = new Clock();
+    new LanternInterrupt(freshClock, emitter); // vanilla construction
+    freshClock.restore(snaps);
+
+    expect(lampTurnsRemaining(freshClock.getEntry('I-LANTERN'))).toBe(570); // 770 - 200
+
+    for (let i = 0; i < 200; i++) freshClock.advance(); // completes the doubled initial 400
+    expect(restoredEvents).toHaveLength(1);
+    expect(restoredEvents[0]!.remaining).toBe(370); // doubled, not vanilla 185
+    // And the re-queue after the warning uses the DOUBLED stage tick (200,
+    // not vanilla 100) — the whole schedule survived, not just the counter.
+    expect(freshClock.getEntry('I-LANTERN')?.turnsLeft).toBe(200);
+  });
+
+  it('an unscaled (vanilla) snapshot restores as vanilla — old saves keep their schedule', () => {
+    const emitterA = new SimpleEventEmitter();
+    const clockA = new Clock();
+    new LanternInterrupt(clockA, emitterA);
+    for (let i = 0; i < 100; i++) clockA.advance();
+    const snaps = clockA.snapshot();
+
+    const emitterB = new SimpleEventEmitter();
+    const clockB = new Clock();
+    new LanternInterrupt(clockB, emitterB);
+    clockB.restore(snaps);
+    expect(lampTurnsRemaining(clockB.getEntry('I-LANTERN'))).toBe(285); // vanilla 385 - 100
+  });
+});
+
+// ---------------------------------------------------------------------------
+// lampTurnsRemaining — live fuel readout for the tracker panel. Derives the
+// turns of light left from the I-LANTERN entry's snapshot (countdown to the
+// next stage + the ticks of every stage still ahead), so it agrees with the
+// `remaining` values the fuel events emit at each warning, at every moment
+// BETWEEN warnings too. A missing entry means the burnout sentinel fired and
+// removed it: 0 turns.
+// ---------------------------------------------------------------------------
+
+describe('lampTurnsRemaining: live fuel readout', () => {
+  it('reads the full 385-turn budget fresh, tracks between stages, and hits 0 at burnout', () => {
+    const emitter = new SimpleEventEmitter();
+    const clock = new Clock();
+    new LanternInterrupt(clock, emitter);
+
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(385);
+
+    for (let i = 0; i < 150; i++) clock.advance(); // mid-first-stage
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(235);
+
+    for (let i = 0; i < 50; i++) clock.advance(); // turn 200 — first warning fired
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(185);
+
+    for (let i = 0; i < 170; i++) clock.advance(); // turn 370 — "nearly out"
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(15);
+
+    for (let i = 0; i < 15; i++) clock.advance(); // turn 385 — burnout, entry removed
+    expect(clock.getEntry('I-LANTERN')).toBeUndefined();
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(0);
+  });
+
+  it('a frozen (disabled) lantern keeps its readout — fuel does not drain unlit', () => {
+    const emitter = new SimpleEventEmitter();
+    const clock = new Clock();
+    const lantern = new LanternInterrupt(clock, emitter);
+    for (let i = 0; i < 100; i++) clock.advance();
+    lantern.disable();
+    for (let i = 0; i < 50; i++) clock.advance();
+    expect(lampTurnsRemaining(clock.getEntry('I-LANTERN'))).toBe(285);
   });
 });
 

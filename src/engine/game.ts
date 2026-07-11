@@ -15,7 +15,7 @@ const MSG_RESTORE_VERSION = 'This saved game is from an incompatible version of 
 const MSG_RESTORE_CORRUPT = 'That saved game appears to be damaged.';
 import { captureModuleGlobals, applyModuleGlobals } from './module-globals.js';
 import { Rng as ConcreteRng } from './rng.js';
-import { Clock } from './clock.js';
+import { Clock, lampTurnsRemaining } from './clock.js';
 import type { EventEmitter } from './events.js';
 import { Parser } from './parser/parser.js';
 import { tokenize } from './parser/tokenizer.js';
@@ -37,7 +37,7 @@ import type { HeroBlowCallbacks } from './combat.js';
 import type { VillainEntry } from '../domain/villain-entry.js';
 import { makeTrollFcn } from '../actions/troll-fcn.js';
 import { makeRobberFcn, type RobberFcnCtx, type VerbDispatch } from '../actions/robber-fcn.js';
-import { thiefEngrossed, setThiefEngrossed, setEggSolve, cyclowrath, setCyclowrath } from '../actions/thief-state.js';
+import { thiefEngrossed, setThiefEngrossed, cyclowrath, setCyclowrath } from '../actions/thief-state.js';
 import { iCyclops, type ICyclopsCtx } from '../actions/cyclops.js';
 import { iThief, type IThiefCtx } from '../actions/i-thief.js';
 import {
@@ -76,6 +76,18 @@ export interface GameView {
   readonly inMaze: boolean;
   /** True once doFinish() fires (victory or resurrections exhausted). Shell uses this to surface the RESTART/RESTORE affordance (spec §7.1). */
   readonly gameOver: boolean;
+  readonly randomizerSeedString?: string;
+  readonly randomizerElapsedMs?: number;
+  /** Object-parent map scoped ONLY to shuffled randomizer location objectIds
+   *  (never the full object tree) — feeds the tracker panel's checked-state
+   *  computation without exposing unrelated engine internals to the UI layer. */
+  readonly randomizerObjectParents?: Record<string, string | null>;
+  /** Turns of lamp light remaining (I-LANTERN clock state, read via
+   *  lampTurnsRemaining in clock.ts) — feeds the tracker panel's fuel row.
+   *  Pure information: fuel mechanics are untouched and fuel stays unmodeled
+   *  in logic; only surfaced during a randomized run (the tracker is the
+   *  only consumer). 0 means burned out. */
+  readonly randomizerLampTurnsLeft?: number;
 }
 
 /**
@@ -186,6 +198,30 @@ export class Game {
   private lastPrep: string | undefined = undefined;
 
   private readonly visited = new Set<ObjectId>();
+
+  // Randomizer run state (Spec 2) — undefined for a vanilla game. Set once,
+  // at construction, by the caller that built this Game with a placementMap
+  // (Task 9's new-run UI); never mutated by engine logic itself except
+  // timerMs/firstCommandAt (Task 8).
+  private randomizerSeedString: string | undefined;
+  private randomizerPlacements: [string, string][] = [];
+  private randomizerTimerMs = 0;
+  private randomizerFirstCommandAt: string | null = null;
+
+  // In-memory only — NEVER serialized. Epoch ms marking when the current
+  // live segment started ticking; null when not yet ticking (before the
+  // first command of a fresh run) or for a vanilla game.
+  private randomizerLiveSegmentStartAt: number | null = null;
+
+  /** Called once by the caller after a randomized createGame() — records the
+   *  seed string and the resolved placement list for save/tracker use. Not
+   *  part of the constructor because bootstrap.ts (Task 6) stays engine-
+   *  generic and never imports src/logic/; the CALLER (Task 9) resolves the
+   *  seed string and passes it here as plain data. */
+  setRandomizerRun(seedString: string, placements: [string, string][]): void {
+    this.randomizerSeedString = seedString;
+    this.randomizerPlacements = placements;
+  }
 
   // Persistence port + restart handler — threaded from the session layer (§4.6).
   // Optional: absent in test contexts that don't need save/restore/restart wiring.
@@ -329,6 +365,13 @@ export class Game {
     const movePart = moves === 1 ? '1 move.' : `${moves} moves.`;
     const scoreText = `Your score is ${score} (total of 350 points), in ${movePart}\nThis gives you the rank of ${rank}.`;
     tell?.(scoreText);
+    if (this.randomizerSeedString !== undefined) {
+      this.checkpointRandomizerTimer();
+      const totalSeconds = Math.floor(this.randomizerTimerMs / 1000);
+      const mm = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const ss = String(totalSeconds % 60).padStart(2, '0');
+      tell?.(`Final time: ${mm}:${ss}.`);
+    }
     tell?.('ZORK: The Great Underground Empire.');
     this.gameOver = true;
   }
@@ -609,6 +652,12 @@ export class Game {
 
   /** Execute one command line (may contain chained commands via "then" / "."). */
   async turn(input: string, opts?: { saveSlot?: string }): Promise<TurnResult> {
+    if (this.randomizerSeedString !== undefined && this.randomizerLiveSegmentStartAt === null) {
+      this.randomizerLiveSegmentStartAt = Date.now();
+      if (this.randomizerFirstCommandAt === null) {
+        this.randomizerFirstCommandAt = new Date().toISOString();
+      }
+    }
     if (this.gameOver) return { output: '', moved: false };
     this.fatalPending = false;
 
@@ -1058,6 +1107,14 @@ export class Game {
       moves: this.moveCount,
       inMaze: this.here.has(Flag.Maze),
       gameOver: this.gameOver,
+      ...(this.randomizerSeedString !== undefined ? {
+        randomizerSeedString: this.randomizerSeedString,
+        randomizerElapsedMs: this.getRandomizerElapsedMs(),
+        randomizerObjectParents: Object.fromEntries(
+          this.randomizerPlacements.map(([objectId]) => [objectId, this.world.get(objectId)?.parent?.id ?? null]),
+        ),
+        randomizerLampTurnsLeft: lampTurnsRemaining(this.clock.getEntry('I-LANTERN')),
+      } : {}),
     };
   }
 
@@ -1353,29 +1410,32 @@ export class Game {
   // hereId and tell are injected per-call so the same builder is reused for
   // both the VillainEntry (F-code path) and the THIEF object handler (verb path).
   private buildRobberFcnCtx(hereId: string, tell: (s: string) => void): RobberFcnCtx {
+    const getObj = (id: string) => {
+      const obj = this.world.get(id);
+      if (obj === undefined) return undefined;
+      return {
+        get id()       { return obj.id; },
+        get parentId() { return obj.parent?.id ?? null; },
+        get tvalue()   { return (obj.props.get('TVALUE') ?? 0) as number; },
+        get desc()     { return obj.desc; },
+        hasFlag:  (f: Flag) => obj.has(f),
+        setFlag:  (f: Flag) => obj.set(f),
+        clearFlag:(f: Flag) => obj.clear(f),
+        moveTo: (destId: string) => {
+          if (destId === '__void__') { obj.moveTo(null); return; }
+          const dest = this.world.get(destId);
+          if (dest !== undefined) obj.moveTo(dest);
+        },
+        setLdesc: (s: string) => { (obj as { ldesc?: string }).ldesc = s; },
+      };
+    };
+    const childrenOf = (containerId: string) =>
+      this.world.contents(containerId).map(o => o.id);
+
     return {
       hereId,
-      getObj: (id: string) => {
-        const obj = this.world.get(id);
-        if (obj === undefined) return undefined;
-        return {
-          get id()       { return obj.id; },
-          get parentId() { return obj.parent?.id ?? null; },
-          get tvalue()   { return (obj.props.get('TVALUE') ?? 0) as number; },
-          get desc()     { return obj.desc; },
-          hasFlag:  (f: Flag) => obj.has(f),
-          setFlag:  (f: Flag) => obj.set(f),
-          clearFlag:(f: Flag) => obj.clear(f),
-          moveTo: (destId: string) => {
-            if (destId === '__void__') { obj.moveTo(null); return; }
-            const dest = this.world.get(destId);
-            if (dest !== undefined) obj.moveTo(dest);
-          },
-          setLdesc: (s: string) => { (obj as { ldesc?: string }).ldesc = s; },
-        };
-      },
-      childrenOf: (containerId: string) =>
-        this.world.contents(containerId).map(o => o.id),
+      getObj,
+      childrenOf,
       getThiefPStrength: () => {
         const t = this.world.get('THIEF');
         return (t as unknown as { pStrength: number })?.pStrength ?? 0;
@@ -1402,23 +1462,16 @@ export class Game {
         }
       },
       depositBooty: (rmId: string): boolean => {
-        // DEPOSIT-BOOTY: move TVALUE>0 thief children (excl. STILETTO/LARGE-BAG) to rm.
-        // 1actions.zil:1897–1909
-        const rm = this.world.get(rmId);
-        if (rm === undefined) return false;
-        let deposited = false;
-        for (const child of this.world.contents('THIEF')) {
-          if (child.id === 'STILETTO' || child.id === 'LARGE-BAG') continue;
-          const tv = (child.props.get('TVALUE') ?? 0) as number;
-          if (tv <= 0) continue;
-          child.moveTo(rm);
-          deposited = true;
-          if (child.id === 'EGG') {
-            setEggSolve(true);
-            child.set(Flag.Open);
-          }
-        }
-        return deposited;
+        // DEPOSIT-BOOTY: move thief children (excl. STILETTO/LARGE-BAG) to rm.
+        // 1actions.zil:1897–1909. AMENDMENT 4 (repair task 3R3): in a seeded
+        // run (this.randomizerSeedString set), the TVALUE filter is lifted —
+        // see thief.ts's depositBooty doc comment for the faithfulness/
+        // mode-isolation rationale. Delegates to the same canonical helper
+        // the I-THIEF demon's silent settle-in-TREASURE-ROOM branch uses, so
+        // there is exactly one DEPOSIT-BOOTY implementation, not two.
+        if (this.world.get(rmId) === undefined) return false;
+        const seeded = this.randomizerSeedString !== undefined;
+        return thiefDepositBooty({ getObj, childrenOf }, rmId, seeded);
       },
       moveAll: (fromId: string, toId: string) => {
         // MOVE-ALL: FCLEAR INVISIBLE + MOVE every child of from to to.
@@ -1914,7 +1967,10 @@ export class Game {
           hackTreasures: () => { thiefHackTreasures(thCtx, 'THIEF', 'TREASURE-ROOM'); },
           depositBooty:  (rmId) => thiefDepositBooty(thCtx, rmId),
           rob:           (whatId, whereId, prob) => thiefRob(thCtx, whatId, whereId, prob),
-          robMaze:       (rmId) => thiefRobMaze(thCtx, rmId),
+          // AMENDMENT 10 (repair 3R8): ROB-MAZE is the one rob path with no
+          // SACREDBIT check in the ZIL, so the sacred-torch treatment gates
+          // it explicitly on the seeded-run marker (thief.ts robMaze).
+          robMaze:       (rmId) => thiefRobMaze(thCtx, rmId, this.randomizerSeedString !== undefined),
           stealJunk:     (rmId) => thiefStealJunk(thCtx, rmId),
           dropJunk:      (rmId) => { thiefDropJunk(thCtx, rmId); },
           recoverStiletto: () => { thiefRecoverStiletto(thCtx, 'THIEF'); },
@@ -2365,7 +2421,28 @@ export class Game {
    * Fields owned by sibling tasks are stubs marked // SS1-SEAM:<task>; tests
    * must NOT assert on those fields until the owning task lands.
    */
+  /** Folds the live segment into the persisted accumulator and resets the
+   *  live-segment base to now. Called at the top of snapshot() so the
+   *  persisted timerMs is always caught up as of save time. */
+  private checkpointRandomizerTimer(): void {
+    if (this.randomizerLiveSegmentStartAt === null) return;
+    this.randomizerTimerMs += Date.now() - this.randomizerLiveSegmentStartAt;
+    this.randomizerLiveSegmentStartAt = Date.now();
+  }
+
+  /** Live elapsed ms for the current randomizer run — 0 for a vanilla game
+   *  or before the first command has been submitted. Safe to poll every
+   *  UI tick (Task 9); does not mutate state. */
+  getRandomizerElapsedMs(): number {
+    if (this.randomizerSeedString === undefined) return 0;
+    const live = this.randomizerLiveSegmentStartAt !== null
+      ? Date.now() - this.randomizerLiveSegmentStartAt
+      : 0;
+    return this.randomizerTimerMs + live;
+  }
+
   snapshot(): SaveState {
+    this.checkpointRandomizerTimer();
     // Injected at Vite build time; falls back to 'dev' in Node/test.
     let buildId = 'dev';
     try {
@@ -2416,6 +2493,14 @@ export class Game {
       objects:       this.world.all().map(captureObjectDelta),
       parser:        this.parser.snapshotState(),  // SS5
       moduleGlobals: captureModuleGlobals(),        // SS6
+      ...(this.randomizerSeedString !== undefined ? {
+        randomizer: {
+          seedString: this.randomizerSeedString,
+          placements: this.randomizerPlacements,
+          timerMs: this.randomizerTimerMs,
+          firstCommandAt: this.randomizerFirstCommandAt,
+        },
+      } : {}),
     };
   }
 
@@ -2443,6 +2528,15 @@ export class Game {
     this.scoring.restoreState(state.scoring);  // SS3
     this.clock.restore(state.clock);
     applyModuleGlobals(state.moduleGlobals);  // SS6
+    if (state.randomizer !== undefined) {
+      this.randomizerSeedString = state.randomizer.seedString;
+      this.randomizerPlacements = state.randomizer.placements;
+      this.randomizerTimerMs = state.randomizer.timerMs;
+      this.randomizerFirstCommandAt = state.randomizer.firstCommandAt;
+      // Resume ticking immediately if the run had already started; the live
+      // segment always resets to "now" so a save/restore gap is never counted.
+      this.randomizerLiveSegmentStartAt = state.randomizer.firstCommandAt !== null ? Date.now() : null;
+    }
 
     // 3. Object tree — three passes (mirrors World.fromData's build-then-link).
 

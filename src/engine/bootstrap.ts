@@ -41,6 +41,11 @@ export function createGame(opts: {
   combatRng?: CombatRng;
   savePort?: SavePort;
   restartFn?: () => void;
+  /** Randomizer seam (Spec 2): objectId -> new initial parent (room or
+   *  container object id), applied immediately after world construction,
+   *  before anything else reads room contents. Absent/undefined = the
+   *  exact vanilla path (zero behavioral delta — mode isolation). */
+  placementMap?: Record<ObjectId, ObjectId>;
 } = {}): Game {
   const startRoomId = opts.startRoom ?? DEFAULT_START_ROOM;
   const seed = opts.seed ?? DEFAULT_SEED;
@@ -50,6 +55,32 @@ export function createGame(opts: {
     ...(objectsData as unknown[]),
   ];
   const world = World.fromData(allData);
+
+  // Randomizer placement seam (Spec 2) — applied before any other bootstrap
+  // step touches room contents. No-op when placementMap is absent, which
+  // is the ONLY path vanilla play (and every existing test) exercises.
+  if (opts.placementMap !== undefined) {
+    for (const [objectId, newParentId] of Object.entries(opts.placementMap)) {
+      const obj = world.get(objectId);
+      const parent = world.get(newParentId);
+      if (obj === undefined || parent === undefined) {
+        console.warn(`createGame: placementMap entry skipped (unknown id) — ${objectId} -> ${newParentId}`);
+        continue;
+      }
+      obj.moveTo(parent);
+    }
+
+    // AMENDMENT 10 (repair 3R8) — sacred torch, seeded runs only. Losing
+    // the torch to the thief is the one theft that cascades into true
+    // unwinnability (light loss with every source exhausted), so seeded
+    // runs mark it SACREDBIT and the thief's robbery skips it: ROB
+    // (1actions.zil:3982) and STEAL-JUNK (:3961) both check the flag; the
+    // one path that doesn't (ROB-MAZE, :1917-1933) carries an explicit
+    // seeded gate in src/actions/thief.ts's robMaze. Vanilla play never
+    // reaches this branch, so the vanilla torch stays exactly as robbable
+    // as the ZIL made it. Everything else stays the thief's fair game.
+    world.get('TORCH')?.set(Flag.Sacred);
+  }
 
   // Bind ZIL ACTION-routine names to translated handlers from the registry.
   for (const obj of world.all()) {
@@ -90,7 +121,13 @@ export function createGame(opts: {
 
   // I-LANTERN: registered at startup (GO() in 1dungeon.zil), starts disabled.
   // enableClock/disableClock in light-sources.ts gates fuel drain while the lamp burns.
-  const lanternInterrupt = new LanternInterrupt(clock, events);
+  // AMENDMENT 11 (repair 3R9): seeded runs (placementMap present — the same
+  // seeded-run marker as the other mode carve-outs) double every lamp stage
+  // budget (385 total turns -> 770). Vanilla's budget assumes known routes;
+  // blind randomized exploration is structurally thirstier. Vanilla passes
+  // scale 1 — its dfrotz-anchored schedule is byte-identical. Candles are
+  // deliberately NOT scaled.
+  const lanternInterrupt = new LanternInterrupt(clock, events, undefined, opts.placementMap !== undefined ? 2 : 1);
   lanternInterrupt.disable();
 
   // On burnout, mark LAMP as burned out — mirrors LIGHT-INT in 1actions.zil:2328.

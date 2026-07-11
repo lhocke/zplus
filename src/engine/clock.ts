@@ -158,11 +158,16 @@ export class Clock {
     return { lines, interrupted };
   }
 
-  /** Read-only state for a single entry by id (undefined if not registered). */
+  /** Read-only state for a single entry by id (undefined if not registered).
+   *  Includes the entry's aux data (e.g. FuelInterrupt.tableIndex) so
+   *  read-only consumers like lampTurnsRemaining() below can interpret a
+   *  stage-table entry without reaching into its private state. */
   getEntry(id: string): Readonly<ClockSnapshot> | undefined {
     const e = this.entries.get(id);
     if (!e) return undefined;
-    return { id: e.id, turnsLeft: e.turnsLeft, enabled: e.enabled };
+    const snap: ClockSnapshot = { id: e.id, turnsLeft: e.turnsLeft, enabled: e.enabled };
+    if (e.snapshotAux) snap.aux = e.snapshotAux();
+    return snap;
   }
 
   /** Snapshot for SaveState serialisation. */
@@ -216,20 +221,32 @@ class FuelInterrupt {
     // Definite object name for the burnout line — matches ZIL's <D .OBJ>
     // in LIGHT-INT (1actions.zil:2335): "the <name>" follows "more light than from".
     private readonly burnoutName: string,
+    // AMENDMENT 11 (repair 3R9): multiplier on every stage budget — the
+    // initial countdown, each stage's re-queue, and the `remaining` values
+    // the fuel events emit. 1 = the vanilla dfrotz-anchored schedule;
+    // seeded runs construct the LANTERN with 2 (vanilla's 385-turn budget
+    // assumes known routes; blind randomized exploration is structurally
+    // thirstier). Serialized in the entry's snapshot aux so an in-place
+    // RESTORE of a seeded save brings the doubled schedule with it,
+    // whatever scale the receiving instance was constructed with (the
+    // session restores into the Game it currently holds — possibly a
+    // vanilla-constructed one). Candles never scale.
+    private budgetScale = 1,
   ) {
     const self = this;
     this.entry = {
       id,
-      turnsLeft: initialTicks,
+      turnsLeft: initialTicks * budgetScale,
       enabled: true,
       tick(ctx): boolean {
         return self.onFire(ctx);
       },
       snapshotAux(): Record<string, number> {
-        return { tableIndex: self.tableIndex };
+        return { tableIndex: self.tableIndex, budgetScale: self.budgetScale };
       },
       restoreAux(aux: Record<string, number>): void {
         if (aux['tableIndex'] !== undefined) self.tableIndex = aux['tableIndex'];
+        if (aux['budgetScale'] !== undefined) self.budgetScale = aux['budgetScale'];
       },
     };
     clock.schedule(this.entry);
@@ -244,7 +261,7 @@ class FuelInterrupt {
   }
 
   private remainingTurns(): number {
-    return this.table.slice(this.tableIndex).reduce((acc, s) => acc + s.ticks, 0);
+    return this.budgetScale * this.table.slice(this.tableIndex).reduce((acc, s) => acc + s.ticks, 0);
   }
 
   private onFire(ctx: ClockTickContext): boolean {
@@ -278,7 +295,9 @@ class FuelInterrupt {
 
     // Re-queue with THIS stage's own gap before the next warning — ZIL re-queues
     // <GET .TBL 0> (the current row), not the following one (1actions.zil:2323).
-    this.entry.turnsLeft = stage.ticks;
+    // budgetScale is 1 in vanilla (byte-identical schedule) and 2 in seeded
+    // runs (AMENDMENT 11 repair 3R9).
+    this.entry.turnsLeft = stage.ticks * this.budgetScale;
     this.tableIndex++;
     return true;
   }
@@ -300,11 +319,35 @@ const LAMP_TABLE: ReadonlyArray<FuelStage> = [
 // Initial countdown before the first warning (from GO() in 1dungeon.zil).
 const LAMP_INITIAL_TICKS = 200;
 
+/**
+ * Turns of lamp light remaining, from the I-LANTERN entry's read-only
+ * snapshot (Clock.getEntry('I-LANTERN')). The entry's turnsLeft counts down
+ * to the NEXT stage fire, and its aux.tableIndex points at that stage row —
+ * whose own ticks were already folded into turnsLeft when the previous stage
+ * re-queued — so the live remainder is turnsLeft plus the ticks of every row
+ * from tableIndex on. Agrees exactly with the `remaining` values the
+ * lantern-fuel events emit at each warning, at every turn between warnings
+ * too. A missing entry means the burnout sentinel fired and self-removed:
+ * 0 turns. The entry's aux.budgetScale (AMENDMENT 11 repair 3R9; 1 when
+ * absent, so pre-scale snapshots read vanilla) multiplies the stage tail
+ * exactly as the interrupt itself does, so the readout tracks the seeded
+ * doubled schedule with no caller changes. Feeds the tracker panel's fuel
+ * row — pure information, no fuel mechanics live here.
+ */
+export function lampTurnsRemaining(entry: Readonly<ClockSnapshot> | undefined): number {
+  if (entry === undefined) return 0;
+  const tableIndex = entry.aux?.['tableIndex'] ?? 0;
+  const budgetScale = entry.aux?.['budgetScale'] ?? 1;
+  return entry.turnsLeft + budgetScale * LAMP_TABLE.slice(tableIndex).reduce((acc, s) => acc + s.ticks, 0);
+}
+
 // LanternInterrupt — faithful TypeScript translation of I-LANTERN from
-// 1actions.zil:4026.
+// 1actions.zil:4026. budgetScale (default 1 = vanilla) doubles the whole
+// schedule for seeded runs — see FuelInterrupt's constructor doc
+// (AMENDMENT 11 repair 3R9).
 export class LanternInterrupt extends FuelInterrupt {
-  constructor(clock: Clock, emitter: EventEmitter, initialTicks = LAMP_INITIAL_TICKS) {
-    super(clock, emitter, LAMP_TABLE, 'lantern-fuel', 'I-LANTERN', initialTicks, 'brass lantern');
+  constructor(clock: Clock, emitter: EventEmitter, initialTicks = LAMP_INITIAL_TICKS, budgetScale = 1) {
+    super(clock, emitter, LAMP_TABLE, 'lantern-fuel', 'I-LANTERN', initialTicks, 'brass lantern', budgetScale);
   }
 }
 

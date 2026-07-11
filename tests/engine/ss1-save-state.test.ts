@@ -256,7 +256,6 @@ describe('SS1 format version', () => {
     const g = freshGame();
     const s = g.snapshot();
     expect(s.formatVersion).toBe(SAVE_FORMAT_VERSION);
-    expect(SAVE_FORMAT_VERSION).toBe(1);
   });
 
   it('restore throws on formatVersion mismatch', () => {

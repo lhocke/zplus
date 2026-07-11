@@ -112,12 +112,22 @@ export function rob(
 // so the LUCKY denom is 100, not 80.  Faithful steal P = 60/100 = 0.60.
 //
 // Returns false when no eligible item found (or the room is empty).
+//
+// AMENDMENT 10 (repair 3R8) — sacred torch, seeded runs only. Unlike ROB
+// and STEAL-JUNK, ZIL ROB-MAZE never checks SACREDBIT (faithfully mirrored
+// here), so the Sacred flag the placement seam sets on TORCH cannot protect
+// a torch dropped in a maze room on this path. `seeded` (default false)
+// gates the torch out explicitly — the amendment's instruction for any rob
+// path the flag doesn't cover. Vanilla play (seeded omitted/false) is
+// byte-for-byte unchanged; every other item stays the thief's fair game in
+// both modes. See tests/engine/placement-seam.test.ts's carve-out list.
 // ---------------------------------------------------------------------------
 
-export function robMaze(ctx: ThiefCtx, rmId: string): boolean {
+export function robMaze(ctx: ThiefCtx, rmId: string, seeded = false): boolean {
   for (const childId of ctx.childrenOf(rmId)) {
     const child = ctx.getObj(childId);
     if (child === undefined) continue;
+    if (seeded && childId === 'TORCH') continue;
     if (!child.hasFlag(Flag.Takeable)) continue;
     if (child.hasFlag(Flag.Invisible)) continue;
 
@@ -219,14 +229,36 @@ export function dropJunk(ctx: ThiefCtx, rmId: string): void {
 // Returns true if anything was deposited.
 // ---------------------------------------------------------------------------
 
-export function depositBooty(ctx: ThiefCtx, rmId: string): boolean {
+// Minimal shape depositBooty needs to move thief-held items — deliberately
+// narrower than ThiefCtx so a non-demon caller (the F_DEAD combat handler in
+// robber-fcn.ts, wired via game.ts's buildRobberFcnCtx) can reuse this same
+// canonical helper without satisfying ThiefCtx's full surface (rng, tell,
+// fightStrength, etc. — none of which DEPOSIT-BOOTY ever touches).
+export interface BootyCtx {
+  getObj(id: string): ThiefObjHandle | undefined;
+  childrenOf(containerId: string): string[];
+}
+
+// AMENDMENT 4 (2026-07-08, repair task 3R3) — mode-gated thief safety.
+// Vanilla DEPOSIT-BOOTY (1actions.zil:1897-1909) only ever recovers
+// TVALUE>0 items on the thief's death; TVALUE==0 items he is carrying are
+// gone for good — oracle-verified faithful. In a SEEDED run that is
+// unacceptable: a randomizer-placed progression/filler item is frequently
+// TVALUE==0, and the thief can steal ANY item, so a vanilla-shaped loss
+// would make some seeds permanently unsolvable. `seeded` (default false)
+// disables the TVALUE filter ONLY for seeded runs — vanilla play (seeded
+// omitted/false) is byte-for-byte unchanged. STILETTO/LARGE-BAG (the
+// thief's own tools, never a shuffle-eligible check) stay excluded in BOTH
+// modes — this is the FIRST intentional in-mode behavior delta beyond
+// placement itself (see tests/engine/placement-seam.test.ts header).
+export function depositBooty(ctx: BootyCtx, rmId: string, seeded = false): boolean {
   let deposited = false;
 
   for (const childId of ctx.childrenOf('THIEF')) {
     if (childId === 'STILETTO' || childId === 'LARGE-BAG') continue;
     const child = ctx.getObj(childId);
     if (child === undefined) continue;
-    if (child.tvalue <= 0) continue;
+    if (!seeded && child.tvalue <= 0) continue;
 
     child.moveTo(rmId);
     deposited = true;

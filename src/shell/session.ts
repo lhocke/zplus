@@ -49,6 +49,10 @@ export interface GameSession {
    * The caller owns any confirmation / user-facing message.
    */
   restoreFromAutosave(): Promise<string>;
+  /** Re-bootstrap into a fresh randomized run: reset module globals, create
+   *  a Game with the given placementMap, record the seed string + resolved
+   *  placements for save/tracker use. Mirrors restart()'s reset shape. */
+  startRandomized(seedString: string, placementMap: Record<string, string>): string;
   close(): void;
 }
 
@@ -127,6 +131,13 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
   function doRestart(): void {
     resetModuleGlobals();
     game = createGame({ seed: opts.seed ?? DEFAULT_SEED, savePort: wrappedPort, restartFn: doRestart });
+  }
+
+  function doStartRandomized(seedString: string, placementMap: Record<string, string>): string {
+    resetModuleGlobals();
+    game = createGame({ seed: opts.seed ?? DEFAULT_SEED, savePort: wrappedPort, restartFn: doRestart, placementMap });
+    game.setRandomizerRun(seedString, Object.entries(placementMap));
+    return game.start();
   }
 
   // Mutable so restart() can replace the live game with a fresh one.
@@ -259,6 +270,10 @@ export function createSession(opts: { sink: PlaytestSink; seed?: number; savePor
       const r = await wrappedPort.readWithReason('autosave');
       if (typeof r === 'string') return ''; // empty/corrupt/version — nothing to restore
       return game.restoreAndDescribe(r);
+    },
+
+    startRandomized(seedString, placementMap) {
+      return doStartRandomized(seedString, placementMap);
     },
 
     close(): void {

@@ -556,6 +556,62 @@ describe('TS-D: depositBooty()', () => {
     expect(result).toBe(false);
     expect(knife.parentId).toBe('THIEF');
   });
+
+  // ---------------------------------------------------------------------
+  // AMENDMENT 4 (repair task 3R3) — mode-gated thief safety.
+  //
+  // Oracle verdict: the engine is FAITHFUL on thief junk-loss (vanilla
+  // DEPOSIT-BOOTY only ever recovers TVALUE>0 items on the thief's death;
+  // TVALUE==0 items he is carrying are gone for good). In a SEEDED run that
+  // is unacceptable — a randomizer-placed progression/filler item is
+  // frequently TVALUE==0, and the thief can pick up ANY item via rob()/
+  // stealJunk(), so a vanilla-shaped loss would make some seeds
+  // permanently unsolvable. The fix is mode-gated, not a vanilla behavior
+  // change: `seeded` (new 3rd param, default false) disables the TVALUE
+  // filter only; STILETTO/LARGE-BAG (the thief's own tools, never a
+  // shuffle-eligible check) stay excluded in BOTH modes.
+  // ---------------------------------------------------------------------
+
+  it('vanilla mode (seeded param omitted, defaults false): still filters TVALUE==0 items — the seeded escape hatch is opt-in only', () => {
+    const knife = makeItem('KNIFE', 'THIEF', { tvalue: 0 });
+    const thief = makeItem('THIEF', 'HERE', { children: [knife] });
+    const dest = makeItem('TREASURE-ROOM', null);
+    const { ctx } = makeCtx({ items: [knife, thief, dest] });
+
+    // No 3rd arg at all — the default must match today's vanilla behavior.
+    const result = depositBooty(ctx, 'TREASURE-ROOM');
+    expect(result).toBe(false);
+    expect(knife.parentId).toBe('THIEF');
+
+    // Explicit `false` (as vanilla callers will pass) — same result.
+    const result2 = depositBooty(ctx, 'TREASURE-ROOM', false);
+    expect(result2).toBe(false);
+    expect(knife.parentId).toBe('THIEF');
+  });
+
+  it('randomizer mode (seeded=true): returns the ENTIRE bag, including a TVALUE-0 progression-shaped item — thief death in a seeded run never permanently destroys a check item', () => {
+    const skeletonKey = makeItem('SKELETON-KEY', 'THIEF', { tvalue: 0 });
+    const thief = makeItem('THIEF', 'HERE', { children: [skeletonKey] });
+    const dest = makeItem('TREASURE-ROOM', null);
+    const { ctx } = makeCtx({ items: [skeletonKey, thief, dest] });
+
+    const result = depositBooty(ctx, 'TREASURE-ROOM', true);
+    expect(result).toBe(true);
+    expect(skeletonKey.parentId).toBe('TREASURE-ROOM');
+  });
+
+  it('randomizer mode (seeded=true): STILETTO/LARGE-BAG are still excluded — they are the thief\'s own tools, never a shuffled check', () => {
+    const stiletto = makeItem('STILETTO', 'THIEF', { tvalue: 0 });
+    const bag = makeItem('LARGE-BAG', 'THIEF', { tvalue: 0 });
+    const thief = makeItem('THIEF', 'HERE', { children: [stiletto, bag] });
+    const dest = makeItem('TREASURE-ROOM', null);
+    const { ctx } = makeCtx({ items: [stiletto, bag, thief, dest] });
+
+    const result = depositBooty(ctx, 'TREASURE-ROOM', true);
+    expect(result).toBe(false);
+    expect(stiletto.parentId).toBe('THIEF');
+    expect(bag.parentId).toBe('THIEF');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -836,6 +892,87 @@ describe('robMaze()', () => {
     // Must use desc "brass lantern", not atom "brass-lantern"
     expect(emitted.some(m => m.includes('brass lantern'))).toBe(true);
     expect(emitted.some(m => m.includes('brass-lantern'))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AMENDMENT 10 (repair 3R8) — sacred torch in seeded runs.
+//
+// Losing the torch to the thief is the one theft that cascades into true
+// unwinnability (light loss with all sources exhausted), so seeded runs set
+// SACREDBIT on TORCH at the placement seam (bootstrap.ts) and robbery skips
+// it. Verification record for the three steal paths (ZIL + engine, checked
+// against 1actions.zil before this change):
+//   ROB        (1actions.zil:3976-3989, thief.ts rob)       — checks SACREDBIT. Covers
+//              rob(HERE), rob(WINNER), and the wander-time rob(rm, THIEF, 75).
+//   STEAL-JUNK (1actions.zil:3954-3974, thief.ts stealJunk) — checks SACREDBIT, and its
+//              TVALUE==0 filter excludes the TORCH (TVALUE 6) anyway.
+//   ROB-MAZE   (1actions.zil:1917-1933, thief.ts robMaze)   — NO SACREDBIT check in the
+//              ZIL (faithfully mirrored here), so the flag alone cannot protect a torch
+//              dropped in a maze room: that path is gated explicitly on (seeded && TORCH).
+// Vanilla play is untouched — the vanilla pins below prove the TORCH stays
+// exactly as robbable as it always was.
+// ---------------------------------------------------------------------------
+
+describe('AMENDMENT 10 (repair 3R8): sacred torch in seeded runs', () => {
+  beforeEach(() => { resetThiefState(); });
+
+  it('vanilla pin: rob() steals an un-Sacred TORCH from the player exactly as before', () => {
+    const torch = makeItem('TORCH', 'PLAYER', { tvalue: 6, flags: [Flag.Takeable] });
+    const player = makeItem('PLAYER', null, { children: [torch] });
+    const thief = makeItem('THIEF', null, { flags: [Flag.Actor] });
+    const { ctx } = makeCtx({ items: [torch, player, thief] });
+
+    expect(rob(ctx, 'PLAYER', 'THIEF')).toBe(true);
+    expect(torch.parentId).toBe('THIEF');
+  });
+
+  it('seeded: rob() skips the TORCH once the placement seam has set Sacred on it', () => {
+    const torch = makeItem('TORCH', 'PLAYER', { tvalue: 6, flags: [Flag.Takeable, Flag.Sacred] });
+    const player = makeItem('PLAYER', null, { children: [torch] });
+    const thief = makeItem('THIEF', null, { flags: [Flag.Actor] });
+    const { ctx } = makeCtx({ items: [torch, player, thief] });
+
+    expect(rob(ctx, 'PLAYER', 'THIEF')).toBe(false);
+    expect(torch.parentId).toBe('PLAYER');
+  });
+
+  it('stealJunk() never targets the TORCH in either mode (TVALUE>0 excludes it)', () => {
+    const torch = makeItem('TORCH', 'ROOM', { tvalue: 6, flags: [Flag.Takeable] });
+    const room = makeItem('ROOM', null, { children: [torch] });
+    const thief = makeItem('THIEF', 'ROOM', { flags: [Flag.Actor] });
+    // All-steal draws: if the TVALUE filter ever stopped excluding it, this steals.
+    const { ctx } = makeCtx({ items: [torch, room, thief], rngDraws: [0.0, 0.0] });
+
+    expect(stealJunk(ctx, 'ROOM')).toBe(false);
+    expect(torch.parentId).toBe('ROOM');
+  });
+
+  it('vanilla pin: robMaze() steals a TORCH dropped in a maze room (ZIL ROB-MAZE has no SACREDBIT check)', () => {
+    const torch = makeItem('TORCH', 'MAZE', { tvalue: 6, flags: [Flag.Takeable] });
+    const maze = makeItem('MAZE', null, { children: [torch] });
+    const thief = makeItem('THIEF', 'MAZE', { flags: [Flag.Actor] });
+    // PROB(40)=0.1 → true; zprob(60,100)=0.1 → steal
+    const { ctx } = makeCtx({ items: [torch, maze, thief], rngDraws: [0.1, 0.1], lucky: true });
+
+    robMaze(ctx, 'MAZE');
+    expect(torch.parentId).toBe('THIEF');
+  });
+
+  it('seeded: robMaze() skips the TORCH and moves on to the thief\'s ordinary fair game', () => {
+    // Sacred is set (as the seam would), but robMaze's ZIL shape never reads
+    // it — the explicit (seeded && TORCH) gate is what protects the torch.
+    const torch = makeItem('TORCH', 'MAZE', { tvalue: 6, flags: [Flag.Takeable, Flag.Sacred] });
+    const map = makeItem('MAP', 'MAZE', { tvalue: 0, flags: [Flag.Takeable] });
+    const maze = makeItem('MAZE', null, { children: [torch, map] });
+    const thief = makeItem('THIEF', 'MAZE', { flags: [Flag.Actor] });
+    // Draws land on MAP (the torch is skipped before any draw):
+    // PROB(40)=0.1 → true; zprob(60,100)=0.1 → steal
+    const { ctx } = makeCtx({ items: [torch, map, maze, thief], rngDraws: [0.1, 0.1], lucky: true });
+
+    robMaze(ctx, 'MAZE', true);
+    expect(torch.parentId).toBe('MAZE');
+    expect(map.parentId).toBe('THIEF');
   });
 });
 

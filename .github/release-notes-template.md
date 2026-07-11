@@ -22,3 +22,8 @@ manager equivalent).
 Saves live in a shared app-data location on your machine and export/import to
 a file you choose from the Saves panel — the same 3 manual slots + 1
 death-autosave slot as the web demo.
+
+**Randomizer:** desktop-only. Shuffles every progression item, treasure, and
+piece of filler onto a guaranteed-completable layout, with a shareable seed
+string for byte-identical head-to-head runs, a spoiler-free tracker panel,
+and a run timer. See the README's Randomizer section for the full rundown.
