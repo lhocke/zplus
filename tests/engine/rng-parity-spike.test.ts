@@ -35,7 +35,7 @@ function flattenTurns(turns: ReturnType<typeof normalizeDfrotz>): string {
 // that the engine does not yet implement). Byte-level dfrotz RNG parity therefore
 // needs draw-order alignment, not just the right PRNG. Re-enable (drop .skip) once
 // per-turn RNG consumption is aligned to ZIL. See
-// docs/research/2026-06-07-rng-parity-spike-design.md (Spike outcome).
+// the RNG parity spike writeup (spike outcome: controlled-draw approach).
 describe.skip('RNG parity spike: grue outcome matches dfrotz seed-for-seed', () => {
   for (const seed of SEEDS) {
     it(`seed ${seed}`, async () => {

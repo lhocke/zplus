@@ -1,7 +1,6 @@
 /**
- * FsSavePort — filesystem-backed SavePort for the Tauri shell (spec: docs/
- * superpowers/specs/2026-07-06-native-shell-design.md, component 1 +
- * Amendment A).
+ * FsSavePort — filesystem-backed SavePort for the Tauri shell (native-shell
+ * design, component 1 + Amendment A).
  *
  * Implements the async SavePort interface directly over the injected FsOps
  * (Tauri plugin-fs in production, a temp-dir fake in tests). Every method
